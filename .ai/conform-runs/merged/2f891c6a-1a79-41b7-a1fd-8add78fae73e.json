@@ -1,0 +1,296 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2f891c6a-1a79-41b7-a1fd-8add78fae73e",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-09T00:25:18.946290+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:102 The cut draws a stored status rather than the measured offset, so a clip nudged off its mark still reads ok (lib/cut/deriveTimeline.ts emits only ok or missing), and the score cannot place a cue inside a scene or show a refused cue as anything but missing.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 Signed ms readout and snap-to-mark exist, but the 50 ms step is coarser than one 40 ms frame at this cut's 25 fps (technique asks sub-frame), and status does not follow the offset: only drift->ok is derived, so a nudged ok clip never shows drift."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:11 A cue's address is a first/last scene pair, so it cannot enter or exit mid-scene; the purpose field exists (Score.tsx:47) but no region can be marked as chosen silence."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 A refused cue and a never-rendered cue collapse into missing (CueView carries no refusal field); plate, card and motion refusals are drawn properly elsewhere (Cut.tsx:78, Strips.tsx, Motion.tsx:85)."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:232 One clock, picture/voice/music lanes, blocks to scale from the sync offset (Cut.tsx:169), dashed missing blocks. Gap: no legend names the block states (rg legend finds only key legends)."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The surface reads a derived turn and draws no marker on absence; how it is derived is judged in part-port-fixtures."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:80 Edits are ops naming an element and a property, never pixels; the render is a separate priced act."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:85 A declined direction is shown verbatim, and render clip is offered only after an accepted motion line (Motion.tsx:114-115)."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:61 The poster preview addresses renderFrame by a frame index computed from the timestamp, with a fixed seed, rather than by counting ticks."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 An undecodable still is an error naming the input. Gap: the Cut monitor's img (Cut.tsx:75) has no such handler."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:100 Blocking finish checks stop the aspect render before it is priced or run."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx:3 The voice unit is a whole line held against a card; no cue is derived from a position inside a clip, and rg alignment finds nothing in this directory."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:23 Research and script are routed apart from the media kinds and these editors only write and pick text; a search of the part directory for compileCut, ffmpeg, storyboard, transcript and nudgeOffsets found nothing, and the only timing shown is planned durations on documents and ad scenarios (Document.tsx:148, Scenarios.tsx:32), with no lanes, clock or assembly.",
+   "techniques": [],
+   "absenceTerms": [
+    "compileCut",
+    "ffmpeg",
+    "storyboard",
+    "transcript",
+    "nudgeOffsets"
+   ]
+  },
+  {
+   "context": "visual-producers",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/producers/src/frames/define.ts:44 The default render-plates batch plans a refused plate again with nothing changed about its brief, treating a provider refusal as a retriable hole even though the operator confirms the receipt.",
+   "techniques": [
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/frames/define.ts:44 A refusal is a terminal outcome needing a re-brief or an accepted hole; here it sits beside empty in the batch."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/motion/define.ts:69 A clip is single-image anchored and needs human-accepted motion, and a decline is a produced outcome. Outside this context, lib/producers/motion.ts:54 fixes durationS at 5 rather than the slot's length."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/cut/define.ts:7 The export is compiled from a deterministic document over the derived timeline."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/strips/plan.ts:9 Lint runs before capture, and a passing round looks at a contact sheet (plan.ts:11)."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/strips/plan.ts:17 A failing seek gate sends the card back for a fix; the gate itself re-renders frames cold and out of order (pipeline/strips/render.mts:280)."
+    },
+    {
+     "technique": "storyboard-grid-conditioning",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/frames/define.ts:13 Plates are per-unit images, the per-shot anchoring the technique says to prefer; rg storyboard|grid over these producers finds only a trial-grid comment."
+    }
+   ]
+  },
+  {
+   "context": "music-vendors-and-publish",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/music/plan.ts:94 A cue brief starts at its first scene and is sized by whole scenes, so the vendor layer cannot express an entry or exit inside a scene even though purpose, exact durations and tempo are briefed well.",
+   "techniques": [
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "lib/music/plan.ts:94 Times derive from the picture, which the technique prefers, but there is no offset form, so a mid-scene address is impossible; the purpose sentence is carried at plan.ts:222."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "lib/music/elevenlabs.ts:193 Refusal is a typed outcome kept apart from rate-limit and failure; the studio score view does not yet show it (see part-editor-media-cut-score)."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/music/elevenlabs.ts:279 A truncated body is an error rather than a silent take; the file routes likewise name a missing file."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "lib/audioEnvelope.ts:7 Audio-driven effects read a precomputed array by frame index, with no live analyser in the path."
+    }
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 Sync status is only ever cleared by a zero offset and never raised by a non-zero one, so the finish line's drift row passes for a clip sitting hundreds of milliseconds off its mark.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 The offset is stored data and snap returns it to exact zero, but status follows a stored flag; no derived clip is ever marked drift."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 Position is derived, but the score re-implements what the cut gets from turnOf (fixtureCut.ts:143), breaking one derivation for all consumers, and two matching scenes silently take the first."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:89 Coverage is computed but sums every cue span whether or not a take exists, and the editor labels it seconds scored; refused, unrendered and spotted seconds are not separated."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:183 The stored address is scene ids only. The film finish line also keeps the coverage row (fixtureCut.ts:107), so a chosen silence fails it and holds the cut from ready."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The block position and the bench's number come from the same stored offset."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 Each export records the digest of the compiled document it was cut from."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureMotion.ts:76 A clip needs an accepted motion line; ClipRec (fixtureMotion.ts:26) carries no model or brief, though the real clip record keeps a model."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T00:25:18.946290+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:25:18.946290+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:25:18.946290+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "seek-stable-composition-authoring",
+    "storyboard-grid-conditioning",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "visual-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:25:18.946290+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "gap-and-refusal-honesty",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error"
+   ],
+   "deviations": 1,
+   "context": "music-vendors-and-publish",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:25:18.946290+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

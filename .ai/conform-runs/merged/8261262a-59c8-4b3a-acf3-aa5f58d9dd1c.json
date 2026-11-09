@@ -1,0 +1,212 @@
+{
+  "schema": "conform-run/1",
+  "worker": "8261262a-59c8-4b3a-acf3-aa5f58d9dd1c",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-09T04:00:36.432129+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "part-editor-writing-research",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 The render gate's escape hatch names only a version, so one click waives every blocking finding on that staged version and no single finding can be accepted while the others keep blocking, which the technique's two-findings test defines as a blanket.",
+      "techniques": [
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 The op carries versionId and no rule or site. The receipt (lib/script/versions.ts GateOverride) records which renders blocked, after the fact and at render granularity. Low blast radius: one operator, one version, and the blocking list is drawn beside the button."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:258 The skip is rendered and counted beside violations, and the enforced percentage sits next to it, so a pass with holes does not read as a full pass."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:161 An accepted version keeps its override visible in the history. The hole is written by the same act that advances it (fixtureScript.ts accept-over-gate), and the per-kind module is shared with the real side."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Findings.tsx:5 One findings renderer with a closed verdict vocabulary serves both checks, so the two surfaces cannot diverge on what a verdict means."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:197 A blocked gate removes the plain accept action and leaves only the recorded override. The server half also refuses `accept` on a blocked gate (fixtureScript.ts:181)."
+        }
+      ],
+      "registryProposal": "waiver-names-its-finding and advancement-evidence-fields pull apart on a human-judgment override of a lexical gate: the second endorses advancing the whole item with the hole recorded, the first calls any waiver that cannot name a single finding a blanket. The standard could say whether a per-item override with a frozen receipt of its findings is a third permitted shape or still a blanket."
+    },
+    {
+      "context": "foundry-strips-and-training",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/strips/lint.ts:155 The lint's three API presence rules (lines 152, 155, 156) read the raw page while its bans read the comment-blanked one, so a page that only mentions STRIP_READY in a comment satisfies the rule; the failure then surfaces later as a render error after the cheap rung passed it.",
+      "techniques": [
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:155 For a presence rule the raw read is the permissive direction, and it is unexplained: the neighbouring stripFramesRule normalises at line 166. The tests hold no seeded comment-only pair for these rules. render.mts:75 catches the case later."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:35 The blocking regex misses Math[\"random\"](), const {random}=Math and aliased fetch or setTimeout, and no rule refuses computed access or eval. The pages are generated under the project's own contract, so the precondition holds. The blanking-pass obligation is met by the tests."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:149 An unnamed cap of three per rule feeds the fix turn's work list (steps.ts:102) with no sign of truncation, which can cost an extra paid round. The status half is sound: triage.ts:100 is one array read by the store guard and the Board source."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:15 The header states what the lint cannot answer and which instrument owns that question."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "pipeline/strips/lint.mts:19 A planted bad page and a clean page exit non-zero on a miss, and tests/next-server/strips-lint-comments.test.ts seeds the blanking pass."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:203 Any finding sets the card's failed status, and only a `rendered` card can take a verdict (triage.ts JUDGEABLE)."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:138 The verdict is a pure function of the page and the brief's frame count, with no external feed."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:9 The cheap static rung sits ahead of the costly render rung."
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:7 Window-decidable constructs go to patterns, and the non-local remainder is handed to the seek gate."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:67 A misfire was fixed by narrowing the detector, with tests holding both directions. No precision measurement over a population was found."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/author.ts:4 The fixer has only file tools confined by --restricted to a workspace holding inputs/ and out/; the lint and render gates run outside it, by the orchestrator."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:195 The gate reads the landed artifact, not the agent's account of it."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:234 The anchored and floorOverride hatches are per-improvement by id, and an unmatched target is refused loudly."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:269 The commit that advances the improvement writes its basis into the durable ledger row."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/blind.ts:165 Below the floor the ledger row reads unmeasurable unless explicitly overridden."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:206 The refusal names both remedies and the improvements they apply to, and both are available on the gate surface."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "board-decision-desk",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "ui-board-state",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "ui-status-provenance",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchor, status.ts:1, is only the header comment of a status-vocabulary table. It does not show that the context has no gate or refusal. The claim rests on a keyword search whose terms (process.exit, exitCode, pre-commit, no-verify, waiver) are CLI and commit-hook words, so they do"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T04:00:36.432129+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "policy-projection",
+        "severity-by-construction",
+        "unmeasurable-criteria",
+        "waiver-names-its-finding"
+      ],
+      "deviations": 1,
+      "context": "part-editor-writing-research",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T04:00:36.432129+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-status-provenance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T04:00:36.432129+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "blocking-by-input-determinism",
+        "decidable-in-a-window",
+        "false-positive-economics",
+        "gate-laddering",
+        "gate-liveness",
+        "instrument-answers-only-its-own-question",
+        "match-the-resolved-artifact",
+        "oracle-frozen-during-repair",
+        "policy-projection",
+        "refusal-names-a-reachable-remedy",
+        "self-reported-gate-inputs",
+        "severity-by-construction",
+        "unmeasurable-criteria",
+        "unparseable-form-is-a-finding",
+        "waiver-names-its-finding"
+      ],
+      "deviations": 1,
+      "context": "foundry-strips-and-training",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

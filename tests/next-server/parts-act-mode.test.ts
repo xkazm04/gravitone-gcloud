@@ -12,8 +12,23 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 vi.mock("server-only", () => ({}));
 
-vi.hoisted(() => {
+// Every part write fires openReadyGates after answering (real.ts `kick`); nothing here asserts on it, so its
+// tail outlived the test and logged `blob: cannot write` once this file's directory was gone, which vitest
+// reported as a run error when the file's teardown beat the log. The same real gates, waited for before the store closes.
+const kicks = vi.hoisted(() => {
   process.env["SPEND_STORE"] = "memory";
+  return [] as Promise<unknown>[];
+});
+vi.mock("../../lib/parts/gates.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../../lib/parts/gates.ts")>();
+  return {
+    ...real,
+    openReadyGates: (...a: Parameters<typeof real.openReadyGates>) => {
+      const p = real.openReadyGates(...a);
+      kicks.push(p);
+      return p;
+    },
+  };
 });
 
 import { ok, type Result } from "@gt/domain/errors";
@@ -33,7 +48,8 @@ afterAll(() => {
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 let open: Kernel[] = [];
-afterEach(() => {
+afterEach(async () => {
+  await Promise.allSettled(kicks.splice(0));
   for (const k of open) k.close();
   open = [];
 });
@@ -56,7 +72,7 @@ function universe(recipe: string, id: string): { store: Store; port: ReturnType<
   const store = k.value.store;
   const c = compose(store, { recipe }, OP, { id });
   if (!c.ok) throw c.error;
-  return { store, port: makeRealPart({ store: () => ok(store), now: () => NOW, gates: { store: () => ok(store), blobs: () => blobStore(path.join(dir, "blobs")), now: () => NOW } }) };
+  return { store, port: makeRealPart({ store: () => ok(store), now: () => NOW, gates: { store: () => ok(store), blobs: () => blobStore(path.join(dir, "blobs")), now: () => NOW }, actWaitMs: 60_000 }) };
 }
 
 describe("which act may be priced live", () => {

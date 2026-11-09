@@ -18,7 +18,7 @@
   },
   "stats": {
     "contexts": 122,
-    "pairs": 1070,
+    "pairs": 1123,
     "unmatched": 0,
     "weaklyGoverned": 6,
     "deadContexts": 0,
@@ -27,7 +27,7 @@
     "medianTopScore": 763.8,
     "carriedVerdicts": 309,
     "restoredPairs": 33,
-    "staleVerdicts": 109,
+    "staleVerdicts": 146,
     "orphanedVerdicts": 105,
     "renamedContexts": 0,
     "arrivedContexts": 14
@@ -131,7 +131,20 @@
       "bba6c91f-7e8c-40e9-acee-8929eb245a8c",
       "76331df3-dc8c-4421-bb81-6c2bbe2f688b",
       "311a7f00-ddc9-4938-b67a-60807c67e0b4",
-      "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2"
+      "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2",
+      "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
+      "03bbdce3-27bb-4361-947c-ba8f0d70fa2c",
+      "06a49bc3-5cc1-4701-9869-efbacdcf5f6c",
+      "7d7b94f7-f312-4ea4-b315-23df705c2286",
+      "1eb57510-dcfa-4549-97ed-56f3f97519ec",
+      "b94edc9f-f1d4-4be0-99cb-4483648000eb",
+      "04e4702a-4221-4673-9cfa-130cbd21f93e",
+      "95dd9201-2503-481d-8cdd-a863f6566283",
+      "51e3f5c9-f984-40e7-9588-f8eab2b916f9",
+      "ce5ef2e0-d944-4b79-a500-32f8a081923f",
+      "862d474e-1da6-4513-a2c9-f7c8b54c7a29",
+      "63ca5808-c5b5-4e64-840b-69d8c3c6991f",
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
     ],
     "error-handling": [
       "ea68a117-e84a-4b1b-bff1-c49133e939a9",
@@ -142,7 +155,34 @@
     ],
     "test-harness": [
       "38f619c8-80eb-4040-986c-10c9e35e734e",
-      "868afe8a-01af-428e-9f7c-d561ee033d4c"
+      "868afe8a-01af-428e-9f7c-d561ee033d4c",
+      "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
+      "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
+      "6a878b5f-8652-4265-839a-dce38680a9c7",
+      "492013a4-a2b2-4f74-b6e3-9dde233632a9",
+      "c1a2a2a3-7561-4522-816b-c2418500374c",
+      "7d7b94f7-f312-4ea4-b315-23df705c2286",
+      "92742f06-a6dc-418e-8c50-42c050345bc7",
+      "1155c1ec-f832-471a-929c-2a16f06cfbb7",
+      "453eefad-eacc-4fdc-87fb-37e83ded0b47",
+      "59d40b40-c1eb-4e42-8187-018bb749c736",
+      "0735052e-7b05-4df7-b581-eaa0bc632249",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
+      "ee38e76a-8e14-43c9-b82d-c83504463ef9",
+      "19bc7f75-f983-4a12-9f0a-19a952d2e4fe",
+      "95dd9201-2503-481d-8cdd-a863f6566283",
+      "cfbabdf6-58ed-4f4a-acad-2a2249c19dbd",
+      "693915d1-61ac-4fc1-835d-7dbb074613b2",
+      "017c20b1-6e01-4427-b944-83501aef72b3",
+      "1b623dc8-2658-4458-af5f-c1cae9f0a02b",
+      "d8928803-1de2-497f-882c-809d029b705b",
+      "3ceb5985-07f1-4504-830b-fca7669a4404",
+      "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0",
+      "48eca705-7472-4b83-8678-2b451b2b723f",
+      "4eabdc72-cf31-48f3-a218-98ebd0914ff1",
+      "78923fed-ef5d-48d9-b781-bdb558f77b88",
+      "95a41c11-42cf-4369-b4c3-1233543bd74f",
+      "e44cfa27-83ec-470a-adec-674d8a2a8037"
     ],
     "mcp-tools": [
       "333e954c-3d86-400f-a6c8-48777a94ccba",
@@ -250,7 +290,9 @@
       "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
       "052f74ff-87c5-45a8-a5ea-6fbb2ae44102",
       "43edf8cd-29be-430d-898d-70c96d2d537c",
-      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5",
+      "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
+      "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd"
     ],
     "agent-cli-transport": [
       "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
@@ -314,7 +356,9 @@
       "e1ce049c-26d0-4fe6-bb21-81eefafa79af",
       "63ca5808-c5b5-4e64-840b-69d8c3c6991f",
       "7cfc1d67-f77b-480c-a052-25c3217f0b1b",
-      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e"
+      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "92742f06-a6dc-418e-8c50-42c050345bc7",
+      "43edf8cd-29be-430d-898d-70c96d2d537c"
     ],
     "agent-instruction-files": [
       "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
@@ -347,7 +391,8 @@
       "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3",
       "78923fed-ef5d-48d9-b781-bdb558f77b88",
       "e44cfa27-83ec-470a-adec-674d8a2a8037",
-      "eb037310-8dca-433e-81ce-73ebf2d545fa"
+      "eb037310-8dca-433e-81ce-73ebf2d545fa",
+      "453eefad-eacc-4fdc-87fb-37e83ded0b47"
     ],
     "eval-harness": [
       "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
@@ -503,7 +548,9 @@
       "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3",
       "8e1afe6e-41c9-41fe-b8c8-f01186dfa849",
       "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
-      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e"
+      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "a0dd902a-5adc-4c0a-8b28-28239c18303e",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0"
     ],
     "agent-memory": [
       "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
@@ -568,7 +615,15 @@
       "1de3c823-3d27-478d-8f7e-b3b940344faf",
       "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
       "052f74ff-87c5-45a8-a5ea-6fbb2ae44102",
-      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e"
+      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "f666874c-d32c-49e2-a1bc-70363f3ca4f2",
+      "1eb57510-dcfa-4549-97ed-56f3f97519ec",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
+      "95dd9201-2503-481d-8cdd-a863f6566283",
+      "6deb060a-3f7b-4426-a66b-970a7bb54a5e",
+      "78923fed-ef5d-48d9-b781-bdb558f77b88",
+      "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6",
+      "43edf8cd-29be-430d-898d-70c96d2d537c"
     ],
     "hitl-approval": [
       "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3",
@@ -672,7 +727,10 @@
       "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c",
       "eb037310-8dca-433e-81ce-73ebf2d545fa",
       "9e61ac82-5353-41a4-a550-a55408d6c9d9",
-      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e"
+      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "bba6c91f-7e8c-40e9-acee-8929eb245a8c",
+      "1eb57510-dcfa-4549-97ed-56f3f97519ec",
+      "95a47cdb-181e-41d7-8dcd-2e2277a63d3e"
     ],
     "build-economics": [
       "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3"
@@ -758,7 +816,8 @@
     ],
     "docs-sync": [
       "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
-      "6106734e-7508-4cd1-a097-e28e4bb7a484"
+      "6106734e-7508-4cd1-a097-e28e4bb7a484",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0"
     ],
     "video-assembly": [
       "396608fd-9886-4a9d-829d-4a5efb6ea9d3",
@@ -804,7 +863,10 @@
       "63ca5808-c5b5-4e64-840b-69d8c3c6991f",
       "00c6177f-43a3-4f35-8252-59c9ae8110e0",
       "eb037310-8dca-433e-81ce-73ebf2d545fa",
-      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5",
+      "9508a262-9b09-4e7e-ab74-ff10c182a001",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
+      "8e1afe6e-41c9-41fe-b8c8-f01186dfa849"
     ],
     "translation-pipeline-topology": [
       "6a878b5f-8652-4265-839a-dce38680a9c7",
@@ -835,7 +897,9 @@
       "c027c39d-d8fd-4768-add8-4ecc5f206783",
       "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6",
       "052f74ff-87c5-45a8-a5ea-6fbb2ae44102",
-      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e"
+      "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "59d40b40-c1eb-4e42-8187-018bb749c736",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0"
     ],
     "fleet-orchestration": [
       "d968dc62-e28c-4437-abb1-af18df448216",
@@ -862,7 +926,8 @@
       "63ca5808-c5b5-4e64-840b-69d8c3c6991f",
       "00c6177f-43a3-4f35-8252-59c9ae8110e0",
       "9e61ac82-5353-41a4-a550-a55408d6c9d9",
-      "1de3c823-3d27-478d-8f7e-b3b940344faf"
+      "1de3c823-3d27-478d-8f7e-b3b940344faf",
+      "4f4a61e0-df30-4a71-b7e9-b0f355e4e848"
     ],
     "production-pipeline-phasing": [
       "492013a4-a2b2-4f74-b6e3-9dde233632a9",
@@ -903,7 +968,8 @@
       "403a996c-9490-4011-a01f-cb9c66fd5f99",
       "95a41c11-42cf-4369-b4c3-1233543bd74f",
       "e1ce049c-26d0-4fe6-bb21-81eefafa79af",
-      "1de3c823-3d27-478d-8f7e-b3b940344faf"
+      "1de3c823-3d27-478d-8f7e-b3b940344faf",
+      "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5"
     ],
     "table": [
       "bdb7f333-4ecd-4edf-b3a6-d343a0fe4d0b",
@@ -972,14 +1038,17 @@
       "95dd9201-2503-481d-8cdd-a863f6566283",
       "311a7f00-ddc9-4938-b67a-60807c67e0b4",
       "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2",
-      "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c"
+      "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c",
+      "81727933-5b57-4d12-a91d-a626568e0072",
+      "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3"
     ],
     "media-playback": [
       "fc4d39eb-1778-430b-805f-fe081c9ea223",
       "48aa7d61-42fe-4e07-bc0e-0da7de023d71",
       "de9066f2-b74b-43d1-a936-e7dfeb229f7c",
       "7d7b94f7-f312-4ea4-b315-23df705c2286",
-      "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c"
+      "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c",
+      "cfbabdf6-58ed-4f4a-acad-2a2249c19dbd"
     ],
     "image-prompt-composition": [
       "03bbdce3-27bb-4361-947c-ba8f0d70fa2c",
@@ -997,7 +1066,8 @@
       "945bdecb-65ee-4232-9e43-9d1216c620df",
       "862d474e-1da6-4513-a2c9-f7c8b54c7a29",
       "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
-      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5",
+      "017c20b1-6e01-4427-b944-83501aef72b3"
     ],
     "music-prompt-composition": [
       "03bbdce3-27bb-4361-947c-ba8f0d70fa2c",
@@ -1030,7 +1100,9 @@
       "368829fe-5714-4cbb-af3a-2a71bbe73607",
       "48eca705-7472-4b83-8678-2b451b2b723f",
       "51e3f5c9-f984-40e7-9588-f8eab2b916f9",
-      "1c2ac174-ba41-4264-b184-6b7aa04507d4"
+      "1c2ac174-ba41-4264-b184-6b7aa04507d4",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
+      "3ceb5985-07f1-4504-830b-fca7669a4404"
     ],
     "talking-avatar": [
       "d34bdb99-d5d5-431b-89ee-0b7da9b9c24f",
@@ -1038,14 +1110,17 @@
       "928a52be-b8cd-42e6-bc4a-3d3149bd4609",
       "79439a23-e379-41e6-92c6-ea1bbd2516d7",
       "6106734e-7508-4cd1-a097-e28e4bb7a484",
-      "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3"
+      "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3",
+      "fc4d39eb-1778-430b-805f-fe081c9ea223"
     ],
     "generated-workflow-candidates": [
       "81727933-5b57-4d12-a91d-a626568e0072"
     ],
     "trust-base": [
       "81727933-5b57-4d12-a91d-a626568e0072",
-      "47a52ae3-c07c-4d24-86e1-da7d59861f7e"
+      "47a52ae3-c07c-4d24-86e1-da7d59861f7e",
+      "969da751-61f5-40a0-a5fc-dfca59f20636",
+      "19bc7f75-f983-4a12-9f0a-19a952d2e4fe"
     ],
     "status-vocabulary": [
       "35c4885c-477a-4fa4-8e6d-356b3af05959",
@@ -1066,7 +1141,8 @@
       "06a49bc3-5cc1-4701-9869-efbacdcf5f6c",
       "c1a2a2a3-7561-4522-816b-c2418500374c",
       "ea68a117-e84a-4b1b-bff1-c49133e939a9",
-      "4801e7ab-d365-4c2d-8351-adcf188ba3c1"
+      "4801e7ab-d365-4c2d-8351-adcf188ba3c1",
+      "21a8a03c-bd42-4bad-a36e-a6e929a471e0"
     ],
     "scoring-rubrics": [
       "daafd078-1722-4200-983a-9b8bcf1cc3a8"
@@ -1081,7 +1157,10 @@
       "e294db9c-78bc-49c1-a8cf-4e0f0afe6fd4",
       "19bc7f75-f983-4a12-9f0a-19a952d2e4fe",
       "017c20b1-6e01-4427-b944-83501aef72b3",
-      "403a996c-9490-4011-a01f-cb9c66fd5f99"
+      "403a996c-9490-4011-a01f-cb9c66fd5f99",
+      "693915d1-61ac-4fc1-835d-7dbb074613b2",
+      "1b623dc8-2658-4458-af5f-c1cae9f0a02b",
+      "8e1afe6e-41c9-41fe-b8c8-f01186dfa849"
     ],
     "on-stream-persona-continuity": [
       "bb09b53f-0faf-495c-8c22-9bbfedbef48d"
@@ -1112,7 +1191,8 @@
       "693915d1-61ac-4fc1-835d-7dbb074613b2",
       "c98573cb-d7c1-42db-b48d-a1bdde8ae3d3",
       "00c6177f-43a3-4f35-8252-59c9ae8110e0",
-      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5",
+      "9256d898-a1aa-470e-86db-7f3a9dee0865"
     ],
     "cost-metering": [
       "eb8e4f16-65ba-445e-9299-2e00abf63aaa",
@@ -1280,7 +1360,8 @@
     ],
     "platform-format-adaptation": [
       "1eb57510-dcfa-4549-97ed-56f3f97519ec",
-      "4801e7ab-d365-4c2d-8351-adcf188ba3c1"
+      "4801e7ab-d365-4c2d-8351-adcf188ba3c1",
+      "93249c73-ef93-4c55-909a-6f3a67262366"
     ],
     "delivery-guarantees": [
       "0735052e-7b05-4df7-b581-eaa0bc632249"
@@ -1310,7 +1391,8 @@
     ],
     "migrations": [
       "8cd64732-19d4-4f28-9919-51939b0b58d0",
-      "868afe8a-01af-428e-9f7c-d561ee033d4c"
+      "868afe8a-01af-428e-9f7c-d561ee033d4c",
+      "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5"
     ],
     "usage-event-ingestion": [
       "8cd64732-19d4-4f28-9919-51939b0b58d0"
@@ -1346,11 +1428,13 @@
     ],
     "motion": [
       "d627b5c0-0c27-4fd3-a621-4898fc4475cf",
-      "51e3f5c9-f984-40e7-9588-f8eab2b916f9"
+      "51e3f5c9-f984-40e7-9588-f8eab2b916f9",
+      "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc"
     ],
     "multi-speaker-speech-production": [
       "d627b5c0-0c27-4fd3-a621-4898fc4475cf",
-      "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc"
+      "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc",
+      "ce5ef2e0-d944-4b79-a500-32f8a081923f"
     ],
     "english": [
       "1f3a062b-ff35-4626-bdb1-d590720c665b"
@@ -1372,7 +1456,8 @@
     ],
     "optional-dependency-degradation": [
       "ee38e76a-8e14-43c9-b82d-c83504463ef9",
-      "6402b757-37fa-43bd-99f3-b8bc1fb303cd"
+      "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
+      "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5"
     ],
     "search": [
       "ee38e76a-8e14-43c9-b82d-c83504463ef9"
@@ -1519,7 +1604,8 @@
       "eb037310-8dca-433e-81ce-73ebf2d545fa"
     ],
     "verifiable-giveaway-draws": [
-      "9e61ac82-5353-41a4-a550-a55408d6c9d9"
+      "9e61ac82-5353-41a4-a550-a55408d6c9d9",
+      "1ee1af3d-2b19-4463-adf0-146c4c579da4"
     ],
     "keyed-sample-transforms": [
       "9e61ac82-5353-41a4-a550-a55408d6c9d9"
@@ -1556,6 +1642,25 @@
     ],
     "model-call-outcome-integrity": [
       "43edf8cd-29be-430d-898d-70c96d2d537c"
+    ],
+    "tracing": [
+      "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5"
+    ],
+    "ci-execution-trust": [
+      "0735052e-7b05-4df7-b581-eaa0bc632249"
+    ],
+    "narrative-scroll-surface": [
+      "6106734e-7508-4cd1-a097-e28e4bb7a484",
+      "693915d1-61ac-4fc1-835d-7dbb074613b2"
+    ],
+    "native-document-format": [
+      "93249c73-ef93-4c55-909a-6f3a67262366"
+    ],
+    "knowledge-registry": [
+      "67420468-b503-4a5c-bf04-0e24a9bbc225"
+    ],
+    "contribution-reactive-visuals": [
+      "e3a63c9a-324f-417a-b93b-bfddb63e7aa5"
     ]
   },
   "contexts": [
@@ -1695,7 +1800,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/agent/cliSeam.ts:35 The agent fence's argv was shown to the real CLI once by hand at no spend and no lane repeats that, so probes assert the flags as strings against a stub that ignores them and a renamed fence flag surfaces only on a real paid turn.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-runtime-assembly",
@@ -2143,7 +2254,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/golden-path/articles-critique.probe.spec.ts:284 The test's name claims the reviewers run in parallel (lib/articles/critiqueReviews.ts:66 is a Promise.all) but its body only asserts outcomes and files, and neither the stub nor the probe records overlap, so a serialised panel would stay green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "docs-sync",
@@ -2199,7 +2316,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/checksStatic.ts:82 These gates measure the prose, figures and rendered HTML of a written post and never assemble media on a clock; a case-insensitive search of all of lib/articles for timeline, spotting, storyboard, keyframe and nudge found no hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-instruction-files",
@@ -2214,6 +2337,22 @@
           "digest": "sha256-b2:b8c8de663e610a6c",
           "revision": 33,
           "changedAt": "2026-11-08",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "prompt-assembly",
+          "bundle": "software-engineering",
+          "score": 517.6,
+          "why": [
+            "turn",
+            "rendered",
+            "step"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:ad13b2ee69c25e8d",
+          "revision": 44,
+          "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "unknown"
         }
@@ -2249,7 +2388,12 @@
           "revision": 56,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/humanActs.ts:25 approveRun takes no actor and nothing fences it, so the written rule that approve is never an agent's act has no mechanism and `pipeline/article.mts approve` succeeds for an agent exactly as for the operator, while the landing checks themselves refuse properly.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56,
+          "revisionsBehind": 0
         },
         {
           "subject": "hitl-approval",
@@ -2375,7 +2519,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/registryWrite.ts:80 The landing's adoption of the cwd-bound git environment is unpinned: the predicate is tested alone and articleSandbox deletes the variables before article code runs, so reverting this call site would stay green while a hook's GIT_DIR could redirect a landing's add, commit and push.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "mcp-tools",
@@ -2726,7 +2876,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/medium/fake.ts:38 The fake always reports every figure held and no leftover markers with no knob to change it, and figuresOf appears in no test, so the short read-back the real driver exists to report (three of thirteen figures once lost) is never exercised.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "production-pipeline-phasing",
@@ -3117,6 +3273,70 @@
           "source": "renamed",
           "renamedFrom": "17769afc-f302-4371-8956-63b8f52ada32",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "optional-dependency-degradation",
+          "bundle": "software-engineering",
+          "score": 355.3,
+          "why": [
+            "library",
+            "extras",
+            "write"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:641cb6bf0b2c6916",
+          "revision": 17,
+          "changedAt": "2026-10-14",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "migrations",
+          "bundle": "software-engineering",
+          "score": 339.3,
+          "why": [
+            "schema",
+            "store",
+            "query"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:b7d5afcb859dfff9",
+          "revision": 10,
+          "changedAt": "2026-09-05",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "browser-credential-boundary",
+          "bundle": "software-engineering",
+          "score": 320.1,
+          "why": [
+            "library",
+            "schema",
+            "write"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:8c4e4cc37445b46c",
+          "revision": 4,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "tracing",
+          "bundle": "software-engineering",
+          "score": 316,
+          "why": [
+            "library",
+            "schema",
+            "write"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:2834875c395bfaad",
+          "revision": 6,
+          "changedAt": "2026-09-17",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -3286,6 +3506,22 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "talking-avatar",
+          "bundle": "software-engineering",
+          "score": 398.7,
+          "why": [
+            "audio",
+            "route",
+            "drive"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:72517c45ca8e4198",
+          "revision": 4,
+          "changedAt": "2026-10-22",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -3389,7 +3625,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/brief.ts:24 A brief here asks only for tempo, key and length with no position on any clock: a case-insensitive search of the whole audio component directory for timeline, compileCut, deriveTimeline, offsetMs and storyboard found nothing, and the one picture word is the sfx technique label picture-as-timing-brief in batch.ts:42.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "eval-harness",
@@ -3981,6 +4223,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 6
+        },
+        {
+          "subject": "generated-music-acceptance",
+          "bundle": "media-generation",
+          "score": 386.5,
+          "why": [
+            "audio",
+            "studio",
+            "production"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:3f9de82f80a6905a",
+          "revision": 2,
+          "changedAt": "2026-08-29",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -5143,7 +5401,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/score/define.ts:61 A cue the vendor refused has no state of its own, so the plan job treats it as a cue never rendered and asks for it again instead of labelling the region refused-silence.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "test-harness",
@@ -5511,6 +5775,22 @@
           "source": "renamed",
           "renamedFrom": "8c854c7a-5467-4ddc-80ed-76f19b1f5094",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "video-assembly",
+          "bundle": "media-generation",
+          "score": 387,
+          "why": [
+            "music",
+            "audio",
+            "source"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:5f548f222df2e692",
+          "revision": 20,
+          "changedAt": "2026-10-21",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -5548,7 +5828,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/board-keepalive.test.ts:45 The keepalive test hands flushKeepalive a params promise it composed itself, and no test posts to the route, so the beacon URL and body, the route's rev-requiring schema and its guard are pinned by neither this file nor board-gate.test.ts, and neither file names that crossing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "quality-gates",
@@ -5757,7 +6043,12 @@
           "revision": 39,
           "changedAt": "2026-11-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scout.ts:90 These adapters carry an operator's verdicts back to the scout and spend stores and project their events into the ledger, so nothing here runs candidates against declared scenarios or scores them; a case-insensitive search of lib/decision/v1/sources and lib/ledger/v1/sources for the absence terms found no hit.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39,
+          "revisionsBehind": 0
         },
         {
           "subject": "prompt-assembly",
@@ -5992,7 +6283,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/score.ts:103 A music refusal ends the job as a fatal sentence and nothing lands on the spot, so the refusal is never recorded at the region of the clock it costs and the cue reads the same as one never rendered.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "test-harness",
@@ -6008,7 +6305,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:25 This second copy of the interpreter probe lacks the CI throw that packages/kernel/test/helpers.ts:30 added, so on a runner without Python every forge and Dojo describe.skipIf block skips and the lane still reports green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "module-design",
@@ -6691,6 +6994,23 @@
           "changedAt": "2026-09-01",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "voice-io",
+          "bundle": "software-engineering",
+          "score": 399.7,
+          "why": [
+            "cut",
+            "timeline",
+            "headless"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:29f8b158c4d44054",
+          "revision": 23,
+          "changedAt": "2026-10-18",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 3
         }
       ],
       "governance": "governed"
@@ -6728,7 +7048,12 @@
           "revision": 56,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/parts/gates.ts:34 A gate part is ratified from the packet's committed state alone, and the kernel's commit accepts a caller-declared `by` (the CLI's `--by agent|operator` flag included), so a machine session can ratify a human gate by writing the record the gate reads.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56,
+          "revisionsBehind": 0
         },
         {
           "subject": "test-harness",
@@ -6744,7 +7069,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:21 The gate-fact tests seed packets by raw INSERT with body '{}' and committed or returned rows at rev 0, bypassing openPacket and commit with no invariant check afterwards, so gatePacketFact is certified against rows the product's door would not write.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "hitl-approval",
@@ -6845,6 +7176,23 @@
           "evaluatedRevision": 19,
           "source": "retained",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "mcp-tools",
+          "bundle": "software-engineering",
+          "score": 399.2,
+          "why": [
+            "schema",
+            "gates",
+            "approval"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:ed8e615f51454325",
+          "revision": 34,
+          "changedAt": "2026-10-15",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 2
         }
       ],
       "governance": "governed"
@@ -7447,6 +7795,23 @@
           "evaluatedAgainst": "sha256-b2:20824426732ffb6a",
           "evaluatedRevision": 15,
           "revisionsBehind": 0
+        },
+        {
+          "subject": "data-video-art-direction",
+          "bundle": "media-generation",
+          "score": 291.2,
+          "why": [
+            "publication",
+            "data",
+            "frames"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:9e140bec9e8eb951",
+          "revision": 8,
+          "changedAt": "2026-10-22",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 2
         }
       ],
       "governance": "governed"
@@ -7484,7 +7849,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/test/machines.test.ts:43 The suite claims a rule over every machine but runs over seven hand-written closedMachine calls, so an eighth defineMachine export would turn nothing red and the claim is about the list, not the set.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "fleet-orchestration",
@@ -7789,7 +8160,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/floor-real.test.ts:87 One kernel store seeded in beforeAll is mutated by every case, and later cases depend on earlier writes: line 222 expects item A already on youtube from the prior test and line 271 finds Glass Harbor, so test order is a hidden input.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "data-video-art-direction",
@@ -7807,6 +8184,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 5
+        },
+        {
+          "subject": "agent-instruction-files",
+          "bundle": "software-engineering",
+          "score": 396.2,
+          "why": [
+            "floor",
+            "contract",
+            "write"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:25b61236a62604b0",
+          "revision": 31,
+          "changedAt": "2026-09-25",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -8002,6 +8395,22 @@
           "digest": "sha256-b2:4eb7088d6ed99926",
           "revision": 6,
           "changedAt": "2026-09-11",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "module-design",
+          "bundle": "software-engineering",
+          "score": 320.3,
+          "why": [
+            "module",
+            "form",
+            "flow"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:7c8008f2207b1946",
+          "revision": 18,
+          "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "unknown"
         }
@@ -8233,7 +8642,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:52 Run without two env vars that playwright.live.config.ts does not set, the Floor's live spec seeds nothing and compares against whatever v1 work sits in this machine's foundry-out, so its result depends on the developer's data and fails on a machine with no pile waiting.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "retrieval",
@@ -8326,6 +8741,23 @@
           "changedAt": "2026-11-07",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "supply-chain",
+          "bundle": "software-engineering",
+          "score": 393.6,
+          "why": [
+            "floor",
+            "channel",
+            "runs"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:f5666db1094acd9f",
+          "revision": 6,
+          "changedAt": "2026-09-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 2
         }
       ],
       "governance": "governed"
@@ -9178,7 +9610,12 @@
           "revision": 56,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:155 The lint's three API presence rules (lines 152, 155, 156) read the raw page while its bans read the comment-blanked one, so a page that only mentions STRIP_READY in a comment satisfies the rule; the failure then surfaces later as a render error after the cheap rung passed it.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56,
+          "revisionsBehind": 0
         },
         {
           "subject": "hitl-approval",
@@ -9795,6 +10232,23 @@
           "changedAt": "2026-10-15",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 475.4,
+          "why": [
+            "pricing",
+            "budget",
+            "shared"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -9848,7 +10302,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/video/types.ts:66 The stored clip record keeps the motion line, model, duration and dates but not the identity of the key image that conditioned it, so a clip's anchor is lost and it can be regenerated but not re-briefed from its own record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "data-video-art-direction",
@@ -10035,6 +10495,40 @@
           "source": "renamed",
           "renamedFrom": "60361278-9fbe-43c5-add7-454ed78ef0f5",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "voice-io",
+          "bundle": "software-engineering",
+          "score": 402.7,
+          "why": [
+            "vendor",
+            "image",
+            "budget"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:29f8b158c4d44054",
+          "revision": 23,
+          "changedAt": "2026-10-18",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 3
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 397.7,
+          "why": [
+            "store",
+            "still",
+            "pricing"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -10119,7 +10613,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/job-fixture.ts:32 openWorld runs the migration chain for every world and the job suites call it once per test (job.test.ts 21 uses of world(), job.queue.test.ts 13), though lease.test.ts and dryrun.test.ts already use the kernel's build-once templateStores; the cost was not measured here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "delivery-guarantees",
@@ -10329,6 +10829,22 @@
           "source": "renamed",
           "renamedFrom": "0c02b354-237b-44cb-9283-518ed620e846",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "ci-execution-trust",
+          "bundle": "software-engineering",
+          "score": 416.9,
+          "why": [
+            "job",
+            "execution",
+            "run"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:47305180676ccbaa",
+          "revision": 7,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -10599,6 +11115,22 @@
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
           "revisionsBehind": 2,
           "stale": true
+        },
+        {
+          "subject": "trust-base",
+          "bundle": "software-engineering",
+          "score": 591.7,
+          "why": [
+            "spec",
+            "language",
+            "hash"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:0fd52192b37a88e4",
+          "revision": 6,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -11007,6 +11539,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 7
+        },
+        {
+          "subject": "narrative-scroll-surface",
+          "bundle": "software-engineering",
+          "score": 369,
+          "why": [
+            "motion",
+            "page",
+            "sections"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:e93abcf9f70a6c36",
+          "revision": 3,
+          "changedAt": "2026-09-26",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -11077,6 +11625,128 @@
           "digest": "sha256-b2:9d7453513e23efad",
           "revision": 30,
           "changedAt": "2026-11-08",
+          "confidence": "probable",
+          "state": "deviation",
+          "evidence": "tests/live/kit.live.spec.ts:31 The specimen walk claims every exported component, but its needle only sees `export function`, so memo-wrapped and default-exported components leave the required population without any failure, and a future one could ship with no specimen on a green lane.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
+        },
+        {
+          "subject": "docs-sync",
+          "bundle": "software-engineering",
+          "score": 455.5,
+          "why": [
+            "app",
+            "system",
+            "checked"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:fd96220db75846a1",
+          "revision": 14,
+          "changedAt": "2026-09-25",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "live-system-demo-film",
+          "bundle": "media-generation",
+          "score": 389.8,
+          "why": [
+            "system",
+            "screen",
+            "audio"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:e3bb8c209c3765f1",
+          "revision": 3,
+          "changedAt": "2026-10-29",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 4
+        },
+        {
+          "subject": "supply-chain",
+          "bundle": "software-engineering",
+          "score": 377.9,
+          "why": [
+            "floor",
+            "ledger",
+            "library"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:f5666db1094acd9f",
+          "revision": 6,
+          "changedAt": "2026-09-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 2
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 376.2,
+          "why": [
+            "system",
+            "library",
+            "fixtures"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
+        },
+        {
+          "subject": "generated-speech-acceptance",
+          "bundle": "media-generation",
+          "score": 346.6,
+          "why": [
+            "board",
+            "audio",
+            "floor"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:944f40c9b53212c0",
+          "revision": 2,
+          "changedAt": "2026-09-30",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 4
+        },
+        {
+          "subject": "video-assembly",
+          "bundle": "media-generation",
+          "score": 344.1,
+          "why": [
+            "audio",
+            "library",
+            "produce"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:5f548f222df2e692",
+          "revision": 20,
+          "changedAt": "2026-10-21",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "module-design",
+          "bundle": "software-engineering",
+          "score": 340.7,
+          "why": [
+            "design",
+            "produce",
+            "library"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:7c8008f2207b1946",
+          "revision": 18,
+          "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "unknown"
         }
@@ -12198,7 +12868,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/mv.ts:183 Each source projects v1 job records into events, live jobs, a weir and tallies with no lanes or clock of a cut; a case-insensitive search of lib/ledger/v1/sources for the absence terms found no hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "broadcast-software-control",
@@ -12489,7 +13165,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/library-screen.test.ts:53 The check that every port call goes through settle walks a hand-written file list that omits CharacterDetail, GenreDetail, ModelDetail and VentureDetail, so a bare port call in those or in any new _library file would stay green; none of the four references port today, so this is a gap in the instrument and not a live defect.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-memory",
@@ -12760,7 +13442,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:273 The parity suite claims 'every kind' over nine hand-written kinds while LIBRARY_KINDS has eleven and the corpus holds genre and venture items, so those two kinds are never compared between fixture and kernel on this surface.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "demo-data-plane",
@@ -12909,6 +13597,22 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "trust-base",
+          "bundle": "software-engineering",
+          "score": 308.5,
+          "why": [
+            "library",
+            "contract",
+            "side"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:0fd52192b37a88e4",
+          "revision": 6,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -12946,15 +13650,14 @@
           "revision": 53,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "not-applicable",
-          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
           "source": "renamed",
           "renamedFrom": "d067e4e3-6739-4666-9103-06dac7f825ac",
-          "revisionsBehind": 2,
-          "stale": true
+          "state": "not-applicable",
+          "evidence": "lib/library/feeds/types.ts:9 Feeds map the studio's finished work into a media catalogue and a recursive search of lib/library for recall, consolidat, belief, distill and memories found nothing; agents can query it through the `library` MCP op (app/_server/mcp/tools/read.ts:121), which the earlier verdict missed, but that op searches produced assets and nothing here is carried forward or injected as a belief.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
+          "revisionsBehind": 0
         },
         {
           "subject": "prompt-assembly",
@@ -13007,7 +13710,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:15 This module indexes finished items for search and builds no cut; a search of lib/library found none of the listed terms, and its caption, keyframe and storyboard mentions are catalog facets and tile images for media already made.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "quality-gates",
@@ -13263,6 +13972,21 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 8
+        },
+        {
+          "subject": "verifiable-giveaway-draws",
+          "bundle": "media-generation",
+          "score": 332.8,
+          "why": [
+            "draws",
+            "key"
+          ],
+          "grounding": "lexical-only",
+          "digest": "sha256-b2:edca6ad83fb151ae",
+          "revision": 1,
+          "changedAt": "2026-11-03",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "weak"
@@ -13702,7 +14426,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/plan.ts:94 A cue brief starts at its first scene and is sized by whole scenes, so the vendor layer cannot express an entry or exit inside a scene even though purpose, exact durations and tempo are briefed well.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "voice-io",
@@ -13735,7 +14465,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/sound/suno/fakeDriver.ts:59 Offline Suno probes run against this stand-in for lib/suno/driver.ts, which starts healthy with no failure configured, while a grep finds no test importing the real driver, browser or selectors, so a green suite says nothing about the shipped Suno path.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "prompt-assembly",
@@ -13859,6 +14595,23 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 398.6,
+          "why": [
+            "sessions",
+            "pricing",
+            "channels"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -14251,7 +15004,12 @@
           "revision": 39,
           "changedAt": "2026-11-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:38 This is a production door that accepts or refuses one model answer against a structural contract and a deterministic regression corpus over tracked files, with no declared scenarios, trials or scores; a case-insensitive search of lib/notebook for the subject's terms found only the source name 'CF Benchmarks' in facts.ts, so that term is left out of the absence list, and the corpus belongs to the test-harness subject, to which the golden path hands deterministic suites.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39,
+          "revisionsBehind": 0
         },
         {
           "subject": "test-harness",
@@ -14332,6 +15090,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 7
+        },
+        {
+          "subject": "prompt-assembly",
+          "bundle": "software-engineering",
+          "score": 446.9,
+          "why": [
+            "tail",
+            "reasoning",
+            "whether"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:ad13b2ee69c25e8d",
+          "revision": 44,
+          "changedAt": "2026-10-14",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -14436,7 +15210,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/part-editor-media.test.ts:560 The claim that no media write button reads as pressable mid-write runs over a hand-written list of frames, motion and trailer, so the send-bound write buttons in Cut.tsx (nudge, snap) and Score.tsx (add cue, delete cue) are outside the walk and a new editor would turn nothing red.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-instruction-files",
@@ -14519,6 +15299,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 5
+        },
+        {
+          "subject": "media-playback",
+          "bundle": "software-engineering",
+          "score": 602,
+          "why": [
+            "media",
+            "clock",
+            "timeline"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:122990080db4f70e",
+          "revision": 6,
+          "changedAt": "2026-09-25",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -14704,6 +15500,38 @@
           "changedAt": "2026-10-14",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "platform-format-adaptation",
+          "bundle": "media-generation",
+          "score": 462.1,
+          "why": [
+            "part",
+            "edit",
+            "script"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:14fcb9b8c64f1b8b",
+          "revision": 3,
+          "changedAt": "2026-09-26",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "native-document-format",
+          "bundle": "software-engineering",
+          "score": 450.8,
+          "why": [
+            "editor",
+            "document",
+            "consumes"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:1104f28404244275",
+          "revision": 3,
+          "changedAt": "2026-10-14",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -14741,7 +15569,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:182 This case drives only the fixture's undoPart and compares it to a literal, so a change to the kernel's wording in planUndo leaves the hand-restated string at fixture.ts:338 and this parity test green.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "video-assembly",
@@ -14858,6 +15692,38 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 6
+        },
+        {
+          "subject": "narrative-scroll-surface",
+          "bundle": "software-engineering",
+          "score": 401.5,
+          "why": [
+            "explainer",
+            "motion",
+            "without"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:e93abcf9f70a6c36",
+          "revision": 3,
+          "changedAt": "2026-09-26",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "demo-data-plane",
+          "bundle": "software-engineering",
+          "score": 399.2,
+          "why": [
+            "fixture",
+            "data",
+            "sample"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:8b6581bd5537bf1b",
+          "revision": 5,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -14895,7 +15761,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/parts-real.test.ts:40 universe() opens a new kernel and runs the full migration chain from inside each test (8 call sites over 9 cases), so the suite pays build per test rather than build once and copy, which fixture-economics names as the failure.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-instruction-files",
@@ -15041,6 +15913,22 @@
           "digest": "sha256-b2:8b6581bd5537bf1b",
           "revision": 5,
           "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "image-prompt-composition",
+          "bundle": "media-generation",
+          "score": 431.6,
+          "why": [
+            "studio",
+            "project",
+            "real"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:d254a22feb4a9423",
+          "revision": 14,
+          "changedAt": "2026-10-15",
           "confidence": "probable",
           "state": "unknown"
         }
@@ -15648,15 +16536,14 @@
           "revision": 53,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "not-applicable",
-          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
           "source": "renamed",
           "renamedFrom": "e2f6231a-d39f-4d39-9465-0a48436cae92",
-          "revisionsBehind": 2,
-          "stale": true
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:8 This is browser IndexedDB storage for UI step content: a recursive search of lib/steps for recall, consolidat, belief, distill and memories found nothing, and no file in lib/producers, lib/script, app/_server, workers or pipeline references lib/steps, so no agent reads it as memory.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
+          "revisionsBehind": 0
         },
         {
           "subject": "settings",
@@ -15886,7 +16773,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:1 The file claims fixture and real sides agree, but it runs over hand-picked verbs with no enumeration of ProducePort, so 7 of 19 verbs (composerChoices, composerReceipt, launchRun, listProjects, composeChoices, discard, pauseJob) are never driven and can drift under a green parity suite.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-memory",
@@ -16003,6 +16896,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 3
+        },
+        {
+          "subject": "demo-data-plane",
+          "bundle": "software-engineering",
+          "score": 388.7,
+          "why": [
+            "real",
+            "fixture",
+            "data"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:8b6581bd5537bf1b",
+          "revision": 5,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -16188,7 +17097,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/mode.ts:12 Publishing's whole claim is an effect on a platform it does not own, yet the live path is exercised only with stub adapters and a fake wire, and my search found no lane that reads back from the platform that an upload landed, so a green suite cannot witness delivery.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "quality-gates",
@@ -16641,7 +17556,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/test/components/review-schedule.test.ts:47 The test claims 'only' over the PacketSource union but samples article, mv and forge, so adding suno or another source to SCHEDULE_CHANNELS offers a calendar control at the Board with this test green and no other test reading that table.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "prompt-assembly",
@@ -16822,6 +17743,23 @@
           "source": "renamed",
           "renamedFrom": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "live-system-demo-film",
+          "bundle": "media-generation",
+          "score": 414.3,
+          "why": [
+            "runs",
+            "approve",
+            "summary"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:e3bb8c209c3765f1",
+          "revision": 3,
+          "changedAt": "2026-10-29",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 4
         }
       ],
       "governance": "governed"
@@ -16881,7 +17819,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/test/records.options.test.ts:163 The test named 'no second spelling remains' reads three hand-listed files, so a fourth site spelling the ceiling crossing its own way turns nothing red and the claim covers only the list.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-memory",
@@ -17077,7 +18021,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/live/runs.live.spec.ts:10 The lane's server forces only the produce side to fixture, and load.ts keeps the real v1 reading beside it, so without NEXT_PUBLIC_GRAVITONE_DATA the bar-driven Runs tests depend on this machine's real piles and fail on a machine with none.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "voice-io",
@@ -17263,7 +18213,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/gitEnv.ts:16 The header says the probe holds the fixture's copied variable list to the library's, but the probe aims only GIT_DIR at the fixture, so dropping any of the copy's other nine names stays green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "tenant-scoped-agent-runtime",
@@ -17459,7 +18415,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/score/spots.ts:69 A spot's whole address is a list of scene ids, which re-derives on a retime but cannot express a mid-scene entry, exit or authored overhang, so the cue is not free to resolve inside a scene as the technique requires.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "live-system-demo-film",
@@ -17728,6 +18690,22 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 7
+        },
+        {
+          "subject": "knowledge-registry",
+          "bundle": "software-engineering",
+          "score": 459.5,
+          "why": [
+            "registry",
+            "knowledge",
+            "propose"
+          ],
+          "grounding": "lexical-only",
+          "digest": "sha256-b2:6c7d2c16b9fe5b9b",
+          "revision": 13,
+          "changedAt": "2026-10-31",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -17950,6 +18928,22 @@
           "evaluatedRevision": 2,
           "source": "retained",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "motion",
+          "bundle": "software-engineering",
+          "score": 363.9,
+          "why": [
+            "taste",
+            "engine",
+            "loop"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:8d9b3eabe2f3b534",
+          "revision": 10,
+          "changedAt": "2026-09-24",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -18274,7 +19268,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:183 A refused or missing clip is filtered out and the piece is concatenated without it, so the hole closes into a shorter continuous cut and the failure survives only as a sentence in the candidate's error field.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "test-harness",
@@ -18402,6 +19402,22 @@
           "evaluatedRevision": 11,
           "source": "retained",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "multi-speaker-speech-production",
+          "bundle": "media-generation",
+          "score": 345.1,
+          "why": [
+            "scene",
+            "sheet",
+            "asset"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:7ea2b5e416115e6b",
+          "revision": 3,
+          "changedAt": "2026-10-21",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -19413,6 +20429,22 @@
           "evaluatedRevision": 2,
           "source": "retained",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "fleet-orchestration",
+          "bundle": "software-engineering",
+          "score": 424.9,
+          "why": [
+            "measure",
+            "triage",
+            "acceptance"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:93bd71853ab468b1",
+          "revision": 28,
+          "changedAt": "2026-10-15",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -19541,6 +20573,23 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 8
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 398.4,
+          "why": [
+            "pricing",
+            "store",
+            "budget"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -19762,6 +20811,23 @@
           "evaluatedRevision": 19,
           "source": "retained",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "voice-io",
+          "bundle": "software-engineering",
+          "score": 418.2,
+          "why": [
+            "meter",
+            "budget",
+            "decides"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:29f8b158c4d44054",
+          "revision": 23,
+          "changedAt": "2026-10-18",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 3
         }
       ],
       "governance": "governed"
@@ -20077,6 +21143,22 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "generated-music-acceptance",
+          "bundle": "media-generation",
+          "score": 309.6,
+          "why": [
+            "studio",
+            "audio",
+            "plan"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:3f9de82f80a6905a",
+          "revision": 2,
+          "changedAt": "2026-08-29",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -20130,7 +21212,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/clipboard.test.ts:42 The 'every copy site goes through copyText' pin matches one spelling and declares no floor, so `navigator.clipboard?.writeText(x)` or an aliased clipboard passes it while the click still says nothing, which is the defect clipboard.ts exists to close.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "voice-io",
@@ -20248,6 +21336,23 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 7
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 411.1,
+          "why": [
+            "agent",
+            "addresses",
+            "project"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -20401,7 +21506,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/live-feed.test.ts:1 The test claims the wire sse.ts writes, yet its FakeSource hand-spells the frames and imports nothing from sse.ts, while sse.test.ts never feeds openFeed and no file under tests/live, tests/golden-path or tests/next-gates names openFeed or liveFeed, so the string-typed `rotate` crossing is pinned by neither side.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "agent-runtime-assembly",
@@ -20768,7 +21879,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 A cut reviewer's note is stored as prose against a whole-second beat time, with no frame number, frame-fraction spot, marked frame image, done flag or cut revision, so the editor must still search for what was meant.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "repository-landing-document",
@@ -20960,6 +22077,38 @@
           "source": "renamed",
           "renamedFrom": "ab872012-f902-4f43-b9c7-f13137e36f24",
           "revisionsBehind": 0
+        },
+        {
+          "subject": "video-assembly",
+          "bundle": "media-generation",
+          "score": 293.7,
+          "why": [
+            "generation",
+            "sound",
+            "library"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:5f548f222df2e692",
+          "revision": 20,
+          "changedAt": "2026-10-21",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "demo-data-plane",
+          "bundle": "software-engineering",
+          "score": 265.6,
+          "why": [
+            "fake",
+            "real",
+            "store"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:8b6581bd5537bf1b",
+          "revision": 5,
+          "changedAt": "2026-10-27",
+          "confidence": "probable",
+          "state": "unknown"
         }
       ],
       "governance": "governed"
@@ -21042,7 +22191,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/router.ts:17 This module routes reasoning calls across providers and assembles no media; a search of lib/text found none of the listed terms, and the only timeline or video mentions are unrelated comments and task names such as wiki timeline and mv-metadata.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "mcp-tools",
@@ -21075,7 +22230,12 @@
           "revision": 56,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/text/router.ts:314 The sole-entry-point rule is stated in prose with no negative-space gate behind it (no no-restricted rule in eslint.config.mjs, no matching check in pipeline gates or tests/next-gates), and it is already breached: lib/music-clip/gemini.ts:95 posts generateContent directly, outside the router's trail and spend booking.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56,
+          "revisionsBehind": 0
         },
         {
           "subject": "cost-metering",
@@ -21278,7 +22438,13 @@
           "revision": 30,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:108 The model-plan refusal layer in plan.ts, and notes.ts beside it, are imported only by pipeline/trailer-structure-regression.mts (git grep over lib, app, packages, workers, pipeline, tests and .claude/skills), so its plan cases prove a path no production entry point takes.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "short-form-narrative-structure",
@@ -21526,6 +22692,23 @@
           "changedAt": "2026-09-26",
           "confidence": "probable",
           "state": "unknown"
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 399,
+          "why": [
+            "rules",
+            "ladder",
+            "collects"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
         }
       ],
       "governance": "governed"
@@ -22761,7 +23944,12 @@
           "revision": 56,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:90 These components only draw states computed elsewhere, and a case-insensitive search of their directories for process.exit, exitCode and waiver found nothing, while the blocked and awaiting_gate words are display labels in a look table, so no check, refusal or verdict is built here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56,
+          "revisionsBehind": 0
         },
         {
           "subject": "public-claim-provenance",
@@ -23237,15 +24425,14 @@
           "revision": 53,
           "changedAt": "2026-11-06",
           "confidence": "strong",
-          "state": "not-applicable",
-          "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:4f054116d66a9495",
-          "evaluatedRevision": 51,
           "source": "renamed",
           "renamedFrom": "b412ea73-0dc3-4362-93c4-2a9b913f9a61",
-          "revisionsBehind": 2,
-          "stale": true
+          "state": "not-applicable",
+          "evidence": "lib/import/commit.ts:32 The context moves v1 projects, shelves and archive rows into the kernel and back through deterministic mapping, and a recursive search of lib/import for recall, consolidat, belief, distill and memories found nothing, nor any agent, LLM or Claude reference.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53,
+          "revisionsBehind": 0
         },
         {
           "subject": "supply-chain",
@@ -23529,6 +24716,40 @@
           "confidence": "probable",
           "state": "unknown",
           "priorNotApplicable": 6
+        },
+        {
+          "subject": "agent-memory",
+          "bundle": "software-engineering",
+          "score": 398.6,
+          "why": [
+            "posture",
+            "chooses",
+            "model"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:6c06fb6d8d6c900f",
+          "revision": 52,
+          "changedAt": "2026-10-25",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 6
+        },
+        {
+          "subject": "mcp-tools",
+          "bundle": "software-engineering",
+          "score": 380.1,
+          "why": [
+            "routing",
+            "vendor",
+            "model"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:ed8e615f51454325",
+          "revision": 34,
+          "changedAt": "2026-10-15",
+          "confidence": "probable",
+          "state": "unknown",
+          "priorNotApplicable": 2
         }
       ],
       "governance": "governed"
@@ -23564,7 +24785,13 @@
           "revision": 24,
           "changedAt": "2026-11-08",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/frames/define.ts:44 The default render-plates batch plans a refused plate again with nothing changed about its brief, treating a provider refusal as a retriable hole even though the operator confirms the receipt.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1,
+          "stale": true
         },
         {
           "subject": "visual-style-locking",
@@ -23673,6 +24900,22 @@
           "digest": "sha256-b2:d254a22feb4a9423",
           "revision": 14,
           "changedAt": "2026-10-15",
+          "confidence": "probable",
+          "state": "unknown"
+        },
+        {
+          "subject": "contribution-reactive-visuals",
+          "bundle": "media-generation",
+          "score": 405.8,
+          "why": [
+            "visual",
+            "look",
+            "feed"
+          ],
+          "grounding": "use_when",
+          "digest": "sha256-b2:74d90e509f2bc092",
+          "revision": 1,
+          "changedAt": "2026-11-03",
           "confidence": "probable",
           "state": "unknown"
         }

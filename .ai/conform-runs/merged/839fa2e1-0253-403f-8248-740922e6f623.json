@@ -1,0 +1,169 @@
+{
+ "schema": "conform-run/1",
+ "worker": "839fa2e1-0253-403f-8248-740922e6f623",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T03:44:18.294613+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-screen",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/scout/_port/fixture.ts:4 The fixture side is a second implementation of the scout port that claims the real side's refusals, yet no test compares the two (the part port has such a parity test) and no test imports real.ts or actions.ts, so every automated check of /scout's port runs on the fork.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/scout/_port/fixture.ts:4 The whole-implementation fork. The fixture repeats the ref check but has no archivedDoor branch (lib/foundry/scout/steer.ts:86-87) and adds a venture only it draws. The technique's rule 3, run the same input through both, is not done: rg finds realScout in no test. Whether archivedDoor can fire on the web path was not established."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "deviation",
+     "evidence": "tests/live/floor.live.spec.ts:98 The only behavioural live visit to /scout, and it reads the header link. The lane server sets GRAVITONE_PRODUCE_SIDE=fixture while the product defaults to real. Produce and Library have real-side live specs; scout has none, so kernel() plus buildGraph plus the steer writers are never driven assembled."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:8850 A seeded break for isScoutPacket's own spelling of the sources; it is the only mutant naming a file in this context."
+    }
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/parts-real.test.ts:40 universe() opens a new kernel and runs the full migration chain from inside each test (8 call sites over 9 cases), so the suite pays build per test rather than build once and copy, which fixture-economics names as the failure.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/parts-real.test.ts:40 openKernel runs migrate() (packages/kernel/src/kernel.ts:113). parts-fixture-parity repeats the shape at its line 47. No template copy was found for these files. The cost per build was not measured, because this seat is read-only, so the deviation is of shape and its size is unknown."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/parts-fixture-parity.test.ts:24 Drives one verb on both sides and compares the code and words, which is rule 3 applied to a whole-implementation fixture."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:215 The shipped port is built by the same factory the suite calls, so the tested path is the production construction with only store, clock and gates injected."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:3307 Seeded breaks exist for real.ts, realResearch.ts, realScript.ts, actions.ts and schema.ts in this context."
+    }
+   ],
+   "registryProposal": "fixture-economics gives no floor below which a per-test build of a small embedded store is acceptable; a stated ratio or absolute cost would let a seat tell a real defect from a shape match without timing it."
+  },
+  {
+   "context": "kit-screen-specimens",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/live/kit.live.spec.ts:31 The specimen walk claims every exported component, but its needle only sees `export function`, so memo-wrapped and default-exported components leave the required population without any failure, and a future one could ship with no specimen on a green lane.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "tests/live/kit.live.spec.ts:31 A needle that matches a syntax shape rather than the resource. LibraryRow and LibraryTile (memo) and ModelStage (default export) are outside the 189 matched. No damage today: the first two have specimens and ModelStage is drawn inside ModelViewer."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "tests/live/kit.live.spec.ts:56 A derived population with a declared floor, so an empty walk fails rather than passing. The floor is far under the 189 matched, so it catches emptiness and not shrinkage."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/kit.live.spec.ts:51 Claims that only exist in a rendered page, located through data-specimen identifiers maintained in app/(studio)/kit/Spec.tsx."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:7239 The kit-sheet claims carry seeded breaks in the kit's own files."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/kit/boardKitData.ts:4 Specimen ids are built through the product's validation door rather than written as states it could not produce."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/kit-source-unreadable.test.ts:26 The failure path is asserted by rendering the shipped page, with only the file read made to fail."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "trailer-structure-engine",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "domain-decision-board-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T03:44:18.294613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "live-app-harness",
+    "negative-control-tests"
+   ],
+   "deviations": 1,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:44:18.294613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "negative-control-tests",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:44:18.294613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "derived-selection-must-be-measured",
+    "fixture-economics",
+    "live-app-harness",
+    "negative-control-tests",
+    "pin-the-call-not-the-name"
+   ],
+   "deviations": 1,
+   "context": "kit-screen-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

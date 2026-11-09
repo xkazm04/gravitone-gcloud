@@ -30,12 +30,15 @@ import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { markFromIdea } from "../../lib/foundry/scout/acts.ts";
 import { checkIdeaSeeds, parseIdeas } from "../../lib/foundry/scout/idea.ts";
 import { createSeedBatch } from "../../lib/foundry/scout/seedStore.ts";
 import { readNight } from "../../lib/foundry/scout/store.ts";
 import type { IdeaCandidate, Night, Seed } from "../../lib/foundry/scout/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const ENV = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LIVE = "2026-09-20";
@@ -85,7 +88,7 @@ afterAll(() => {
 async function cli(argv: string[], ports?: CliPorts): Promise<{ code: number; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ...(ports === undefined ? {} : { ports }) });
+  const code = await guardedRunCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ...(ports === undefined ? {} : { ports }) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

@@ -3601,8 +3601,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "parts-cut-voice-holds",
     test: "tests/next-server/parts-verdict.test.ts",
     file: "lib/parts/verdict.ts",
-    find: "(x.id !== \"voice\" || i.plansVoice)",
-    replace: "(true)",
+    find: "x.id !== \"voice\" || o.plansVoice",
+    replace: "true",
     why: "A film plans no voice part, yet its unrecorded lines hold the cut from READY forever.",
   },
   {

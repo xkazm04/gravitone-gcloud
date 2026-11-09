@@ -568,4 +568,12 @@ export const MUTANTS: Mutant[] = [
     replace: "if (false) throw new ImagingError(\"Ollama returned an empty recognition.\"",
     why: "The local eye answers empty content and the caller receives a green, empty judgement that nothing grades.",
   },
+  {
+    id: "store-dir-list-drops-mesh",
+    probe: "store-dir-isolation.probe.spec.ts",
+    file: "playwright.config.ts",
+    find: "\"MESH_STORE_DIR\", ",
+    replace: "",
+    why: "A store root lib/ reads drops out of the central isolation list and the next probe that touches it writes into the operator's foundry-out tree.",
+  },
 ];

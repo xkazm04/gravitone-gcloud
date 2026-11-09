@@ -93,11 +93,11 @@
  * `makeRise`/`rise` variant pair used to sit in this file for a library that
  * was never a dependency, and nothing imported it for as long as it existed).
  */
-export const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
 /** The same curve as EASE, in CSS form (`--gt-ease`). */
-export const EASE_CSS = `cubic-bezier(${EASE[0]}, ${EASE[1]}, ${EASE[2]}, ${EASE[3]})`;
+const EASE_CSS = `cubic-bezier(${EASE[0]}, ${EASE[1]}, ${EASE[2]}, ${EASE[3]})`;
 
-export const ACCENT = {
+const ACCENT = {
   cyan: "#67e8f9",
   violet: "#a78bfa",
   emerald: "#6ee7b7",
@@ -127,7 +127,7 @@ export const ACCENT = {
  * warm. If you need a chart palette, `git log` this file and bring back the one
  * that was measured, together with the chart that reads it.
  */
-export const CSS_TOKENS: Record<string, string> = {
+const CSS_TOKENS: Record<string, string> = {
   // accents
   "--gt-accent-cyan": ACCENT.cyan,
   "--gt-accent-violet": ACCENT.violet,
@@ -203,7 +203,7 @@ export const CSS_TOKENS: Record<string, string> = {
  * it — a default nobody consumes is a promise, not a contract. Add it back in
  * the same commit as the rule that tints something by it.
  */
-export const SIGNAL_DEFAULTS: Record<string, string> = {
+const SIGNAL_DEFAULTS: Record<string, string> = {
   "--gt-level": "0",
   "--gt-peak": "0",
   "--gt-centroid": "0.5",

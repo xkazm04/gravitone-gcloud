@@ -572,9 +572,17 @@ export type StoryboardCandidate = CandidateBase & {
   /** Kept characters it casts, by name (spark scout-vision S3): every panel leads with each one's identity block, and
    *  a character with a kept sheet rides it as an attached reference. */
   readonly cast?: readonly string[];
+  /** Who drew the panels in this process: `codex` (`--draw codex`, the operator's subscription). Absent on a board drawn
+   *  through its job and on every night written before the marker; the Board's meta reads it. */
+  readonly drawnBy?: "codex";
+  /** The process drawing a Codex board, stamped while it is pending and dropped when it settles: how a draw whose
+   *  process died is told from one in flight (lib/foundry/scout/codexOwner.ts). */
+  readonly owner?: CodexOwner;
   /** The channel's look the panels were drawn under (channelLook.ts), so a verdict is attributable to it. Omitted: none. */
   readonly look?: string;
 };
+
+export type CodexOwner = { readonly bootId: string; readonly pid: number; readonly host: string };
 
 /**
  * A kept stats idea ON REAL DATA (spark scout-vision S5): the idea's own approach and brief shape, its numbers replaced

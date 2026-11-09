@@ -1,0 +1,213 @@
+{
+ "schema": "conform-run/1",
+ "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-09T02:36:14.603148+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The sync bench offers only 50 ms steps on a 25 fps cut, so each nudge is larger than the 40 ms frame and the control cannot work in the sub-frame increments drift correction requires.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 Stored offset, signed readout and snap-to-mark exist, but the only step (buttons and the comma and period keys) is 50 ms, 1.25 frames at the cut's 25 fps; the standard asks for increments well under the frame."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 A cue the vendor refused and a cue never rendered both draw as missing; CueView has no failure field and lib/producers/score.ts leaves a refusal as the job's sentence, so it never reaches the region of the clock. Unspotted seconds are only a chip count, not drawn."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:37 A cue's address is a first and last scene and a drop snaps to scene marks, so no cue can enter or exit inside a scene; there is no mark-plus-offset form. Purpose sentence and tempo are present."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:232 One ruler, labelled lanes, blocks positioned and sized from start and duration times pixels-per-second; missing blocks stay on the clock with a dashed style."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The editor draws the mark from the derived value and draws none when the material has no turn; the derivation itself is judged under part-port-fixtures."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 The preview asks for an explicit frame index with a fixed seed, read off the frame clock rather than a tick count; lib/sound/mv/compositor.ts carries no state between frames."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 An undecodable still becomes an error naming the input instead of a blank canvas; the scope is the preview surface only."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:100 The ad's data checks stop the paid render before it can start and name the deny sentences; the Render part also previews the poster before an export."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx:38 Voice is recorded per line and held across its beat; nothing in this context places a cue inside a narration clip or reads a returned alignment."
+    }
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 The port's status only ever turns a stored drift into ok, and derived clips are born ok or missing, so a clip nudged off its mark still reads ok and the finish line's drift row stays at zero.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 deriveTimeline and explainerCut emit only ok or missing, and shownStatus maps only drift to ok, so an offset of any size never produces a drifting status; status does not follow the measurement."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:288 finishLine's coverage row fails below 100 percent scored and this keeps it as a hold, so a film with a deliberate silence can never read ready; the standard treats silence as a spotting decision and full scoring as a warning sign."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The position is derived, but this is a second copy of the rule beside turnOf used by fixtureCut.ts, against one derivation for all consumers, and a first match silently wins when two scenes match."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:84 The cue view carries only an active take id, so a refused render and a render never asked for are both null; missing reasons and unplaced items are otherwise carried through."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn start is computed from the same offset the bench displays, so the number and the block are one fact."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 The cut compiles to a deterministic document and its hash is what the export row records."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:249 The act's unit count refuses an aspect render on failing data checks before any render is priced or run."
+    }
+   ]
+  },
+  {
+   "context": "text-reasoning-engine",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/text/router.ts:17 This module routes reasoning calls across providers and assembles no media; a search of lib/text found none of the listed terms, and the only timeline or video mentions are unrelated comments and task names such as wiki timeline and mv-metadata.",
+   "techniques": [],
+   "absenceTerms": [
+    "deriveTimeline",
+    "compileCut",
+    "offsetMs",
+    "spotting",
+    "drawnStart"
+   ]
+  },
+  {
+   "context": "library-projection-feeds",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/library/project.ts:15 This module indexes finished items for search and builds no cut; a search of lib/library found none of the listed terms, and its caption, keyframe and storyboard mentions are catalog facets and tile images for media already made.",
+   "techniques": [],
+   "absenceTerms": [
+    "deriveTimeline",
+    "compileCut",
+    "offsetMs",
+    "spotting",
+    "drawnStart"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T02:36:14.603148+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:36:14.603148+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:36:14.603148+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "text-reasoning-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:36:14.603148+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-projection-feeds",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

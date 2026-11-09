@@ -76,6 +76,9 @@ import { driveStoryboard, launchStoryboard } from "../../producers/scoutStoryboa
 import { settledBoard, type StoryboardClip, type StoryboardDraw } from "../../producers/scoutStoryboardActs.ts";
 import { launchable, Refusal, type ActContext } from "./acts";
 import { archivedFromIdea } from "./baseline";
+import { drawInProcess } from "./codexDraw";
+import { ownerGone, ownerNow, settledCodexBoard } from "./codexOwner";
+import { LOOP_IDEA_RE, loopRef, readLoopIdea } from "./idea-loop/loop";
 import { composeLook, lookOf } from "./channelLook";
 import { castPanels } from "./storyboardPanels";
 import { castAllow, castLine, CAST_MAX, rootedNights } from "./cast";
@@ -116,6 +119,8 @@ export type StoryboardEngines = {
   readonly draw?: StoryboardDraw;
   /** Clip one panel still (a trial's): the mp4 bytes and their length. */
   readonly clip?: StoryboardClip;
+  /** `--draw codex`: every panel by Codex, in this process, no job (./codexDraw.ts). Requires `draw`; opens `fromLoop`. */
+  readonly drawnBy?: "codex";
 };
 
 export type StoryboardResult = {
@@ -148,6 +153,8 @@ const briefSchema = z
     fromIdea: z.string().trim().regex(IDEA_REF_RE, "a kept idea's <night>/<c-id>").optional(),
     /** The channel episode it storyboards (spark project-baseline), `F1-03`. */
     fromEpisode: z.string().trim().regex(EPISODE_ID_RE, "a channel episode's id (F1-03)").optional(),
+    /** The idea-loop idea it composes, `il-20261108-001`: only under `--draw codex`, only one that cleared the bar. */
+    fromLoop: z.string().trim().regex(LOOP_IDEA_RE, "an idea-loop id il-YYYYMMDD-NNN").optional(),
     title: line(IDEA_TITLE_MAX),
     /** The vision, one short paragraph. */
     paragraph: z.string().trim().min(1).max(STORYBOARD_PARAGRAPH_MAX),
@@ -176,7 +183,7 @@ const briefSchema = z
     cast: z.array(line(80)).min(1).max(CAST_MAX).optional(),
   })
   .strict()
-  .refine((b) => (b.fromIdea === undefined) !== (b.fromEpisode === undefined), { message: "a brief names exactly one of fromIdea (a kept idea) and fromEpisode (a channel episode)", path: ["fromEpisode"] });
+  .refine((b) => [b.fromIdea, b.fromEpisode, b.fromLoop].filter((x) => x !== undefined).length === 1, { message: "a brief names exactly one of fromIdea (a kept idea) and fromEpisode (a channel episode)", path: ["fromEpisode"] });
 
 export type StoryboardBrief = z.output<typeof briefSchema>;
 
@@ -203,6 +210,7 @@ export function parseStoryboards(raw: unknown, kept: readonly KeptCharacter[] = 
     }
     const twice = b.fromIdea === undefined ? -1 : out.findIndex((x) => x.fromIdea === b.fromIdea && x.genre === b.genre);
     if (twice >= 0) return err("invalid", `${at}: fromIdea: ${b.fromIdea} is storyboard ${twice + 1}'s too; one ${b.genre === undefined ? "storyboard" : `trial of ${b.genre}`} per idea`);
+    if (b.fromLoop !== undefined && out.some((x) => x.fromLoop === b.fromLoop)) return err("invalid", `${at}: fromLoop: ${b.fromLoop} is in the batch twice; one storyboard per idea`);
     out.push(b);
   }
   return ok(out);
@@ -217,13 +225,16 @@ function trialOf(nights: readonly Night[], ref: string, genre: string): { readon
   return undefined;
 }
 
+/** What the candidate names as its idea: a kept idea's ref, or the idea-loop record's. */
+const originRef = (b: Pick<StoryboardBrief, "fromIdea" | "fromLoop">): string => b.fromIdea ?? (b.fromLoop === undefined ? "" : loopRef(b.fromLoop));
+
 /** Why a brief cannot be written over `nights`, or undefined: one plain storyboard per idea, one trial per idea per genre. */
-function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "fromEpisode" | "genre">, place: number): string | undefined {
+function heldFor(nights: readonly Night[], b: Pick<StoryboardBrief, "fromIdea" | "fromEpisode" | "fromLoop" | "genre">, place: number): string | undefined {
   if (b.fromEpisode !== undefined) {
     const had = episodeBoardOf(nights, b.fromEpisode);
     return had === undefined ? undefined : `storyboard ${place}: episode ${b.fromEpisode} already has storyboard ${had.night}/${had.candidate.id} (${had.candidate.status}); one storyboard per episode, unless that one failed`;
   }
-  const ref = b.fromIdea ?? "";
+  const ref = originRef(b);
   if (b.genre !== undefined) {
     const had = trialOf(nights, ref, b.genre);
     return had === undefined ? undefined : `storyboard ${place}: idea ${ref} already has trial ${had.night}/${had.candidate.id} of ${b.genre} (${had.candidate.status}); one trial per idea per genre, unless that one failed`;
@@ -293,6 +304,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const parsed = parseStoryboards(input, kept);
   if (!parsed.ok) throw new Refusal(parsed.error.message);
   const briefs = parsed.value;
+  await codexRefusal(briefs, engines, ctx.detach);
   for (const [i, b] of briefs.entries()) {
     const nowhere = b.technique === undefined ? undefined : await templateProblem(b.technique.template);
     if (nowhere !== undefined) throw new Refusal(`storyboard ${i + 1}: technique: ${nowhere}`);
@@ -319,7 +331,11 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   const looks = episodes.map((e) => (e === undefined ? undefined : lookOf(e.channel)));
   const drawn = briefs.map((b, i) => composeLook(looks[i], b.panels, `storyboard ${i + 1}`));
   const casted = await castPanels(briefs.map((b, i) => ({ ...b, panels: drawn[i] ?? b.panels })), ideas, kept);
-  const all = await readAllNights();
+  // A board whose drawing process died holds its idea until settled: settle the nights the held checks read, once.
+  let all = await readAllNights();
+  let settled = false;
+  for (const n of all) settled = (await settleGoneBoards(n)).length > 0 || settled;
+  if (settled) all = await readAllNights();
   const others = all.filter((n) => n.id !== id);
   for (const [i, b] of briefs.entries()) {
     const held = heldFor(others, b, i + 1);
@@ -351,7 +367,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         kind: "storyboard",
         sourceIds: [],
         status: n.dry ? "rendered" : "pending",
-        ...(b.fromIdea === undefined ? {} : { fromIdea: b.fromIdea }),
+        ...(b.fromIdea === undefined && b.fromLoop === undefined ? {} : { fromIdea: originRef(b) }),
         ...(b.fromEpisode === undefined ? {} : { fromEpisode: b.fromEpisode }),
         ...(idea?.fromSeed === undefined ? {} : { fromSeed: idea.fromSeed }),
         title: b.title,
@@ -367,6 +383,7 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
         ...(b.genre === undefined ? {} : { genre: b.genre }),
         ...(cast === undefined ? {} : { cast: cast.members.map((m) => m.card.name) }),
         ...(n.dry ? { images: [] } : {}),
+        ...(engines.drawnBy === "codex" && engines.draw !== undefined && mode !== "dry" ? { drawnBy: "codex" as const, owner: ownerNow() } : {}),
       };
       next = { ...next, candidates: [...next.candidates, c] };
       made.push(c);
@@ -384,6 +401,12 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   if (mode === "dry") {
     ctx.say(`night ${id} is dry: ${made.length} storyboard(s) written as words only; no frame is drawn and nothing is launched`);
     return { candidates: await batchOf(id, cids), jobIds: [], dry: true };
+  }
+  if (engines.drawnBy === "codex" && engines.draw !== undefined) {
+    ctx.say(`receipt (live): ${made.reduce((a, c) => a + c.panels.length, 0)} frame(s) by codex on the operator's subscription · no metered charge · no job`);
+    const outcome = await drawInProcess(ctx, id, made, engines.draw);
+    await followEpisodes(id, cids);
+    return { candidates: await batchOf(id, cids), jobIds: [], outcome };
   }
 
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly };
@@ -424,7 +447,45 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
   return { candidates: await batchOf(id, cids), jobIds, outcome };
 }
 
+/** Refused before anything is written: what a Codex-drawn batch cannot be, and a `fromLoop` that did not earn its place. */
+async function codexRefusal(briefs: readonly StoryboardBrief[], engines: StoryboardEngines, detach: boolean): Promise<void> {
+  const codex = engines.drawnBy === "codex";
+  if (codex && engines.draw === undefined) throw new Refusal("storyboard: --draw codex has no draw engine bound");
+  if (codex && detach) throw new Refusal("storyboard: --draw codex draws in this process; --detach would hand the job to the worker");
+  for (const [i, b] of briefs.entries()) {
+    const at = `storyboard ${i + 1}`;
+    if (codex && b.genre !== undefined) throw new Refusal(`${at}: --draw codex takes no genre: a trial clips its panels and no video is made here`);
+    if (codex && b.cast !== undefined) throw new Refusal(`${at}: --draw codex takes no cast: a cast rides reference sheets and the codex draw takes none`);
+    if (b.fromLoop === undefined) continue;
+    if (!codex) throw new Refusal(`${at}: fromLoop: an idea-loop idea is storyboarded only with --draw codex`);
+    const idea = await readLoopIdea(b.fromLoop);
+    if (idea === null) throw new Refusal(`${at}: fromLoop: no idea-loop idea ${b.fromLoop}`);
+    if (!idea.passed) throw new Refusal(`${at}: fromLoop: ${b.fromLoop} did not clear the bar (${idea.predictedKeep} against ${idea.bar.value})`);
+  }
+}
+
 /* ── Collect ──────────────────────────────────────────────────────────────── */
+
+/**
+ * A Codex board has no job: its draw ended if its owner is gone (codexOwner.ts). Settle every such pending board
+ * of an uncommitted night and name the ones settled; a live owner's board is left pending and a committed night
+ * is not written.
+ */
+async function settleGoneBoards(n: Night): Promise<CandidateId[]> {
+  const out: CandidateId[] = [];
+  if (n.state === "committed") return out;
+  const id = n.id;
+  for (const c of n.candidates) {
+    if (c.kind !== "storyboard" || c.status !== "pending" || c.jobId !== undefined || c.owner === undefined || !ownerGone(c.owner)) continue;
+    out.push(c.id);
+    await mutateNight(id, (m) => {
+      const now = m.candidates.find((x): x is StoryboardCandidate => x.id === c.id && x.kind === "storyboard");
+      if (now === undefined || now.status !== "pending" || now.owner === undefined || !ownerGone(now.owner)) return m;
+      return withCandidate(m, settledCodexBoard(now, "failed", `codex:${id}/${c.id}`, `the draw's process (pid ${now.owner.pid}) ended before the board was finished`));
+    });
+  }
+  return out;
+}
 
 /**
  * Collect detached storyboard jobs into the night. The job writes each frame into the night itself
@@ -435,15 +496,16 @@ export async function storyboardAct(ctx: ActContext, id: NightId, input: unknown
 export async function collectStoryboards(id: NightId, o: { readonly store?: Store } = {}): Promise<StoryboardCandidate[]> {
   const n = await readNight(id);
   if (n.state === "committed") throw new Refusal(`night ${id} is committed; its packet is decided and nothing more is collected into it`);
+  const out = await settleGoneBoards(n);
   const waiting = n.candidates.filter((c): c is StoryboardCandidate & { readonly jobId: string } => c.kind === "storyboard" && c.status === "pending" && c.jobId !== undefined);
-  if (waiting.length === 0) return [];
-  const store = o.store ?? (() => {
+  if (waiting.length === 0 && out.length === 0) return [];
+  const store = waiting.length === 0 ? undefined : (o.store ?? (() => {
     const k = kernel();
     if (!k.ok) throw k.error;
     return k.value.store;
-  })();
-  const out: CandidateId[] = [];
+  })());
   for (const c of waiting) {
+    if (store === undefined) break;
     out.push(c.id);
     const jid = parseAt("job id", jobIdSchema, c.jobId);
     if (!jid.ok) continue;

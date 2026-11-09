@@ -35,6 +35,7 @@ import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { checkCharacters, parseIdeas } from "../../lib/foundry/scout/idea.ts";
 import { judgeInstruction, judgeStill, JUDGE_INSTRUCTION, PARODY_CLAUSE, STAND_JUDGE } from "../../lib/foundry/scout/judge.ts";
@@ -45,6 +46,8 @@ import { __resetBudget } from "../../lib/imaging/budget.ts";
 import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
 import { fakeCodexIdeas } from "./fake-codex-ideas.ts";
 import type { GenerateRequest, Recognition, RecognizeRequest } from "../../lib/imaging/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const DRY = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LIVE = (() => {
@@ -91,7 +94,7 @@ afterAll(() => {
 async function cli(argv: string[], o: { env?: Record<string, string | undefined>; ports?: CliPorts } = {}): Promise<{ code: number; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
+  const code = await guardedRunCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

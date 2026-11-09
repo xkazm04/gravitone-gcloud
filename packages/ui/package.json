@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@gt/domain": "0.0.0",
-    "three": "0.185.1",
-    "@react-three/fiber": "9.6.1"
+    "three": "0.187.0",
+    "@react-three/fiber": "9.8.2"
   },
   "peerDependencies": {
     "react": "^19"

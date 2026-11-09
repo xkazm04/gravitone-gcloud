@@ -35,6 +35,7 @@ import { closeProcessKernel } from "@gt/kernel/process";
 import { openKernel } from "@gt/kernel/kernel";
 import { FINISH, MESH } from "@gt/producers/mesh/define";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { inputGate, INPUT_SIZE, type Decode, type Pixels } from "../../lib/foundry/mesh/inputGate.ts";
 import { readAsset } from "../../lib/foundry/mesh/store.ts";
@@ -46,6 +47,8 @@ import { driveStage, meshProducer, stageJobs } from "../../lib/producers/mesh.ts
 import { scoutAssetProducer } from "../../lib/producers/scoutAsset.ts";
 import { scoutSceneProducer } from "../../lib/producers/scoutScene.ts";
 import { assetUse } from "../../lib/decision/v1/sources/scoutPlan.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const ENV = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LOC = path.join(ROOT, "kernel.sqlite");
@@ -92,7 +95,7 @@ const allBusy: Decode = async () => ({ ok: true, value: BUSY });
 async function cli(argv: string[], decode: Decode = ours): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ports: { asset: { decode } } });
+  const code = await guardedRunCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ports: { asset: { decode } } });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

@@ -8,6 +8,7 @@ import { finishOpLabel, type AdAspect, type AdFinishData, type ClipView, type Cu
 import { compileCut, cutDocumentHash } from "@/lib/cut/cutDocument";
 import { deriveTimeline, turnOf, type CutClip, type DerivedCut, type OwnerStep } from "@/lib/cut/deriveTimeline";
 import { finishLine } from "@/lib/cut/finishLine";
+import { finishRule } from "@/lib/parts/verdict";
 import { drawnStart, nudgeOffsets, offsetFrom, shownStatus, type Offsets } from "@/lib/cut/offsets";
 import { AD_RUNTIME_RANGE, type AdsFinishData, type AdsShotsData } from "@/lib/ads/types";
 import { editPoints, musicGaps } from "@/lib/cut/edits";
@@ -274,21 +275,15 @@ function land(ctx: KCtx, c: CutRec, act: PartActKind, at: number, jobId: string,
 
 /* ── verdict, records ─────────────────────────────────────────────────────── */
 
-/** The cut's verdict: lib/parts/verdict's rule (READY when the finish line holds nothing; a film
- *  plans no voice part, so its voice row is reported and does not hold), over THIS derived cut -
- *  the explainer's is its own (strips and voice), which lib's cutVerdict does not derive; the ads
- *  face reads ads-finish and stays lib's. */
+/** The cut's verdict: lib/parts/verdict's finishRule (READY when the finish line holds nothing; a
+ *  film plans no voice part, so its voice row is reported and does not hold), over THIS derived
+ *  cut - the explainer's is derived from strips and voice (lib/cut/explainer.ts), which lib's
+ *  cutVerdict reads too since 930d255e; the ads face reads ads-finish and stays lib's. The editor
+ *  picks the explainer by recipe family, the gate by a strips record: that is kept as it was. */
 function verdict(ctx: KCtx, c: CutRec): PartVerdict {
   if (face(ctx) === "finish") return verdictFor(ctx, "cut", heldTakes(ctx.rec("score")));
-  const cut = derivedOf(ctx);
-  if (cut.scenes.length === 0) return { state: "empty", codes: [{ code: "no-picture", text: "no picture to cut" }] };
-  const rows = rowsOf(ctx, cut, c.offsets);
   const plansVoice = recipeById(ctx.project.recipe)?.parts.some((p) => p.kind === "voice") === true;
-  const fails = rows.filter((r) => r.verdict === "fail");
-  const holds = fails.filter((r) => r.id !== "voice" || plansVoice);
-  // What holds the cut first; a row this recipe has no part to clear (a film's voice) after it.
-  const codes = [...holds, ...fails.filter((r) => !holds.includes(r))].map((r) => ({ code: `finish-${r.id}`, text: r.deny ?? `${r.label} ${r.value} vs ${r.target}` }));
-  return holds.length === 0 ? { state: "ready", codes: [{ code: "finish-line", text: `${rows.filter((r) => r.verdict === "pass").length} of ${rows.length} checks pass` }, ...codes] } : { state: "working", codes };
+  return finishRule(derivedOf(ctx), c.offsets, { plansVoice, explainer: face(ctx) === "explainer", holdsFirst: true, emptyAnyFace: true });
 }
 
 function toRecords(c: CutRec): Record<string, Obj> {

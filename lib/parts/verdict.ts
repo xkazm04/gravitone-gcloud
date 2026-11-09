@@ -203,15 +203,38 @@ function cutVerdict(i: VerdictInput): PartVerdict {
   return finishVerdict(i, cut, false);
 }
 
-/** The finish line over a derived cut. An explainer's has no music rows: it plans no score. */
-function finishVerdict(i: VerdictInput, cut: Parameters<typeof finishLine>[0], explainer: boolean): PartVerdict {
-  if (explainer && cut.scenes.length === 0) return v("empty", c("no-picture", "no picture to cut"));
-  const offsets = rec(i, "cut", (r) => decodeStep(CUT, r))?.offsets ?? {};
-  const checks = finishLine(cut, offsets).filter((x) => !explainer || !EXPLAINER_SKIPS.has(x.id));
-  const holds = checks.filter((x) => x.verdict === "fail" && (x.id !== "voice" || i.plansVoice));
-  const codes = checks.filter((x) => x.verdict === "fail").map((x) => c(`finish-${x.id}`, x.deny ?? `${x.label} ${x.value} vs ${x.target}`));
+/** What the two callers of the finish rule disagree on, named so neither is picked over the other.
+ *  The gate (cutVerdict, below) lists the codes in the finish line's own order and answers
+ *  "no picture" for an empty cut only on the explainer face; the editor's cut part
+ *  (_part/fixtureCut.ts verdict) lists what holds first, then the rows its recipe cannot clear,
+ *  and answers "no picture" for an empty cut on every face. */
+export type FinishRuleOptions = {
+  /** Does the recipe plan a voice part? Without one the voice row is reported and does not hold. */
+  readonly plansVoice: boolean;
+  /** The explainer's cut has no music rows (EXPLAINER_SKIPS): it plans no score. */
+  readonly explainer: boolean;
+  /** Codes: the holds before the rows that do not hold (editor) or the finish line's order (gate). */
+  readonly holdsFirst: boolean;
+  /** An empty cut is "no picture" on every face (editor) rather than only the explainer's (gate). */
+  readonly emptyAnyFace: boolean;
+};
+
+/** THE FINISH RULE, once: READY when the finish line holds nothing over this derived cut. */
+export function finishRule(cut: Parameters<typeof finishLine>[0], offsets: Parameters<typeof finishLine>[1], o: FinishRuleOptions): PartVerdict {
+  if ((o.explainer || o.emptyAnyFace) && cut.scenes.length === 0) return v("empty", c("no-picture", "no picture to cut"));
+  const checks = finishLine(cut, offsets).filter((x) => !o.explainer || !EXPLAINER_SKIPS.has(x.id));
+  const fails = checks.filter((x) => x.verdict === "fail");
+  const holds = fails.filter((x) => x.id !== "voice" || o.plansVoice);
+  const ordered = o.holdsFirst ? [...holds, ...fails.filter((x) => !holds.includes(x))] : fails;
+  const codes = ordered.map((x) => c(`finish-${x.id}`, x.deny ?? `${x.label} ${x.value} vs ${x.target}`));
   if (holds.length === 0) return v("ready", c("finish-line", `${checks.filter((x) => x.verdict === "pass").length} of ${checks.length} checks pass`), ...codes);
   return v("working", ...codes);
+}
+
+/** The gate's finish line over a derived cut. */
+function finishVerdict(i: VerdictInput, cut: Parameters<typeof finishLine>[0], explainer: boolean): PartVerdict {
+  const offsets = rec(i, "cut", (r) => decodeStep(CUT, r))?.offsets ?? {};
+  return finishRule(cut, offsets, { plansVoice: i.plansVoice, explainer, holdsFirst: false, emptyAnyFace: false });
 }
 
 // The door checked what readers rely on and carried the rest; these guards check the rest of what

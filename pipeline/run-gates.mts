@@ -39,11 +39,11 @@
 // Runs under plain `node` (type stripping), not `npx tsx`: the gate that runs
 // every other gate should not need a package fetched before it can start.
 
-import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { spawnBounded } from "./gate-bound.mts";
 import type { Gate } from "./gates.mts";
 
 type Verdict = "pass" | "fail" | "could-not-run" | "blocked";
@@ -194,19 +194,7 @@ function runGate(g: Gate, row: Row, buffered: boolean): Promise<void> {
     if (!buffered) console.log(header);
     row.startedAt = Date.now();
     const chunks: Buffer[] = [];
-    // One command string with shell:true - `npm` is npm.cmd on Windows - and the
-    // script name was validated as plain, so nothing here needs quoting.
-    const child = spawn(`npm run ${g.npmScript}`, {
-      cwd: ROOT,
-      // The playwright configs refuse a committed `.only` when this is set. CI sets
-      // CI instead; the pre-push hook sets neither, and CI=1 there would also
-      // change `next build` and eslint.
-      env: { ...process.env, PW_FORBID_ONLY: "1" },
-      shell: true,
-      stdio: buffered ? ["ignore", "pipe", "pipe"] : "inherit",
-    });
-    child.stdout?.on("data", (d: Buffer) => chunks.push(d));
-    child.stderr?.on("data", (d: Buffer) => chunks.push(d));
+    const onData = (d: Buffer) => chunks.push(d);
     let settled = false;
     const finish = (code: number | null, signal: string | null, note?: string) => {
       if (settled) return;
@@ -224,8 +212,16 @@ function runGate(g: Gate, row: Row, buffered: boolean): Promise<void> {
       }
       resolve();
     };
-    child.on("error", (e) => finish(null, null, `could not start: ${e.message}`));
-    child.on("close", (code, signal) => finish(code, signal));
+    // The playwright configs refuse a committed `.only` when PW_FORBID_ONLY is set. CI sets CI instead;
+    // the pre-push hook sets neither, and CI=1 there would also change `next build` and eslint.
+    spawnBounded({
+      command: `npm run ${g.npmScript}`,
+      cwd: ROOT,
+      env: { ...process.env, PW_FORBID_ONLY: "1" },
+      buffered,
+      onData,
+      settle: finish,
+    });
   });
 }
 

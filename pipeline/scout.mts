@@ -107,7 +107,7 @@ const USAGE = [
   "  seeds status [<batch>]",
   "  track <night> --seed <batch>/sd-NNN [--detach] · track <night> --collect",
   "  visualizer <night> --track <night>/<c-id>/<aN> [--detach] · visualizer <night> --collect",
-  "  storyboard <night> [--json <briefs|->] [--detach] · storyboard <night> --collect   (a brief with genre: gn-... is a TRIAL)",
+  "  storyboard <night> [--json <briefs|->] [--detach | --draw codex] · storyboard <night> --collect   (a brief with genre: gn-... is a TRIAL)",
   "  propose <night> --json <file|->            [{kind: genre, name, fromStoryboard, look, grammar} | {kind: venture, name, ventureKind: channel|album, frame, basedOn}]",
   "  piece <night> [--genre gn-...] [--detach] · piece <night> --collect",
   "  sheet <night> [--character <name>] [--detach] · sheet <night> --collect   (a kept character's reference sheet)",
@@ -519,7 +519,10 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
           if (json) doc({ ok: true, night: id, candidates: got });
           return 0;
         }
-        const r = await sb.storyboardAct(ctx, id, await input(), io.ports?.storyboard ?? {});
+        const drawFlag = flags.get("draw");
+        if (drawFlag !== undefined && drawFlag !== "codex") throw new Usage(`--draw takes codex, got ${String(drawFlag)}`);
+        const codex = drawFlag === "codex" ? { draw: io.ports?.storyboard?.draw ?? (await import("../lib/foundry/scout/codexDraw.ts")).codexDraw(), drawnBy: "codex" as const } : {};
+        const r = await sb.storyboardAct(ctx, id, await input(), { ...io.ports?.storyboard, ...codex });
         for (const c of r.candidates) say(`  ${c.id} storyboard ${c.status} · ${c.fromIdea ?? `episode ${c.fromEpisode ?? "-"}`} · ${(c.images ?? []).filter((f) => f !== null).length}/${c.panels.length} frame(s)${c.error === undefined ? "" : ` · ${c.error}`}`);
         const failed = r.outcome !== undefined && !["done", "detached"].includes(r.outcome);
         const n = await store.readNight(id);

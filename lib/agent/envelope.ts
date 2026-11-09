@@ -90,11 +90,29 @@ export function classifyOutcome(parsed: ParsedEnvelope, run: { exit: number | nu
   return "completed";
 }
 
-/** End the whole tree: a timed-out agent that keeps running keeps spending. */
+/** End the whole tree: a timed-out agent that keeps running keeps spending.
+ *
+ *  POSIX has no tree walk, only process groups, so the tree is reached when the caller spawned
+ *  with `detached: true` (the child then leads its own group). A caller that did not has no group
+ *  at this id: the group kill throws ESRCH and `kill()` signals the direct child, as it always did.
+ *
+ *  SIGKILL, not SIGTERM: this runs after a limit, on a tree already judged hung, and there is one
+ *  shot. A member that ignores SIGTERM would hold the stdout pipe open, and runCodex waits on
+ *  'close' with no grace timer. It is also what taskkill /F does on the other branch. The price
+ *  is that nothing in the group cleans up, and a descendant that left the group is not reached. */
 export function killTree(pid: number | undefined, kill: () => void): void {
   if (process.platform === "win32" && pid) {
     execFile("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true }, () => kill());
     return;
+  }
+  if (pid) {
+    try {
+      process.kill(-pid, "SIGKILL");
+      return;
+    } catch {
+      // ESRCH is a caller that did not spawn detached. Any other refusal lands here too, because
+      // this runs inside a timer, where a throw would take the whole process down.
+    }
   }
   kill();
 }

@@ -28,7 +28,8 @@ import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { boardFor } from "../../_shell/links.ts";
 import { useShell } from "../../_shell/Providers.tsx";
-import { CommitLayer, useCommitFlow } from "./commitFlow.tsx";
+import { useCommitFlow } from "./commitFlow.tsx";
+import { LazyCommitLayer, useWarmCommit } from "./LazyCommit.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
 import { Losses } from "./Losses.tsx";
 import { stepTarget } from "./rail.ts";
@@ -108,6 +109,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
     router.refresh();
   }, [gate, id, router]);
   const flow = useCommitFlow(gate, { onDone: refresh, toast, announce });
+  useWarmCommit();
 
   const hrefOf = useCallback((to: string) => (home === undefined ? boardFor(to) : `${home.railBase}/${encodeURIComponent(to)}`), [home]);
   const open = useMemo(() => rail.filter((p) => p.state === "open"), [rail]);
@@ -217,7 +219,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
       <BoardDesk rail={<PacketRail packets={rail} current={id} hrefOf={hrefOf} onOpen={go} />}>
         {packet.view.state === "open" && packet.present.losses !== undefined && <Losses losses={packet.present.losses} />}
         {desk}
-        {(flow.open || flow.asking !== null) && <CommitLayer flow={flow} />}
+        {(flow.open || flow.asking !== null) && <LazyCommitLayer flow={flow} />}
       </BoardDesk>
       <div aria-live="polite">
         <SrOnly text={said} />

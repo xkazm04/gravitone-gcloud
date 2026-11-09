@@ -34,6 +34,7 @@ import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import type { RootedNight } from "../../lib/foundry/scout/characters.ts";
 import { checkCharacters, parseIdeas } from "../../lib/foundry/scout/idea.ts";
@@ -44,6 +45,8 @@ import { cellId, type Candidate, type IdeaCandidate, type Night } from "../../li
 import { withWing } from "../../lib/foundry/scout/wingScope.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
 import { resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const DRY = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 
@@ -81,7 +84,7 @@ const NEVER: CliPorts = {
 async function cli(argv: string[]): Promise<{ code: number; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: DRY, out: (s) => out.push(s), err: (s) => err.push(s), ports: NEVER });
+  const code = await guardedRunCli(argv, { env: DRY, out: (s) => out.push(s), err: (s) => err.push(s), ports: NEVER });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

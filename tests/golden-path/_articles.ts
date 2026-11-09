@@ -7,7 +7,7 @@
 // tests/fixtures/articles/stub-gh.mjs. Nothing spends, nothing reaches the
 // network, and the real registry is never named.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -71,6 +71,30 @@ export interface ArticleSandbox {
   cleanup: () => void;
 }
 
+// THE FIXTURE IS BUILT ONCE PER PROCESS AND COPIED PER SANDBOX. Building it is ~15 git spawns
+// (3.0 s measured on Windows, 2026-11-08) and every case of every article probe asked for a
+// fresh one; a copy of the built tree plus one `remote set-url` is the same bytes: a bare origin
+// and a clone whose `origin` points at it. Every sandbox still gets its own origin and registry,
+// so no case sees another's pushes.
+const TEMPLATE_BASE = tmpdir();
+let template: { dir: string; registry: string; origin: string } | undefined;
+
+function cloneRegistryFixture(into: string): { registry: string; origin: string } {
+  if (!template) {
+    const dir = mkdtempSync(path.join(TEMPLATE_BASE, "articles-fixture-"));
+    // A subprocess, not an import: the fixture is an ES module and this lane's
+    // transform loads probes as CommonJS.
+    const built = JSON.parse(execFileSync(process.execPath, [FIXTURE, path.join(dir, "reg")], { encoding: "utf8" })) as { registry: string; origin: string };
+    template = { dir: path.join(dir, "reg"), ...built };
+    process.once("exit", () => rmSync(dir, { recursive: true, force: true }));
+  }
+  cpSync(template.dir, into, { recursive: true });
+  const origin = path.join(into, path.relative(template.dir, template.origin));
+  const registry = path.join(into, path.relative(template.dir, template.registry));
+  execFileSync("git", ["remote", "set-url", "origin", origin], { cwd: registry, stdio: "ignore", windowsHide: true });
+  return { registry, origin };
+}
+
 /** A fresh registry clone and run store, with the env pointed at them. */
 export function articleSandbox(): ArticleSandbox {
   // Under a git hook these name the hook's repository, and every git call the
@@ -78,9 +102,7 @@ export function articleSandbox(): ArticleSandbox {
   // (lib/gitEnv.ts). They are in ARTICLE_ENV, so keepEnv restores them.
   for (const k of REPO_LOCATING_GIT_VARS) delete process.env[k];
   const dir = mkdtempSync(path.join(tmpdir(), "articles-probe-"));
-  // A subprocess, not an import: the fixture is an ES module and this lane's
-  // transform loads probes as CommonJS.
-  const { registry, origin } = JSON.parse(execFileSync(process.execPath, [FIXTURE, path.join(dir, "reg")], { encoding: "utf8" })) as { registry: string; origin: string };
+  const { registry, origin } = cloneRegistryFixture(path.join(dir, "reg"));
   const store = path.join(dir, "store");
   // The engine names its agent workspaces and its landing worktree
   // `<run id>-<ms>` under os.tmpdir(), and the run id is the date and the

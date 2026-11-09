@@ -28,7 +28,7 @@
 // choice (client-state rehydration-narrowing: guard each field independently).
 
 import type { z } from "zod";
-import { parseAt, parseJsonAt, type Parsed } from "@gt/domain/door";
+import type { Parsed } from "@gt/domain/door";
 import { err, ok, type AppError, type Result } from "@gt/domain/errors";
 
 import { classify, troubleError } from "./trouble.ts";
@@ -43,7 +43,44 @@ export type StorageLike = {
   removeItem(key: string): void;
 };
 
-export type KeyDef<S extends z.core.$ZodType = z.core.$ZodType> = {
+// WHY THE STORE DOES NOT IMPORT THE DOOR. `@gt/domain/door` reaches zod's core, and Turbopack
+// ships all of that core (about 22 KB gzip, measured 2026-11-08) to every (studio) route when
+// the shell's one registered key goes through it. So the store asks a schema only what any
+// schema of zod's - classic, `zod/mini` - or a hand-written one in the registrant can answer
+// (`safeParse`), and takes the one thing only the door may do in packages, `JSON.parse`, as a
+// parameter of `createStore`. The messages are the door's, word for word.
+
+/** The part of a schema this store uses; classic zod, `zod/mini` and a hand-written one all have it. */
+export type Schema<T = unknown> = {
+  safeParse(input: unknown): { readonly success: true; readonly data: T } | { readonly success: false; readonly error: { readonly issues: readonly Issue[] } };
+};
+export type Issue = { readonly path: readonly PropertyKey[]; readonly message: string };
+export type Out<S> = S extends z.core.$ZodType ? z.output<S> : S extends Schema<infer T> ? T : never;
+export type In<S> = S extends z.core.$ZodType ? z.input<S> : Out<S>;
+/** Text to a JSON value, or an `invalid` err naming the door - `parseJsonAt`'s first half. */
+export type ReadJson = (door: string, text: string) => Result<unknown>;
+
+function omitUndefined(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(omitUndefined);
+  if (typeof v === "object" && v !== null) {
+    const proto: unknown = Object.getPrototypeOf(v);
+    if (proto !== Object.prototype && proto !== null) return v;
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v)) if (x !== undefined) out[k] = omitUndefined(x);
+    return out;
+  }
+  return v;
+}
+
+function parseOne<S extends Schema>(door: string, schema: S, input: unknown): Result<Parsed<Out<S>>> {
+  const r = schema.safeParse(input);
+  if (r.success) return ok(omitUndefined(r.data) as Parsed<Out<S>>);
+  const issue = r.error.issues[0];
+  const where = issue === undefined ? "invalid input" : `${issue.path.length > 0 ? issue.path.map(String).join(".") : "(root)"}: ${issue.message}`;
+  return err("invalid", `${door}: ${where}`, { detail: door });
+}
+
+export type KeyDef<S extends Schema = Schema> = {
   readonly key: string;
   readonly scope: Scope;
   readonly schema: S;
@@ -53,7 +90,7 @@ export type KeyDef<S extends z.core.$ZodType = z.core.$ZodType> = {
 
 export const NAMESPACE = "gravitone.";
 
-export function defineKey<S extends z.core.$ZodType>(def: KeyDef<S>): KeyDef<S> {
+export function defineKey<S extends Schema>(def: KeyDef<S>): KeyDef<S> {
   return Object.freeze({ ...def });
 }
 
@@ -67,7 +104,9 @@ export type EvictionReport = {
 
 export type Store = {
   /** ok(undefined): never written. err: unreadable, corrupt, or not registered. */
-  read<S extends z.core.$ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined>;
+  read<S extends Schema>(def: KeyDef<S>): Result<Parsed<Out<S>> | undefined>;
+  /** Text from storage, through the key's schema. null is absence. */
+  decode<S extends Schema>(def: KeyDef<S>, raw: string | null): Result<Parsed<Out<S>> | undefined>;
   /**
    * The raw stored text, or null when absent or unreadable. A string is stable by
    * value, so `useSyncExternalStore` can take it as its snapshot and parse with
@@ -75,7 +114,7 @@ export type Store = {
    */
   snapshot(def: KeyDef): string | null;
   /** Validates through the schema first; nothing invalid reaches storage. */
-  write<S extends z.core.$ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null>;
+  write<S extends Schema>(def: KeyDef<S>, value: In<S>): Result<null>;
   remove(def: KeyDef): Result<null>;
   evict(scope: Scope, opts?: { dryRun?: boolean }): EvictionReport;
   readonly keys: readonly KeyDef[];
@@ -83,12 +122,7 @@ export type Store = {
 };
 
 /** Refuses a registration that could lie: a duplicate key, a key outside the namespace, a missing reason. */
-/** Text from storage, through the key's schema door. null is absence. */
-export function decode<S extends z.core.$ZodType>(def: KeyDef<S>, raw: string | null): Result<Parsed<z.output<S>> | undefined> {
-  return raw === null ? ok(undefined) : parseJsonAt(`storage:${def.key}`, def.schema, raw);
-}
-
-export function createStore(defs: readonly KeyDef[], backing: () => StorageLike | null): Result<Store> {
+export function createStore(defs: readonly KeyDef[], backing: () => StorageLike | null, readJson: ReadJson): Result<Store> {
   const registered = new Map<string, KeyDef>();
   for (const d of defs) {
     if (!d.key.startsWith(NAMESPACE)) return err("invalid", `storage key "${d.key}" is outside the ${NAMESPACE} namespace`);
@@ -125,17 +159,24 @@ export function createStore(defs: readonly KeyDef[], backing: () => StorageLike 
     }
   };
 
-  function read<S extends z.core.$ZodType>(def: KeyDef<S>): Result<Parsed<z.output<S>> | undefined> {
+  function decode<S extends Schema>(def: KeyDef<S>, raw: string | null): Result<Parsed<Out<S>> | undefined> {
+    if (raw === null) return ok(undefined);
+    const door = `storage:${def.key}`;
+    const json = readJson(door, raw);
+    return json.ok ? parseOne(door, def.schema, json.value) : json;
+  }
+
+  function read<S extends Schema>(def: KeyDef<S>): Result<Parsed<Out<S>> | undefined> {
     const reg = isRegistered(def);
     if (!reg.ok) return reg;
     const raw = rawOf(def.key);
     return raw.ok ? decode(def, raw.value) : raw;
   }
 
-  function write<S extends z.core.$ZodType>(def: KeyDef<S>, value: z.input<S>): Result<null> {
+  function write<S extends Schema>(def: KeyDef<S>, value: In<S>): Result<null> {
     const reg = isRegistered(def);
     if (!reg.ok) return reg;
-    const valid = parseAt(`storage:${def.key}`, def.schema, value);
+    const valid = parseOne(`storage:${def.key}`, def.schema, value);
     if (!valid.ok) return valid;
     const raw = JSON.stringify(value);
     const b = open(def.key);
@@ -177,6 +218,7 @@ export function createStore(defs: readonly KeyDef[], backing: () => StorageLike 
   const store: Store = {
     keys: [...registered.values()],
     read,
+    decode,
     snapshot(def) {
       if (!isRegistered(def).ok) return null;
       const raw = rawOf(def.key);

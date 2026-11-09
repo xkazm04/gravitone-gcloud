@@ -29,6 +29,7 @@ import path from "node:path";
 
 import { closeProcessKernel, processKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { driveSuno, sunoKernelJobs } from "../../lib/producers/suno.ts";
 import { FAKE_SUNO, resetFakeSuno } from "../../lib/sound/suno/fakeDriver.ts";
@@ -42,6 +43,8 @@ import { createNight, mutateNight, readNight, scoutFileStat } from "../../lib/fo
 import { collectTracks, isScoutSunoJob, STAND_MP3, trackAct, tracksSection } from "../../lib/foundry/scout/track.ts";
 import type { Night, TrackCandidate } from "../../lib/foundry/scout/types.ts";
 import type { TextRequest, TextResult } from "../../lib/text/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const LOC = path.join(ROOT, "kernel.sqlite");
 const BATCH = "2026-10-20";
@@ -180,7 +183,7 @@ describe("a dry night", () => {
     expect((await collectTracks(ctxOf(), n.id)).map((c) => c.status)).toEqual(["pending"]);
     await driveSuno([r.candidate.jobId ?? ""], { driver: FAKE_SUNO_DRIVER, dryOnly: true });
     const out: string[] = [];
-    const code = await runCli(["track", n.id, "--collect"], { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => out.push(s), err: (s) => out.push(s) });
+    const code = await guardedRunCli(["track", n.id, "--collect"], { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => out.push(s), err: (s) => out.push(s) });
     expect(code).toBe(0);
     expect(out).toEqual(["c-01 track rendered"]);
     expect((await trackOf(n.id, "c-01")).clips).toHaveLength(4);

@@ -6,10 +6,13 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { genreLead } from "../../lib/foundry/scout/leadEvents.ts";
 import { leadMark, queueEvents, readQueue } from "../../lib/foundry/scout/leads.ts";
 import { createNight, mutateNight, readNight } from "../../lib/foundry/scout/store.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 // `scout.mts leads` and `lead` (spark registry-feedback-loop WP-R1): the queue listed, and one
 // claim filed per event into <repo>/.ai/registry-leads.jsonl - refused, whole sentence and exit 1,
@@ -37,7 +40,7 @@ afterAll(() => disposeRoot());
 async function cli(argv: string[], env: Record<string, string | undefined> = ENV): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env, out: (s) => out.push(s), err: (s) => err.push(s), ports: { resolve, now: () => new Date("2026-10-23T01:00:00.000Z") } });
+  const code = await guardedRunCli(argv, { env, out: (s) => out.push(s), err: (s) => err.push(s), ports: { resolve, now: () => new Date("2026-10-23T01:00:00.000Z") } });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

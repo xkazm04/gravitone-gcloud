@@ -1,0 +1,217 @@
+{
+ "schema": "conform-run/1",
+ "worker": "91c7cbd3-e5e5-4ecb-b27e-eef061f6be5f",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T00:47:11.464481+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-routes-and-redirects",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/clipboard.test.ts:42 The 'every copy site goes through copyText' pin matches one spelling and declares no floor, so `navigator.clipboard?.writeText(x)` or an aliased clipboard passes it while the click still says nothing, which is the defect clipboard.ts exists to close.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/clipboard.test.ts:42 The needle names one shape rather than the resource; line 44 asserts only an empty result with no floor on files read or sites matched; the one clipboard mutant (copy-text-bare-clipboard) mutates the exempted helper, so the pin has no control. Latent: no bypass exists today (grep found only clipboard.ts and DevInspector)."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/calendar/page.tsx:13 The shipped page calls the same pure target function the unit test asserts, so the walk from the entry point reaches it."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/board-exit.live.spec.ts:228 The @sheet overlay route is driven in a real browser from the Floor."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:6087 Redirect tables and agentNav have mutants naming the test that must fail; this does not extend to the clipboard source pin."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "not-applicable",
+     "evidence": "tests/next-server/agent-nav.test.ts:7 The reader (Athena's gate) is outside this repository and its lanes, which is the technique's stated exception; the test title still claims more than the flags it asserts."
+    }
+   ]
+  },
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/agent/cliSeam.ts:35 The agent fence's argv was shown to the real CLI once by hand at no spend and no lane repeats that, so probes assert the flags as strings against a stub that ignores them and a renamed fence flag surfaces only on a real paid turn.",
+   "techniques": [
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "deviation",
+     "evidence": "tests/golden-path/articles-critique.probe.spec.ts:114 A value quoted for codex's own config parser is pinned by substring; agentArgs and reviewerCommand argv are asserted only as arrays. `git grep` for --safe-mode and --permission-prompts outside .ai and docs finds only the emitters, a comment and these string assertions."
+    },
+    {
+     "technique": "recorded-interaction-fixtures",
+     "verdict": "deviation",
+     "evidence": "tests/_engine/cassettes/engine-door.json:3 All 12 cassettes are hand-written, the recorder is on demand, and no workflow cron or registered gate runs a live lane. Freshness identity is met (cliVersion, argv fingerprint, 180-day refusal at tests/golden-path/_helpers.ts:160); the live-cadence obligation is not. Codex and agy envelopes are inline JSON with no date at all."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/_engine/fake-claude.mjs:28 The stand-in sits on PATH behind the real door and has no passing default for an unmatched prompt."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:91 A test-side copy of the spawn was replaced by runClaude's own spawn, asserted on the argv the stand-in received."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "tests/_engine/fake-claude.mjs:83 The cassette turn is selected by a marker derived from the prompt the door wrote, so an answer names its input."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "lib/harness/protocol.ts:130 A typed, versioned, product-level control surface shared by both sides and held out of production builds."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cli-kill-tree.probe.spec.ts:18 The kill-tree probe proves the naive variant fails; tests/mutants/registry.ts also holds claudeCli mutants."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/cli-kill-tree.probe.spec.ts:53 A cutoff is proved by observing the sleeper's own pid. The one stopwatch found, claude-run-bounded.probe.spec.ts:33, is a loose one-sided 2 s guard, the form the technique permits."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/harness-gate.probe.spec.ts:49 The gate pin over the control-surface files reads code with comments stripped, and gateFrom refuses when its expression is not found."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/_helpers.ts:143 The stand-in's environment is a named set each file restores, so it cannot leak across the single-process lane."
+    }
+   ],
+   "registryProposal": "assert-through-the-reader excepts a reader not available in the lane, but does not rule on a reader installed on the operator's box and absent from CI, whose real use spends while its argument parsing does not. A parse-only check gated on the binary's presence looks like the intended repair."
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/produce-fixture-parity.test.ts:1 The file claims fixture and real sides agree, but it runs over hand-picked verbs with no enumeration of ProducePort, so 7 of 19 verbs (composerChoices, composerReceipt, launchRun, listProjects, composeChoices, discard, pauseJob) are never driven and can drift under a green parity suite.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/produce-fixture-parity.test.ts:1 An unqualified claim over a closed set runs on a hand-written selection; a search for `keyof ProducePort` or Object.keys over either side in tests/next-server is empty. planReceipt and launchPlan appear on the real side only. The RECIPES loop in the same file does derive its members."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/produce-fixture-parity.test.ts:6 For the verbs it covers, the same input goes through the fixture and the real port and the outcomes are compared, which is the technique's check."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/produce-fixture-parity.test.ts:22 Every store a real verb could touch is pointed at the test's own temp directory before imports."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/produce-fixture-parity.test.ts:56 The scratch directory's reaper is named in suite teardown and the copy is discarded whole."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/produce.live.spec.ts:24 Compose, Plan, receipt and Runs acts are driven in a browser and the side is stated; this spec covers the fixture side only."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:3599 Registry mutants target the port's real-side modules, naming the test that must go red."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "floor-lanes-runs",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "part-editor-media-cut-score",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T00:47:11.464481+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-through-the-reader",
+    "live-app-harness",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "studio-routes-and-redirects",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:47:11.464481+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "assert-through-the-reader",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path",
+    "recorded-interaction-fixtures",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:47:11.464481+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "gate-scope-is-not-report-scope",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests"
+   ],
+   "deviations": 1,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

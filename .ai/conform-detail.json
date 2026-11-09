@@ -16258,16 +16258,27 @@
       "context": "board-scout-spend-sources",
       "subject": "eval-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:03:59.034Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "eaf5e8ab-0772-4d12-b720-af765f02e401",
-        "state": "not-applicable",
-        "at": "2026-11-06T00:04:57.222386+00:00",
-        "reason": "reviewer (sonnet): The anchor, scout.ts:260, is an error string ('nothing rendered to judge') that does not itself show that no eval harness is present. The context's adapters also build an oracle pass/fail summary and gate verdicts and scores into packets (scout.ts:281, scoutPlan.ts:269). The 'judge means a human rul"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scoutBrief.ts:8 The checks are words shown to the operator on a run's head; this module scores nothing."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scoutWing.ts:55 The `judge` field is a vision read printed into a cell's meta; no score is compared over time in this code."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/spend.ts:20 Spend here is the operator's approval of production launches, not the budget of an eval matrix."
+        }
+      ]
     },
     "95dd9201-2503-481d-8cdd-a863f6566283/generated-music-acceptance": {
       "context": "music-vendors-and-publish",
@@ -19264,6 +19275,1985 @@
           "technique": "theme-architecture",
           "verdict": "not-applicable",
           "evidence": "packages/ui/src/tokenRender.ts:18 The renderer emits a single :root binding set. A grep of packages/ui/src for prefers-color-scheme and data-theme found nothing, so there is no second theme for the technique to govern."
+        }
+      ]
+    },
+    "693915d1-61ac-4fc1-835d-7dbb074613b2/test-harness": {
+      "context": "part-port-fixtures",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:27 The header's claim is false for the undo-conflict case at line 182, whose name also claims the kernel's words; packages/kernel/test/parts.test.ts:148 pins a separate literal, so the crossing is compared by neither file."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:87 Where a case is truly two-sided it runs the same input through the fixture and the real port and compares the outcome code, which is the technique's step 3."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:39 The fixture side's process-wide state has a defined reset before every test."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:4101 Fixture modules carry seeded defects with a named guard test; the entry was read, the mutant was not run."
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/test-harness": {
+      "context": "decision-and-gates",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:21 Build-once-copy is right here (templateStores, also decision.test.ts:10); the seeded-data honesty rule is what fails."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/parts.test.ts:22 Narrow: the neutral helper film() opens :memory:, which skips the WAL requirement at store.ts:135, and neither its name nor a comment says so; the file makes no locking claim, so the exposure is future tests."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/decision.crash.test.ts:119 The crash enumeration asserts the effects it actually crossed beside the zero-violation verdict, so an empty scenario cannot pass."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/parts.gates.test.ts:64 The index-seek claim is settled by asking SQLite for its plan on the statements actually issued, not by reading the SQL text."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:403 A seeded recovery defect names decision.crash.test.ts as its guard; the entry was read, the mutant was not run."
+        }
+      ]
+    },
+    "95a41c11-42cf-4369-b4c3-1233543bd74f/test-harness": {
+      "context": "studio-shell",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:09:59.611Z",
+      "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/live-feed.test.ts:1 Two suites each pin their own half of a marshalled event name, and the handing-over belongs to neither, which is the case the technique names."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/shell-handoff.test.ts:4 A deliberately cheaper React stand-in that states what it keeps."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/live-feed.test.ts:76 Coalescing is proved under fake timers with a refresh count, not an elapsed-time bound."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:8056 A seeded defect names shell-session-post.test.ts as its guard; the entry was read, the mutant was not run."
+        }
+      ]
+    },
+    "c1a2a2a3-7561-4522-816b-c2418500374c/test-harness": {
+      "context": "board-decision-desk",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/board-keepalive.test.ts:6 The header claims how the id arrives, but the test supplies the encoded value and the route never runs. A search of tests/ and packages/ui/test for keepalive finds only this file and a mutant registry entry, and the uncovered crossing is not declared."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/board-real.test.ts:73 One mutable store and fixture universe serve the first describe's tests. The first test's 'first sight' check at line 115 expects only decision.opened, which holds only if it runs before the later test commits the same forge pile, so test order is a hidden input."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/board-real.test.ts:85 The test uses the same factory as port.ts over a real file-backed kernel. Only the store handle, weir reader and kick are supplied, and the apply is then driven through the real applier."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/board-real.test.ts:23 A temp universe is created before any store module loads, cwd is redirected and the operator's store variables are deleted, so the file inherits nothing from the machine."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/board-exit.live.spec.ts:10 Browser journeys through a real Next server are read back from the store and from v1's files, not from the UI's own response."
+        }
+      ]
+    },
+    "1155c1ec-f832-471a-929c-2a16f06cfbb7/test-harness": {
+      "context": "domain-run-job-steps",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/domain/test/machines.test.ts:44 All seven current defineMachine sites in packages/domain/src are listed today, but nothing derives the population or asserts its count; outside transitions.test.ts's own toy machines, no test or pipeline file references defineMachine."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:146 The break of job.machine.ts is registered as data, and tests/mutants-unit/ledger.json records it killed by machines.test.ts."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/domain/test/machines.test.ts:212 The check drives the real derivation over a population taken from the table itself, so the decision it names is executed for every edge."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "packages/domain/test/machines.test.ts:133 Pure logic uses in-memory literals, the cheapest fixture that can witness the claim."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/test/transitions.test.ts:10 The test calls the shipped constructor directly; pure logic with no setup has nothing to fork."
+        }
+      ]
+    },
+    "453eefad-eacc-4fdc-87fb-37e83ded0b47/test-harness": {
+      "context": "floor-calendar-port",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:35:32.827Z",
+      "worker": "582093c7-bd51-4762-8300-3322655ae471",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/floor-real.test.ts:213 This write is the undeclared input of two later cases. The live spec states the opposite discipline for its own tests at tests/live/calendar.live.spec.ts:16."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/floor-real.test.ts:15 The store path is redirected in a hoisted block, and channel variables are cleared, before any store module loads."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/floor-real.test.ts:37 The test reaches the real side through the app's own kernel accessor and real.ts, not a test-only construction."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/calendar.live.spec.ts:166 The live lane drives the real side as well as the fixture side, so the port's real wiring is exercised in the running product."
+        }
+      ]
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/test-harness": {
+      "context": "run-records-and-slots",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/records.options.test.ts:163 A uniformity claim runs over a hand-written population of three files instead of one derived from the tree. The needle also misses a '>=' comparison."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/records.test.ts:23 The helper is named store() and opens :memory:, which store.ts:134 exempts from the WAL requirement production holds. The mode fork is not stated in the name; the same helper is in records.runs, records.reroute and records.preflight. These files make no locking claim, so the defect is the unnamed fork, not a known wrong result."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.process.test.ts:58 The two-process claim is asserted as a count of distinct claimed slots under a fixed clock; the 60 s timeout is only a hang guard."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.claim.test.ts:18 Each file owns an OS-temp scratch directory with a named reaper, so nothing touches the operator's store."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:4949 The slot sweep's window comparison has a named mutant bound to the test file that claims to guard it; the context has further entries for sweep, core, import and records."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.mode.test.ts:104 The L63 cases use a readiness that really reads the store, so the ordering of the existence check against the write is reached instead of answered by a stub."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/slots.child.ts:25 The child process runs the shipped sweep, which production reaches from packages/producers/src/publish/tick.ts."
+        }
+      ]
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/test-harness": {
+      "context": "bound-producers",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:25 The missing-interpreter quirk is absorbed in the kernel helper with its reason attached, but this copy returns undefined under CI and neither forge nor Dojo tests print a warning, so one entry point stays unabsorbed."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/worker-lanes.test.ts:66 The test claims 'every studio step' over a hand copy of the registry's unexported STEPS, so a tenth step bound there is outside the assertion and nothing goes red."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/producer-registry-loads.probe.spec.ts:64 The static-import walk strips comments, skips type-only imports and declares a floor on what it read, and the file explains why the site cannot be witnessed by importing."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/produce-real.test.ts:47 The process kernel is pointed at a temp store before any import resolves, with the incident that forced it recorded beside the line."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:2385 Bound producers carry named mutants on production lines, each tied to the test file claimed to guard it."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/producer-gpu-harness.ts:47 The universe is a file store built by the shipped constructor, so WAL and the full migration chain match what the Python and Node children open."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/worker-lanes.test.ts:18 The test reads the registry the worker binds and spawns the real workers/runner.mts instead of composing its own producer list."
+        }
+      ]
+    },
+    "3ceb5985-07f1-4504-830b-fca7669a4404/test-harness": {
+      "context": "review-and-runs-history",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:05:32.173Z",
+      "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "packages/ui/test/components/review-schedule.test.ts:47 A closed-set claim runs over three hand-picked members. The Runs half of this context does the opposite and derives its population at runs.test.ts:174."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:1103 The day-line's packing priority has a named mutant bound to runs.test.ts, with further entries for thread, lanes, schedule and packetItems."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/runs.live.spec.ts:25 The live lane waits on a product-published identifier and a measured state rather than on a timer or a style hook."
+        }
+      ]
+    },
+    "e3a63c9a-324f-417a-b93b-bfddb63e7aa5/video-assembly": {
+      "context": "visual-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:25:18.946Z",
+      "worker": "2f891c6a-1a79-41b7-a1fd-8add78fae73e",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/frames/define.ts:44 A refusal is a terminal outcome needing a re-brief or an accepted hole; here it sits beside empty in the batch."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/motion/define.ts:69 A clip is single-image anchored and needs human-accepted motion, and a decline is a produced outcome. Outside this context, lib/producers/motion.ts:54 fixes durationS at 5 rather than the slot's length."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/cut/define.ts:7 The export is compiled from a deterministic document over the derived timeline."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/strips/plan.ts:9 Lint runs before capture, and a passing round looks at a contact sheet (plan.ts:11)."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/strips/plan.ts:17 A failing seek gate sends the card back for a fix; the gate itself re-renders frames cold and out of order (pipeline/strips/render.mts:280)."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/frames/define.ts:13 Plates are per-unit images, the per-shot anchoring the technique says to prefer; rg storyboard|grid over these producers finds only a trial-grid comment."
+        }
+      ]
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/video-assembly": {
+      "context": "music-vendors-and-publish",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:25:18.946Z",
+      "worker": "2f891c6a-1a79-41b7-a1fd-8add78fae73e",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/music/plan.ts:94 Times derive from the picture, which the technique prefers, but there is no offset form, so a mid-scene address is impossible; the purpose sentence is carried at plan.ts:222."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:193 Refusal is a typed outcome kept apart from rate-limit and failure; the studio score view does not yet show it (see part-editor-media-cut-score)."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:279 A truncated body is an error rather than a silent take; the file routes likewise name a missing file."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/audioEnvelope.ts:7 Audio-driven effects read a precomputed array by frame index, with no live analyser in the path."
+        }
+      ]
+    },
+    "78923fed-ef5d-48d9-b781-bdb558f77b88/test-harness": {
+      "context": "studio-routes-and-redirects",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:47:11.464Z",
+      "worker": "91c7cbd3-e5e5-4ecb-b27e-eef061f6be5f",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/clipboard.test.ts:42 The needle names one shape rather than the resource; line 44 asserts only an empty result with no floor on files read or sites matched; the one clipboard mutant (copy-text-bare-clipboard) mutates the exempted helper, so the pin has no control. Latent: no bypass exists today (grep found only clipboard.ts and DevInspector)."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/calendar/page.tsx:13 The shipped page calls the same pure target function the unit test asserts, so the walk from the entry point reaches it."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/board-exit.live.spec.ts:228 The @sheet overlay route is driven in a real browser from the Floor."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:6087 Redirect tables and agentNav have mutants naming the test that must fail; this does not extend to the clipboard source pin."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "not-applicable",
+          "evidence": "tests/next-server/agent-nav.test.ts:7 The reader (Athena's gate) is outside this repository and its lanes, which is the technique's stated exception; the test title still claims more than the flags it asserts."
+        }
+      ]
+    },
+    "ae3ffd29-70b3-497b-a1bc-2ea36458e2b3/test-harness": {
+      "context": "agent-cli-and-turns",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:47:11.464Z",
+      "worker": "91c7cbd3-e5e5-4ecb-b27e-eef061f6be5f",
+      "techniques": [
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-critique.probe.spec.ts:114 A value quoted for codex's own config parser is pinned by substring; agentArgs and reviewerCommand argv are asserted only as arrays. `git grep` for --safe-mode and --permission-prompts outside .ai and docs finds only the emitters, a comment and these string assertions."
+        },
+        {
+          "technique": "recorded-interaction-fixtures",
+          "verdict": "deviation",
+          "evidence": "tests/_engine/cassettes/engine-door.json:3 All 12 cassettes are hand-written, the recorder is on demand, and no workflow cron or registered gate runs a live lane. Freshness identity is met (cliVersion, argv fingerprint, 180-day refusal at tests/golden-path/_helpers.ts:160); the live-cadence obligation is not. Codex and agy envelopes are inline JSON with no date at all."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/_engine/fake-claude.mjs:28 The stand-in sits on PATH behind the real door and has no passing default for an unmatched prompt."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:91 A test-side copy of the spawn was replaced by runClaude's own spawn, asserted on the argv the stand-in received."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/_engine/fake-claude.mjs:83 The cassette turn is selected by a marker derived from the prompt the door wrote, so an answer names its input."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "lib/harness/protocol.ts:130 A typed, versioned, product-level control surface shared by both sides and held out of production builds."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-kill-tree.probe.spec.ts:18 The kill-tree probe proves the naive variant fails; tests/mutants/registry.ts also holds claudeCli mutants."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-kill-tree.probe.spec.ts:53 A cutoff is proved by observing the sleeper's own pid. The one stopwatch found, claude-run-bounded.probe.spec.ts:33, is a loose one-sided 2 s guard, the form the technique permits."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/harness-gate.probe.spec.ts:49 The gate pin over the control-surface files reads code with comments stripped, and gateFrom refuses when its expression is not found."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_helpers.ts:143 The stand-in's environment is a named set each file restores, so it cannot leak across the single-process lane."
+        }
+      ],
+      "registryProposal": "assert-through-the-reader excepts a reader not available in the lane, but does not rule on a reader installed on the operator's box and absent from CI, whose real use spends while its argument parsing does not. A parse-only check gated on the binary's presence looks like the intended repair."
+    },
+    "1b623dc8-2658-4458-af5f-c1cae9f0a02b/test-harness": {
+      "context": "projects-index-port",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:47:11.464Z",
+      "worker": "91c7cbd3-e5e5-4ecb-b27e-eef061f6be5f",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:1 An unqualified claim over a closed set runs on a hand-written selection; a search for `keyof ProducePort` or Object.keys over either side in tests/next-server is empty. planReceipt and launchPlan appear on the real side only. The RECIPES loop in the same file does derive its members."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:6 For the verbs it covers, the same input goes through the fixture and the real port and the outcomes are compared, which is the technique's check."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:22 Every store a real verb could touch is pointed at the test's own temp directory before imports."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/produce-fixture-parity.test.ts:56 The scratch directory's reaper is named in suite teardown and the copy is discarded whole."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/produce.live.spec.ts:24 Compose, Plan, receipt and Runs acts are driven in a browser and the side is stated; this spec covers the fixture side only."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:3599 Registry mutants target the port's real-side modules, naming the test that must go red."
+        }
+      ]
+    },
+    "59d40b40-c1eb-4e42-8187-018bb749c736/test-harness": {
+      "context": "floor-lanes-runs",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:05:58.734Z",
+      "worker": "71029a63-b8fa-436a-979f-bd9fe31a5812",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "tests/live/floor.live.spec.ts:16 The spec documents inheriting the developer's universe; the lane config's server env sets store, produce side and dry-only but not NEXT_PUBLIC_GRAVITONE_DATA, so the isolated world is opt-in."
+        },
+        {
+          "technique": "suite-partitioning",
+          "verdict": "conformant",
+          "evidence": "tests/live/floor.live.spec.ts:3 The live spec states what is exclusive to its rung; pure lane rules live in the vitest file packages/ui/test/components/floor.test.ts."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:1221 A registered mutant removes modeOf's article branch in floor.ts and is bound to floor.test.ts."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/floor/Lane.tsx:38 Identifiers name the role and compose the entity id (data-lane), not an index; the live spec locates lanes through them."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/live/floor.live.spec.ts:67 The per-lane pile comparison refuses to pass over an empty population (0 = 0)."
+        }
+      ]
+    },
+    "396608fd-9886-4a9d-829d-4a5efb6ea9d3/test-harness": {
+      "context": "article-check-and-critique",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:05:58.734Z",
+      "worker": "71029a63-b8fa-436a-979f-bd9fe31a5812",
+      "techniques": [
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-critique.probe.spec.ts:284 An overlap claim with no in-flight count, barrier or recorded spans; removing the concurrency cannot turn it red."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-critique.probe.spec.ts:289 The assertion holds in either scheduling, so the name overstates, and the mutant registries carry no row for the fan-out."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-checkloop.probe.spec.ts:51 The check loop is reached through the engine's own run driver, not a composition built in the test."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-checkloop.probe.spec.ts:44 Shares the shipped constructor and names the one thing it leaves out. The stub agent defaults to ok, but real checks still judge its output."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-checks.probe.spec.ts:5 Emitted HTML is judged by a real browser's computed styles (lib/articles/checksRendered.ts), not by regex."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:8530 Mutant rows exist for checkLoop, checksRendered and checksReport; critique modules have none, so this covers the check half only."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:48 Each sandbox owns its kernel store, run store, registry, temp dir and agent binaries, and strips inherited git variables."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:74 Build once, cpSync per sandbox, with a named exit reaper; a per-process build cannot go stale between runs."
+        }
+      ]
+    },
+    "48eca705-7472-4b83-8678-2b451b2b723f/test-harness": {
+      "context": "runs-console",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:05:58.734Z",
+      "worker": "71029a63-b8fa-436a-979f-bd9fe31a5812",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "tests/live/runs.live.spec.ts:10 The spec inherits the developer's data universe by declaration and seeds nothing itself; failing loudly on an empty world does not make the lane machine-independent."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/runs.live.spec.ts:25 Drives the running page and reads back a hydration marker before pressing keys."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:8090 Mutants on Acts.tsx are bound to runs-console.test.ts; tests/mutants/registry.ts also mutates model.ts against runs-live.probe."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/runs-live.probe.spec.ts:17 The comparison is guarded against passing as 0 = 0, and an unregistered source goes red."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/runs-act-runner.test.ts:50 This pin strips comments from its haystack and counts call shapes. The sibling pin in runs-legend.test.ts does not strip, which is weaker but was not judged a deviation."
+        }
+      ]
+    },
+    "03bbdce3-27bb-4361-947c-ba8f0d70fa2c/video-assembly": {
+      "context": "audio-composer-briefs",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:26:34.918Z",
+      "worker": "b7c08f51-7b85-4035-b6c5-9afbcf2226e0",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:42 A selectable prompt-technique label for standalone sound generation; nothing here places a cue against picture."
+        }
+      ]
+    },
+    "7d7b94f7-f312-4ea4-b315-23df705c2286/video-assembly": {
+      "context": "bound-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:26:34.918Z",
+      "worker": "b7c08f51-7b85-4035-b6c5-9afbcf2226e0",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/producers/score.ts:103 lib/music/errors.ts keeps refused distinct from failed, but here it is only a job outcome. Motion's WAN_LIVE refusal does say its seam honestly."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/producers/score.ts:182 Landing writes only takes that were made, so no refused-silence outcome reaches the spotting record. Cue durations are correctly derived from the picture at line 67."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/producers/motion.ts:54 Every clip is briefed at a fixed 5 s and ClipRequest carries no duration, so the brief does not state the length of the timeline slot it must fill."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:184 The export renders a deterministic compiled document, and the job is identified by that document's hash."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:183 Judged on the producer's share only: dialled offsets are read from the stored record into the render, so a correction ships as data without regenerating material."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/producers/cut.ts:212 Segments the export could not reach are booked on the export record; an absent plate is carried as a gap in a draft animatic, which the technique allows."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/producers/score.ts:67 Cue timing is computed from the same picture projection the cut derives its clock from, so there is one time authority."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/motion.ts:182 Each shot is anchored on its own plate; the technique names per-shot frame anchoring as the stronger instrument when an exact start frame exists."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:41 Narration comes from an offline speech pipeline with one stored voice and the animatic picture is stills, so no generator-emitted sound channel reaches the cut."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/voice.ts:33 A line is held whole against its card and nothing places a cue inside a clip; a search of lib/ for alignment payload names hit only music-clip's lyric code."
+        }
+      ]
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/quality-gates": {
+      "context": "article-human-gate-and-landing",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:45:09.513Z",
+      "worker": "f3f22b4e-80dc-4cb9-9efa-b971a9dd72d1",
+      "techniques": [
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:25 CLAUDE.md states approve is never an agent's act; the act has no actor parameter, the CLI passes a constant ACTOR, and .claude/settings.json denies only --no-verify, force-push and GRAVITONE_SKIP_GATE=1. The forbidden action works."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The approval record holds a time and patch ids, with no digest of the post approved and no actor; landing (including a resume's re-land) reads post/ from disk afresh, so the record does not name the version it approved."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:406 The registry gate's real exit code throws before commit and push; a spawn error also maps to non-zero in run()."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/articles/diffFiles.ts:41 git's could-not-read exit 1 with no diff is a failure, no longer folded into 'identical'."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:397 A public PR is irreversible, so the registry's own lane gates run in the worktree before anything is pushed."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:307 Dimensions the check could not measure are named in the PR body rather than dropped. A missing check.json yields check: {} which the registry's check-publications refuses."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryRead.ts:125 Out-of-tree remedy degrades to what was tried, where, and the variable that declares it."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/humanNote.ts:11 Presence-only, but a human rejecting can always say why, so this is the technique's ordinary-rule cell, not the fabrication cell."
+        },
+        {
+          "technique": "branch-provenance-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/registryWrite.ts:350 The landing branch is cut from the just-fetched remote default, so it cannot carry another proposal's commits."
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/quality-gates": {
+      "context": "decision-and-gates",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:45:09.513Z",
+      "worker": "f3f22b4e-80dc-4cb9-9efa-b971a9dd72d1",
+      "techniques": [
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/parts/gates.ts:34 The fact never reads who committed and commit.ts has no actor check. The proof and spend adapters refuse an agent's keep, but they read the same self-declared field, and neither the step nor the article source checks it."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:82 An undecided candidate or a reasonless reject reaches the transaction's result and nothing is written."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/gates.ts:63 A cull with no rows cannot ratify through an empty every(); packages/kernel/test/decision.test.ts also seeds a refused commit."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/gates.ts:55 An unreadable stored commit result fails closed instead of reading as ratified."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:84 The refusal names the remedy and carries a machine-readable detail for the surface to act on."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:91 What a partial commit left undecided is written by the same act that advances the packet, and the commit event carries the preview token."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/read.ts:166 The preview and the commit evaluate one function, so a preview cannot state a weaker rule than the commit enforces."
+        }
+      ]
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/video-assembly": {
+      "context": "text-reasoning-engine",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:36:14.603Z",
+      "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
+      "techniques": []
+    },
+    "1eb57510-dcfa-4549-97ed-56f3f97519ec/video-assembly": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:02:05.803Z",
+      "worker": "9f9d4c10-f192-493d-b421-7c0cf6647ec9",
+      "techniques": [
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/types.ts:66 Provenance lacks the anchor and the conditioning rung: the base64 image is consumed by startClip and no digest is written. Durations are typed, audio is decided and a refusal is not blind-retried, so the gap is provenance."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:216 A moderation answer is a terminal refused state with the vendor's words, distinct from failed and never retried."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:337 An empty download fails by name instead of landing as a done clip; an unverified aspect is likewise refused at line 172."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:209 The adapter asks for silent clips, so no synthesised channel exists to pin across calls."
+        }
+      ]
+    },
+    "cfbabdf6-58ed-4f4a-acad-2a2249c19dbd/test-harness": {
+      "context": "part-editor-media-cut-score",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/part-editor-media.test.ts:570 A universal claim over a three-member hand list. The population is not derived from the editor kinds, and part-editor-writing.test.ts covers only the writing editors."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:249 The preview's 30 fps claim is driven by a stubbed rAF with fabricated timestamps and asserted as a frame index, not by wall time."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/part-finish.live.spec.ts:3 Score, cut, voice and render journeys run in a real browser, and the lane states which claims need one."
+        },
+        {
+          "technique": "configuration-axes-cross-the-ladder",
+          "verdict": "conformant",
+          "evidence": "tests/live/part-finish.live.spec.ts:11 The lane names the side it runs, so its green carries that predicate."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:3 The cheaper hook dispatcher says what it leaves out, in the file header rather than its name, and the browser rung sits above it."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/part-editor-media.test.ts:24 The mocked compositor is declared in the file that makes it unreachable, along with the one fact still observed."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:7634 A seeded mutant demands a red run for the transport; the registry also carries CutFinish, Render, Score, ScoreTakes, Takes and Voice entries."
+        }
+      ]
+    },
+    "4eabdc72-cf31-48f3-a218-98ebd0914ff1/test-harness": {
+      "context": "runtime-support-and-local-mode",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-git-env.probe.spec.ts:48 One of ten variables crosses into the subprocess. The claimed equivalence of the two lists is never exercised. Inferred from reading, no mutation was run."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/foundry-catalogue-tx.probe.spec.ts:336 The exemption list is checked in one direction only. lib/sound/store.ts and lib/articles/store.ts now import acquireLock from diskTx and hold no \"wx\", so both PENDING entries are stale and nothing reports it. The walk does declare a floor at line 328."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/lib-sleep.test.ts:14 The delay is asserted on fake timers at the boundary, with no wall-clock bound."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "lib/kernelProcess.ts:25 The handle exposes the one knob that lets a lane point away from the operator's store, resolved per call in storeLocation."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:6320 Two seeded mutants cover domain load. No mutant names diskTx, renameRetry or gitEnv."
+        }
+      ],
+      "registryProposal": "pin-the-call-not-the-name calls the two-direction exemption check a 'refinement worth copying' in its body but states it as a decision rule at the end; the two should agree on whether it binds."
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/test-harness": {
+      "context": "article-human-gate-and-landing",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:04.563Z",
+      "worker": "46ce2617-3a31-4991-9202-2e3cb6543eec",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "tests/golden-path/articles-git-env.probe.spec.ts:65 The file's header names the landing code, but no case drives landRun under an inherited GIT_DIR, and no mutant in either registry touches the adoption (repo search for cwdBoundGitEnv and GIT_DIR). Inferred from reading, no mutation was run."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:74 Build once, copy per sandbox, with a private origin and registry per case and a measured build cost."
+        },
+        {
+          "technique": "far-side-oracle",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:154 The pushed result is read back from the bare origin, not from the run record. The GitHub PR itself is only an argv logged by a stub."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:165 The approved patch goes through real git apply and is asserted by its effect at the origin."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/fixtures/articles/registry-fixture.mjs:63 The stub gate says it is a stub and names the real one, which limits the claim. No comparison against the real gate exists, so publication/1 acceptance by the real gate is unproven here."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:126 Each sandbox gets its own store, registry and temp directory, and cleanup restores them."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/_articles.ts:100 The hook-environment quirk is absorbed once in the sandbox, with its incident recorded in the probe header."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants/registry.ts:526 A seeded mutant proves the retry branch can fail its probe. It does not cover the environment adoption above."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-engine.probe.spec.ts:146 The landing is reached through the shipped engine after the shipped approveRun, not through a composition the test assembled."
+        },
+        {
+          "technique": "recorded-interaction-fixtures",
+          "verdict": "not-applicable",
+          "evidence": "tests/fixtures/articles/stub-gh.mjs:13 A single request with a one-line answer falls under the technique's trivial-exchange exclusion."
+        }
+      ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/video-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:36:14.603Z",
+      "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
+      "techniques": []
+    },
+    "396608fd-9886-4a9d-829d-4a5efb6ea9d3/video-assembly": {
+      "context": "article-check-and-critique",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:50:58.393Z",
+      "worker": "fe98f84f-1351-4332-a814-e1b3edf58f5c",
+      "techniques": []
+    },
+    "51e3f5c9-f984-40e7-9588-f8eab2b916f9/video-assembly": {
+      "context": "score-and-ads",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:50:58.393Z",
+      "worker": "fe98f84f-1351-4332-a814-e1b3edf58f5c",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/score/spots.ts:69 Purpose and hard constraints are well carried (takes.ts:83) and silence is not filled, but there is no mark-plus-offset form; the intended tail of a cue survives only as prose at lib/studio/score.ts:167."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/score/spots.ts:231 ScoreSpot has no failure or refused field and this projection passes none, so the CueSpot.failure vocabulary reaches only the hand-typed SPOTS fixture; a real refusal cannot be held as a state of the cue. Unplaced movements are honest, with reasons (spots.ts:169)."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "lib/score/picture.ts:88 The semantic source is a labelled field carrying a note that it is load-bearing, taken from the beat's own kind rather than an index. The position computation lives outside this context."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "lib/motion/direction.ts:24 Rung zero is implemented: a plate with no separable element is declined with a reason, and proposed moves are filtered in code against the reading."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/studio/score.ts:178 One derivation of the clock from scene holds, with cue spans computed from it; the hand-typed TIMELINE beside it is fixture data."
+        }
+      ]
+    },
+    "492013a4-a2b2-4f74-b6e3-9dde233632a9/test-harness": {
+      "context": "article-trials-and-medium",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:06:37.073Z",
+      "worker": "fb64c161-2615-4360-9d9d-ec788cbab3a7",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "lib/medium/fake.ts:10 A passing default, the setting the technique names as the worst: probes must opt in to failure, and the figure count has no failing setting at all."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/fixtures/articles/trialSeeds.ts:7 Cloning one real run per verdict is the right economics, but the manifests bypass the store and neither the seeds nor the gate probe call a validator afterwards, which the seeded-data rule requires of a raw write."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-trial.probe.spec.ts:395 The cutoff is read from the exec record's own duration, with a loose 30 s one-sided hang guard on the next line and polling for the killed pids."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/articles-trial.probe.spec.ts:381 The probe detaches the grandchild on Windows precisely so the tree-kill decision is reached and another mechanism cannot answer for it."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants/registry.ts:384 A registered mutant makes every trial record better, proving the registry-record probe can fail."
+        }
+      ],
+      "registryProposal": "The technique marks its no-default rule for fakes as inference. These fakes reset to ok and each failing path is set explicitly, so the measured harm here is narrower: an outcome the fake has no knob for. The rule could be sharpened to require that every outcome the real driver can report is reachable through the fake."
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/test-harness": {
+      "context": "music-vendors-and-publish",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:06:37.073Z",
+      "worker": "fb64c161-2615-4360-9d9d-ec788cbab3a7",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "lib/sound/suno/fakeDriver.ts:60 Health and create both default to a pass. The fake sits outside this context's file list, but it is the only thing standing in for this context's lib/suno/driver.ts in tests. suno-queue.probe does set unhealthy states explicitly."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/music-body-deadline.probe.spec.ts:60 The verdict is the MusicError kind raised by the request's own abort signal; the 3 s race is only a loose hang guard against one timer shortened to 50 ms."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:1696 A registered mutant drops the speech-hold release in elevenlabs.ts to prove its test can fail."
+        }
+      ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/agent-memory": {
+      "context": "library-projection-feeds",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "lane-reconciliation",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/project.ts:171 The index is a derived projection that the sync reconciles with its feeds, but its items are catalogue entries, not memories with a retrieval lane."
+        },
+        {
+          "technique": "probe-without-write-back",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/probe.ts:11 This probe times queries over a generated corpus; this context has no usage term that recall would feed."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of studio feeds into the kernel's Library index for the screens, not a store an agent carries forward between sessions; searching lib/library (feeds included) found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hits are the SQLite ':memory:' path and an ingest memo (rememberIngest), which is a content-hash cache.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/agent-memory": {
+      "context": "project-step-store",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/readStep.ts:14 The read separates missing from failed in the same spirit, but the technique's precondition is a store the model reads and writes, and no model reads this one."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/steps/index.ts:2 This is an IndexedDB store for UI step content keyed `${projectId}:${phase}`, with no agent reading it as recalled memory; searching lib/steps found no hit for recall, consolidat, belief, distill or memories, and the only 'memory' hit is a comment about an in-memory mirror in saveWatchers.ts. Its honest never-written vs failed read path is the same idea as durable-store-failure-posture, but it is not an agent memory store.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "052f74ff-87c5-45a8-a5ea-6fbb2ae44102/agent-memory": {
+      "context": "v1-import-and-archive",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+      "techniques": [
+        {
+          "technique": "observation-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/project.ts:154 The import carries timestamps across unchanged; no distillation pass grounds relative time against them, which is the technique's precondition for imports."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/import/archive.ts:9 This context converts v1 data to and from the NDJSON archive and the kernel store, with no agent and no carried-forward memory; searching lib/import found no hit for recall, consolidat, belief, distill or memories (the one 'memory' hit is an out-of-memory comment in archive.ts).",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 62f0f79f-64e7-483e-ad30-b006522c3d32"
+        }
+      ]
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/agent-memory": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:19:59.616Z",
+      "techniques": [
+        {
+          "technique": "exposure-is-not-credit",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/calibration.ts:318 Human keeps calibrate grade fields per candidate, and the result orders a human's cull; no memory items are delivered to a run and credited."
+        },
+        {
+          "technique": "memory-governance",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/verdictLog.ts:41 This names who decided a plate's keep or reject, an artifact verdict rather than a write to what an agent believes."
+        },
+        {
+          "technique": "procedure-promotion",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/store.ts:11 `proven` marks a visual style a human kept on more than one scene; it does not promote an observed agent workflow into a capability."
+        }
+      ],
+      "withdrawn": {
+        "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+        "state": "not-applicable",
+        "at": "2026-11-09T03:20:33.693799+00:00",
+        "reason": "reviewer (sonnet): The claim that no verdict reaches a model as recalled memory is contradicted inside lib/foundry: lib/foundry/scout/idea-loop/generate.ts:25-38 (`ideaPrompt`) puts the operator's last 20 keep/reject idea verdicts, with reasons, into the generation prompt. The evidence mentions lib/foundry/scout only "
+      }
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/quality-gates": {
+      "context": "text-reasoning-engine",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:31:10.168Z",
+      "worker": "f513d6f8-88da-42fc-bee9-a8e14762ba04",
+      "techniques": [
+        {
+          "technique": "chokepoint-tag-registry",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:314 No call-site tag bijection and no confinement rule for the vendor endpoint or provider modules; lib/sound/suno/listen.ts:31 and lib/foundry/scout/doctorOllama.ts:1 also import from provider modules."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "deviation",
+          "evidence": "lib/text/router.ts:1 The forbidden action simply works: lib/music-clip/gemini.ts:95 calls Gemini directly and nothing goes red."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/text/repair.ts:237 The repaired object re-enters the validator the model cannot write, after diff and no-shrink guards in code. Limit: a finding with path \"\" (lib/notebook/failure.ts:45) makes covers() license edits everywhere, leaving only no-shrink on scope."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:425 A probe that cannot confirm an engine eliminates that candidate on the record; an empty chain ends in refusal, never a served answer."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:684 .env.example is tracked and declares GOOGLE_AI_API_KEY (:205), OLLAMA_HOST (:323) and TEXT_RETRIEVE (:92), so the named remedy resolves in the shipped tree."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:449 A vendor's native schema enforcement is not trusted; the door re-checks every served answer. Limit: the check is shallow by design (lib/text/json.ts:27)."
+        },
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "conformant",
+          "evidence": "pipeline/check-bundle.mjs:143 The seam's server-only claim is tested against emitted browser chunks, behind a positive control, not against source imports."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "conformant",
+          "evidence": "pipeline/check-bundle.mjs:141 Each lib/text fingerprint names its source file and is asserted present there with comments stripped, so a rewording exits 2."
+        }
+      ]
+    },
+    "1de3c823-3d27-478d-8f7e-b3b940344faf/quality-gates": {
+      "context": "ui-status-provenance",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:15:01.860Z",
+      "worker": "6a43a5d3-2bb4-4e51-8af3-403873a1f575",
+      "techniques": [
+        {
+          "technique": "severity-by-construction",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:1 The component draws a break the caller reports; it has no severity or exit path of its own."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/status/status.ts:151 Unknown tokens draw amber rather than calm, which is display honesty; no verdict depends on it.",
+          "carriedFrom": "2026-11-09"
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/consequence/ConsequencePanel.tsx:90 The panel renders a Consequence built elsewhere; the enumeration and enforcement are the Board's and the kernel's.",
+          "carriedFrom": "2026-11-09"
+        }
+      ]
+    },
+    "017c20b1-6e01-4427-b944-83501aef72b3/test-harness": {
+      "context": "part-port-real-and-contract",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:44:18.294Z",
+      "worker": "839fa2e1-0253-403f-8248-740922e6f623",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/parts-real.test.ts:40 openKernel runs migrate() (packages/kernel/src/kernel.ts:113). parts-fixture-parity repeats the shape at its line 47. No template copy was found for these files. The cost per build was not measured, because this seat is read-only, so the deviation is of shape and its size is unknown."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/parts-fixture-parity.test.ts:24 Drives one verb on both sides and compares the code and words, which is rule 3 applied to a whole-implementation fixture."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/real.ts:215 The shipped port is built by the same factory the suite calls, so the tested path is the production construction with only store, clock and gates injected."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:3307 Seeded breaks exist for real.ts, realResearch.ts, realScript.ts, actions.ts and schema.ts in this context."
+        }
+      ],
+      "registryProposal": "fixture-economics gives no floor below which a per-test build of a small embedded store is acceptable; a stated ratio or absolute cost would let a seat tell a real defect from a shape match without timing it."
+    },
+    "21a8a03c-bd42-4bad-a36e-a6e929a471e0/test-harness": {
+      "context": "kit-screen-specimens",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:44:18.294Z",
+      "worker": "839fa2e1-0253-403f-8248-740922e6f623",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "tests/live/kit.live.spec.ts:31 A needle that matches a syntax shape rather than the resource. LibraryRow and LibraryTile (memo) and ModelStage (default export) are outside the 189 matched. No damage today: the first two have specimens and ModelStage is drawn inside ModelViewer."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:56 A derived population with a declared floor, so an empty walk fails rather than passing. The floor is far under the 189 matched, so it catches emptiness and not shrinkage."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/kit.live.spec.ts:51 Claims that only exist in a rendered page, located through data-specimen identifiers maintained in app/(studio)/kit/Spec.tsx."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:7239 The kit-sheet claims carry seeded breaks in the kit's own files."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/kit/boardKitData.ts:4 Specimen ids are built through the product's validation door rather than written as states it could not produce."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/kit-source-unreadable.test.ts:26 The failure path is asserted by rendering the shipped page, with only the file read made to fail."
+        }
+      ]
+    },
+    "946b3fa8-75ef-47c1-94b1-40703a9401b1/quality-gates": {
+      "context": "foundry-strips-and-training",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:00:36.432Z",
+      "worker": "8261262a-59c8-4b3a-acf3-aa5f58d9dd1c",
+      "techniques": [
+        {
+          "technique": "match-the-resolved-artifact",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:155 For a presence rule the raw read is the permissive direction, and it is unexplained: the neighbouring stripFramesRule normalises at line 166. The tests hold no seeded comment-only pair for these rules. render.mts:75 catches the case later."
+        },
+        {
+          "technique": "unparseable-form-is-a-finding",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:35 The blocking regex misses Math[\"random\"](), const {random}=Math and aliased fetch or setTimeout, and no rule refuses computed access or eval. The pages are generated under the project's own contract, so the precondition holds. The blanking-pass obligation is met by the tests."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/strips/lint.ts:149 An unnamed cap of three per rule feeds the fix turn's work list (steps.ts:102) with no sign of truncation, which can cost an extra paid round. The status half is sound: triage.ts:100 is one array read by the store guard and the Board source."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:15 The header states what the lint cannot answer and which instrument owns that question."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "pipeline/strips/lint.mts:19 A planted bad page and a clean page exit non-zero on a miss, and tests/next-server/strips-lint-comments.test.ts seeds the blanking pass."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:203 Any finding sets the card's failed status, and only a `rendered` card can take a verdict (triage.ts JUDGEABLE)."
+        },
+        {
+          "technique": "blocking-by-input-determinism",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:138 The verdict is a pure function of the page and the brief's frame count, with no external feed."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:9 The cheap static rung sits ahead of the costly render rung."
+        },
+        {
+          "technique": "decidable-in-a-window",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:7 Window-decidable constructs go to patterns, and the non-local remainder is handed to the seek gate."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/lint.ts:67 A misfire was fixed by narrowing the detector, with tests holding both directions. No precision measurement over a population was found."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/author.ts:4 The fixer has only file tools confined by --restricted to a workspace holding inputs/ and out/; the lint and render gates run outside it, by the orchestrator."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/strips/steps.ts:195 The gate reads the landed artifact, not the agent's account of it."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:234 The anchored and floorOverride hatches are per-improvement by id, and an unmatched target is refused loudly."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:269 The commit that advances the improvement writes its basis into the durable ledger row."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/blind.ts:165 Below the floor the ledger row reads unmeasurable unless explicitly overridden."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/training/store.ts:206 The refusal names both remedies and the improvements they apply to, and both are available on the gate surface."
+        }
+      ]
+    },
+    "06a49bc3-5cc1-4701-9869-efbacdcf5f6c/video-assembly": {
+      "context": "audio-text-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:24:49.209Z",
+      "worker": "eb3425f0-3bc4-4f2a-ad67-771287a337e6",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/score/define.ts:31 The cue view knows only taken or not. lib/music/errors.ts:5-7 says a refusal reverts the cue to refused-silence, but lib/producers/score.ts ends it as a job failure and writes nothing on the spot. The brief itself does carry purpose and tempo (cueTakeRequest)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/voice/define.ts:32 Scoped to no phantom capability: a missing engine is stated as a seam and refused. The vendor-refused cue state is the music-spotting deviation above."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/voice/define.ts:69 A take with no bytes fails by name before the chain runs, rather than rendering silence."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/mv/plan.ts:17 The cheap validated step runs before the multi-minute render, in STEP_ORDER."
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:7 Each line is one unit held whole; no cue is derived from a position inside a narration clip."
+        }
+      ]
+    },
+    "b94edc9f-f1d4-4be0-99cb-4483648000eb/video-assembly": {
+      "context": "ledger-v1-sources",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:24:49.209Z",
+      "worker": "eb3425f0-3bc4-4f2a-ad67-771287a337e6",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sources/clips.ts:37 Refused is carried here as a job's terminal status in a ledger event; there is no region of a clock for it to be drawn on."
+        }
+      ]
+    },
+    "e44cfa27-83ec-470a-adec-674d8a2a8037/quality-gates": {
+      "context": "trailer-structure-engine",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:37:01.710Z",
+      "techniques": [
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/structure.ts:142 The regression pins patch {connector: \"BUT\"} as the fix (pipeline/trailer-structure-regression.mts:581). The rule row says 'declared', but the aggregate names the property, and the DECLARED-only limit is stated only in a code comment."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:136 Unmeasured rows stay in the denominator, so a verdict with holes carries a lower enforced figure."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:125 What counts toward malformed is computed here, and the report calls itself a diagnosis rather than a ship gate."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/structure.ts:122 Not-engaged rows are excluded, so a rule that examined nothing cannot score as enforcement."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:42 A drifted params file throws at import instead of running a rule it cannot state; seeded controls live in the regression file."
+        },
+        {
+          "technique": "false-positive-economics",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:127 Rules known to fire on correct work are held advisory, by the doctrine's own quoted reason."
+        },
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/thresholds.ts:21 Thresholds that existed as prose plus literals are read from one validated file."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:38 The schema sent to the model and the refusal share one table."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:41 Promise grades are excluded from what a model may write. The connector and raises fields remain writable, which is the deviation recorded above."
+        },
+        {
+          "technique": "oracle-frozen-during-repair",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/plan.ts:131 Patches touching kind or movement are refused at the door. This plan path has only the regression as a caller today."
+        }
+      ],
+      "withdrawn": {
+        "worker": "da67ff08-de11-4400-b11f-dbfc8c9cda5b",
+        "state": "deviation",
+        "at": "2026-11-09T04:37:25.037877+00:00",
+        "reason": "reviewer (sonnet): The claim that the DECLARED-only limit is stated only in a code comment is contradicted by the code. The line 142 message itself says 'well-FORMED... says nothing about whether it works — see the efficacy row', and rules/connectors.ts:59 and :64 report 'declared' adjacencies and 'examined nothing, d"
+      }
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/video-assembly": {
+      "context": "scout-producers",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:47:22.182Z",
+      "worker": "d5539da7-2f9c-42b6-8b8d-c0c39fdaa7d2",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:183 The failure is recorded per index, but the cut drops the slot rather than holding its place on the clock, an automatic edit nobody approved."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:30 Baked audio is kept by one blanket rule, not decided per clip as keep, demote or strip. Failed clips do revert to a null index with their sentence."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "deviation",
+          "evidence": "lib/producers/scoutPieceActs.ts:132 The clip is conditioned on a still alone and the record says nothing about its unpinned sound channel. The LTX graph file matched an audio-node search; whether a character actually speaks across clips was not established."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:209 The assistant's output is a source page; the image or mp4 is rendered from it afterwards."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:102 A static frame-purity lint gates each strip, and the tile frame is rendered cold."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutReelActs.ts:298 A strip still failing its lint stops before any frame or full render is drawn."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/producers/scoutPieceActs.ts:240 An input with no video stream is an error naming the file rather than black frames."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/scoutStoryboardActs.ts:24 Each panel is its own frame and its own clip anchor; no multi-panel grid conditions one generation."
+        }
+      ]
+    },
+    "e44cfa27-83ec-470a-adec-674d8a2a8037/test-harness": {
+      "context": "trailer-structure-engine",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:58:01.062Z",
+      "worker": "08b889b5-dd17-45e4-ace3-867b486f2968",
+      "techniques": [
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "deviation",
+          "evidence": "lib/script/trailer/plan.ts:108 A walk from production entry points finds zero calls to parseTrailerPlan, replayTrailerPlan, structureDelta or notesFromFindings; only the regression script calls them. The green count is evidence about a library."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "pipeline/trailer-structure-regression.mts:513 The consumed_by check matches a bare identifier against unstripped source, so a comment naming the symbol satisfies a claim about the code that reads the value. Its floor on line 515 is sound; the needle is the defect."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:515 The walk fails when it selects zero claims."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:22 Cases are fixtures built to be broken, with an opposite control against false findings."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "conformant",
+          "evidence": "pipeline/trailer-structure-regression.mts:67 In-memory baseline cut; each case is one edit from it, with no environment cost."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:25 Adoption is asserted at each of the three readers, not only ops.ts logFromRecord."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:19 The origin cut comes from the shipped composeCut, not a test-only constructor."
+        }
+      ]
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/test-harness": {
+      "context": "job-queue-and-leases",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:58:01.062Z",
+      "worker": "08b889b5-dd17-45e4-ace3-867b486f2968",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/test/job.test.ts:16 Rebuild per test where the build-once copy helper exists one import away."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job-fixture.ts:31 Same openStore (WAL, pragmas), migrate and liveEffects as production. Caveat: KERNEL is a four-module subset under a neutral name, though a missing table fails loudly."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job.worker.test.ts:103 Capacity is proved with gated producers and observed in-flight sets. Caveat: the job.test.ts heartbeat cases still lean on slow(150) with heartbeatMs 20."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "tests/mutants-unit/registry.ts:363 The crash harness itself has a seeded mutant, and each job and lease test file has entries."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/helpers.ts:30 A missing interpreter becomes a named failure on CI instead of a green skip."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/effects.ts:18 The effect port is a value passed to the driver, not a shared singleton."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "workers/worker.ts:292 The worker entry point calls the same workLoop the tests drive."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/test/job.kill.test.ts:89 The log names which process performed each step, so the answer carries its producer."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/worker.test.ts:68 The worker's real runner is spawned as a process, and job.kill.test.ts kills a real child mid-step."
+        }
+      ]
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/video-assembly": {
+      "context": "style-trials-cull",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:06:40.226Z",
+      "worker": "a0d5bf71-b2a6-4424-bc9a-9f1170913493",
+      "techniques": [
+        {
+          "technique": "pinned-frame-notes",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 The notes are joined into one verdict note line per beat, keyed to a caption beat's m:ss start, and none of the five parts of a pinned note beyond the text is captured."
+        }
+      ]
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/test-harness": {
+      "context": "publish-producers",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:14:42.772Z",
+      "worker": "e284f2a8-000e-42a8-87a3-5899a831731a",
+      "techniques": [
+        {
+          "technique": "far-side-oracle",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/publish-youtube.test.ts:25 Near-side only. Searches for armLive, PUBLISH_MODE, videos.list and googleapis in tests found stubs and dry holds, no credential-gated lane that skips when unset."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-timers.test.ts:115 Waits on observed tick counts; the 10 s limit is only a hang guard."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-tick.test.ts:23 The worker-level tests use the same binding workers/runner.mts loads; the cheaper stub world in publish.test.ts says what it leaves out in its header."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/publish-tick.test.ts:24 Drives the roster production builds at workers/worker.ts:210, not a composition of the test's own."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "packages/producers/test/publish.test.ts:125 Counts on the stub prove the live act was never entered, beside a refused and counted fetch."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "packages/producers/test/publish.test.ts:41 Temp directory with a named reaper, and each world opens its own store file."
+        }
+      ],
+      "registryProposal": "far-side-oracle describes a deployed agent on a host the lane controls. For a third-party API, the only available oracle is a read under a separate credential, so the technique could say what the oracle is when nothing can be deployed on the far side."
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/eval-harness": {
+      "context": "style-trials-cull",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "techniques": [
+        {
+          "technique": "comparison-modes",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:126 The technique says a judge (or human) scores every pair both ways and a flip becomes a tie. Slots are decorrelated from the arm by an id-derived rank, which removes a systematic baseline-left confound but is not a mirror; no second presentation exists, and rg for mirror/swap in lib/foundry/training found none. Ties and both-bad do have a home."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/style.ts:36 Proofs attach to a stable trial id, not a column position. The trial's verbatim subject is compared as part of the block in packages/domain/src/style.ratchet.ts:114, so an edited subject does not stand as the same trial."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/style.ts:38 A trial column's face is the newest attempt, never the best, and the approved, rejected, undecided and earlier counts travel beside it. Scope: this is the display only; the server's coverage gate is outside this context."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/StyleFacts.tsx:43 An agent's keep is shown and marked but excluded from the keep tally, so an agent cannot score a style upward from this surface."
+        },
+        {
+          "technique": "certification-levels",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 The ratchet has declared promotion criteria, but both steps are operator readings of rendered output; no theoretical level over a derived model gates an empirical one."
+        },
+        {
+          "technique": "uncontrolled-games-beside-the-win-rate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:182 This is human-machine agreement, not a round-robin win rate with a swap control. Observation: pairs the kernel could not compare leave the denominator and the computed `total` is not drawn beside it."
+        },
+        {
+          "technique": "pairing-schedule",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:61 The surface walks a packet's fixed pairs in order and yields no leaderboard over a field, so there is no comparison graph to report."
+        }
+      ],
+      "registryProposal": "comparison-modes requires every pair to be scored both ways and names a human as a possible judge, but it does not say whether a seeded per-pair slot assignment suffices when the judge is one person and mirroring doubles their labour; the technique should rule on that case.",
+      "withdrawn": {
+        "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+        "state": "deviation",
+        "at": "2026-11-09T05:34:35.199800+00:00",
+        "reason": "reviewer (sonnet): The deviation anchors on packages/ui/src/components/pair/BlindPair.tsx and the kernel's driver.ts. Neither is among this context's files (style, cull and cut), and nothing in style/, cull/ or cut/ imports pair/. The claim about the blind-pair mirror is therefore about the Board pair context, not thi"
+      }
+    },
+    "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd/eval-harness": {
+      "context": "notebook-contract-validation",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:33 The door sits wholly in the deterministic band and states what it leaves unchecked; no judge exists here to place a boundary against."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:41 The population is every tracked file run through a deterministic validator, not scenarios posed to a non-deterministic candidate."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:30 Each member carries a verdict diffed against an approved snapshot; no aggregate pass rate exists for family counts to sit beside."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:148 This guards an accidental snapshot rewrite in a deterministic lane; no agent candidate is being scored against the snapshot."
+        },
+        {
+          "technique": "monitor-inside-the-loop",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/retrieval.ts:16 The cross-check does read the artifact rather than the account, but it is deterministic code, not a model reviewing inside a scored loop."
+        }
+      ]
+    },
+    "ee38e76a-8e14-43c9-b82d-c83504463ef9/test-harness": {
+      "context": "library-browser-screen",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:42:38.279Z",
+      "worker": "3271e62e-5a7a-48ab-b63b-377719c6a36f",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-screen.test.ts:42 An 'every' claim runs over a hand-written list of a directory; the technique's repair is to enumerate the directory at run time, as tests/next-server/style-atelier.test.ts:72 does."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-screen.test.ts:55 The needle requires a call's opening parenthesis, reads comment-stripped source, and line 61 pins the exact call sites as a floor."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-page.test.ts:2 The file states why its sides are stubbed and which refusal it therefore makes reachable."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/library.live.spec.ts:24 The lane locates the screen through a role identifier kept in product code, and its header confines the lane to claims only the running page can show."
+        }
+      ]
+    },
+    "19bc7f75-f983-4a12-9f0a-19a952d2e4fe/test-harness": {
+      "context": "library-port",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:42:38.279Z",
+      "worker": "3271e62e-5a7a-48ab-b63b-377719c6a36f",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:272 The 'every' claim omits genre and venture from packages/domain/src/library.ts:23, and adding a kind turns nothing red; lines 238, 255 and 297 use the same nine-kind list."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:52 The kernel is built once per suite and items go through upsertItems, but project rows are raw inserts of a record projectSchema would refuse (recipe, rev and createdAt missing), with no invariant check afterwards."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:164 The same input goes to the fixture and the kernel and the answers are compared, which is the technique's check of the claim."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/port.ts:57 Production builds the real side with the same constructor the tests drive in tests/next-server/library-real.test.ts:64."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-handoff.test.ts:35 The test asserts the process actually adopted the temp store before relying on it."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/library-real.live.spec.ts:211 After Pin the lane reads the effect back from the store instead of trusting the toast."
         }
       ]
     }
