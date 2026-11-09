@@ -4526,7 +4526,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scout.ts:90 These adapters carry an operator's verdicts back to the scout and spend stores and project their events into the ledger, so nothing here runs candidates against declared scenarios or scores them; a case-insensitive search of lib/decision/v1/sources and lib/ledger/v1/sources for the absence terms found no hit.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "prompt-assembly",
@@ -12474,7 +12478,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:38 This is a production door that accepts or refuses one model answer against a structural contract and a deterministic regression corpus over tracked files, with no declared scenarios, trials or scores; a case-insensitive search of lib/notebook for the subject's terms found only the source name 'CF Benchmarks' in facts.ts, so that term is left out of the absence list, and the corpus belongs to the test-harness subject, to which the golden path hands deterministic suites.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "error-handling",

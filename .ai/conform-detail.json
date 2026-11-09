@@ -16258,16 +16258,27 @@
       "context": "board-scout-spend-sources",
       "subject": "eval-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T00:03:59.034Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "eaf5e8ab-0772-4d12-b720-af765f02e401",
-        "state": "not-applicable",
-        "at": "2026-11-06T00:04:57.222386+00:00",
-        "reason": "reviewer (sonnet): The anchor, scout.ts:260, is an error string ('nothing rendered to judge') that does not itself show that no eval harness is present. The context's adapters also build an oracle pass/fail summary and gate verdicts and scores into packets (scout.ts:281, scoutPlan.ts:269). The 'judge means a human rul"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scoutBrief.ts:8 The checks are words shown to the operator on a run's head; this module scores nothing."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/scoutWing.ts:55 The `judge` field is a vision read printed into a cell's meta; no score is compared over time in this code."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "not-applicable",
+          "evidence": "lib/decision/v1/sources/spend.ts:20 Spend here is the operator's approval of production launches, not the budget of an eval matrix."
+        }
+      ]
     },
     "95dd9201-2503-481d-8cdd-a863f6566283/generated-music-acceptance": {
       "context": "music-vendors-and-publish",
@@ -21085,6 +21096,94 @@
         }
       ],
       "registryProposal": "far-side-oracle describes a deployed agent on a host the lane controls. For a third-party API, the only available oracle is a read under a separate credential, so the technique could say what the oracle is when nothing can be deployed on the far side."
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/eval-harness": {
+      "context": "style-trials-cull",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "techniques": [
+        {
+          "technique": "comparison-modes",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:126 The technique says a judge (or human) scores every pair both ways and a flip becomes a tie. Slots are decorrelated from the arm by an id-derived rank, which removes a systematic baseline-left confound but is not a mirror; no second presentation exists, and rg for mirror/swap in lib/foundry/training found none. Ties and both-bad do have a home."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/style.ts:36 Proofs attach to a stable trial id, not a column position. The trial's verbatim subject is compared as part of the block in packages/domain/src/style.ratchet.ts:114, so an edited subject does not stand as the same trial."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/style.ts:38 A trial column's face is the newest attempt, never the best, and the approved, rejected, undecided and earlier counts travel beside it. Scope: this is the display only; the server's coverage gate is outside this context."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/StyleFacts.tsx:43 An agent's keep is shown and marked but excluded from the keep tally, so an agent cannot score a style upward from this surface."
+        },
+        {
+          "technique": "certification-levels",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 The ratchet has declared promotion criteria, but both steps are operator readings of rendered output; no theoretical level over a derived model gates an empirical one."
+        },
+        {
+          "technique": "uncontrolled-games-beside-the-win-rate",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:182 This is human-machine agreement, not a round-robin win rate with a swap control. Observation: pairs the kernel could not compare leave the denominator and the computed `total` is not drawn beside it."
+        },
+        {
+          "technique": "pairing-schedule",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/pair/BlindPair.tsx:61 The surface walks a packet's fixed pairs in order and yields no leaderboard over a field, so there is no comparison graph to report."
+        }
+      ],
+      "registryProposal": "comparison-modes requires every pair to be scored both ways and names a human as a possible judge, but it does not say whether a seeded per-pair slot assignment suffices when the judge is one person and mirroring doubles their labour; the technique should rule on that case.",
+      "withdrawn": {
+        "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+        "state": "deviation",
+        "at": "2026-11-09T05:34:35.199800+00:00",
+        "reason": "reviewer (sonnet): The deviation anchors on packages/ui/src/components/pair/BlindPair.tsx and the kernel's driver.ts. Neither is among this context's files (style, cull and cut), and nothing in style/, cull/ or cut/ imports pair/. The claim about the blind-pair mirror is therefore about the Board pair context, not thi"
+      }
+    },
+    "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd/eval-harness": {
+      "context": "notebook-contract-validation",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:33:50.656Z",
+      "worker": "a7868610-e392-4277-8c6d-6584a2459d9e",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/validate.ts:33 The door sits wholly in the deterministic band and states what it leaves unchecked; no judge exists here to place a boundary against."
+        },
+        {
+          "technique": "scenario-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:41 The population is every tracked file run through a deterministic validator, not scenarios posed to a non-deterministic candidate."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:30 Each member carries a verdict diffed against an approved snapshot; no aggregate pass rate exists for family counts to sit beside."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/corpus.ts:148 This guards an accidental snapshot rewrite in a deterministic lane; no agent candidate is being scored against the snapshot."
+        },
+        {
+          "technique": "monitor-inside-the-loop",
+          "verdict": "not-applicable",
+          "evidence": "lib/notebook/retrieval.ts:16 The cross-check does read the artifact rather than the account, but it is deterministic code, not a model reviewing inside a scored loop."
+        }
+      ]
     }
   }
 }
