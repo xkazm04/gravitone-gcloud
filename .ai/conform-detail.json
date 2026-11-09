@@ -20293,6 +20293,52 @@
       "evaluatedTs": "2026-11-09T02:36:14.603Z",
       "worker": "85d09863-b159-4d61-946a-92a9e3621c7e",
       "techniques": []
+    },
+    "396608fd-9886-4a9d-829d-4a5efb6ea9d3/video-assembly": {
+      "context": "article-check-and-critique",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:50:58.393Z",
+      "worker": "fe98f84f-1351-4332-a814-e1b3edf58f5c",
+      "techniques": []
+    },
+    "51e3f5c9-f984-40e7-9588-f8eab2b916f9/video-assembly": {
+      "context": "score-and-ads",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:50:58.393Z",
+      "worker": "fe98f84f-1351-4332-a814-e1b3edf58f5c",
+      "techniques": [
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "lib/score/spots.ts:69 Purpose and hard constraints are well carried (takes.ts:83) and silence is not filled, but there is no mark-plus-offset form; the intended tail of a cue survives only as prose at lib/studio/score.ts:167."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "lib/score/spots.ts:231 ScoreSpot has no failure or refused field and this projection passes none, so the CueSpot.failure vocabulary reaches only the hand-typed SPOTS fixture; a real refusal cannot be held as a state of the cue. Unplaced movements are honest, with reasons (spots.ts:169)."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "lib/score/picture.ts:88 The semantic source is a labelled field carrying a note that it is load-bearing, taken from the beat's own kind rather than an index. The position computation lives outside this context."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "conformant",
+          "evidence": "lib/motion/direction.ts:24 Rung zero is implemented: a plate with no separable element is declined with a reason, and proposed moves are filtered in code against the reading."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "lib/studio/score.ts:178 One derivation of the clock from scene holds, with cue spans computed from it; the hand-typed TIMELINE beside it is fixture data."
+        }
+      ]
     }
   }
 }

@@ -1991,7 +1991,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/articles/checksStatic.ts:82 These gates measure the prose, figures and rendered HTML of a written post and never assemble media on a clock; a case-insensitive search of all of lib/articles for timeline, spotting, storyboard, keyframe and nudge found no hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "prompt-assembly",
@@ -15651,7 +15655,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/score/spots.ts:69 A spot's whole address is a list of scene ids, which re-derives on a retime but cannot express a mid-scene entry, exit or authored overhang, so the cue is not free to resolve inside a scene as the technique requires.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "live-system-demo-film",
