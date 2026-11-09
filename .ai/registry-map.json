@@ -10956,7 +10956,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/library-screen.test.ts:53 The check that every port call goes through settle walks a hand-written file list that omits CharacterDetail, GenreDetail, ModelDetail and VentureDetail, so a bare port call in those or in any new _library file would stay green; none of the four references port today, so this is a gap in the instrument and not a live defect.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "voice-io",
@@ -11209,7 +11213,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:273 The parity suite claims 'every kind' over nine hand-written kinds while LIBRARY_KINDS has eleven and the corpus holds genre and venture items, so those two kinds are never compared between fixture and kernel on this surface.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "demo-data-plane",

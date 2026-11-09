@@ -21184,6 +21184,78 @@
           "evidence": "lib/notebook/retrieval.ts:16 The cross-check does read the artifact rather than the account, but it is deterministic code, not a model reviewing inside a scored loop."
         }
       ]
+    },
+    "ee38e76a-8e14-43c9-b82d-c83504463ef9/test-harness": {
+      "context": "library-browser-screen",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:42:38.279Z",
+      "worker": "3271e62e-5a7a-48ab-b63b-377719c6a36f",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-screen.test.ts:42 An 'every' claim runs over a hand-written list of a directory; the technique's repair is to enumerate the directory at run time, as tests/next-server/style-atelier.test.ts:72 does."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-screen.test.ts:55 The needle requires a call's opening parenthesis, reads comment-stripped source, and line 61 pins the exact call sites as a floor."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-page.test.ts:2 The file states why its sides are stubbed and which refusal it therefore makes reachable."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/library.live.spec.ts:24 The lane locates the screen through a role identifier kept in product code, and its header confines the lane to claims only the running page can show."
+        }
+      ]
+    },
+    "19bc7f75-f983-4a12-9f0a-19a952d2e4fe/test-harness": {
+      "context": "library-port",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:42:38.279Z",
+      "worker": "3271e62e-5a7a-48ab-b63b-377719c6a36f",
+      "techniques": [
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:272 The 'every' claim omits genre and venture from packages/domain/src/library.ts:23, and adding a kind turns nothing red; lines 238, 255 and 297 use the same nine-kind list."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:52 The kernel is built once per suite and items go through upsertItems, but project rows are raw inserts of a record projectSchema would refuse (recipe, rev and createdAt missing), with no invariant check afterwards."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-fixture-parity.test.ts:164 The same input goes to the fixture and the kernel and the answers are compared, which is the technique's check of the claim."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/library/_port/port.ts:57 Production builds the real side with the same constructor the tests drive in tests/next-server/library-real.test.ts:64."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/library-handoff.test.ts:35 The test asserts the process actually adopted the temp store before relying on it."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "tests/live/library-real.live.spec.ts:211 After Pin the lane reads the effect back from the store instead of trusting the toast."
+        }
+      ]
     }
   }
 }
