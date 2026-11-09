@@ -19996,6 +19996,108 @@
           "evidence": "lib/producers/voice.ts:33 A line is held whole against its card and nothing places a cue inside a clip; a search of lib/ for alignment payload names hit only music-clip's lyric code."
         }
       ]
+    },
+    "6a878b5f-8652-4265-839a-dce38680a9c7/quality-gates": {
+      "context": "article-human-gate-and-landing",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:45:09.513Z",
+      "worker": "f3f22b4e-80dc-4cb9-9efa-b971a9dd72d1",
+      "techniques": [
+        {
+          "technique": "prose-rule-drift",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:25 CLAUDE.md states approve is never an agent's act; the act has no actor parameter, the CLI passes a constant ACTOR, and .claude/settings.json denies only --no-verify, force-push and GRAVITONE_SKIP_GATE=1. The forbidden action works."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "deviation",
+          "evidence": "lib/articles/humanActs.ts:36 The approval record holds a time and patch ids, with no digest of the post approved and no actor; landing (including a resume's re-land) reads post/ from disk afresh, so the record does not name the version it approved."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:406 The registry gate's real exit code throws before commit and push; a spawn error also maps to non-zero in run()."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "lib/articles/diffFiles.ts:41 git's could-not-read exit 1 with no diff is a failure, no longer folded into 'identical'."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:397 A public PR is irreversible, so the registry's own lane gates run in the worktree before anything is pushed."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryWrite.ts:307 Dimensions the check could not measure are named in the PR body rather than dropped. A missing check.json yields check: {} which the registry's check-publications refuses."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "lib/articles/registryRead.ts:125 Out-of-tree remedy degrades to what was tried, where, and the variable that declares it."
+        },
+        {
+          "technique": "fabrication-economics",
+          "verdict": "conformant",
+          "evidence": "lib/articles/humanNote.ts:11 Presence-only, but a human rejecting can always say why, so this is the technique's ordinary-rule cell, not the fabrication cell."
+        },
+        {
+          "technique": "branch-provenance-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/registryWrite.ts:350 The landing branch is cut from the just-fetched remote default, so it cannot carry another proposal's commits."
+        }
+      ]
+    },
+    "92742f06-a6dc-418e-8c50-42c050345bc7/quality-gates": {
+      "context": "decision-and-gates",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:45:09.513Z",
+      "worker": "f3f22b4e-80dc-4cb9-9efa-b971a9dd72d1",
+      "techniques": [
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/parts/gates.ts:34 The fact never reads who committed and commit.ts has no actor check. The proof and spend adapters refuse an agent's keep, but they read the same self-declared field, and neither the step nor the article source checks it."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:82 An undecided candidate or a reasonless reject reaches the transaction's result and nothing is written."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/gates.ts:63 A cull with no rows cannot ratify through an empty every(); packages/kernel/test/decision.test.ts also seeds a refused commit."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/parts/gates.ts:55 An unreadable stored commit result fails closed instead of reading as ratified."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:84 The refusal names the remedy and carries a machine-readable detail for the surface to act on."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/commit.ts:91 What a partial commit left undecided is written by the same act that advances the packet, and the commit event carries the preview token."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/decision/read.ts:166 The preview and the commit evaluate one function, so a preview cannot state a weaker rule than the commit enforces."
+        }
+      ]
     }
   }
 }

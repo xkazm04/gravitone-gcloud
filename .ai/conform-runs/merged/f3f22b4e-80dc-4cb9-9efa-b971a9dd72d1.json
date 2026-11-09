@@ -1,0 +1,211 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f3f22b4e-80dc-4cb9-9efa-b971a9dd72d1",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-11-09T01:45:09.513549+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/humanActs.ts:25 approveRun takes no actor and nothing fences it, so the written rule that approve is never an agent's act has no mechanism and `pipeline/article.mts approve` succeeds for an agent exactly as for the operator, while the landing checks themselves refuse properly.",
+   "techniques": [
+    {
+     "technique": "prose-rule-drift",
+     "verdict": "deviation",
+     "evidence": "lib/articles/humanActs.ts:25 CLAUDE.md states approve is never an agent's act; the act has no actor parameter, the CLI passes a constant ACTOR, and .claude/settings.json denies only --no-verify, force-push and GRAVITONE_SKIP_GATE=1. The forbidden action works."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "deviation",
+     "evidence": "lib/articles/humanActs.ts:36 The approval record holds a time and patch ids, with no digest of the post approved and no actor; landing (including a resume's re-land) reads post/ from disk afresh, so the record does not name the version it approved."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "lib/articles/registryWrite.ts:406 The registry gate's real exit code throws before commit and push; a spawn error also maps to non-zero in run()."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "lib/articles/diffFiles.ts:41 git's could-not-read exit 1 with no diff is a failure, no longer folded into 'identical'."
+    },
+    {
+     "technique": "gate-laddering",
+     "verdict": "conformant",
+     "evidence": "lib/articles/registryWrite.ts:397 A public PR is irreversible, so the registry's own lane gates run in the worktree before anything is pushed."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "lib/articles/registryWrite.ts:307 Dimensions the check could not measure are named in the PR body rather than dropped. A missing check.json yields check: {} which the registry's check-publications refuses."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "lib/articles/registryRead.ts:125 Out-of-tree remedy degrades to what was tried, where, and the variable that declares it."
+    },
+    {
+     "technique": "fabrication-economics",
+     "verdict": "conformant",
+     "evidence": "lib/articles/humanNote.ts:11 Presence-only, but a human rejecting can always say why, so this is the technique's ordinary-rule cell, not the fabrication cell."
+    },
+    {
+     "technique": "branch-provenance-gate",
+     "verdict": "not-applicable",
+     "evidence": "lib/articles/registryWrite.ts:350 The landing branch is cut from the just-fetched remote default, so it cannot carry another proposal's commits."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 The override op carries only a version id, so one press waives every blocking finding on the staged version and the operator cannot accept one finding while another keeps blocking, although the version does keep a frozen receipt of the count and renders.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 No finding identity in the waiver: rule and site are not named, so its reach is the whole version. The receipt (lib/script/versions.ts GateOverride) records violations, blocking renders and enforced %, not per-rule identity."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:161 The version advanced over a blocked gate stays marked in the version list; the receipt is written by the accepting act and frozen."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:258 Unmeasured conditions are counted and drawn beside violations, not folded into pass."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Findings.tsx:13 One exhaustive table renders the render gate and the trailer check, so a verdict cannot read differently on two surfaces."
+    }
+   ],
+   "registryProposal": "waiver-names-its-finding is written for waiver text matched by a machine; a human override of a staged artifact with a receipt frozen at the click is a different shape, and the technique could say whether a per-artifact override is acceptable where the receipt lists each finding."
+  },
+  {
+   "context": "decision-and-gates",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/parts/gates.ts:34 A gate part is ratified from the packet's committed state alone, and the kernel's commit accepts a caller-declared `by` (the CLI's `--by agent|operator` flag included), so a machine session can ratify a human gate by writing the record the gate reads.",
+   "techniques": [
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/parts/gates.ts:34 The fact never reads who committed and commit.ts has no actor check. The proof and spend adapters refuse an agent's keep, but they read the same self-declared field, and neither the step nor the article source checks it."
+    },
+    {
+     "technique": "severity-by-construction",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:82 An undecided candidate or a reasonless reject reaches the transaction's result and nothing is written."
+    },
+    {
+     "technique": "gate-liveness",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/parts/gates.ts:63 A cull with no rows cannot ratify through an empty every(); packages/kernel/test/decision.test.ts also seeds a refused commit."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/parts/gates.ts:55 An unreadable stored commit result fails closed instead of reading as ratified."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:84 The refusal names the remedy and carries a machine-readable detail for the surface to act on."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/commit.ts:91 What a partial commit left undecided is written by the same act that advances the packet, and the commit event carries the preview token."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/read.ts:166 The preview and the commit evaluate one function, so a preview cannot state a weaker rule than the commit enforces."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "quality-gates",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "quality-gates",
+   "context": "ui-board-state",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T01:45:09.513549+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "branch-provenance-gate",
+    "fabrication-economics",
+    "gate-laddering",
+    "gate-liveness",
+    "prose-rule-drift",
+    "refusal-names-a-reachable-remedy",
+    "severity-by-construction",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:45:09.513549+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "policy-projection",
+    "unmeasurable-criteria",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:45:09.513549+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "gate-liveness",
+    "policy-projection",
+    "refusal-names-a-reachable-remedy",
+    "self-reported-gate-inputs",
+    "severity-by-construction",
+    "unmeasurable-criteria"
+   ],
+   "deviations": 1,
+   "context": "decision-and-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

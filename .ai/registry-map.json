@@ -2041,7 +2041,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/articles/humanActs.ts:25 approveRun takes no actor and nothing fences it, so the written rule that approve is never an agent's act has no mechanism and `pipeline/article.mts approve` succeeds for an agent exactly as for the operator, while the landing checks themselves refuse properly.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "hitl-approval",
@@ -5298,7 +5302,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/parts/gates.ts:34 A gate part is ratified from the packet's committed state alone, and the kernel's commit accepts a caller-declared `by` (the CLI's `--by agent|operator` flag included), so a machine session can ratify a human gate by writing the record the gate reads.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "test-harness",
