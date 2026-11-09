@@ -1883,12 +1883,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs under an allow-everything profile and is contained only by workspace isolation, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts; one engine of the seam is therefore open rather than fail-closed.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs with permissions skipped (an open profile) and is contained only by a throwaway workspace, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts, so one engine on the seam is open rather than fail-closed.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -6019,12 +6018,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again (bounded only by a ceiling re-priced at apply time), so what runs can differ from what the operator was shown.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again, bounded only by the ceiling the card showed, so lines, provider or model that run can differ from what the operator approved.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "eval-harness",
@@ -7884,12 +7882,11 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "conformant",
-          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a durable pending gate whose only exits are ratified, blocked or sent back, and the receipt/live-arm/stale-confirm records around it bind consent to what was shown; who may drive the gate transition lives in the kernel/Board, not here.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a pending gate whose only exits are ratified, blocked or sent back, and the records around it (receipt token, stale confirm, live arm, frozen ceiling) bind consent and spend to what was shown; who may drive the transition is enforced in the kernel and Board, outside this context.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "structured-output",
@@ -8961,12 +8958,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks that the preview token still matches only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks the preview token only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "job-coordination",
@@ -19763,14 +19759,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/script/versions.ts:136 The receipt for accepting a version over a blocking gate records when, which violations and how much of the gate was enforced, but not who overrode it, so the record cannot attribute the decision.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
+          "evidence": "lib/script/versions.ts:136 Accepting a script version over a blocking gate leaves a receipt frozen on the version that records when, which renders and how much of the gate was enforced, but not who overrode it, so the decision cannot be attributed.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
           "source": "renamed",
           "renamedFrom": "f8036604-75f5-4f7d-898c-734511ac5e86",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "review-iteration-loops",

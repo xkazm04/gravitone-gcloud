@@ -1,0 +1,261 @@
+{
+ "schema": "conform-run/1",
+ "worker": "51fdd994-1809-46ca-95f1-7e69f5f1750b",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-09T22:42:01.685368+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "domain-run-job-steps",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a pending gate whose only exits are ratified, blocked or sent back, and the records around it (receipt token, stale confirm, live arm, frozen ceiling) bind consent and spend to what was shown; who may drive the transition is enforced in the kernel and Board, outside this context.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/run.machine.ts:29 The pending state is enumerated data with declared exits only (ratified, blocked, sent back); transitions.ts refuses any undeclared move."
+    },
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/plan.ts:105 The machine's own success (job done) maps only to awaiting_gate. Ratified is reachable only through a committed packet, so the producer has no way to admit its own output."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/produce.ts:99 A launch is a receipt first, then a confirm. The confirm carries back a digest of the exact parameters disclosed."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/produce.ts:126 When the world has moved, the contract answers 'stale' with the fresh receipt and launches nothing."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.ts:86 Every live spend records who armed it, when and why. run.ts:112 also keeps the figures the confirmed receipt showed."
+    },
+    {
+     "technique": "fixed-policy-amendable-plan",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.ts:115 The spend bound is fixed-tier: the executor reads it and only an operator act moves it."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/estimate.ts:41 A missing price cannot quietly take the mildest bucket ('free'). It must carry a marker saying why it is unpriced."
+    },
+    {
+     "technique": "fail-closed-profile-for-headless",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/job.machine.ts:13 An interrupted job is an unknown outcome and is never treated as safe. No automatic resume leaves it; an operator's look is required."
+    }
+   ]
+  },
+  {
+   "context": "script-composition-and-validation",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/script/versions.ts:136 Accepting a script version over a blocking gate leaves a receipt frozen on the version that records when, which renders and how much of the gate was enforced, but not who overrode it, so the decision cannot be attributed.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/script/versions.ts:136 The fields are at, violations, blocking and enforced, with no decider. Line 131 claims a reader sees 'which one, and when' but not who; fixtureScript.ts:183 builds it via overrideFrom(gate, at)."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/script/history.ts:35 A restored version drops the earlier override and meets the gate again, so an approval does not travel to new content."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "conformant",
+     "evidence": "lib/script/gate.ts:27 An unmeasured check is a first-class verdict, counted separately, never folded into pass."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "conformant",
+     "evidence": "lib/script/versions.ts:143 The override carries how much of the gate could execute at all, so the verdict's verifiability travels with it."
+    },
+    {
+     "technique": "fixed-policy-amendable-plan",
+     "verdict": "conformant",
+     "evidence": "lib/script/recalibrate.ts:108 A recalibration note cannot move the scope boundary; such a note is refused, not adopted."
+    }
+   ]
+  },
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs with permissions skipped (an open profile) and is contained only by a throwaway workspace, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts, so one engine on the seam is open rather than fail-closed.",
+   "techniques": [
+    {
+     "technique": "fail-closed-profile-for-headless",
+     "verdict": "deviation",
+     "evidence": "lib/agent/reviewerCommand.ts:37 agy headless uses allow-everything. reviewerEngines.ts:46-48 records that neither --sandbox nor plan mode stopped writes, so it is read-only by isolation, not by policy. The claude path (agentArgs.ts:40-41) is fail-closed."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/agent/cliSeam.ts:24 The gated write (registry) is deterministic code outside the agent's workspace, so no agent output can perform it."
+    }
+   ]
+  },
+  {
+   "context": "board-scout-spend-sources",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again, bounded only by the ceiling the card showed, so lines, provider or model that run can differ from what the operator approved.",
+   "techniques": [
+    {
+     "technique": "resume-after-decision",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/sources/spend.ts:193 A stale-world resume fires the re-derived receipt instead of asking again or failing loudly."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/sources/spend.ts:185 The commit digest binds consent to the shown price, but a material change at launch does not void the consent; only the USD ceiling is held."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/spend.ts:204 Only an operator's keep moves a request from requested to confirmed; an agent's keep is no confirm."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/spend.ts:225 A rejection must carry a reason, and the reasons and note are written to the request for the agent to read back."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/spend.ts:230 Compare-not-overwrite: a verdict landing on a request whose state already moved is skipped and named, never overwritten. The day's requests are one matrix-cull packet."
+    },
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/spend.ts:81 The agent requests and only an operator answers; the answerer class is fixed before the ask."
+    }
+   ]
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks the preview token only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/store.ts:406 The approval-binds-to-version check at the door is optional; a tokenless commit binds to whatever the run holds at that moment."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/store.ts:384 A verdict racing the commit waits on the run lock and then sees 'committed' and is refused, so concurrent verdicts resolve to one."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T22:42:01.685368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "fail-closed-profile-for-headless",
+    "fail-loud-classification-default",
+    "fixed-policy-amendable-plan",
+    "gate-state-machines",
+    "resume-after-decision",
+    "truncated-verdict-space"
+   ],
+   "deviations": 0,
+   "context": "domain-run-job-steps",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:42:01.685368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fail-loud-classification-default",
+    "fixed-policy-amendable-plan",
+    "gate-state-machines",
+    "oracle-before-gate"
+   ],
+   "deviations": 1,
+   "context": "script-composition-and-validation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:42:01.685368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "fail-closed-profile-for-headless",
+    "gate-state-machines"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:42:01.685368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "handoff-is-a-declared-door",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "board-scout-spend-sources",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:42:01.685368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "gate-state-machines",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
