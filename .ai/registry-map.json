@@ -18850,7 +18850,11 @@
           "revision": 20,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 A cut reviewer's note is stored as prose against a whole-second beat time, with no frame number, frame-fraction spot, marked frame image, done flag or cut revision, so the editor must still search for what was meant.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:b47fafe05146f90b",
+          "evaluatedRevision": 23
         },
         {
           "subject": "image-prompt-composition",

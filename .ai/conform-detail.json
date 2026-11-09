@@ -21027,6 +21027,22 @@
           "evidence": "tests/next-server/worker.test.ts:68 The worker's real runner is spawned as a process, and job.kill.test.ts kills a real child mid-step."
         }
       ]
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/video-assembly": {
+      "context": "style-trials-cull",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:06:40.226Z",
+      "worker": "a0d5bf71-b2a6-4424-bc9a-9f1170913493",
+      "techniques": [
+        {
+          "technique": "pinned-frame-notes",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 The notes are joined into one verdict note line per beat, keyed to a caption beat's m:ss start, and none of the five parts of a pinned note beyond the text is captured."
+        }
+      ]
     }
   }
 }
