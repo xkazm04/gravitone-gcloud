@@ -46,6 +46,14 @@ export const UNGUARDED_TEST_BUDGET = 0;
 export const MUTANTS: UnitMutant[] = [
   // ---- @gt/domain and @gt/catalog
   {
+    id: "production-casts-before-proven",
+    test: "packages/domain/test/production.test.ts",
+    file: "packages/domain/src/production.machine.ts",
+    find: "hero: [\"rough\", \"proven\", \"dropped\"],",
+    replace: "hero: [\"rough\", \"proven\", \"casting\", \"dropped\"],",
+    why: "A hero take could go straight to casting, so the operator would spend ElevenLabs credits and character work on a concept no take has proven - the one rule the stages exist to hold."
+  },
+  {
     id: "door-keeps-explicit-undefined",
     test: "packages/domain/test/door.test.ts",
     file: "packages/domain/src/door.ts",
