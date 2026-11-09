@@ -15,12 +15,13 @@ import { ROUND_VOICES, voicePickRefusal, type CreditRead, type ProductionId, typ
 import { blobStore } from "@gt/kernel/blob";
 import { armLive, DRY } from "@gt/kernel/dryrun";
 import { append } from "@gt/kernel/events";
+import { completeCastIn } from "@gt/kernel/productions/cast";
 import { queryEvents } from "@gt/kernel/events-query";
 import { enqueueIn, get, loadOutputs } from "@gt/kernel/job";
 import { vendorHealth, type Outputs, type Producer, type StepContext, type StepOutcome } from "@gt/kernel/job-core";
 import { readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
-import type { Store } from "@gt/kernel/store";
+import type { Reader, Store, Tx } from "@gt/kernel/store";
 import { madeFree, madePaid } from "@gt/producers/research/partAct";
 import { failureOf, meteredCall } from "@gt/producers/research/metered";
 import {
@@ -204,6 +205,15 @@ export function productionVoicesProducer(o: { readonly store?: () => Result<Stor
     design: (req, k, ctx) => guarded(() => designAct(e, req, k, ctx)),
     level: (req, i, ctx) => guarded(() => levelAct(e, rootOf(), req, i, ctx)),
     create: (req, ctx) => guarded(() => createAct(e, req, ctx)),
+    ended: async (req, job, ending) => {
+      if (ending !== "done") return;
+      const s = store();
+      if (!s.ok) throw s.error;
+      const made = createdVoiceOf(s.value, job.id);
+      if (!made.ok) throw made.error;
+      const done = s.value.tx((t) => completeCastIn(t, { productionId: req.productionId, roundId: req.roundId, voice: req.candidateId, voiceId: made.value.voiceId, dry: made.value.dry }, { kind: "machine", id: job.id }));
+      if (!done.ok) throw done.error;
+    },
     health: vendorHealth(async () => (isMusicConfigured() ? { ok: true } : { ok: false, reason: "no ElevenLabs key is configured on this box" })),
   });
 }
@@ -245,10 +255,24 @@ export type VoiceRoundLaunch = { readonly kind: "receipt"; readonly receipt: Rec
 
 export const voiceRoundJobId = (productionId: string, roleId: string, roundId: string): string => `job:production-voices:${productionId}:${roleId}:${roundId}`;
 
-function roundReceipt(r: Parameters<Parameters<Store["read"]>[0]>[0], ask: VoiceRoundAsk, now: number): Receipt {
+/** A round's voices line on a receipt, also carried on the casting round's combined receipt. */
+export function voiceRoundLine(ask: VoiceRoundAsk): PlanLine {
   const key = `voices:${ask.productionId}/${ask.roundId}@${createHash("sha256").update(`${ask.brief}\u0000${ask.script}`).digest("hex").slice(0, 12)}`;
-  const line: PlanLine = { key, label: `voice design · ${designCalls(ROUND_VOICES)} calls, ${ROUND_VOICES} previews`, lane: PRODUCTION_VOICES_LANE, units: designCalls(ROUND_VOICES), option: designOption(), after: [], order: 0, status: "pending" };
+  return { key, label: `voice design · ${designCalls(ROUND_VOICES)} calls, ${ROUND_VOICES} previews`, lane: PRODUCTION_VOICES_LANE, units: designCalls(ROUND_VOICES), option: designOption(), after: [], order: 0, status: "pending" };
+}
+
+function roundReceipt(r: Reader, ask: VoiceRoundAsk, now: number): Receipt {
+  const line = voiceRoundLine(ask);
   return receiptFor({ subject: { kind: "run", lane: "audio" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now, mode: ask.mode });
+}
+
+/** Enqueues a round's voices job, its request beside it: the casting round's confirm and this file's `requestVoiceRound`. */
+export function enqueueVoiceRoundIn(t: Tx, ask: VoiceRoundAsk, mode: Job["mode"]): string {
+  const jobId = voiceRoundJobId(ask.productionId, ask.roleId, ask.roundId);
+  const script = ask.script.trim();
+  enqueueIn(t, { id: jobId, of: { kind: "run", id: `production:${ask.productionId}/${ask.roundId}` }, producer: PRODUCTION_VOICES, lane: PRODUCTION_VOICES_LANE, mode }, ask.actor);
+  append(t, { actor: ask.actor, type: VOICES_REQUEST, subject: { kind: "job", id: jobId }, data: { act: "round", productionId: ask.productionId, roleId: ask.roleId, roundId: ask.roundId, brief: ask.brief, script, count: ROUND_VOICES, by: ask.by } });
+  return jobId;
 }
 
 /** A round's voices: the receipt, then its confirm. */
@@ -266,15 +290,7 @@ export function requestVoiceRound(store: Store, ask: VoiceRoundAsk): Result<Voic
     if (receipt.token !== token) return { kind: "stale", fresh: receipt };
     const mode = ask.mode === "dry" ? ok(DRY) : armLive(ask.actor, t.at, `voices receipt ${token.slice(0, 12)} confirmed`, { dryOnly: ask.dryOnly });
     if (!mode.ok) throw mode.error;
-    const jobId = voiceRoundJobId(ask.productionId, ask.roleId, ask.roundId);
-    enqueueIn(t, { id: jobId, of: { kind: "run", id: `production:${ask.productionId}/${ask.roundId}` }, producer: PRODUCTION_VOICES, lane: PRODUCTION_VOICES_LANE, mode: mode.value }, ask.actor);
-    append(t, {
-      actor: ask.actor,
-      type: VOICES_REQUEST,
-      subject: { kind: "job", id: jobId },
-      data: { act: "round", productionId: ask.productionId, roleId: ask.roleId, roundId: ask.roundId, brief: ask.brief, script, count: ROUND_VOICES, by: ask.by },
-    });
-    return { kind: "launched", jobId, receipt };
+    return { kind: "launched", jobId: enqueueVoiceRoundIn(t, ask, mode.value), receipt };
   });
 }
 
@@ -294,7 +310,7 @@ export type VoicePickAsk = {
  * The operator's pick, the only way a vendor voice is created. Refused for anyone else, for a preview never played, and
  * for a round that has not finished; a pick is one job, and picking the same candidate again is that job's conflict.
  */
-export function pickVoice(store: Store, ask: VoicePickAsk): Result<{ readonly jobId: string }> {
+export function pickVoice(store: Store, ask: VoicePickAsk, inTx?: (t: Tx) => void): Result<{ readonly jobId: string }> {
   if (ask.actor.kind !== "operator") return err("refused", `voice: only the operator picks a cast voice (${ask.actor.kind} tried)`);
   const unheard = voicePickRefusal(ask.heardAt === undefined ? {} : { heardAt: ask.heardAt });
   if (unheard !== undefined) return err("refused", unheard);
@@ -306,14 +322,15 @@ export function pickVoice(store: Store, ask: VoicePickAsk): Result<{ readonly jo
   if (!parsed.ok) return parsed;
   const job = get(store, parsed.value);
   if (!job.ok) return job;
-  if (job.value.job.state !== "done") return err("refused", `voice: the round is ${job.value.job.state}; it must finish before a pick`);
+  const roundState = job.value.job.state;
+  if (roundState === "queued" || roundState === "running") return err("refused", `voice: the round is ${roundState}; it must finish before a pick`);
   const position = Number(/^voice-(\d+)$/.exec(ask.candidateId)?.[1] ?? NaN);
   if (!Number.isInteger(position) || position < 1 || position > round.count) return err("refused", `voice: ${ask.candidateId} is not a candidate of this round`);
   const outputs = store.read((r) => loadOutputs(r, ask.roundJobId));
   if (!outputs.ok) return outputs;
   const preview = previewAt(outputs.value, round.count, position);
   if (!preview.ok) return preview;
-  if (preview.value === undefined) return err("not-found", `voice: ${ask.candidateId} has no stored preview`);
+  if (preview.value === undefined || !outputs.value.has(levelStep(position))) return err("not-found", `voice: ${ask.candidateId} has no finished preview`);
   const generatedVoiceId = preview.value.generatedVoiceId;
   const jobId = `${ask.roundJobId}:create-${ask.candidateId}`;
   return store.tx((t) => {
@@ -326,6 +343,7 @@ export function pickVoice(store: Store, ask: VoicePickAsk): Result<{ readonly jo
       subject: { kind: "job", id: jobId },
       data: { act: "create", productionId: round.productionId, roleId: round.roleId, roundId: round.roundId, candidateId: ask.candidateId, generatedVoiceId, name: ask.name, brief: round.brief, pickedBy: ask.by },
     });
+    inTx?.(t);
     return { jobId };
   });
 }

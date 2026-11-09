@@ -24,7 +24,8 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 import type { KeptConcept, ProductionEntry, ProductionsPort, ProductionsView, TakeLaunchView, TakeRequestInput } from "../_port/contract.ts";
 import s from "./productions.module.css";
-import { AudioBlock, CastingBlock, CutBlock, LessonsBlock, SourceChip, STAGE_PILL, VentureBlock } from "./Sections.tsx";
+import { AudioBlock, CutBlock, LessonsBlock, SourceChip, STAGE_PILL, VentureBlock } from "./Sections.tsx";
+import { CastingPanel } from "./Casting.tsx";
 import { initialScript, scriptReducer } from "./script.ts";
 
 type Act = (run: () => Promise<ActionResult<ProductionsView>>) => Promise<string | undefined>;
@@ -247,6 +248,8 @@ export function ProductionInspector({ entry, port, act, onView }: { readonly ent
         )}
       </div>
 
+      <CastingPanel entry={entry} port={port} act={act} onView={onView} />
+
       <div className={s.row}>
         {stage === "proven" && <Button label="Start casting" size="sm" tone="cyan" disabled={busy} onPress={casting} />}
         {stage !== "dropped" && stage !== "done" && <Button label="Drop" size="sm" tone="rose" disabled={busy} onPress={drop} />}
@@ -255,7 +258,7 @@ export function ProductionInspector({ entry, port, act, onView }: { readonly ent
   );
 }
 
-/** The stages S2-S6 build, as they will read, drawn from the scripted slate. Nothing here reaches a record. */
+/** The stages S5-S6 build, as they will read, drawn from the scripted slate. Nothing here reaches a record. */
 export function ScriptedPanels({ entry, view }: { readonly entry: ProductionEntry; readonly view: ProductionsView }) {
   const [open, setOpen] = useState(false);
   const [script, dispatch] = useReducer(scriptReducer, initialScript);
@@ -263,12 +266,8 @@ export function ScriptedPanels({ entry, view }: { readonly entry: ProductionEntr
   return (
     <div className={s.scripted} data-scripted="later-stages">
       <Fold title="Later stages, scripted" open={open} onToggle={setOpen} level={3}>
-        <p className={s.note}>casting, audio, final cut, lessons and ventures stay scripted until S2-S6. Nothing here is real or written; acts reset on reload.</p>
+        <p className={s.note}>audio, final cut, lessons and ventures stay scripted until S5-S6. Nothing here is real or written; acts reset on reload.</p>
         <div className={s.journey}>
-          <section className={s.block} aria-label="casting, scripted">
-            <Chip label="scripted · S2-S4" ghost casing="lower" />
-            <CastingBlock {...props} />
-          </section>
           <section className={s.block} aria-label="audio, scripted">
             <Chip label="scripted · S5" ghost casing="lower" />
             <AudioBlock {...props} />

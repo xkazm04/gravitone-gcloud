@@ -148,7 +148,7 @@ function entryOf(raw: Raw): Result<ProductionEntry> {
     if (!lesson.ok) return lesson;
     lessons.push(lesson.value);
   }
-  return ok({ production: production.value, logline: raw.logline, ...(raw.poster === undefined ? {} : { poster: raw.poster }), frames: raw.frames ?? [], progress: {}, rounds, lessons });
+  return ok({ production: production.value, logline: raw.logline, ...(raw.poster === undefined ? {} : { poster: raw.poster }), frames: raw.frames ?? [], progress: {}, rounds, castJobs: {}, lessons });
 }
 
 /** The scripted slate: on the fixture side it is the whole view; the real side shows only its later-stage panels. */

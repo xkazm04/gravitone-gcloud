@@ -77,7 +77,7 @@ const BALANCE_WAIT_MS = 10_000;
  * subscription's `character_count` delta (which also counts anything else the account spent meanwhile). `unread` is
  * neither: nothing was invented, and `why` says what failed.
  */
-export type CreditReading = { readonly used: number; readonly read: CreditRead } | { readonly used: 0; readonly read: "unread"; readonly why: string };
+export type CreditReading = { readonly used: number; readonly read: Exclude<CreditRead, "unread"> } | { readonly used: 0; readonly read: "unread"; readonly why: string };
 
 export type VoiceDeps = { readonly sleep?: (ms: number) => Promise<void> };
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));

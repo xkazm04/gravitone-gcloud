@@ -3,7 +3,7 @@
 // cut, lessons, ventures) are scripted panels on both sides until S2-S6: `scripted` is what they draw.
 
 import type { ReceiptMode, Receipt } from "@gt/domain/produce";
-import type { CastRound, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, TakeKind } from "@gt/domain/production";
+import type { CastJob, CastRound, Production, ProductionId, ProductionLesson, ProductionSource, ProductionStage, TakeKind } from "@gt/domain/production";
 
 import type { ActionResult } from "../../../../_server/actionCore.ts";
 
@@ -22,6 +22,8 @@ export type ProductionEntry = {
   readonly frames: readonly ProductionFrame[];
   readonly progress: Readonly<Record<string, TakeProgress>>;
   readonly rounds: readonly CastRound[];
+  /** The latest job of each casting act (`roles`, `audition:<role>`), so the screen can watch and report it. */
+  readonly castJobs: Readonly<Record<string, CastJob>>;
   readonly lessons: readonly ProductionLesson[];
 };
 
@@ -50,6 +52,11 @@ export type TakeRequestInput = { readonly id: ProductionId; readonly kind: TakeK
 /** A launch's answer: the receipt to confirm, a fresher one, or the take it started, always with the view rebuilt. */
 export type TakeLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string; readonly takeId: string } };
 
+/** A casting launch: the concept's roles, one role's line, a round, or a retry of a round's missing designs. */
+export type CastLaunchInput = { readonly kind: "roles" | "audition" | "round" | "retry"; readonly id: ProductionId; readonly roleId?: string; readonly roundId?: string; readonly mode: ReceiptMode; readonly token?: string };
+export type CastLaunchView = { readonly view: ProductionsView; readonly launch: { readonly kind: "receipt" | "stale"; readonly receipt: Receipt } | { readonly kind: "launched"; readonly jobId: string } };
+export type RoleEditInput = { readonly id?: string; readonly name: string; readonly brief: string; readonly auditionScript?: string };
+
 export type ProductionsPort = {
   readonly start: (input: { readonly source: ProductionSource }) => Promise<ActionResult<ProductionsView>>;
   readonly launch: (input: TakeRequestInput) => Promise<ActionResult<TakeLaunchView>>;
@@ -57,4 +64,11 @@ export type ProductionsPort = {
   readonly drop: (input: { readonly id: ProductionId }) => Promise<ActionResult<ProductionsView>>;
   readonly move: (input: { readonly id: ProductionId; readonly to: ProductionStage }) => Promise<ActionResult<ProductionsView>>;
   readonly refresh: () => Promise<ActionResult<ProductionsView>>;
+  readonly castLaunch: (input: CastLaunchInput) => Promise<ActionResult<CastLaunchView>>;
+  readonly saveRoles: (input: { readonly id: ProductionId; readonly roles: readonly RoleEditInput[] }) => Promise<ActionResult<ProductionsView>>;
+  readonly heard: (input: { readonly id: ProductionId; readonly roundId: string; readonly voiceId: string; readonly at: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly pick: (input: { readonly id: ProductionId; readonly roundId: string; readonly character: string; readonly voice: string; readonly saveToLibrary: boolean }) => Promise<ActionResult<ProductionsView>>;
+  readonly recast: (input: { readonly id: ProductionId; readonly roleId: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly retryVoices: (input: { readonly id: ProductionId; readonly roundId: string }) => Promise<ActionResult<ProductionsView>>;
+  readonly retryCreate: (input: { readonly id: ProductionId; readonly roundId: string }) => Promise<ActionResult<ProductionsView>>;
 };

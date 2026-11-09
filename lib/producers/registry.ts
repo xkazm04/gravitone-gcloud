@@ -42,6 +42,7 @@ import { coverBriefProducer } from "./coverBrief.ts";
 import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { productionTakeProducer } from "./production.ts";
 import { productionVoicesProducer } from "./productionVoices.ts";
+import { productionCastProducer } from "./productionCast.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -177,6 +178,8 @@ export const BOUND: readonly Bound[] = [
   { name: "production-take", producer: productionTakeProducer() },
   // A casting round's voices (spark concept-casting-stages S3): design calls and the operator's pick, on cloud.elevenlabs.
   { name: "production-voices", producer: productionVoicesProducer() },
+  // A casting round's words and new faces (spark concept-casting-stages S4): on the text and image seats, one job per act.
+  { name: "production-cast", producer: productionCastProducer() },
   ...stepsBound(),
 ];
 

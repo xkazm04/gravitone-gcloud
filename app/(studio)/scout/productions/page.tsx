@@ -9,7 +9,7 @@ import { scoutHeaderFacts } from "../../_shell/headerFacts.ts";
 import { serverBoard } from "../../board/_port/port.ts";
 import { isScoutPacket, ScoutHead } from "../_scout/ScoutHead.tsx";
 import s from "../_scout/scout.module.css";
-import { dropProductionAction, launchTakeAction, markProvenAction, moveProductionAction, refreshProductionsAction, startProductionAction } from "./_port/actions.ts";
+import { castLaunchAction_, dropProductionAction, heardAction_, launchTakeAction, markProvenAction, moveProductionAction, pickCastAction, recastAction_, refreshProductionsAction, retryCreateAction_, retryVoicesAction_, saveRolesAction_, startProductionAction } from "./_port/actions.ts";
 import type { ProductionsPort } from "./_port/contract.ts";
 import { serverProductions } from "./_port/port.ts";
 import { Productions } from "./_productions/Productions.tsx";
@@ -17,7 +17,7 @@ import { Productions } from "./_productions/Productions.tsx";
 export const metadata: Metadata = { title: "Gravitone · Productions" };
 
 /** The Server Actions as the island holds them: passed as props, so no client module imports the actions file (or its zod). */
-const port: ProductionsPort = { start: startProductionAction, launch: launchTakeAction, proven: markProvenAction, drop: dropProductionAction, move: moveProductionAction, refresh: refreshProductionsAction };
+const port: ProductionsPort = { start: startProductionAction, launch: launchTakeAction, proven: markProvenAction, drop: dropProductionAction, move: moveProductionAction, refresh: refreshProductionsAction, castLaunch: castLaunchAction_, saveRoles: saveRolesAction_, heard: heardAction_, pick: pickCastAction, recast: recastAction_, retryVoices: retryVoicesAction_, retryCreate: retryCreateAction_ };
 
 export default async function ProductionsPage({ searchParams }: { readonly searchParams: Promise<{ readonly from?: string | string[] }> }) {
   await connection();

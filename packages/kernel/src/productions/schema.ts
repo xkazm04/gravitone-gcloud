@@ -74,6 +74,56 @@ BEGIN SELECT RAISE(ABORT, 'a take settles once'); END;
 CREATE TRIGGER production_takes_never_deleted BEFORE DELETE ON production_takes
 BEGIN SELECT RAISE(ABORT, 'a take is never deleted'); END;`,
     },
+    // The casting round (spark concept-casting-stages S4): a production's roles and the jobs writing them, one row per
+    // round, one row per candidate. Who cast whom is the role's `cast` (in `roles`); a round is never deleted.
+    {
+      version: 2,
+      sql: `
+ALTER TABLE productions ADD COLUMN roles TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(roles) AND json_type(roles) = 'array');
+ALTER TABLE productions ADD COLUMN cast_jobs TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(cast_jobs) AND json_type(cast_jobs) = 'object');
+CREATE TABLE cast_rounds (
+  production_id TEXT NOT NULL REFERENCES productions (id),
+  id TEXT NOT NULL CHECK (length(id) > 0),
+  role_id TEXT NOT NULL CHECK (length(role_id) > 0),
+  n INTEGER NOT NULL CHECK (n > 0),
+  at TEXT NOT NULL,
+  dry INTEGER NOT NULL DEFAULT 0 CHECK (dry IN (0, 1)),
+  voice_job_id TEXT NOT NULL CHECK (length(voice_job_id) > 0),
+  draw_job_id TEXT,
+  draw_attempt INTEGER NOT NULL DEFAULT 0 CHECK (draw_attempt >= 0),
+  heard TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(heard) AND json_type(heard) = 'object'),
+  pick_character TEXT,
+  pick_voice TEXT,
+  save_to_library INTEGER NOT NULL DEFAULT 0 CHECK (save_to_library IN (0, 1)),
+  picked_at TEXT,
+  picked_by TEXT,
+  create_job_id TEXT,
+  PRIMARY KEY (production_id, id),
+  UNIQUE (production_id, role_id, n)
+);
+CREATE TRIGGER cast_rounds_never_deleted BEFORE DELETE ON cast_rounds
+BEGIN SELECT RAISE(ABORT, 'a casting round is never deleted'); END;
+CREATE TABLE cast_candidates (
+  production_id TEXT NOT NULL,
+  round_id TEXT NOT NULL,
+  slot INTEGER NOT NULL CHECK (slot BETWEEN 1 AND 5),
+  origin TEXT NOT NULL CHECK (origin IN ('reused', 'new')),
+  state TEXT NOT NULL CHECK (state IN ('pending', 'ready', 'failed', 'refused')),
+  character_id TEXT,
+  card TEXT CHECK (card IS NULL OR (json_valid(card) AND json_type(card) = 'object')),
+  images TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(images) AND json_type(images) = 'array'),
+  blobs TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(blobs) AND json_type(blobs) = 'array'),
+  match TEXT,
+  error TEXT,
+  PRIMARY KEY (production_id, round_id, slot),
+  FOREIGN KEY (production_id, round_id) REFERENCES cast_rounds (production_id, id),
+  CHECK (origin <> 'reused' OR (character_id IS NOT NULL AND card IS NOT NULL)),
+  CHECK (state <> 'failed' OR error IS NOT NULL),
+  CHECK (state <> 'refused' OR error IS NOT NULL)
+);
+CREATE TRIGGER cast_candidates_never_deleted BEFORE DELETE ON cast_candidates
+BEGIN SELECT RAISE(ABORT, 'a casting candidate is never deleted'); END;`,
+    },
   ],
 };
 
@@ -81,7 +131,7 @@ BEGIN SELECT RAISE(ABORT, 'a take is never deleted'); END;`,
 
 export const startInputSchema = z.object({ source: productionSourceSchema, title: z.string().trim().min(1), board: productionBoardSchema }).strict();
 
-export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by";
+export const HEAD_COLUMNS = "id, title, source_kind, source_ref, stage, board, started_at, started_by_kind, started_by, roles, cast_jobs";
 export const TAKE_COLUMNS = "production_id, id, n, kind, state, beats, frames, prompt, seed, engine, job_id, dry, at, video, poster, error, duration_s, gpu_seconds, proven_at, proven_by, stale";
 
 const opt = z.string().nullable();
@@ -96,6 +146,8 @@ export const headRowSchema = z.object({
   started_at: z.string(),
   started_by_kind: z.enum(ACTOR_KINDS),
   started_by: z.string().min(1),
+  roles: z.string(),
+  cast_jobs: z.string(),
 });
 
 export const takeRowSchema = z.object({

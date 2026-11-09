@@ -83,8 +83,12 @@ export type LessonState = (typeof LESSON_STATES)[number];
 export const ROUND_CHARACTERS = 5;
 export const ROUND_VOICES = 5;
 
-/** Where a round's consumed credits were read: the API's `character-cost` header, else the subscription's delta. */
-export const CREDIT_READS = ["character-cost-header", "subscription-delta"] as const;
+/** A new design's progress in its round. `failed` is the draw's sentence; `refused` is the safety judge's line. */
+export const CAST_CANDIDATE_STATES = ["pending", "ready", "failed", "refused"] as const;
+export type CastCandidateState = (typeof CAST_CANDIDATE_STATES)[number];
+
+/** Where a round's consumed credits were read: the API's `character-cost` header, else the subscription's delta, else not read at all. */
+export const CREDIT_READS = ["character-cost-header", "subscription-delta", "unread"] as const;
 export type CreditRead = (typeof CREDIT_READS)[number];
 
 /** The ledger's event types. `lesson.confirmed` is lib/sound/lessons.ts's, so lessons are production events. */
@@ -95,6 +99,8 @@ export const PRODUCTION_EVENTS = {
   proven: "production.proven",
   castRound: "cast.round",
   castPicked: "cast.picked",
+  castRoles: "cast.roles",
+  castRecast: "cast.recast",
   characterAdded: "character.added",
   characterUpdated: "character.updated",
   characterSaved: "character.saved",

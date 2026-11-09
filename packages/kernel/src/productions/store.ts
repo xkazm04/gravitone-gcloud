@@ -6,6 +6,8 @@
 // `production.staged`, `production.take`, `production.proven`) carrying the actor it was handed. A move the machine's
 // table refuses is refused here with `refusalOfMove`'s sentence, whoever asked; no layer above can skip it.
 
+import { z } from "zod";
+
 import { parseAt, parseJsonAt } from "@gt/domain/door";
 import { AppError, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
@@ -13,6 +15,7 @@ import {
   PRODUCTION_EVENTS,
   PRODUCTION_ID_RE,
   productionBoardSchema,
+  productionRoleSchema,
   productionSchema,
   refusalOfMove,
   type Production,
@@ -26,6 +29,8 @@ import {
 import { append } from "../events.ts";
 import type { Reader, Row, Tx } from "../store.ts";
 import { HEAD_COLUMNS, TAKE_COLUMNS, headRowSchema, startInputSchema, stringListSchema, takeRowSchema } from "./schema.ts";
+
+const rolesSchema = z.array(productionRoleSchema);
 
 function must<T>(r: Result<T>): T {
   if (!r.ok) throw r.error;
@@ -71,7 +76,7 @@ function toProduction(r: Reader, row: Row): Production {
       stage: h.stage,
       board: must(parseJsonAt(`production ${h.id} board`, productionBoardSchema, h.board)),
       takes: takesOf(r, h.id),
-      roles: [],
+      roles: must(parseJsonAt(`production ${h.id} roles`, rolesSchema, h.roles)),
       startedAt: h.started_at,
       startedBy: h.started_by,
     }),
@@ -152,10 +157,25 @@ function stageMove(t: Tx, id: string, from: ProductionStage, to: ProductionStage
   append(t, { actor, type: PRODUCTION_EVENTS.staged, subject: { kind: "production", id }, data: { from, to } });
 }
 
+/**
+ * Why this stage move may not happen though the machine allows it: audio needs every role cast (and no dry stand-in
+ * among the casts), and the way back to casting is a re-cast of a named role, which is what marks later takes stale.
+ */
+export function refusalOfCastMove(p: Production, to: ProductionStage): string | undefined {
+  if (to === "casting" && (p.stage === "audio" || p.stage === "cutting")) return "production: a re-cast names the role it re-casts; the stage does not move back on its own";
+  if (to !== "audio" || p.stage !== "casting") return undefined;
+  if (p.roles.length === 0) return `production: ${p.id} has no roles to cast`;
+  const open = p.roles.filter((r) => r.cast === undefined).map((r) => r.name);
+  if (open.length > 0) return `production: every role needs a character and a voice before audio (${open.join(", ")} still open)`;
+  const dry = p.roles.filter((r) => r.cast?.dry === true).map((r) => r.name);
+  if (dry.length > 0) return `production: ${dry.join(", ")} cast on a dry round; a dry stand-in cannot go to audio`;
+  return undefined;
+}
+
 /** One stage move, refused with `refusalOfMove`'s sentence when the machine forbids it (an operator-only stage included). */
 export function moveProductionIn(t: Tx, id: string, to: ProductionStage, actor: Actor): Production {
   const p = mustHave(t, id);
-  const refusal = refusalOfMove(p.stage, to, actor.kind);
+  const refusal = refusalOfMove(p.stage, to, actor.kind) ?? refusalOfCastMove(p, to);
   if (refusal !== undefined) throw new AppError("refused", refusal);
   stageMove(t, id, p.stage, to, actor);
   return mustHave(t, id);

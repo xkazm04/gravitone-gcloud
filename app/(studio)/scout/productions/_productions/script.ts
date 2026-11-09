@@ -6,7 +6,6 @@ import { productionMachine, refusalOfMove } from "@gt/domain/production.machine"
 
 import type { ProductionEntry } from "../_port/contract.ts";
 
-export type RoundPicks = { readonly character?: string; readonly voice?: string };
 export type LessonEdit = { readonly text: string; readonly accepted: boolean };
 export type AudioPick = { readonly voice: VoiceRoute; readonly music: MusicRoute };
 
@@ -14,10 +13,6 @@ export type ScriptState = {
   readonly started: Readonly<Record<string, true>>;
   readonly stage: Readonly<Record<string, ProductionStage>>;
   readonly proven: Readonly<Record<string, string>>;
-  readonly heard: Readonly<Record<string, true>>;
-  readonly picks: Readonly<Record<string, RoundPicks>>;
-  readonly locked: Readonly<Record<string, true>>;
-  readonly saved: Readonly<Record<string, boolean>>;
   readonly lessons: Readonly<Record<string, LessonEdit>>;
   readonly venture: Readonly<Record<string, string>>;
   readonly audio: Readonly<Record<string, AudioPick>>;
@@ -25,16 +20,12 @@ export type ScriptState = {
   readonly refusal?: string;
 };
 
-export const initialScript: ScriptState = { started: {}, stage: {}, proven: {}, heard: {}, picks: {}, locked: {}, saved: {}, lessons: {}, venture: {}, audio: {} };
+export const initialScript: ScriptState = { started: {}, stage: {}, proven: {}, lessons: {}, venture: {}, audio: {} };
 
 export type ScriptAct =
   | { readonly type: "start"; readonly id: string }
   | { readonly type: "move"; readonly id: string; readonly from: ProductionStage; readonly to: ProductionStage }
   | { readonly type: "proven"; readonly id: string; readonly from: ProductionStage; readonly takeId: string }
-  | { readonly type: "hear"; readonly voice: string }
-  | { readonly type: "pick"; readonly round: string; readonly field: "character" | "voice"; readonly candidate: string }
-  | { readonly type: "lock"; readonly round: string }
-  | { readonly type: "save"; readonly round: string; readonly on: boolean }
   | { readonly type: "lesson"; readonly id: string; readonly edit: LessonEdit }
   | { readonly type: "venture"; readonly id: string; readonly name: string }
   | { readonly type: "audio"; readonly id: string; readonly audio: AudioPick }
@@ -59,14 +50,6 @@ export function scriptReducer(s0: ScriptState, a: ScriptAct): ScriptState {
       const refusal = refusalOfMove(a.from, "proven", "operator");
       return refusal !== undefined ? { ...s, refusal } : { ...s, stage: { ...s.stage, [a.id]: "proven" }, proven: { ...s.proven, [a.id]: a.takeId } };
     }
-    case "hear":
-      return { ...s, heard: { ...s.heard, [a.voice]: true } };
-    case "pick":
-      return { ...s, picks: { ...s.picks, [a.round]: { ...s.picks[a.round], [a.field]: a.candidate } } };
-    case "lock":
-      return { ...s, locked: { ...s.locked, [a.round]: true } };
-    case "save":
-      return { ...s, saved: { ...s.saved, [a.round]: a.on } };
     case "lesson":
       return { ...s, lessons: { ...s.lessons, [a.id]: a.edit } };
     case "venture":

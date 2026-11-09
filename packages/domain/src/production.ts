@@ -13,6 +13,7 @@ import { z } from "zod";
 import { blobRefSchema } from "./blob.ts";
 import { VENTURE_ID_RE } from "./genre.ts";
 import {
+  CAST_CANDIDATE_STATES,
   CHARACTER_AUDIENCES,
   CHARACTER_ID_RE,
   CHARACTER_ORIGINS,
@@ -33,6 +34,7 @@ import {
 } from "./production.machine.ts";
 
 export {
+  CAST_CANDIDATE_STATES,
   CHARACTER_AUDIENCES,
   CHARACTER_ID_RE,
   CHARACTER_ORIGINS,
@@ -54,6 +56,7 @@ export {
   productionMachine,
   refusalOfMove,
   voicePickRefusal,
+  type CastCandidateState,
   type CharacterAudience,
   type CharacterOrigin,
   type CreditRead,
@@ -123,7 +126,15 @@ export const productionTakeSchema = z.object({
 export type ProductionTake = z.output<typeof productionTakeSchema>;
 
 /** What a role was cast with. Written only by the operator's pick (`cast.picked`). */
-export const roleCastSchema = z.object({ characterId: characterIdSchema, voiceId: text, roundId: text, pickedAt: at, pickedBy: text });
+export const roleCastSchema = z.object({
+  characterId: characterIdSchema,
+  voiceId: text,
+  roundId: text,
+  pickedAt: at,
+  pickedBy: text,
+  /** Present when a dry round made this pick: a stand-in voice, so it cannot carry the production past casting. */
+  dry: z.literal(true).optional(),
+});
 export type RoleCast = z.output<typeof roleCastSchema>;
 
 export const productionRoleSchema = z.object({
@@ -151,7 +162,7 @@ export type CharacterUse = z.output<typeof characterUseSchema>;
  */
 export const characterCandidateSchema = z.discriminatedUnion("origin", [
   z.object({ id: text, origin: z.literal("reused"), characterId: characterIdSchema, card: characterCardSchema, images: z.array(text), usedBefore: z.array(characterUseSchema).min(1), match: text.optional() }),
-  z.object({ id: text, origin: z.literal("new"), card: characterCardSchema, images: z.array(text) }),
+  z.object({ id: text, origin: z.literal("new"), card: characterCardSchema, images: z.array(text), state: z.enum(CAST_CANDIDATE_STATES).optional(), error: text.optional() }),
 ]);
 export type CharacterCandidate = z.output<typeof characterCandidateSchema>;
 
@@ -170,6 +181,10 @@ export const voiceCandidateSchema = z.object({
 });
 export type VoiceCandidate = z.output<typeof voiceCandidateSchema>;
 
+/** How far a round's job got; omitted while nothing is known of it. */
+export const castJobSchema = z.object({ id: text, state: text, done: z.number().int().nonnegative(), total: z.number().int().nonnegative(), step: text.optional(), error: text.optional() });
+export type CastJob = z.output<typeof castJobSchema>;
+
 /** One casting round for one role. A pick is the operator's alone; `creditsUsed` comes from the API, never a guess. */
 export const castRoundSchema = z.object({
   id: text,
@@ -184,6 +199,15 @@ export const castRoundSchema = z.object({
   creditsRead: z.enum(CREDIT_READS),
   /** Present when the operator asked to keep the picked character in the library. */
   saveToLibrary: z.literal(true).optional(),
+  /** Present when a dry round: previews are silent stand-ins and no vendor was called. */
+  dry: z.literal(true).optional(),
+  /** Calls whose consumption could not be read, so `creditsUsed` is short by them. */
+  unreadCalls: z.number().int().positive().optional(),
+  /** The new designs' job, omitted when every candidate was reused. */
+  drawJob: castJobSchema.optional(),
+  voiceJob: castJobSchema.optional(),
+  /** The picked voice's creation job, while a pick is waiting on the vendor. */
+  createJob: castJobSchema.optional(),
 });
 export type CastRound = z.output<typeof castRoundSchema>;
 

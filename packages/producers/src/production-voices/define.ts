@@ -6,7 +6,7 @@ import { AppError, type Result } from "@gt/domain/errors";
 import type { Estimate } from "@gt/domain/estimate";
 import type { Job } from "@gt/domain/job";
 import type { ResourceLane } from "@gt/domain/lane";
-import type { MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
+import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome } from "@gt/kernel/job-core";
 
 // A CASTING ROUND'S VOICES (spark concept-casting-stages S3) as the steps of ONE kernel job on cloud.elevenlabs.
 //
@@ -121,6 +121,8 @@ export type VoicesPorts = {
   readonly level: (req: VoicesRoundRequest, i: number, ctx: StepContext) => Promise<StepOutcome>;
   readonly create: (req: VoicesCreateRequest, ctx: StepContext) => Promise<StepOutcome>;
   readonly health: (job?: Job) => Promise<{ readonly ok: true } | { readonly ok: false; readonly reason: string }>;
+  /** A create job's ending, so the role it casts can be told. */
+  readonly ended?: (req: VoicesCreateRequest, job: Job, ending: Ending) => Promise<void>;
 };
 
 export function defineProductionVoices(lane: ResourceLane, ports: VoicesPorts): Producer {
@@ -155,6 +157,11 @@ export function defineProductionVoices(lane: ResourceLane, ports: VoicesPorts): 
       if (kind === "design" && Number.isInteger(n) && n >= 1) return ports.design(req.value, n, ctx);
       if (kind === "level" && Number.isInteger(n) && n >= 1) return ports.level(req.value, n, ctx);
       return { kind: "fatal", code: "internal", message: `a voices job has no step ${step.name}` };
+    },
+    async settle(job, ending) {
+      const req = requestOf(job);
+      if (!req.ok) throw req.error;
+      if (req.value.act === "create") await ports.ended?.(req.value, job, ending);
     },
   };
 }

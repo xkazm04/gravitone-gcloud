@@ -4,20 +4,24 @@ import "server-only";
 // the concepts that can Start from Scout's own files (lib/foundry/scout/concepts.ts). A stage is read from the record,
 // never inferred from a night. A concept with a production no longer offers Start.
 //
-// The later-stage panels keep drawing the scripted slate until S2-S6 (`scripted` on the view).
+// Casting reads the record (S4); audio, cut, lessons and ventures keep drawing the scripted slate until S5-S6 (`scripted` on the view).
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import { dryOnlyFrom } from "@gt/kernel/dryrun";
+import type { Store } from "@gt/kernel/store";
 import { listProductions } from "@gt/kernel/productions/store";
+import { roundsOf } from "@gt/kernel/productions/cast";
 
 import { keptConcepts } from "../../../../../lib/foundry/scout/concepts.ts";
 import { blobRoute } from "../../../../../lib/library/media.ts";
 import { jobOfTake, markProven, moveProduction, requestTake, startProduction } from "../../../../../lib/producers/production.ts";
+import { castJobsView, castRoundView, markHeard, pickCast, recastRole, requestAudition, requestRoles, requestRound, retryDesigns, retryVoiceCreate, retryVoices, saveRoles } from "../../../../../lib/producers/productionCast.ts";
+import type { CastRound } from "@gt/domain/production";
 import { kernel } from "../../../../../lib/kernelStore.ts";
 import type { Production, ProductionId } from "@gt/domain/production";
 
-import type { KeptConcept, ProductionEntry, ProductionFrame, ProductionsView, TakeLaunchView, TakeProgress, TakeRequestInput } from "./contract.ts";
+import type { CastLaunchView, KeptConcept, ProductionEntry, ProductionFrame, ProductionsView, RoleEditInput, TakeLaunchView, TakeProgress, TakeRequestInput } from "./contract.ts";
 import { fixtureProductions } from "./fixture.ts";
 import type { ServerProductions } from "./port.ts";
 
@@ -36,7 +40,15 @@ function entryOf(p: Production, store: Parameters<typeof jobOfTake>[0]): Product
     if (job !== undefined) progress[t.id] = { jobState: job.state, done: job.progress.done, total: job.progress.total, ...(job.progress.stage === undefined ? {} : { step: job.progress.stage }) };
   }
   const first = frames[0];
-  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds: [], lessons: [] };
+  const stored = store.read((r) => roundsOf(r, p.id));
+  const rounds: CastRound[] = [];
+  if (stored.ok) {
+    for (const round of stored.value) {
+      const view = castRoundView(store, p, round);
+      if (view.ok) rounds.push(view.value);
+    }
+  }
+  return { production: p, logline: p.board.logline, ...(first === undefined ? {} : { poster: first.src }), frames, progress, rounds, castJobs: castJobsView(store, p.id), lessons: [] };
 }
 
 /** The screen's whole view: the record's productions, the concepts still to start, and the scripted panels. */
@@ -55,6 +67,19 @@ export async function realView(): Promise<Result<ProductionsView>> {
   } catch (e) {
     return err("unavailable", errorMessage(e));
   }
+}
+
+const storeOf = (): Result<Store> => {
+  const k = kernel();
+  return k.ok ? ok(k.value.store) : k;
+};
+
+async function withStore<T>(f: (s: Store) => Result<T>): Promise<Result<ProductionsView>> {
+  const s = storeOf();
+  if (!s.ok) return s;
+  const r = f(s.value);
+  if (!r.ok) return r;
+  return view();
 }
 
 async function view(): Promise<Result<ProductionsView>> {
@@ -80,4 +105,21 @@ export const realProductions: ServerProductions = {
   proven: async (id: ProductionId, takeId: string, who: Actor) => then(await markProven({ id, takeId, by: who.id, actor: who.kind })),
   drop: async (id: ProductionId, who: Actor) => then(await moveProduction({ id, to: "dropped", by: who.id, actor: who.kind })),
   move: async (id, to, who) => then(await moveProduction({ id, to, by: who.id, actor: who.kind })),
+  castLaunch: async (input, who) => {
+    const store = storeOf();
+    if (!store.ok) return store;
+    const ask = { mode: input.mode, by: who.id, actor: who, dryOnly: dryOnlyFrom(process.env), ...(input.token === undefined ? {} : { token: input.token }) };
+    const r = input.kind === "roles" ? requestRoles(store.value, input.id, ask) : input.kind === "audition" ? requestAudition(store.value, input.id, input.roleId ?? "", ask) : input.kind === "round" ? requestRound(store.value, input.id, input.roleId ?? "", ask) : retryDesigns(store.value, input.id, input.roundId ?? "", ask);
+    if (!r.ok) return r;
+    const v = await view();
+    if (!v.ok) return v;
+    const launch: CastLaunchView["launch"] = r.value.kind === "launched" ? { kind: "launched", jobId: r.value.jobId } : r.value.kind === "stale" ? { kind: "stale", receipt: r.value.fresh } : { kind: "receipt", receipt: r.value.receipt };
+    return ok({ view: v.value, launch });
+  },
+  saveRoles: async (id, roles: readonly RoleEditInput[], who) => withStore((s) => saveRoles(s, id, roles, who)),
+  heard: async (id, roundId, voiceId, at, who) => withStore((s) => markHeard(s, id, roundId, voiceId, at, who)),
+  pick: async (id, roundId, character, voice, saveToLibrary, who) => withStore((s) => pickCast(s, { id, roundId, character, voice, saveToLibrary, by: who.id, actor: who, dryOnly: dryOnlyFrom(process.env) })),
+  recast: async (id, roleId, who) => withStore((s) => recastRole(s, id, roleId, who)),
+  retryVoices: async (id, roundId, who) => withStore((s) => retryVoices(s, id, roundId, who)),
+  retryCreate: async (id, roundId, who) => withStore((s) => retryVoiceCreate(s, id, roundId, who)),
 };

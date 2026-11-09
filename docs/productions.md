@@ -137,11 +137,37 @@ aloud is refused. It has no default voice (`castVoiceIdOf`); George remains the 
 A crash holds `cloud.elevenlabs` like every paid lane (`holdLaneIn`): the step in flight may have spent, so the operator
 acknowledges and retries. Stored steps are not repeated.
 
+## Casting (S4)
+
+`/scout/productions`: `CastingPanel` in the inspector replaces the scripted casting panel. Nothing here has run live: the
+text seat, Codex, the safety judge and ElevenLabs are injected fakes in every test (`tests/next-server/casting.test.ts`), and
+the only non-fake path is a dry round (stand-ins, no vendor).
+
+`productions` migration 2 adds `roles` and `cast_jobs` columns and the `cast_rounds`, `cast_candidates` tables
+(`packages/kernel/src/productions/cast.ts`). A proven production opens casting (`proven -> casting`, the machine's move).
+The seat proposes roles and each role's audition line; the operator edits them (`saveRolesIn`).
+
+One round per role (`requestRound`) is one receipt and one transaction: `openRoundIn` writes the five candidates (usable
+`matchCards` hits above `USABLE_MATCH_SCORE`, adult only, then new designs), the `production-cast` job draws the new
+ones on `seat.text` (a seat turn for the cards, then `draw:<slot>`: `drawCodex` at 1:1 with the first two board frames
+as references, then `judgeStill` and `judgeFailure`), and S3's voices job makes five previews. A slot's failure is booked as
+that step's (`failed`, or `refused` with `judge: <why>`); the still of a refused design is never stored. `retryDesigns` is a
+new job for only the failed and refused slots.
+
+A pick (`pickCast`, operator only) needs its preview played to the end (`markHeard` on the audio's `ended`). It enqueues
+S3's create job in the pick's transaction beside the round's picks. The role is cast when that job lands (the voices producer's
+`settle` calls `completeCastIn`): the character record (a new design only now), `recordCharacterUse`, the optional save, and
+`cast.picked`. A create job that fails leaves the role open with its retry. Credits come from `voiceRoundOf`,
+labelled by `creditsRead`, including `unread`.
+
+`moveProductionIn` to `audio` needs every role cast, and refuses a dry cast (a dry voice is a stand-in, as a dry take is).
+The way back to `casting` is only `recastRoleIn`, which clears the role's cast and round picks and marks takes at or after
+the old pick stale. A picked voice is reused if the operator picks it again; the slot is not spent twice.
+
 ## The screen
 
 `/scout/productions` is the operator's pick, graph first: columns idea, board, take, stage on the left, the inspector on
-the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Later stages (casting,
-audio, final cut, lessons, ventures) stay as a marked, scripted fold on the slate from `_port/fixture.ts` until S2-S6;
+the right. The Scout graph's `NodePanel` links a kept idea or storyboard here (`?from=<ref>`). Later stages (audio, final cut, lessons, ventures) stay as a marked, scripted fold on the slate from `_port/fixture.ts` until S2-S6;
 those acts live in memory and reset on reload.
 
 - No fixture audio exists in the repo: each voice preview is a marked silent stub that only records "heard".

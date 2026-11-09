@@ -7,7 +7,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import type { Actor } from "@gt/domain/event";
 import type { ProductionId, ProductionSource, ProductionStage } from "@gt/domain/production";
 
-import type { ProductionsView, TakeLaunchView, TakeRequestInput } from "./contract.ts";
+import type { CastLaunchInput, CastLaunchView, ProductionsView, RoleEditInput, TakeLaunchView, TakeRequestInput } from "./contract.ts";
 import { fixtureProductions } from "./fixture.ts";
 import { realProductions } from "./real.ts";
 
@@ -18,6 +18,13 @@ export type ServerProductions = {
   readonly proven: (id: ProductionId, takeId: string, who: Actor) => Promise<Result<ProductionsView>>;
   readonly drop: (id: ProductionId, who: Actor) => Promise<Result<ProductionsView>>;
   readonly move: (id: ProductionId, to: ProductionStage, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly castLaunch: (input: CastLaunchInput, who: Actor) => Promise<Result<CastLaunchView>>;
+  readonly saveRoles: (id: ProductionId, roles: readonly RoleEditInput[], who: Actor) => Promise<Result<ProductionsView>>;
+  readonly heard: (id: ProductionId, roundId: string, voiceId: string, at: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly pick: (id: ProductionId, roundId: string, character: string, voice: string, saveToLibrary: boolean, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly recast: (id: ProductionId, roleId: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly retryVoices: (id: ProductionId, roundId: string, who: Actor) => Promise<Result<ProductionsView>>;
+  readonly retryCreate: (id: ProductionId, roundId: string, who: Actor) => Promise<Result<ProductionsView>>;
 };
 
 const SCRIPTED = "the fixture side has no record to act on (GRAVITONE_PRODUCE_SIDE=fixture)";
@@ -29,6 +36,13 @@ const fixtureSide: ServerProductions = {
   proven: async () => err("refused", SCRIPTED),
   drop: async () => err("refused", SCRIPTED),
   move: async () => err("refused", SCRIPTED),
+  castLaunch: async () => err("refused", SCRIPTED),
+  saveRoles: async () => err("refused", SCRIPTED),
+  heard: async () => err("refused", SCRIPTED),
+  pick: async () => err("refused", SCRIPTED),
+  recast: async () => err("refused", SCRIPTED),
+  retryVoices: async () => err("refused", SCRIPTED),
+  retryCreate: async () => err("refused", SCRIPTED),
 };
 
 function unwrap(r: Result<ProductionsView>): ProductionsView {

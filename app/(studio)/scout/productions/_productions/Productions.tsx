@@ -3,7 +3,7 @@
 // /scout/productions (spark concept-casting-stages S1): the operator's pick, graph-first. The graph on the left reads
 // the production record through the port (idea, board, take, stage); the wide inspector on the right is where a concept
 // is started, its hero frames are chosen, a take is launched and watched, takes are compared, one is marked proven, a
-// concept is dropped. Later stages stay scripted until S2-S6, marked as such in the inspector.
+// concept is dropped. Casting is real (S4); the later stages stay scripted until S5-S6, marked as such in the inspector.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -97,7 +97,9 @@ export function Productions({ view: initial, port, from }: { readonly view: Prod
   }, []);
 
   // Watching a take: while any is rendering, re-read the view until it lands.
-  const rendering = view.entries.some((e) => e.production.takes.some((t) => t.state === "rendering"));
+  const active = (j?: { readonly state: string }): boolean => j?.state === "queued" || j?.state === "running";
+  const casting = view.entries.some((e) => Object.values(e.castJobs).some(active) || e.rounds.some((r) => active(r.drawJob) || active(r.voiceJob) || active(r.createJob)));
+  const rendering = view.entries.some((e) => e.production.takes.some((t) => t.state === "rendering")) || casting;
   useEffect(() => {
     if (!rendering) return;
     const t = window.setInterval(() => {
