@@ -32,7 +32,7 @@ import { takeActs, type TakeEngines } from "./productionActs.ts";
 // (@gt/kernel/productions/store); the take's steps are packages/producers/src/production-take/define.ts, its acts
 // ./productionActs.ts, and this file is the doors and the binding.
 //
-// A TAKE COSTS on its receipt one H3 clip per beat on gpu.local (engine comfy, admitted by its measured profile: 1223 s
+// A TAKE COSTS on its receipt one H3 clip per beat on gpu.local (engine comfy-h3, unprofiled so it runs alone: 1223 s
 // for the 124-frame turbo clip alone on the card, .claude/skills/music-clip/SKILL.md) and, for a rough cut, one ffmpeg
 // concat; $0 each. Hero first: `rough` is refused until a hero take has landed. Each take is a new job and a new record
 // `take-N`; takes are appended, never replaced.
@@ -256,8 +256,10 @@ export function productionTakeProducer(o: { readonly store?: () => Result<Store>
     },
     ...takeActs(store, o.engines ?? {}),
   });
-  // H3 runs through ComfyUI: the job names the `comfy` engine, so the worker admits it by that engine's measured profile.
-  return { ...p, engine: "comfy" };
+  // H3 runs through ComfyUI, but not on the `comfy` profile: that one prices a small LTX job, and an idle ComfyUI holding
+  // the H3 weights reads as ~51 GB of GPU memory the take would itself reuse, so the projection never clears the mark (2026-11-09,
+  // the first live take waited forever). Unprofiled, a take is admitted when nothing else runs and runs alone.
+  return { ...p, engine: "comfy-h3" };
 }
 
 /** Drive one take's job on this process (a test, a CLI): the worker's rules. */
