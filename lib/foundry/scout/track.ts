@@ -33,7 +33,7 @@ import { errorMessage } from "@gt/domain/errors";
 import { driveSuno, launchSunoDraft, sunoKernelId, sunoKernelJobs } from "../../producers/suno.ts";
 import { fetchClipBytes, type FetchClipFn } from "../../sound/mv/fetchAudio.ts";
 import { draftJobId, type DraftSource } from "../../sound/suno/draft.ts";
-import { FAKE_SUNO_DRIVER, REAL_SUNO, type SunoDriver } from "../../sound/suno/drivers.ts";
+import { FAKE_SUNO_DRIVER, sunoDriver, type SunoDriver } from "../../sound/suno/drivers.ts";
 import type { ReasonFn, SunoFacets } from "../../sound/suno/propose.ts";
 import { readSuno } from "../../sound/suno/store.ts";
 import { reason as routerReason } from "../../text/router.ts";
@@ -45,7 +45,7 @@ import { DEFAULT_TRACK_CAP, MUSIC_TYPES, USE_MAX, cellId, parseCellId, type Nigh
 
 /** What a test hands in place of the Suno browser, the proposal turn and the clip download. */
 export type TrackEngines = {
-  /** The browser driver a drive binds (default: the real one on a live night, the fake on a dry one). */
+  /** The driver a drive binds (default: the selected one, `sunoDriver()`, on a live night; the fake on a dry one). */
   readonly driver?: SunoDriver;
   /** The text router (default lib/text/router.ts); always asked with `avoid: "google"` (the header). */
   readonly reason?: ReasonFn;
@@ -161,7 +161,7 @@ export async function trackAct(ctx: ActContext, id: NightId, seed: SeedRef, engi
   await setCandidate(id, c, jobId);
   ctx.say(`launched ${c.id}: Suno ${sj} as ${jobId}`);
   if (ctx.detach) return { candidate: c, outcome: "detached" };
-  const driver = engines.driver ?? (mode === "dry" ? FAKE_SUNO_DRIVER : REAL_SUNO);
+  const driver = engines.driver ?? (mode === "dry" ? FAKE_SUNO_DRIVER : sunoDriver());
   const d = await driveSuno([jobId], { driver, dryOnly: ctx.dryOnly });
   const report = d.reports[0]?.report;
   const outcome = d.stopped ?? (report === undefined ? "not driven" : report.ok ? report.value.outcome : report.error.message);

@@ -12,6 +12,7 @@ import { probeLeonardoApiPool, studioBalanceCheck } from "../../imaging/studio/b
 import type { StudioRecon } from "../../imaging/studio/driver";
 import type { StudioHealth } from "../../imaging/studio/types";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
+import type { SunoDriverKind } from "../../sound/suno/drivers";
 import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
 import type { OllamaFetch } from "../../text/providers/ollama";
 import { ollamaCheck } from "./doctorOllama";
@@ -106,8 +107,12 @@ export type DoctorInput = {
   readonly worker?: () => Promise<number | undefined>;
   /** The doctor's clock (default Date.now). */
   readonly now?: () => number;
-  /** The Suno browser's health (default lib/suno/driver.ts `probeSunoOn(SUNO_CDP_PORT)`); a test hands a fake. */
+  /** The selected Suno driver's health (default its own `probe()`, lib/sound/suno/drivers.ts `selectedSunoDriver`); a test hands a fake. */
   readonly suno?: () => Promise<SunoDriverHealth>;
+  /** Which Suno driver is selected (default `selectedSunoDriver`'s kind; "browser" when `suno` is handed in alone). */
+  readonly sunoKind?: () => Promise<SunoDriverKind>;
+  /** The Suno browser's health for the API driver's audio bytes (default `probeSunoOn(SUNO_CDP_PORT)`); a test hands a fake. */
+  readonly sunoBrowser?: () => Promise<SunoDriverHealth>;
   /** The night's track cap (`--tracks`): a live night with tracks to make needs Suno. Absent: the Suno line is a note. */
   readonly tracks?: number;
   /** The Ollama daemon's HTTP API at OLLAMA_HOST (default the global fetch); a test hands a fake. */
@@ -168,23 +173,48 @@ async function studioCheck(input: DoctorInput): Promise<Check> {
 }
 
 /** The Suno browser on its own port: attached read-only (its sign-in cookie), never launched. */
-async function sunoHealth(): Promise<SunoDriverHealth> {
+async function sunoBrowserHealth(): Promise<SunoDriverHealth> {
   const { probeSunoOn } = await import("../../suno/driver");
   return probeSunoOn(SUNO_CDP_PORT);
 }
 
+/** The selected driver, auto resolved - loaded lazily: a doctor that asks nothing of Suno loads none of it. */
+async function selectedSuno(): Promise<{ readonly kind: SunoDriverKind; readonly probe: () => Promise<SunoDriverHealth> }> {
+  const { selectedSunoDriver } = await import("../../sound/suno/drivers");
+  const s = await selectedSunoDriver();
+  return { kind: s.kind, probe: () => s.driver.probe() };
+}
+
+const asHealth = (e: unknown): SunoDriverHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) });
+
+const BROWSER_REMEDY = `start the Suno Chrome profile (~/.suno-chrome, remote debugging on ${SUNO_CDP_PORT}) and sign in to suno.com once`;
+
 /**
- * Is the Suno browser the night's tracks are made in running and signed in: a failure only on a live night that
- * makes tracks (`tracks` > 0), a note otherwise - a dry night's tracks are stand-ins and ask no browser.
+ * Is the Suno driver the night's tracks are made with ready: a failure only on a live night that makes tracks
+ * (`tracks` > 0), a note otherwise - a dry night's tracks are stand-ins and ask nothing. On the API driver a
+ * second line, `suno bytes`, reads the browser profile the audio URLs come from: a note, never a blocker - a
+ * create without it still lands its songs, with no audio file.
  */
-async function sunoCheck(input: DoctorInput): Promise<Check> {
+async function sunoChecks(input: DoctorInput): Promise<Check[]> {
   const needed = !input.dry && (input.tracks ?? 0) > 0;
   // Asked only when it can block, or when a probe is handed in: a dry night's tracks are stand-ins, and a doctor
   // that names no track cap attaches to no browser.
-  if (!needed && input.suno === undefined) return { name: "suno", ok: false, found: input.dry ? "not asked: a dry night's tracks are stand-ins" : "not asked: no track cap named (doctor --tracks N)", needed };
-  const h = await (input.suno ?? sunoHealth)().catch((e: unknown): SunoDriverHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
-  if (h.ok) return { name: "suno", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed };
-  return { name: "suno", ok: false, found: h.reason, remedy: `the night's tracks are made there: start the Suno Chrome profile (~/.suno-chrome, remote debugging on ${SUNO_CDP_PORT}) and sign in to suno.com once`, needed };
+  if (!needed && input.suno === undefined) return [{ name: "suno", ok: false, found: input.dry ? "not asked: a dry night's tracks are stand-ins" : "not asked: no track cap named (doctor --tracks N)", needed }];
+  const handed = input.suno;
+  const sel = handed === undefined ? await selectedSuno().catch((e: unknown) => ({ kind: "browser" as const, probe: async () => asHealth(e) })) : null;
+  const kind: SunoDriverKind = input.sunoKind !== undefined ? await input.sunoKind() : (sel?.kind ?? "browser");
+  const probe = handed ?? sel?.probe ?? sunoBrowserHealth;
+  const h = await probe().catch(asHealth);
+  const out: Check[] = [];
+  if (kind === "api") {
+    out.push(h.ok ? { name: "suno", ok: true, found: "suno api, connected", needed } : { name: "suno", ok: false, found: h.reason, remedy: "the night's tracks are created through Suno's API: connect it in the app (GET /api/suno/connect), or set SUNO_DRIVER=browser", needed });
+    const b = await (input.sunoBrowser ?? sunoBrowserHealth)().catch(asHealth);
+    out.push(b.ok ? { name: "suno bytes", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed: false } : { name: "suno bytes", ok: false, found: `${b.reason}: the songs land with no audio bytes`, remedy: `the API's songs get their audio URL there: ${BROWSER_REMEDY}`, needed: false });
+    return out;
+  }
+  if (kind === "fake") return [{ name: "suno", ok: h.ok, found: h.ok ? "SUNO_DRIVER=fake: stand-in clips" : h.reason, needed, ...(h.ok ? {} : { remedy: "unset SUNO_DRIVER for a live night" }) }];
+  if (h.ok) return [{ name: "suno", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed }];
+  return [{ name: "suno", ok: false, found: h.reason, remedy: `the night's tracks are made there: ${BROWSER_REMEDY}`, needed }];
 }
 
 /** The browser `chromium.launch` in pipeline/strips/render.mts starts: its executable, without launching it. */
@@ -285,7 +315,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push(await registryCheck(input));
   out.push(await studioCheck(input));
   out.push(await studioBalanceCheck({ env: input.env, dry: input.dry, ...(input.studioRecon === undefined ? {} : { recon: input.studioRecon }) }));
-  out.push(await sunoCheck(input));
+  out.push(...(await sunoChecks(input)));
   out.push(await chromiumCheck(input));
   out.push(await ollamaCheck(input.env, input.ollamaFetch));
   return out;

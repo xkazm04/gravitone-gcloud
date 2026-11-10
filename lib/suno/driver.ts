@@ -18,13 +18,11 @@ import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoMo
 import { SUNO_CDP_PORT, SUNO_MODEL_LABEL } from "./types";
 import { attach, isSignedIn, profileContext } from "./browser";
 import { normalizeModelLabel, SELECTORS } from "./selectors";
+import { API_FETCH_TIMEOUT_MS, audioOf, bearerHeaders, fetchClip, type RawClip } from "./resolve";
 
 const PROBE_TTL_MS = 15_000;
 const RENDER_TIMEOUT_MS = 6 * 60_000;
 const POLL_MS = 5_000;
-/** Both in-page fetches return small JSON (a clip record, one feed page), never audio. */
-const API_FETCH_TIMEOUT_MS = 30_000;
-
 // ── probe ────────────────────────────────────────────────────────────────────
 
 const probeCache = new Map<number, { at: number; health: SunoDriverHealth }>();
@@ -52,37 +50,6 @@ export async function probeSuno(): Promise<SunoDriverHealth> {
 }
 
 // ── clip JSON → SunoClipRef ──────────────────────────────────────────────────
-
-interface RawClip {
-  id?: string;
-  status?: string;
-  title?: string;
-  audio_url?: string;
-  image_url?: string;
-  image_large_url?: string;
-  media_urls?: { url?: string }[];
-  metadata?: {
-    duration?: number | null;
-    error_message?: string | null;
-    tags?: string | null;
-    prompt?: string | null;
-    negative_tags?: string | null;
-    gpt_description_prompt?: string | null;
-    make_instrumental?: boolean | null;
-    model_badges?: Record<string, { display_name?: string } | undefined> | null;
-  };
-  major_model_version?: string | null;
-  model_name?: string | null;
-  created_at?: string | null;
-  is_trashed?: boolean | null;
-}
-
-function audioOf(c: RawClip): string | null {
-  const media = c.media_urls?.find((m) => typeof m.url === "string" && m.url)?.url;
-  if (media) return media;
-  if (c.audio_url && !SELECTORS.api.forbiddenAudio.test(c.audio_url)) return c.audio_url;
-  return null;
-}
 
 function toRef(id: string, c: RawClip | undefined, fallbackTitle: string): SunoClipRef {
   const d = c?.metadata?.duration;
@@ -225,12 +192,8 @@ export async function createSunoTracks(
 
   const onRequest = (r: Request) => {
     if (!r.url().startsWith(SELECTORS.api.base)) return;
-    const h = r.headers();
-    if (h.authorization) {
-      headers = { authorization: h.authorization };
-      if (h["browser-token"]) headers["browser-token"] = h["browser-token"];
-      if (h["device-id"]) headers["device-id"] = h["device-id"];
-    }
+    const bearer = bearerHeaders(r);
+    if (bearer) headers = bearer;
     if (r.method() === "POST" && SELECTORS.api.generate.test(r.url())) {
       try {
         observer.onGenerateRequest?.(r.postDataJSON());
@@ -332,28 +295,6 @@ export async function createSunoTracks(
   }
 }
 
-/** GET /api/clip/<id> from inside the tab, with a fresh Clerk token when the
- *  page exposes one and the last captured headers otherwise. Null on any miss:
- *  the passive listener may still have it. */
-async function fetchClip(page: Page, id: string, headers: Record<string, string>): Promise<RawClip | null> {
-  try {
-    return await page.evaluate(
-      async ({ url, headers, timeoutMs }) => {
-        const clerk = (window as unknown as { Clerk?: { session?: { getToken?: () => Promise<string | null> } } }).Clerk;
-        const token = await clerk?.session?.getToken?.().catch(() => null);
-        const h: Record<string, string> = { ...headers };
-        if (token) h.authorization = `Bearer ${token}`;
-        if (!h.authorization) return null;
-        const r = await fetch(url, { headers: h, signal: AbortSignal.timeout(timeoutMs) });
-        return r.ok ? ((await r.json()) as unknown) : null;
-      },
-      { url: SELECTORS.api.base + SELECTORS.api.clip(id), headers, timeoutMs: API_FETCH_TIMEOUT_MS },
-    ) as RawClip | null;
-  } catch {
-    return null;
-  }
-}
-
 // ── the library (read-only) ──────────────────────────────────────────────────
 //
 // READ-ONLY BY CONSTRUCTION. The only request this makes is the library page's
@@ -406,12 +347,8 @@ export async function listSunoLibrary(onPage?: (n: number, total: number | null)
   let query: { filters?: unknown } | null = null;
   const onRequest = (r: Request) => {
     if (!r.url().startsWith(SELECTORS.api.base)) return;
-    const h = r.headers();
-    if (h.authorization) {
-      headers = { authorization: h.authorization };
-      if (h["browser-token"]) headers["browser-token"] = h["browser-token"];
-      if (h["device-id"]) headers["device-id"] = h["device-id"];
-    }
+    const bearer = bearerHeaders(r);
+    if (bearer) headers = bearer;
     if (!query && r.method() === "POST" && SELECTORS.api.feed.test(r.url())) {
       try {
         query = r.postDataJSON() as { filters?: unknown };
@@ -487,13 +424,6 @@ export async function listSunoLibrary(onPage?: (n: number, total: number | null)
   }
 }
 
-/** THE BYTES SEAM (spark suno-api, hybrid). Suno's official API refuses to stream suno.com songs
- *  ("This app can't stream suno.com songs"), so an API clip's audio is resolved here, free, from
- *  inside the signed-in profile: GET /api/clip/<id> per song for its CloudFront media URL - the
- *  same URL `createSunoTracks` hands back. One tab for the whole batch, closed after. A song the
- *  page cannot see maps to null; a browser that is not running (and cannot be launched) rejects
- *  with `suno browser not running` / `not signed in to suno`, verbatim. STUB until WP2. */
-export async function resolveSunoAudio(songIds: readonly string[]): Promise<Map<string, string | null>> {
-  void songIds;
-  throw new Error("resolveSunoAudio is not built yet (spark suno-api WP2)");
-}
+/** THE BYTES SEAM (spark suno-api, hybrid): an API clip's audio URL, free, from the signed-in
+ *  profile. Built in ./resolve.ts; named here because callers import it from this module. */
+export { resolveSunoAudio } from "./resolve";

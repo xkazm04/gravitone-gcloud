@@ -25,4 +25,16 @@ describe("doctor and the paused Suno browser", () => {
     expect(blocking(await doctor({ ...base, tracks: 2 })).map((c) => c.name)).toContain("suno");
     expect(blocking(await doctor(base)).map((c) => c.name)).not.toContain("suno");
   });
+
+  it("on the API driver a dead browser is a `suno bytes` note, never a blocker; the API's own failure blocks", async () => {
+    const base = { env: { ...process.env }, storePath: ROOT + "/none.sqlite", scoutRoot: ROOT + "/scout", dry: false, spawn: stubTools().spawn, tracks: 2, sunoKind: async () => "api" as const };
+    const dead = async () => ({ ok: false as const, reason: "suno browser not running" });
+    const up = await doctor({ ...base, suno: async () => ({ ok: true as const }), sunoBrowser: dead });
+    const bytes = up.find((c) => c.name === "suno bytes");
+    expect([bytes?.ok, bytes?.needed, bytes?.found]).toEqual([false, false, "suno browser not running: the songs land with no audio bytes"]);
+    expect(blocking(up).map((c) => c.name)).not.toContain("suno");
+    const down = await doctor({ ...base, suno: async () => ({ ok: false as const, reason: "not connected to suno" }), sunoBrowser: async () => ({ ok: true as const }) });
+    expect(blocking(down).map((c) => c.name)).toContain("suno");
+    expect(down.find((c) => c.name === "suno bytes")?.ok).toBe(true);
+  });
 });

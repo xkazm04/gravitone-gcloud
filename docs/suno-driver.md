@@ -1,18 +1,91 @@
 # The Suno driver
 
-`lib/suno/` renders a Suno custom create from the server by driving the operator's own,
-signed-in Suno tab over the Chrome DevTools Protocol. There is no Suno API key: the account,
-the credits and the session are the operator's.
+`lib/suno/` renders a Suno custom create from the server, either by driving the operator's own,
+signed-in Suno tab over the Chrome DevTools Protocol, or through Suno's official API on an OAuth
+grant the operator made. The account, the credits and the session are the operator's.
 
 | File | Holds |
 | --- | --- |
 | `lib/suno/types.ts` | wire types, `SUNO_MODEL_LABEL`, `SUNO_CDP_PORT` (9334). Client-reachable: no `node:`, no env names. |
 | `lib/suno/browser.ts` | `attach()`, the Chrome launch, the signed-in check. Server-only. |
 | `lib/suno/selectors.ts` | `SELECTORS` — every DOM selector, API path and cookie name, each with its recon date. |
-| `lib/suno/driver.ts` | `probeSuno()`, `probeSunoOn(port)` (test seam), `createSunoTracks()`, `listSunoLibrary()`. |
+| `lib/suno/driver.ts` | `probeSuno()`, `probeSunoOn(port)` (test seam), `createSunoTracks()`, `listSunoLibrary()`; re-exports `resolveSunoAudio`. |
+| `lib/suno/resolve.ts` | `resolveSunoAudio()`, the raw clip shape, the media-URL rule, the in-tab clip fetch. |
+| `lib/suno/api/driver.ts` | `API_SUNO`, `apiSunoDriver(deps)` (test seam). |
+| `lib/sound/suno/drivers.ts` | the `SunoDriver` interface, `sunoDriver()`, `AUTO_SUNO`, `selectedSunoDriver()`. |
 | `lib/sound/suno/library.ts` | `importSunoLibrary()` — the library into the store, deduped by song id. |
 | `pipeline/suno-browser.mjs` | `npm run suno:browser` — opens the profile. |
 | `pipeline/suno-import.mts` | `npm run suno:import` — the library import without the app. |
+
+## Choosing a driver
+
+`SUNO_DRIVER` (`lib/sound/suno/drivers.ts`), read per call:
+
+| Value | Driver | Create, library, polling | Audio URL | Health (`probe`) |
+| --- | --- | --- | --- | --- |
+| `browser` | `REAL_SUNO` (`lib/suno/driver.ts`) | the profile's `/create` form and studio-api | `media_urls[0].url` from the profile | CDP answers and the Clerk cookie is signed in |
+| `api` | `API_SUNO` (`lib/suno/api/driver.ts`) | `POST /v0/audio`, `GET /v0/audio/{id}`, `GET /v0/library` | `resolveSunoAudio` in the profile (below) | a grant is held and `/v0/account/usage` answers |
+| `fake` | `FAKE_SUNO_DRIVER` (`lib/sound/suno/fakeDriver.ts`) | counted ids, no network | half the clips | `FAKE_SUNO.health` |
+| unset (auto) | `AUTO_SUNO` | `api` while `sunoApiStatus().connected`, else `browser` - decided on every call | as the driver picked | as the driver picked |
+
+Auto decides per call because the worker binds `sunoDriver()` once at module load
+(`lib/producers/registry.ts`): a grant made or dropped later is honoured on the next call.
+`selectedSunoDriver()` names the kind a call would reach now; the scout doctor
+(`lib/foundry/scout/doctor.ts`) probes that one, and on `api` adds a `suno bytes` line (a note,
+never a blocker) for the browser profile.
+
+### Hybrid bytes (the `api` driver)
+
+The API does not hand out a suno.com song's audio. Measured 2026-11-10 with the app's own token:
+
+- `GET /v0/audio/{id}/stream` refuses: `refused (forbidden): This app can't stream suno.com songs. Play the song at its song_url.`
+- `cdn1.suno.ai/<id>.mp3` answers 403; `/download` costs a download credit.
+- A clip carries `{id, title, status, created_at, error, song_url, cover_image_url, cover_image_large_url,
+  handle, liked, visibility, metadata:{duration, style, lyrics?, description?, type}}` - no audio URL, no model.
+
+So `resolveSunoAudio(songIds)` (`lib/suno/resolve.ts`, re-exported by `lib/suno/driver.ts`) opens one
+tab in the profile (launching it where `canSpawnLocalBinaries()`), asks studio-api's `GET /api/clip/<id>`
+with the page's Clerk token, and maps each id to `media_urls[0].url` (`audio_url` only when it is not
+the `/api/forbidden` sentinel); an id the page cannot see maps to `null`. Free: no credit, no download.
+
+When it rejects (`suno browser not running`, `not signed in to suno`), every `audioUrl` is `null` and the
+create or the import still returns: the API's credits are spent once `POST /v0/audio` has answered.
+
+### The `api` create
+
+| Phase | What happens |
+| --- | --- |
+| `attaching` | the grant (`sunoApiStatus`), then `usage()`; `credits_remaining <= 0` is `suno: out of credits` |
+| `composing` | the body: `title`, `style`, `lyrics` (empty or `[Instrumental]`: no `lyrics`, `instrumental: true`), `negative_style` from `exclude`, `model` (`v6`, `v6-wild` as-is), `idempotency_key` |
+| `creating` | `POST /v0/audio`; a 402 or a credits sentence is `suno: out of credits`, any other refusal `suno refused the create: <Suno's sentence>` |
+| `rendering` | `getClip` per id every 5 s until `complete`; `error` is `suno failed the clip: <reason>`; at 6 min, clips that are all at least `streaming` are returned, otherwise `suno did not finish rendering in 6 min (songs …)` |
+| `collecting` | `resolveSunoAudio` for the ids, then `SunoClipRef`s |
+
+`SunoClipRef`: `url` = `song_url` (else `https://suno.com/song/<id>`), `imageUrl` = `cover_image_large_url`
+then `cover_image_url`, `durationS` = `metadata.duration`.
+
+`idempotency_key` = `gt-` + sha256 of (the caller's key, the model, the trimmed fields), 48 hex. The bound
+producer passes the kernel step's `ctx.key` (`<job id>/create:<model>`, stable across retries and
+attempts), so a retried step is one create on Suno. A caller with no key falls back to the minute.
+
+The create answer's shape is not yet seen live: `wire.ts` `CreateResponse` accepts a clip, `{clip_ids}`,
+`{clips}` or a bare array, and the polling needs only the ids.
+
+### The `api` library
+
+`GET /v0/library?limit=50` by `next_cursor` until there is none; `status: complete` only, deduped by id,
+newest first by `created_at`, then one `resolveSunoAudio` batch. `model` is `metadata.model` or
+`major_model_version` when the clip carries one, else `"unknown"`. `prompt` = `{title, style:
+metadata.style ?? "", lyrics: metadata.lyrics}`, absent keys omitted.
+
+### Credits on the receipt
+
+A driver with `credits()` (the `api` driver: `usage().suno_account.credits_remaining`; the fake: `null`;
+the browser driver: none) is read before and after each create in `lib/producers/suno.ts`. The
+difference is written into the create's `credits` entry REASON:
+`<SUNO_CREDITS>; this create spent N credits (A -> B left)`. The entry's `amount` stays undefined -
+it settles on `JOB_USD`, whose unit is dollars, and a credit is not a dollar. A failed read, or a
+negative difference, leaves the reason as `SUNO_CREDITS`.
 
 ## Launching the profile and signing in
 
