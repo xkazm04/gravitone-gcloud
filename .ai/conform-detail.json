@@ -22052,6 +22052,256 @@
           "reason": "replaced by 482438b7-ea33-4361-84d5-074cd416f4aa"
         }
       ]
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/concurrency-guards": {
+      "context": "publish-producers",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:14:54.479Z",
+      "worker": "bdd56b14-b8c2-4d16-a5fe-c6960592810e",
+      "techniques": [
+        {
+          "technique": "preparation-is-the-staleness-window",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/publish/publish.ts:158 No fence re-read immediately before the external effect; dedup at the effect exists only as the adapter's slot-keyed resumable session, and the code does not record that a re-read narrows rather than closes."
+        },
+        {
+          "technique": "fence-inside-write-transaction",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:176 Outcome write presents the claim fence; kernel outcome.ts asserts it inside the store tx."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:105 A superseded attempt's late write is refused by the fence and surfaced as 'lost', not last-writer-wins."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:108 One publication per item x channel x mode asked first and backed by a unique index in the slots schema."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:120 Throws are caught and routed to recordFailure, which releases the claim in the same commit; process death is reclaimed by the sweep as interrupted."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:70 Slots are claimed as kernel leases in the shared SQLite store, with staleness handled by the sweep."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:98 The key is the slot id; the second entry point (publish-now) goes through the same sweep claim instead of a second key."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/tick.ts:109 The second caller is refused as a conflict that names the twin, distinct from an operation failure."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:43 The claim is deliberately held across the upload's awaits, heartbeated per chunk, and stops the sender when lost."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/producers/src/publish/publish.ts:170 Publishing producers fence outcome persistence with the claim fence inside the store transaction so interrupted uploads cannot overwrite newer state.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by bdd56b14-b8c2-4d16-a5fe-c6960592810e"
+        }
+      ]
+    },
+    "969da751-61f5-40a0-a5fc-dfca59f20636/concurrency-guards": {
+      "context": "kernel-python-protocol",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:14:54.479Z",
+      "worker": "bdd56b14-b8c2-4d16-a5fe-c6960592810e",
+      "techniques": [
+        {
+          "technique": "fence-inside-write-transaction",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:248 The book step asserts the fence inside the same tx as its insert."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:254 Outputs carry the attempt's fence; the fence is monotonic and never reused."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:188 Atomic test-and-set on shared SQLite; holder identity is host/pid/bootId with heartbeat time, and dead holders are detected by pid probe."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:341 The context-manager exit releases the lease; a failed acquire leaves the queue; TTL reclaims on death."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/lease.py:379 One shared Leases primitive with FIFO queue; the refusal names the holder."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:231 A step already booked is refused, so a replayed step does not re-spend."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/py/job.py:121 The guard key is a named lane slot from a closed set, not per-invocation identity."
+        },
+        {
+          "technique": "renewal-deadline-two-thirds-ttl",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/job_record.py:77 A per-resource/job lease, not the cluster write lock this technique governs (job-coordination owns it)."
+        },
+        {
+          "technique": "leadership-is-the-lock",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/py/lease.py:170 An embedded SQLite file, not a replicated log with a leader."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/kernel/py/lease.py:277 The Python kernel protocol validates the lease fence inside the SQLite write transaction, ensuring stale holders are refused before mutating shared state.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by bdd56b14-b8c2-4d16-a5fe-c6960592810e"
+        }
+      ]
+    },
+    "8cd64732-19d4-4f28-9919-51939b0b58d0/concurrency-guards": {
+      "context": "kernel-store-and-events",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:14:54.479Z",
+      "worker": "bdd56b14-b8c2-4d16-a5fe-c6960592810e",
+      "techniques": [
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/blob.ts:104 Temp fsync, transient classification, bounded retry and temp cleanup are present; exhaustion is not reported distinctly."
+        },
+        {
+          "technique": "replace-is-visible-before-durable",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/blob.ts:99 No directory flush after the rename that creates the name, so a crash can undo a blob a committed row references."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:234 Every write takes the DB write lock before its first read; a dead holder's lock is released by SQLite."
+        },
+        {
+          "technique": "critical-section-across-a-suspension",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:190 The suspension is removed from the section by type and at runtime."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/store.ts:217 Every throw path rolls back, and a rollback failure quarantines the connection."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ingest.ts:96 The natural key, UNIQUE in events, dedups the append under the write lock; a changed content is reported as same:false."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ingest.ts:125 The sync claim refuses and names the owner and next time."
+        },
+        {
+          "technique": "attempt-attribution",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ingest.ts:143 The finish is conditioned on the owner, so a superseded claimant's finish matches zero rows."
+        },
+        {
+          "technique": "leadership-is-the-lock",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/store.ts:14 An embedded SQLite write lock, not a replicated log with a leader."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/kernel/src/store.ts:234 Every kernel write transaction takes an exclusive database write lock under BEGIN IMMEDIATE before its first read, preventing cross-process read-modify-write interleavings.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by bdd56b14-b8c2-4d16-a5fe-c6960592810e"
+        }
+      ]
+    },
+    "47a52ae3-c07c-4d24-86e1-da7d59861f7e/concurrency-guards": {
+      "context": "foundry-forge-store-and-verdicts",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:14:54.479Z",
+      "worker": "bdd56b14-b8c2-4d16-a5fe-c6960592810e",
+      "techniques": [
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/runStore.ts:90 No fsync before rename (line 89), no temp deletion on failure, raw error on exhaustion; store.ts:333 also writes grader-calibration.json in place."
+        },
+        {
+          "technique": "replace-is-visible-before-durable",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/runStore.ts:89 Neither the file nor the directory entry is flushed around the name change."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/verdictLog.ts:100 The run lock is released in finally, and the queue entry is deleted only if still ours."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/verdictLog.ts:85 A keyed in-process queue per run dir in front of the cross-process lock file (queue policy)."
+        },
+        {
+          "technique": "preparation-is-the-staleness-window",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:293 The commit re-reads its state inside the lock and refuses if the preview token drifted."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:299 Evidence rows are replaced, so a retried commit converges."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/store.ts:269 The run lock file plus the catalogue lock, in a fixed order, across processes."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/foundry/runStore.ts:89 writeJsonAtomic in runStore omits durable flushing (fsync), abandons temporary files upon rename failures, returns raw platform errors instead of exhaustion reports, and is paired with an anti-pattern reader retry loop.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by bdd56b14-b8c2-4d16-a5fe-c6960592810e"
+        }
+      ]
     }
   }
 }

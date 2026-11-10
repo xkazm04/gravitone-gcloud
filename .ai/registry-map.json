@@ -9216,14 +9216,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/runStore.ts:89 writeJsonAtomic in runStore omits durable flushing (fsync), abandons temporary files upon rename failures, returns raw platform errors instead of exhaustion reports, and is paired with an anti-pattern reader retry loop.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "evidence": "lib/foundry/runStore.ts:90 writeJsonAtomic renames an unflushed temp, leaves it behind when the retry exhausts (no cleanup path), rethrows the raw platform error, and never flushes the directory, so the run store's publish door falls short of atomic-file-publish.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "data-access",
@@ -11090,14 +11089,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/kernel/py/lease.py:277 The Python kernel protocol validates the lease fence inside the SQLite write transaction, ensuring stale holders are refused before mutating shared state.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "evidence": "packages/kernel/py/lease.py:277 Every fenced Python write checks the lease row's fence and expiry inside its BEGIN IMMEDIATE transaction, so a stale holder is refused at the write.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "trust-base",
@@ -11227,15 +11225,14 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "packages/kernel/src/store.ts:234 Every kernel write transaction takes an exclusive database write lock under BEGIN IMMEDIATE before its first read, preventing cross-process read-modify-write interleavings.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "state": "deviation",
+          "evidence": "packages/kernel/src/blob.ts:104 When the bounded rename retry runs out, the blob writer reports a generic 'cannot write' carrying the raw platform error instead of a distinct exhaustion failure naming the held destination, attempts and elapsed time.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "e5b296e2-cccf-47a5-b8bd-ce730d40ace8",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "usage-event-ingestion",
@@ -16968,15 +16965,14 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "packages/producers/src/publish/publish.ts:170 Publishing producers fence outcome persistence with the claim fence inside the store transaction so interrupted uploads cannot overwrite newer state.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/publish.ts:158 The irreversible platform upload starts after the awaited adapter.plan with no re-read of the claim/fence as its last statement (the first heartbeat fires only after a chunk is accepted), so the guard verdict from the sweep and the prior-publication read at line 108 ages across the preparation window.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "fleet-orchestration",
