@@ -2,17 +2,18 @@
 
 // THE COVER DESK'S FIXTURE (spark track-mirror-studio, WP3): a history of covers, one per state plus a draft whose
 // brief is running, audio synthesized in the browser, and stand-in acts that move the fixture through the flow
-// (receipt, a stale confirm once, five takes, a pick, a remix), so the desk is driven before the engine and the doors exist. A draft's brief walks
+// (receipt, a stale confirm once, five takes, a pick, a remix, a send to Suno and a kept take), so the desk is driven before the engine and the doors exist. A draft's brief walks
 // queued -> running -> done, one state per re-read, and on done writes the fields and launches the cover. Reached with
 // `/audio?s=cover&fixture=<state>` on a development build only (./useDesk.ts reads the switch); a production
 // build never honours it. Nothing here touches a store, a route or a vendor. A link sent here (cover from a link,
 // WP-C) is "fetched" for LINK_FETCH_MS, so the fetching state can be seen, then made a draft carrying its link.
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { CoverDeskView, CoverRecord, CoverTake } from "@gt/domain/cover";
+import { sunoSendInFlight } from "@gt/domain/cover.suno";
 
 import type { CoverActs } from "../contract.ts";
-import { base, briefDone, briefReceipt, card, OPENS_ON, receipt, records, SEEDS, SONG_S, takesFor } from "./fixtureRecords.ts";
+import { base, briefDone, briefReceipt, card, OPENS_ON, receipt, records, SEEDS, SONG_S, sunoFiled, sunoQueued, sunoReceipt, sunoWalk, takesFor } from "./fixtureRecords.ts";
 import { wav, type Sounds } from "./fixtureSound.ts";
 import type { Sender } from "./send.ts";
 
@@ -20,7 +21,7 @@ import type { Sender } from "./send.ts";
 const ok = <T,>(value: T) => ({ ok: true as const, value });
 const err = (message: string) => ({ ok: false as const, error: { error: message, code: "unavailable" as const } });
 
-export const FIXTURE_STATES = ["empty", "draft", "queued", "rendering", "failed", "judging", "picked", "remixed"] as const;
+export const FIXTURE_STATES = ["empty", "draft", "queued", "rendering", "failed", "judging", "picked", "remixed", "sending", "covered", "filed"] as const;
 export type FixtureState = (typeof FIXTURE_STATES)[number];
 
 /** How long the fixture's link takes to "download": long enough to be seen and photographed. */
@@ -67,6 +68,14 @@ export function useFixture(state: FixtureState): FixtureDesk {
   const staleOnce = useRef(true);
   // The re-read a confirm makes at once finds the brief still queued: it moves on the re-read after that.
   const briefJustQueued = useRef<string | null>(null);
+  // The same for a Suno send, and its own stale answer; the download credits the account holds.
+  const sunoJustQueued = useRef<string | null>(null);
+  const sunoStaleOnce = useRef(true);
+  const creditsLeft = useRef(12);
+  const recsRef = useRef(recs);
+  useEffect(() => {
+    recsRef.current = recs;
+  }, [recs]);
   // A song dropped on the fixture plays as itself.
   const [dropped, setDropped] = useState<ReadonlyMap<string, string>>(new Map());
 
@@ -97,9 +106,30 @@ export function useFixture(state: FixtureState): FixtureDesk {
         change(id, (r) => ({ ...r, brief: { state: "queued", jobId, at: new Date().toISOString() } }));
         return ok({ kind: "launched", jobId });
       },
-      // spark suno-covers WP0: refusals until WP2 gives the fixture its Suno states.
-      sendSuno: async () => err("suno covers: not built yet"),
-      fileSuno: async () => err("suno covers: not built yet"),
+      // spark suno-covers: a send answers its receipt, a stale one once, then queues and walks one state per re-read.
+      sendSuno: async (plan, token) => {
+        if (token === undefined) return ok({ kind: "receipt", receipt: sunoReceipt(plan, 0) });
+        if (sunoStaleOnce.current) {
+          sunoStaleOnce.current = false;
+          return ok({ kind: "stale", fresh: sunoReceipt(plan, 1) });
+        }
+        const held = recsRef.current.find((r) => r.id === plan.id);
+        if (held === undefined) return err("no such cover");
+        const at = new Date().toISOString();
+        sunoJustQueued.current = plan.id;
+        change(plan.id, (r) => sunoQueued(r, plan, at));
+        return ok({ kind: "launched", jobId: sunoQueued(held, plan, at).suno?.sends.at(-1)?.jobId ?? "" });
+      },
+      // A keep answers Suno's quote, then a confirmed one files the take as the remix and takes a credit.
+      fileSuno: async (i) => {
+        const r = recsRef.current.find((x) => x.id === i.id);
+        const t = r?.suno?.sends.find((x) => x.n === i.send)?.takes.find((x) => x.take === i.take);
+        if (r === undefined || t?.clipId === undefined) return err("no such take");
+        if (i.confirm !== true) return ok({ quote: { clipId: t.clipId, credits: 1 as const, left: creditsLeft.current, format: "mp3" as const } });
+        creditsLeft.current -= 1;
+        change(i.id, (x) => sunoFiled(x, i.send, i.take));
+        return ok({ filed: { send: i.send, take: i.take, clipId: t.clipId } });
+      },
       pick: async (id, seed) => {
         change(id, (r) => ({ ...r, state: "picked", winnerSeed: seed, exportFile: "winner.mp3" }));
         return ok({ winnerUrl: sounds?.takes[1] ?? "" });
@@ -117,8 +147,12 @@ export function useFixture(state: FixtureState): FixtureDesk {
     const now = new Date().toISOString();
     const hold = briefJustQueued.current;
     briefJustQueued.current = null;
+    const sunoHold = sunoJustQueued.current;
+    sunoJustQueued.current = null;
     setRecs((rs) =>
       rs.map((r) => {
+        if (r.id === sunoHold) return r;
+        if (sunoSendInFlight(r.suno)) return sunoWalk(r);
         if (r.brief?.state === "queued" && r.id === hold) return r;
         if (r.brief?.state === "queued") return { ...r, brief: { ...r.brief, state: "running", at: now } };
         if (r.brief?.state === "running") return briefDone(r, now);

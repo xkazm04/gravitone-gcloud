@@ -45,6 +45,10 @@ export const EXEMPT: Record<string, string> = {
   "app/(studio)/audio/_cover/desk/sleeve/usePair.ts": NEEDS_DOM,
   // Split out of useCover; its acts are tested in tests/next-server/cover-doors.test.ts.
   "app/(studio)/audio/_cover/desk/useAfterPick.ts": NO_DRIVER,
+  // spark suno-covers: the suno station's send form, receipt and keep. Its state is React's (useState over the form), and
+  // the three compositions that read it ride next/navigation's useSearchParams; the plan the form makes, the steps of a send
+  // and the words a take wears are pure (suno/suno.ts) and unit-tested in tests/next-server/cover-suno-desk.test.ts.
+  "app/(studio)/audio/_cover/desk/suno/useSunoSend.ts": "form state held in React useState and driven through the cover acts from a mounted desk, which this DOM-less lane has none of; its pure parts are unit-tested in cover-suno-desk.test.ts",
   // spark fable-ten: re-reads a part while a job is in flight. It asks document.activeElement whether the
   // operator is typing and rides @gt/ui's visibility-aware poll; its adoption rule (mayAdopt) is unit-tested
   // in packages/ui/test/components/part.test.ts.
