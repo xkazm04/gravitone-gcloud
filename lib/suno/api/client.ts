@@ -28,6 +28,7 @@ import {
   CreateBody,
   CreateResponse,
   createdOf,
+  CoverBody,
   Download,
   LibraryPage,
   Listen,
@@ -37,6 +38,7 @@ import {
   Usage,
   type Created,
   type DownloadFormat,
+  UploadSession,
 } from "./wire.ts";
 
 export const DEFAULT_TIMEOUT_MS = 60_000;
@@ -121,6 +123,15 @@ export interface SunoApi {
    * the person's press and a receipt (lib/sound/suno/pull.ts). Needs the `download` scope.
    */
   download(id: string, o: { readonly format: DownloadFormat; readonly confirm: boolean }): Promise<Result<Download>>;
+  /** POST /v0/audio/upload-sessions: free (uploads spend no credits). Needs the `audio.upload` feature. */
+  uploadSession(title: string): Promise<Result<UploadSession>>;
+  /** PUT the raw bytes to the session's signed `upload_url` (no bearer: the URL is the credential). */
+  putUpload(uploadUrl: string, bytes: Uint8Array, mime: string): Promise<Result<void>>;
+  /** POST /v0/audio/upload-sessions/{id}/complete: the clip the upload becomes; poll `getClip` to `complete`. */
+  completeUpload(sessionId: string): Promise<Result<Clip>>;
+  /** POST /v0/audio/{id}/covers - SPENDS SUNO SONG CREDITS. The caller holds a confirmed receipt
+   *  (lib/producers/coverSuno.ts); pass `idempotency_key` so a retried step is one cover. */
+  cover(clipId: string, body: CoverBody): Promise<Result<Created>>;
 }
 
 type Sent = { readonly raw: Raw; readonly res: Response | null };
@@ -194,6 +205,11 @@ export function sunoApi(deps: SunoApiDeps = {}): SunoApi {
     analysis: (id) => json("suno analysis", "GET", `/v0/audio/${enc(id)}/analysis`, Analysis),
     listen: (id, question) => json("suno listen", "POST", `/v0/audio/${enc(id)}/listen`, Listen, { question }),
     listenRead: (listenId) => json("suno listen read", "GET", `/v0/audio/listens/${enc(listenId)}`, Listen),
+    // spark suno-covers WP0: stubs with the final signatures; WP1 builds them.
+    uploadSession: async () => err("unavailable", "suno upload: not built yet"),
+    putUpload: async () => err("unavailable", "suno upload: not built yet"),
+    completeUpload: async () => err("unavailable", "suno upload: not built yet"),
+    cover: async () => err("unavailable", "suno cover: not built yet"),
     download: (id, o) => json("suno download", "POST", `/v0/audio/${enc(id)}/download`, Download, { format: o.format, ...(o.confirm ? { confirm: true } : {}) }),
     alignment: (id) => json("suno lyrics alignment", "GET", `/v0/audio/${enc(id)}/lyrics-alignment`, Alignment),
     async stream(id) {

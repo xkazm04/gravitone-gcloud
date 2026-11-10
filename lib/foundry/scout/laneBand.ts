@@ -30,6 +30,7 @@ export const LANE_BAND_RESOURCES: { readonly [L in ResourceLane]?: readonly Band
   "cloud.elevenlabs": [],
   "cloud.leonardo": [],
   "cloud.qwen": [],
+  "cloud.suno": [],
 };
 
 /** The union of what `lanes` load; every resource when one lane is unmapped. */

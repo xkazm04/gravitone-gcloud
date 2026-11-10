@@ -18,6 +18,7 @@ import type { Sender } from "./send.ts";
 
 // An act's success, in the ActionResult shape the contract answers.
 const ok = <T,>(value: T) => ({ ok: true as const, value });
+const err = (message: string) => ({ ok: false as const, error: { error: message, code: "unavailable" as const } });
 
 export const FIXTURE_STATES = ["empty", "draft", "queued", "rendering", "failed", "judging", "picked", "remixed"] as const;
 export type FixtureState = (typeof FIXTURE_STATES)[number];
@@ -96,6 +97,9 @@ export function useFixture(state: FixtureState): FixtureDesk {
         change(id, (r) => ({ ...r, brief: { state: "queued", jobId, at: new Date().toISOString() } }));
         return ok({ kind: "launched", jobId });
       },
+      // spark suno-covers WP0: refusals until WP2 gives the fixture its Suno states.
+      sendSuno: async () => err("suno covers: not built yet"),
+      fileSuno: async () => err("suno covers: not built yet"),
       pick: async (id, seed) => {
         change(id, (r) => ({ ...r, state: "picked", winnerSeed: seed, exportFile: "winner.mp3" }));
         return ok({ winnerUrl: sounds?.takes[1] ?? "" });

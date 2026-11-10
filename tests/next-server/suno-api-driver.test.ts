@@ -60,6 +60,10 @@ function fakeApi(o: {
     },
     searchLibrary: unused,
     download: unused,
+    uploadSession: unused,
+    putUpload: unused,
+    completeUpload: unused,
+    cover: unused,
     create: async (body) => {
       created.push(body);
       return o.create?.() ?? ok({ clipIds: ["a", "b"], clips: [] });

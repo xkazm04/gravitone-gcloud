@@ -37,6 +37,7 @@ const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
   "cloud.elevenlabs": { label: "ElevenLabs", engines: "music · sfx · voice", kind: "cloud" },
   "cloud.leonardo": { label: "Leonardo", engines: "image", kind: "cloud" },
   "cloud.qwen": { label: "Qwen", engines: "recognition · vision", kind: "cloud" },
+  "cloud.suno": { label: "Suno", engines: "covers · official API", kind: "cloud" },
 };
 
 // Each lane is spelled ONCE, in LABELS (the mapped type makes it total); its capacity is joined

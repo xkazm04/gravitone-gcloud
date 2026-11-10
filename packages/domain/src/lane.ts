@@ -73,6 +73,7 @@ export const LANE_PAYS: { readonly [L in ResourceLane]: boolean } = {
   "cloud.elevenlabs": true,
   "cloud.leonardo": true,
   "cloud.qwen": true,
+  "cloud.suno": true,
 };
 export const PAID_LANES: readonly ResourceLane[] = RESOURCE_LANES.filter((l) => LANE_PAYS[l]);
 export const FREE_LANES: readonly ResourceLane[] = RESOURCE_LANES.filter((l) => !LANE_PAYS[l]);

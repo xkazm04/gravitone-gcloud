@@ -203,3 +203,29 @@ export function createdOf(raw: z.output<typeof CreateResponse>): Result<Created>
   const ids = [...new Set([...(raw.clip_ids ?? []), ...clips.map((c) => c.id), ...(raw.id !== undefined ? [raw.id] : [])])];
   return { ok: true, value: { clipIds: ids, clips } };
 }
+
+/** POST /v0/audio/upload-sessions (spark suno-covers; route measured 2026-11-10, answer per Suno's tool
+ *  description): the clip id the upload becomes, and a signed URL that takes the raw bytes in one PUT. */
+export const UploadSession = z.object({ id: z.string().min(1), upload_url: z.string().min(1), upload_page_url: nullish(z.string()) }).loose();
+export type UploadSession = z.output<typeof UploadSession>;
+
+/** POST /v0/audio/{id}/covers (route measured 2026-11-10: a duration of 5 answered 400 "duration must be between 15
+ *  and 360 seconds"). Never `max_mode` (only when a person asks for it by name), never `voice_id` in v1. */
+export const CoverBody = z.strictObject({
+  style: z.string().min(1).max(1000),
+  lyrics: z.string().max(5000).optional(),
+  title: z.string().max(256).optional(),
+  duration: z.number().int().min(15).max(360).optional(),
+  model: z.string().min(1).max(40).optional(),
+  negative_style: z.string().max(1000).optional(),
+  controls: z
+    .strictObject({
+      audio_influence: z.number().min(0).max(1).optional(),
+      style_influence: z.number().min(0).max(1).optional(),
+      weirdness: z.number().min(0).max(1).optional(),
+      variety: z.number().int().min(0).max(4).optional(),
+    })
+    .optional(),
+  idempotency_key: z.string().min(1).max(255),
+});
+export type CoverBody = z.input<typeof CoverBody>;
