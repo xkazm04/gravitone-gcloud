@@ -12643,8 +12643,12 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "state": "not-applicable",
+          "priorNotApplicable": 7,
+          "evidence": "lib/ledger/v1/sync.ts:18 This context projects v1 store records into kernel events through a closed source list, with no model call, contributed hook, extension load or conversation checkpoint. A case-insensitive grep of lib/ledger/v1 found no hook, plugin, checkpoint, middleware or subagent. 'agent' appears only in the sources/ adapters, as job-label text.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",

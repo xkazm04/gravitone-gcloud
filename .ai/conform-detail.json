@@ -22855,6 +22855,16 @@
           "evidence": "app/_server/mcp/registry.ts:15 Tools are statically imported rows. No configuration or caller can name code to load."
         }
       ]
+    },
+    "e175da72-0e26-4725-95bf-eecd8c3ffc6f/agent-runtime-assembly": {
+      "context": "ledger-v1-projection-core",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T22:49:18.446Z",
+      "worker": "d2950018-54eb-46ec-82be-3062ba28a2d6",
+      "techniques": []
     }
   }
 }

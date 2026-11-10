@@ -1,0 +1,82 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d2950018-54eb-46ec-82be-3062ba28a2d6",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-10T22:49:18.446323+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/live.ts:10 The listed shell files are page chrome and per-request reads (header facts, toasts, bell, live feed, session handoff), with no model call, hook chain, extension loading or conversation checkpoint. A case-insensitive grep of app/(studio)/_shell found no plugin, checkpoint, middleware or subagent. The agent-facing AgentNav.tsx in the same directory belongs to the studio-routes-and-redirects context.",
+   "techniques": [],
+   "absenceTerms": [
+    "plugin",
+    "checkpoint",
+    "middleware",
+    "subagent"
+   ]
+  },
+  {
+   "context": "ledger-v1-projection-core",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/ledger/v1/sync.ts:18 This context projects v1 store records into kernel events through a closed source list, with no model call, contributed hook, extension load or conversation checkpoint. A case-insensitive grep of lib/ledger/v1 found no hook, plugin, checkpoint, middleware or subagent. 'agent' appears only in the sources/ adapters, as job-label text.",
+   "techniques": [],
+   "absenceTerms": [
+    "hook",
+    "plugin",
+    "checkpoint",
+    "middleware",
+    "subagent"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "audio-studio-host",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "foundry-strips-and-training",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "scout-engine-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T22:49:18.446323+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:49:18.446323+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ledger-v1-projection-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
