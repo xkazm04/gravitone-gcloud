@@ -2892,7 +2892,11 @@
           "revision": 6,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/articles/trial/store.ts:707 A measured trial exec is refused until the prereg is sealed and still matches its sha256, so the costly measurement phase never runs against a protocol that is still moving.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6
         },
         {
           "subject": "quality-gates",
@@ -21807,12 +21811,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate → proven → locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style moves from candidate to proven to locked only through operator keeps and an explicit lock that the server admits only when the trial-coverage gate holds, so the shared style contract graduates by a human act against a checked gate.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "image-prompt-composition",

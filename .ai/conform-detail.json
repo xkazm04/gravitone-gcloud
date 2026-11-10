@@ -17042,32 +17042,47 @@
       "subject": "production-pipeline-phasing",
       "bundle": "media-generation",
       "state": "conformant",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:07:08.894Z",
-      "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:07:06.516Z",
+      "worker": "eb53b302-2743-4ffb-b2c2-c5e3aaf5e72b",
       "techniques": [
         {
           "technique": "phase-order-and-graduation",
           "verdict": "conformant",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A one-way ratchet. The blocker is the server's own sentence, not a view's re-derivation, so the drawn gate is the gate the write enforces."
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 The ratchet is one-way and the lock is an explicit act gated on the server. Graduation is a human act and is not inferred from completion."
         },
         {
           "technique": "asset-vs-disposable-render",
           "verdict": "conformant",
-          "evidence": "packages/ui/src/components/style/ProofSheet.tsx:6 An annotated trial crosses into asset (as the technique requires). Proofs under an earlier block are marked stale and no longer sent as references, so the style is versioned and supersession is explicit."
+          "evidence": "packages/ui/src/components/style/ProofSheet.tsx:6 A rejection carries a required note, so it has been decided about and crosses into the asset side. The reference window counts approved proofs only, and stale approvals stop vouching."
         },
         {
           "technique": "worst-news-first-progress",
           "verdict": "conformant",
-          "evidence": "packages/ui/src/components/style/style.ts:11 A stale approval reads idle, not done. Trial columns count stale proofs apart and never show them as the face. Unpriced spend is counted, never zeroed (style.ts:58)."
+          "evidence": "packages/ui/src/components/style/style.ts:2 Single writer: status, coverage and blocker are computed once by the server ratchet and never re-derived by a view. proofLook draws a stale approval as idle, not done."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 Cut-review notes are addressed by the beat's start second on the export's own clock, so a note has a time address."
         },
         {
           "technique": "approval-reads-forward",
           "verdict": "conformant",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:44 Before the shared style contract can lock, it must cover a fixed battery of downstream trial problems (TrialMatrix.tsx:9). That battery is the forward list, but it is generic, not the beats of a specific project."
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:44 Before the shared style contract can lock, it must cover a fixed battery of downstream trial problems (TrialMatrix.tsx:9). That battery is the forward list, but it is generic, not the beats of a specific project.",
+          "carriedFrom": "2026-11-06"
         }
       ],
-      "registryProposal": "approval-reads-forward assumes the shared asset belongs to one production with a known beat list. A library-level style contract reused across projects has no beats at lock time; the technique should say whether a fixed battery of downstream trial problems satisfies the forward read, or whether the forward check must be repeated per project when the locked style is adopted."
+      "registryProposal": "approval-reads-forward assumes a shared asset's downstream beats exist when it is approved. A library-level style contract is locked before any project that will use it has beats, and here its forward read is a fixed battery of generic trial problems. The technique does not name that proxy. Read literally, the rule 'the forward list cannot be written, so the asset is not ready to graduate' would forbid locking any library style. The technique should say whether a stress battery satisfies the forward read for assets shared across projects.",
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate → proven → locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
+          "evaluatedAt": "2026-11-06T03:07:08.894Z",
+          "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+          "reason": "replaced by eb53b302-2743-4ffb-b2c2-c5e3aaf5e72b"
+        }
+      ]
     },
     "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2/review-iteration-loops": {
       "context": "sound-generation-engine",
@@ -22553,6 +22568,37 @@
           "technique": "swallowed-error-prevention",
           "verdict": "conformant",
           "evidence": "lib/useRemembered.ts:24 The storage-fallback catches in this file are declared as intentional drops of convenience state; identityEviction.ts:395 likewise declares its close() drop."
+        }
+      ]
+    },
+    "492013a4-a2b2-4f74-b6e3-9dde233632a9/production-pipeline-phasing": {
+      "context": "article-trials-and-medium",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:07:06.516Z",
+      "worker": "eb53b302-2743-4ffb-b2c2-c5e3aaf5e72b",
+      "techniques": [
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/store.ts:707 The order open, framed, sealed, exec, closed is declared once (line 14), and the expensive exec is gated on the seal."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/store.ts:695 A pilot is a capped, cheap probe that never counts. The Medium draft is a disposable preview, and post.md stays the one source (mediumDraft.ts:6)."
+        },
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "lib/articles/mediumDraft.ts:44 A synchronous in-memory guard serialises the mutation of one run's draft into a refusal the caller can see. Execs are serialised per trial by a disk lock (store.ts:203)."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "lib/articles/trial/verdict.ts:4 The gate refuses to report a verdict it could not measure (void). A Medium failure is recorded as 'unavailable' with a reason (mediumDraft.ts:11), never buried."
         }
       ]
     }
