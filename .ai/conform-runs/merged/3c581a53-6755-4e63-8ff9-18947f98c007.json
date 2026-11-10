@@ -1,0 +1,168 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3c581a53-6755-4e63-8ff9-18947f98c007",
+ "subject": "review-iteration-loops",
+ "evaluatedAt": "2026-11-10T01:02:02.845357+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "script-composition-and-validation",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/script/editPlan.ts:98 The edit-plan contract the engine must satisfy has edits, refusals and a summary but no unchanged list (and additionalProperties:false would reject one), while pipeline/RECALIBRATE-PROMPT.md:71 asks for `unchanged[]`; Version (versions.ts) carries no such field either, so a render the engine considered and left alone cannot be told apart from one it forgot.",
+   "techniques": [
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "deviation",
+     "evidence": "lib/script/editPlan.ts:98 Refusals with a why and refuse-before-apply ordering (recalibrate.ts:312) are both in place, but 'explicitly unchanged is a verdict' is missing from the schema, the parser and Version."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "lib/script/editPlan.ts:20 The revision engine returns a list of operations, not whole scripts; parseEditPlan rejects a malformed plan instead of repairing it."
+    },
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "conformant",
+     "evidence": "lib/script/versions.ts:33 Closed note kinds: more-focus, less-focus, descope, move-earlier/later, and custom as the escape hatch. applyEdits re-checks connector seams after cuts and moves (chainBreaks, editPlan.ts:250)."
+    },
+    {
+     "technique": "scope-vs-preference-signals",
+     "verdict": "conformant",
+     "evidence": "lib/script/recalibrate.ts:97 Scope decisions outrank notes in both directions: GUARD 1 covers required cards, GUARD 2 (recalibrate.ts:295) covers descoped cards. Both run on the simulated path and the model path."
+    },
+    {
+     "technique": "attribution-share-accounting",
+     "verdict": "conformant",
+     "evidence": "lib/script/editPlan.ts:312 A beat's seconds are split across its cards with the same function the baseline uses. Applied beats start from baseAttribution (line 179) and are amended, not re-derived."
+    }
+   ]
+  },
+  {
+   "context": "sound-generation-engine",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/sound/editPlan.ts:55 buildEditPlan handles every generation chunk the same way whatever its position, and the section edit is filed as a child take with editModes and no anchor or global flag, so regenerating the opening section, which sets the track's genre and tone, cannot be told apart from a local section edit.",
+   "techniques": [
+    {
+     "technique": "partial-regeneration-seams",
+     "verdict": "deviation",
+     "evidence": "lib/sound/editPlan.ts:55 Kept sections are held by range reference (line 57) and seam continuity is a declared condition_strength (line 64), but no anchor region is identified, and nothing gates the result at the seams."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "lib/sound/editPlan.ts:57 A KEPT section is referenced against the stored song and never re-rendered. Only the sections named in editModes are regenerated."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "lib/sound/generate.ts:197 Unknown modes and all-keep edits are refused by name before anything is rendered or paid for."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:78 The script's note picker removes the `custom` kind, so the closed vocabulary loses the free-text escape hatch the standard requires and a note outside the five kinds cannot be filed at all.",
+   "techniques": [
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:78 The typed kinds are offered per card, but the escape hatch is filtered out of the UI."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:204 Refusals are drawn verbatim and the gate override is a deliberate second act (line 198), but the staged version shows no considered-and-unchanged list."
+    },
+    {
+     "technique": "scope-vs-preference-signals",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:189 Collisions between the scope board and the script are shown, not hidden. Required cards cannot be descoped (Notebook.tsx:103)."
+    },
+    {
+     "technique": "follow-up-that-can-kill-a-fact",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:144 Follow-up results carry an explicit strengthened/weakened/resolved/inconclusive verdict. `unanswered` is a terminal status (line 137), and each typed effect (lib/research/followup.ts has `kills`) is applied or rejected one at a time (line 151)."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:202 A recalibration is staged beside the adopted script and accepted or discarded as a whole version. It never overwrites the adopted script in place."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "review-iteration-loops",
+   "context": "part-editor-media-cut-score",
+   "reason": "pair anchor refused: placeholder evidence at app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:91"
+  },
+  {
+   "subject": "review-iteration-loops",
+   "context": "frames-picture-composition",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T01:02:02.845357+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "attribution-share-accounting",
+    "edit-plan-over-regeneration",
+    "note-taxonomy-focus-scope-order",
+    "refusal-as-valid-outcome",
+    "scope-vs-preference-signals"
+   ],
+   "deviations": 1,
+   "context": "script-composition-and-validation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:02:02.845357+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "edit-plan-over-regeneration",
+    "partial-regeneration-seams",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 1,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:02:02.845357+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "edit-plan-over-regeneration",
+    "follow-up-that-can-kill-a-fact",
+    "note-taxonomy-focus-scope-order",
+    "refusal-as-valid-outcome",
+    "scope-vs-preference-signals"
+   ],
+   "deviations": 1,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

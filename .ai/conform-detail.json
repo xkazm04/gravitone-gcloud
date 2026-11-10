@@ -17074,25 +17074,24 @@
       "subject": "review-iteration-loops",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T04:07:21.897Z",
-      "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:02:02.845Z",
+      "worker": "3c581a53-6755-4e63-8ff9-18947f98c007",
       "techniques": [
-        {
-          "technique": "edit-plan-over-regeneration",
-          "verdict": "conformant",
-          "evidence": "lib/sound/generate.ts:19 Revision is a per-section mode plan against the stored take, not a fresh compose. An edit where every section is kept is refused because it has nothing to render (generate.ts:199)."
-        },
         {
           "technique": "partial-regeneration-seams",
           "verdict": "deviation",
-          "evidence": "lib/sound/editPlan.ts:55 Kept sections are referenced by range (line 57), and seam adherence is a declared condition_strength per section (line 64). The third structure is missing: no anchor region is identified, so an edit to section 0 is not treated as global."
+          "evidence": "lib/sound/editPlan.ts:55 Kept sections are held by range reference (line 57) and seam continuity is a declared condition_strength (line 64), but no anchor region is identified, and nothing gates the result at the seams."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/sound/editPlan.ts:57 A KEPT section is referenced against the stored song and never re-rendered. Only the sections named in editModes are regenerated."
         },
         {
           "technique": "refusal-as-valid-outcome",
           "verdict": "conformant",
-          "evidence": "lib/sound/generate.ts:194 Every section's fate must be declared, so kept is explicit. A typo'd mode and an all-keep edit are refused by name before anything is spent (generate.ts:199).",
-          "carriedFrom": "2026-11-06"
+          "evidence": "lib/sound/generate.ts:197 Unknown modes and all-keep edits are refused by name before anything is rendered or paid for."
         },
         {
           "technique": "gate-record-outlives-the-media",
@@ -17101,7 +17100,15 @@
           "carriedFrom": "2026-11-06"
         }
       ],
-      "registryProposal": "partial-regeneration-seams says to identify the anchor region (the opening section). In wire plans where every chunk restates its own positive/negative styles (lib/music/types.ts WireGenerationChunk), part of the global frame is restated per section. The technique could say how to locate the anchor when the style is restated per chunk instead of inherited from the opener."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan treats every generation chunk the same way whatever its position, so regenerating the opening section, which sets the track's genre and tone, is priced and filed as a local section edit rather than flagged as a global restyle with its review clock restarted.",
+          "evaluatedAt": "2026-11-06T04:07:21.897Z",
+          "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
+          "reason": "replaced by 3c581a53-6755-4e63-8ff9-18947f98c007"
+        }
+      ]
     },
     "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/review-iteration-loops": {
       "context": "scout-engine-creative",
@@ -17341,34 +17348,43 @@
       "subject": "review-iteration-loops",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T04:07:21.897Z",
-      "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:02:02.845Z",
+      "worker": "3c581a53-6755-4e63-8ff9-18947f98c007",
       "techniques": [
-        {
-          "technique": "edit-plan-over-regeneration",
-          "verdict": "conformant",
-          "evidence": "lib/script/editPlan.ts:20 The engine returns a closed list of four operations, never whole scripts (file header lines 3-6). Every edit needs a `why` (line 404). Marks are re-laid from durations, and chain seams are re-checked on every apply (line 238)."
-        },
         {
           "technique": "refusal-as-valid-outcome",
           "verdict": "deviation",
-          "evidence": "lib/script/editPlan.ts:98 Refusals are first-class, and required material is refused before apply (recalibrate.ts:339). Conflicts with a named winner exist in recalibrate.ts. But the explicitly-unchanged list that the prompt asks for has no field in the schema or in the EditPlan type, so it is dropped."
+          "evidence": "lib/script/editPlan.ts:98 Refusals with a why and refuse-before-apply ordering (recalibrate.ts:312) are both in place, but 'explicitly unchanged is a verdict' is missing from the schema, the parser and Version."
         },
         {
-          "technique": "scope-vs-preference-signals",
+          "technique": "edit-plan-over-regeneration",
           "verdict": "conformant",
-          "evidence": "lib/script/recalibrate.ts:115 GUARD 2 refuses focus notes on descoped cards and points to the triage board. GUARD 1 refuses a descope of required material, using the card's own requiredWhy."
+          "evidence": "lib/script/editPlan.ts:20 The revision engine returns a list of operations, not whole scripts; parseEditPlan rejects a malformed plan instead of repairing it."
         },
         {
           "technique": "note-taxonomy-focus-scope-order",
           "verdict": "conformant",
-          "evidence": "lib/script/versions.ts:33 A closed vocabulary: more-focus, less-focus, descope, move-earlier, move-later, plus custom as the escape hatch, with labels such as 'cut it back, keep it' that keep less-focus distinct from descope."
+          "evidence": "lib/script/versions.ts:33 Closed note kinds: more-focus, less-focus, descope, move-earlier/later, and custom as the escape hatch. applyEdits re-checks connector seams after cuts and moves (chainBreaks, editPlan.ts:250)."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/script/recalibrate.ts:97 Scope decisions outrank notes in both directions: GUARD 1 covers required cards, GUARD 2 (recalibrate.ts:295) covers descoped cards. Both run on the simulated path and the model path."
         },
         {
           "technique": "attribution-share-accounting",
           "verdict": "conformant",
-          "evidence": "lib/script/impact.ts:100 A beat's seconds are split across its cards so the totals sum to the runtime. The model path (editPlan.ts impactFrom) uses the same function and seeds the cut records, so cut and absent stay distinct."
+          "evidence": "lib/script/editPlan.ts:312 A beat's seconds are split across its cards with the same function the baseline uses. Applied beats start from baseAttribution (line 179) and are amended, not re-derived."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract has refusals and a summary but no `unchanged` field, and the schema sets additionalProperties:false, even though pipeline/RECALIBRATE-PROMPT.md:71 asks the engine for `unchanged[]`; so a render that was considered and left alone looks the same as one that was forgotten, which the refusal technique counts as a verdict that must be kept.",
+          "evaluatedAt": "2026-11-06T04:07:21.897Z",
+          "worker": "c7bce9af-b2e9-4ff0-8969-c4a8b7d1fe2e",
+          "reason": "replaced by 3c581a53-6755-4e63-8ff9-18947f98c007"
         }
       ]
     },

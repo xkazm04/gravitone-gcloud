@@ -19767,12 +19767,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract has refusals and a summary but no `unchanged` field, and the schema sets additionalProperties:false, even though pipeline/RECALIBRATE-PROMPT.md:71 asks the engine for `unchanged[]`; so a render that was considered and left alone looks the same as one that was forgotten, which the refusal technique counts as a verdict that must be kept.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract the engine must satisfy has edits, refusals and a summary but no unchanged list (and additionalProperties:false would reject one), while pipeline/RECALIBRATE-PROMPT.md:71 asks for `unchanged[]`; Version (versions.ts) carries no such field either, so a render the engine considered and left alone cannot be told apart from one it forgot.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "video-assembly",
@@ -20169,12 +20168,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan treats every generation chunk the same way whatever its position, so regenerating the opening section, which sets the track's genre and tone, is priced and filed as a local section edit rather than flagged as a global restyle with its review clock restarted.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan handles every generation chunk the same way whatever its position, and the section edit is filed as a child take with editModes and no anchor or global flag, so regenerating the opening section, which sets the track's genre and tone, cannot be told apart from a local section edit.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "generated-music-acceptance",
