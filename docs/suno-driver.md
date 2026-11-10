@@ -121,6 +121,23 @@ The request sends `mv: "chirp-hawk"` for v6 and `mv: "chirp-hawk-wild"` for v6-w
 matched after folding case, whitespace and hyphens (`normalizeModelLabel`), so `"v6 wild"` in
 `SUNO_MODEL_LABEL` and `"v6-wild"` on the page are the same label.
 
+## The official API
+
+`https://api.suno.com` (`SUNO_API_BASE` moves it), OAuth 2.1 authorization code + PKCE S256 with dynamic client
+registration; the authorization server and its endpoints are discovered from
+`/.well-known/oauth-protected-resource`.
+
+- `lib/suno/api/wire.ts` - the zod shapes; a body that does not parse is refused quoting its first 300 characters.
+- `lib/suno/api/tokens.ts` - `<sound store>/suno-api/auth.json` (client + tokens, plain text),
+  `pending.json` (state -> PKCE verifier, ten minutes), `auth.lock` (every write, stale at 30 s).
+- `lib/suno/api/oauth.ts` - `discover`, `ensureClient`, `beginAuthorization`, `completeAuthorization`, `refresh`,
+  `disconnect`. Scopes `api:v0 credits:spend library:read library:search profile:read offline_access`.
+- `lib/suno/api/client.ts` - `sunoApi()`: `usage, me, getClip, listLibrary, searchLibrary, create, analysis, listen,
+  listenRead, alignment, stream`; `sunoApiStatus()` reads the file only. `create` is the one call that spends credits.
+- Connect: `GET /api/suno/connect` (access guard) -> Suno -> `GET /api/suno/callback` -> `/audio?suno=connected`
+  or `/audio?suno=error&reason=...`. Disconnect: `DELETE /api/suno/connect`.
+- CLI: `npm run suno:api -- status | usage | clip <id> | stream <id> [--out <file>]`. Read-only.
+
 ## When Suno changes its UI
 
 Everything Suno-shaped is in `lib/suno/selectors.ts`. Symptom → entry:

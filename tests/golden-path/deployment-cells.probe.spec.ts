@@ -168,12 +168,18 @@ function addressOf(rel: string): { url: string; params: Record<string, string | 
  * measured by asking `resolveRegistryDir`, the one authority on the question,
  * so this declaration is right in a worktree and in the main checkout both.
  */
-type Ok = "2xx" | "4xx";
+type Ok = "2xx" | "4xx" | "5xx";
 interface Expectation {
   door: Door;
   ok: Partial<Record<Method, Ok>>;
   local?: Method[];
   registry?: Method[];
+  /** Methods whose empty request reaches a vendor BY DESIGN, with the one host it may reach: a
+   *  free, unauthenticated metadata read (no credential, nothing spent) that must happen before the
+   *  route can answer at all. Under the refusing fetch such a method answers `unavailable`, every
+   *  host it reached must be the declared one, and only those calls are excused from the lane's
+   *  "no empty body reaches a vendor" check. A declared method that stops reaching its host fails. */
+  vendor?: Partial<Record<Method, string>>;
 }
 
 /**
@@ -222,6 +228,14 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/mv/jobs/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/ab/[pairId]/[arm]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
+  // Suno's official API sign-in (lib/suno/api/oauth.ts). GET must discover the authorization
+  // server (RFC 9728 metadata at api.suno.com, free and unauthenticated) before it can build the
+  // authorize URL, so its empty request reaches that host and, under the refusing fetch, answers
+  // 503 `unavailable`. DELETE holds no tokens in a scratch store, so it makes no call at all.
+  "app/api/suno/connect/route.ts": { door: "access", ok: { GET: "5xx", DELETE: "2xx" }, vendor: { GET: "api.suno.com" } },
+  // Suno's OAuth redirect: public (the state is the binding). No code, state or error is not a
+  // return from Suno - the input door's 400, before any store or network.
+  "app/api/suno/callback/route.ts": { door: "public", ok: { GET: "4xx" } },
 
 };
 
@@ -510,13 +524,23 @@ async function runCell(
           const caller = callerOf(cell);
           const fetchesBeforeReady = () => hosts.length;
           let sweepFetches = 0;
+          // Fetches a route's declared `vendor` host made, by index into `hosts`: excused below.
+          const excused = new Set<number>();
+          const driveCounted = async (f: string, m: Method, h: Handler, bearer: string | null): Promise<Answer & { reached: string[] }> => {
+            const h0 = hosts.length;
+            const a = await drive(f, m, h, bearer);
+            const allowed = EXPECT[f]?.vendor?.[m];
+            const reached = hosts.slice(h0);
+            if (allowed !== undefined && reached.every((x) => x === allowed)) for (let i = h0; i < hosts.length; i++) excused.add(i);
+            return { ...a, reached };
+          };
 
           if (opts.sweep) {
             // ── invariant 3: the anonymous caller ──
             for (const f of files) {
               const door = doorOf(f);
               for (const [m, h] of handlersOf(f)) {
-                const a = await drive(f, m, h, null);
+                const a = await driveCounted(f, m, h, null);
                 // A public route answers anyone what it answers the authorised
                 // caller: its declared class, never a 401 and never a 5xx.
                 const publicOk = EXPECT[f]?.ok[m];
@@ -542,12 +566,18 @@ async function runCell(
               for (const f of files) {
                 const want = EXPECT[f];
                 for (const [m, h] of handlersOf(f)) {
-                  const a = await drive(f, m, h, bearer);
+                  const a = await driveCounted(f, m, h, bearer);
+                  const vendorHost = want?.vendor?.[m];
                   const forbidden = posture !== "available" && want?.local?.includes(m);
                   const noRegistry = !REGISTRY_PRESENT && want?.registry?.includes(m);
                   let verdict: string;
                   if (!want?.ok[m]) verdict = `no expectation for ${m} (answered ${a.status})`;
                   else if (a.status === 401) verdict = "an authorised caller got 401";
+                  else if (vendorHost !== undefined)
+                    verdict =
+                      a.code === "unavailable" && a.reached.length > 0 && a.reached.every((x) => x === vendorHost)
+                        ? "ok"
+                        : `declared to reach only ${vendorHost} and answer unavailable; reached [${a.reached.join(", ")}], answered ${a.status} ${a.code}`;
                   else if (forbidden)
                     verdict = a.code === "local-binaries-forbidden" ? "ok" : `the posture forbids spawning and it answered ${a.status} ${a.code}`;
                   else if (noRegistry)
@@ -586,7 +616,10 @@ async function runCell(
               if (!unhiddenSeen.has(k)) failures.push(`${cell.name}: KNOWN_UNHIDDEN_REFUSALS["${k}"] is hidden or ready now - remove the entry`);
 
           // No empty body in any cell reaches a vendor: each is refused first.
-          for (const h of hosts.slice(0, sweepFetches)) failures.push(`${cell.name}: an empty-body request reached for ${h}`);
+          // The one excuse: a route's declared `vendor` host (EXPECT), reached by that method alone.
+          hosts.slice(0, sweepFetches).forEach((h, i) => {
+            if (!excused.has(i)) failures.push(`${cell.name}: an empty-body request reached for ${h}`);
+          });
 
           const on = (Object.keys(caps) as (keyof Capabilities)[]).filter((k) => caps[k]);
           summary =
@@ -669,6 +702,7 @@ test("routes: every exported method has an expectation, and every expectation na
     for (const m of Object.keys(EXPECT[f].ok)) if (!exported.includes(m as Method)) off.push(`${f} ${m}: expected, not exported`);
     for (const m of EXPECT[f].local ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared local, not exported`);
     for (const m of EXPECT[f].registry ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared registry, not exported`);
+    for (const m of Object.keys(EXPECT[f].vendor ?? {})) if (!exported.includes(m as Method)) off.push(`${f} ${m}: declared vendor, not exported`);
   }
   expect(off).toEqual([]);
 });
