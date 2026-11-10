@@ -65,7 +65,8 @@ export async function fetchClip(page: Page, id: string, headers: Record<string, 
         const token = await clerk?.session?.getToken?.().catch(() => null);
         const h: Record<string, string> = { ...headers };
         if (token) h.authorization = `Bearer ${token}`;
-        if (!h.authorization) return null;
+        // No bearer is not a miss: measured 2026-11-10, suno.com no longer exposes window.Clerk and
+        // /api/clip/<id> answers the signed-in profile's own clip 200 without one.
         const r = await fetch(url, { headers: h, signal: AbortSignal.timeout(timeoutMs) });
         return r.ok ? ((await r.json()) as unknown) : null;
       },
