@@ -4735,8 +4735,8 @@
           "revision": 3,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         },
         {
           "subject": "generated-music-acceptance",
@@ -5454,7 +5454,11 @@
           "revision": 3,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:65 The fx-line act plans one unit per line from that line's own ask. No chain exists at the voice or character level for every line to share, so a treated character's effect is not guaranteed to be identical from line to line.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:6ada57d2c38d03c7",
+          "evaluatedRevision": 3
         },
         {
           "subject": "fleet-orchestration",
@@ -6593,8 +6597,12 @@
           "revision": 3,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/sound/cover/brief/listen.ts:63 Here a voice is only something the cover brief listens for in an existing reference song, and YUE2 renders the cover. No synthetic voice is designed. I searched lib/sound/cover, lib/producers, packages/producers/src/cover*, and lib/library/feeds for text-to-voice, voice_description, generated_voice_id, timbre and stability, with no hits.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:6ada57d2c38d03c7",
+          "evaluatedRevision": 3
         },
         {
           "subject": "prompt-assembly",
@@ -18887,7 +18895,11 @@
           "revision": 3,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/scout/characters.ts:20 Scout characters are visual (portraits and reference sheets) and are given no voice. The only audio-related field is a seed's song `vocals` facet. A search of lib/foundry/scout for voice, timbre, text-to-voice, voice_description, audition and tts found nothing.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:6ada57d2c38d03c7",
+          "evaluatedRevision": 3
         },
         {
           "subject": "ad-concept-development",

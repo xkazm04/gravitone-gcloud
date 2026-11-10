@@ -22910,6 +22910,74 @@
           "reason": "replaced by ecb6fba6-a338-45e2-8ef2-2306f07b4b92"
         }
       ]
+    },
+    "928a52be-b8cd-42e6-bc4a-3d3149bd4609/character-voice-design": {
+      "context": "audio-local-score-and-listen",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:02:38.146Z",
+      "techniques": [
+        {
+          "technique": "finishing-effect-layer",
+          "verdict": "deviation",
+          "evidence": "lib/sound/voiceFx/propose.ts:96 Some of the technique holds. The effect is a parameterised chain checked at the fxChainSchema door, applied after generation, and the clean source take is kept unchanged beside the FX take (lib/producers/voiceFx.ts fxOf, 'appended, never made active'). The deviation: the chain is proposed fresh per line/ask by a model turn, so it is not identical across a character's lines and is never defined once."
+        }
+      ],
+      "registryProposal": "finishing-effect-layer assumes the person writes the chain's parameters by hand. It should cover the case where a model turns the operator's words into a chain: that chain must be stored as the character's single definition and reused, not proposed again for each line.",
+      "withdrawn": {
+        "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
+        "state": "deviation",
+        "at": "2026-11-10T23:03:10.810097+00:00",
+        "reason": "reviewer (sonnet): The anchor lib/sound/voiceFx/propose.ts and lib/producers/voiceFx.ts are not among this context's files. The context's lib/audio/sidecar.ts only applies a given FxChain, and lib/sound/scorePropose.ts only mentions propose.ts in a comment. The per-line chain deviation belongs to the voice-fx and voic"
+      }
+    },
+    "06a49bc3-5cc1-4701-9869-efbacdcf5f6c/character-voice-design": {
+      "context": "audio-text-producers",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:02:38.146Z",
+      "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
+      "techniques": [
+        {
+          "technique": "finishing-effect-layer",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:65 Each line's FX unit reads its own ask (one describe string per line). No chain is defined once per character and shared by the plan, the bake and playback."
+        },
+        {
+          "technique": "character-vocal-brief",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:10 The voice producer speaks explainer lines in an existing catalog voice. No voice is designed here, so there is no brief to write."
+        },
+        {
+          "technique": "voice-description-composition",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:32 This producer only runs text-to-speech in a bound engine. It never calls a text-to-voice designer, so no description is composed."
+        }
+      ]
+    },
+    "ddcec47d-b93a-4be2-894e-95eba76e329c/character-voice-design": {
+      "context": "cover-sound-and-producers",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:02:38.146Z",
+      "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
+      "techniques": []
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/character-voice-design": {
+      "context": "scout-engine-creative",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:02:38.146Z",
+      "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
+      "techniques": []
     }
   }
 }
