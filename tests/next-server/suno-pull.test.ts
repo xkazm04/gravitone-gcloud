@@ -1,11 +1,10 @@
 // A TAKE PULLED FROM SUNO, AND READ TWICE (spark suno-api WP3): lib/sound/suno/pull.ts (the clip must be
-// complete, its audio URL from the signed-in browser, the bytes from the CDN, then the same measure-
-// and-file step an upload goes through), lib/sound/suno/sunoRead.ts (Suno's analysis, alignment and
+// complete; Suno's official download quotes a credit on the first press and spends it under a receipt
+// on the confirmed one; then the same measure-and-file step an upload goes through), lib/sound/suno/sunoRead.ts (Suno's analysis, alignment and
 // listen folded into one read, polled to a cap, resumed by a second press), the facts record that
 // keeps both (lib/sound/suno/facts.ts) and the four Server Actions' doors (_live/sunoActs.ts).
 //
-// Every vendor and the browser are fakes handed in as dependencies: no network, no Chrome, no Suno
-// credit. The sound store and the kernel are temp files; the sidecar is a stated analysis.
+// Every vendor is a fake handed in as a dependency: no network, no Suno credit. The sound store and the kernel are temp files; the sidecar is a stated analysis.
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,16 +46,17 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { StudioTakeFacts, SunoRead } from "@gt/domain/audio.suno";
-import { err, ok } from "@gt/domain/errors";
+import { err, ok, type Result } from "@gt/domain/errors";
+import { readReceipt } from "@gt/kernel/pricing/receipts";
 
 import { pullSunoTakeAct, readSunoTakeAct, sunoConnectionAct, sunoLibraryAct } from "../../app/(studio)/audio/studio/_live/sunoActs.ts";
 import type { AudioAnalysis } from "../../lib/audio/sidecar.ts";
-import { closeKernel } from "../../lib/kernelStore.ts";
+import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import { factsOf, factsOfSunoClip, fileSunoTake, saveSunoRead, sunoFactsPath } from "../../lib/sound/suno/facts.ts";
 import { measureAndFile } from "../../lib/sound/suno/measure.ts";
-import { audioExtOf, libraryPage, pulledName, pullSunoTake, type PullDeps } from "../../lib/sound/suno/pull.ts";
+import { audioExtOf, DOWNLOAD_POLL_MS, DOWNLOAD_SCOPE, DOWNLOAD_WAIT_MS, libraryPage, pulledName, pullSunoTake, type PullDeps } from "../../lib/sound/suno/pull.ts";
 import { CAP_MS, POLL_MS, readSunoTake, SUNO_LISTEN_QUESTION, type SunoReadDeps } from "../../lib/sound/suno/sunoRead.ts";
-import type { Alignment, Analysis, Clip, Listen } from "../../lib/suno/api/wire.ts";
+import type { Alignment, Analysis, Clip, Download, Listen } from "../../lib/suno/api/wire.ts";
 
 afterAll(() => {
   closeKernel();
@@ -87,21 +87,39 @@ const takesOnDisk = (): number => {
   return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { takes: unknown[] }).takes.length : 0;
 };
 
-const clip = (status = "complete", title: string | null = "Neon Overpass"): Clip => ({ id: CLIP, title, status }) as Clip;
+const clip = (status = "complete", title: string | null = "Neon Overpass", id = CLIP): Clip => ({ id, title, status }) as Clip;
 
-type Seen = { analyzed: string[]; fetched: string[]; resolved: number; got: number; read: string[] };
+type Asked = { readonly id: string; readonly confirm: boolean };
+type Seen = { analyzed: string[]; fetched: string[]; downloads: Asked[]; got: number; read: string[]; slept: number };
 
-function pullDepsWith(over: Partial<PullDeps> = {}, seen: Seen = { analyzed: [], fetched: [], resolved: 0, got: 0, read: [] }): { d: PullDeps; seen: Seen } {
+const quote = (left = 42): Download => ({ status: "requires_credit", format: "mp3", credits_remaining: left, message: "Downloading this song uses one of the user's suno.com download credits." });
+const ready = (left = 41): Download => ({ status: "ready", format: "mp3", url: URL_, credits_remaining: left });
+
+/** Suno's download as it was measured: unconfirmed, the quote; confirmed, the file's URL. */
+const suno = (confirmed: (n: number) => Result<Download> = () => ok(ready())) => {
+  let n = 0;
+  return async (_id: string, o: { readonly confirm: boolean }): Promise<Result<Download>> => (o.confirm ? confirmed(n++) : ok(quote()));
+};
+
+type Over = Partial<Omit<PullDeps, "api">> & { readonly getClip?: PullDeps["api"]["getClip"]; readonly download?: (id: string, o: { readonly confirm: boolean }) => Promise<Result<Download>> };
+
+function pullDepsWith(over: Over = {}): { d: PullDeps; seen: Seen } {
+  const seen: Seen = { analyzed: [], fetched: [], downloads: [], got: 0, read: [], slept: 0 };
+  let t = Date.parse(AT);
+  const { getClip, download, ...rest } = over;
+  const answer = download ?? suno();
   const d: PullDeps = {
     api: {
-      getClip: async () => {
-        seen.got++;
-        return ok(clip());
+      getClip:
+        getClip ??
+        (async (id) => {
+          seen.got++;
+          return ok(clip("complete", "Neon Overpass", id));
+        }),
+      download: async (id, o) => {
+        seen.downloads.push({ id, confirm: o.confirm });
+        return answer(id, o);
       },
-    },
-    resolveAudio: async (ids) => {
-      seen.resolved++;
-      return new Map(ids.map((id) => [id, URL_]));
     },
     fetchBytes: async (url) => {
       seen.fetched.push(url);
@@ -119,82 +137,146 @@ function pullDepsWith(over: Partial<PullDeps> = {}, seen: Seen = { analyzed: [],
       seen.read.push(takeId);
       return factsOf(takeId);
     },
-    ...over,
+    store: () => {
+      const k = kernel();
+      return k.ok ? ok(k.value.store) : k;
+    },
+    actor: { kind: "operator", id: "operator" },
+    dryOnly: false,
+    sleep: async (ms) => {
+      seen.slept++;
+      t += ms;
+    },
+    now: () => t,
+    ...rest,
   };
   return { d, seen };
 }
 
+const receipt = (id: string): string | undefined => {
+  const k = kernel();
+  if (!k.ok) throw k.error;
+  const r = k.value.store.read((t) => readReceipt(t, { scope: DOWNLOAD_SCOPE, key: `${id}:mp3`, mode: "live" })?.state);
+  if (!r.ok) throw r.error;
+  return r.value;
+};
+
 describe("pulling a take from Suno", () => {
-  it("refuses a song Suno has not finished, with its status, before the browser is asked or anything filed", async () => {
+  it("refuses a song Suno has not finished, with its status, before the download is asked or anything filed", async () => {
     const before = takesOnDisk();
-    const { d, seen } = pullDepsWith({ api: { getClip: async () => ok(clip("streaming")) } });
+    const { d, seen } = pullDepsWith({ getClip: async () => ok(clip("streaming")) });
     const r = await pullSunoTake({ session: SESSION, clipId: CLIP }, d);
     expect(r.ok ? "" : r.error.message).toBe('suno song "Neon Overpass" is streaming, not complete');
     expect(r.ok ? "" : r.error.code).toBe("conflict");
-    expect(seen.resolved).toBe(0);
+    expect(seen.downloads).toEqual([]);
     expect(takesOnDisk()).toBe(before);
   });
 
   it("says the API's own refusal verbatim", async () => {
-    const { d } = pullDepsWith({ api: { getClip: async () => err("not-found", "audio not found") } });
+    const { d } = pullDepsWith({ getClip: async () => err("not-found", "audio not found") });
     const r = await pullSunoTake({ session: SESSION, clipId: CLIP }, d);
     expect(r.ok ? "" : r.error.message).toBe("audio not found");
   });
 
-  it("refuses in the browser driver's own words when it cannot run, and when the page has no audio URL", async () => {
+  it("answers Suno's credit quote on the first press: nothing spent, nothing fetched, nothing filed", async () => {
     const before = takesOnDisk();
-    const down = pullDepsWith({
-      resolveAudio: async () => {
-        throw new Error("suno browser not running");
-      },
-    });
-    const r = await pullSunoTake({ session: SESSION, clipId: CLIP }, down.d);
-    expect(r.ok ? "" : r.error.message).toBe("suno browser not running");
-    expect(down.seen.fetched).toEqual([]);
-    const none = pullDepsWith({ resolveAudio: async (ids) => new Map(ids.map((id) => [id, null])) });
-    const n = await pullSunoTake({ session: SESSION, clipId: CLIP }, none.d);
-    expect(n.ok ? "" : n.error.message).toBe(`the signed-in suno page has no audio URL for "Neon Overpass" (${CLIP})`);
-    expect(none.seen.fetched).toEqual([]);
-    expect(takesOnDisk()).toBe(before);
-  });
-
-  it("says the CDN's refusal and the decoder's, filing nothing", async () => {
-    const before = takesOnDisk();
-    const cdn = pullDepsWith({
-      fetchBytes: async () => {
-        throw new Error("the clip's audio at cdn1.suno.ai answered HTTP 403");
-      },
-    });
-    const c = await pullSunoTake({ session: SESSION, clipId: CLIP }, cdn.d);
-    expect(c.ok ? "" : c.error.message).toBe("the clip's audio at cdn1.suno.ai answered HTTP 403");
-    const bad = pullDepsWith({ measureAndFile: (file, from) => measureAndFile(file, from, async () => err("invalid", "audio sidecar analyze: could not decode")) });
-    const b = await pullSunoTake({ session: SESSION, clipId: CLIP }, bad.d);
-    expect(b.ok ? "" : b.error.message).toBe("Neon Overpass.mp3 could not be measured: audio sidecar analyze: could not decode");
-    expect(takesOnDisk()).toBe(before);
-  });
-
-  it("files a complete song as a measured take carrying its Suno id, through the upload's measure step, then reads it", async () => {
     const { d, seen } = pullDepsWith();
-    const r = await pullSunoTake({ session: SESSION, clipId: CLIP, promptId: "p1", clip: "a" }, d);
+    const r = await pullSunoTake({ session: SESSION, clipId: "q-001" }, d);
+    expect(r).toEqual({ ok: true, value: { quote: { clipId: "q-001", credits: 1, left: 42, format: "mp3" } } });
+    expect(seen.downloads).toEqual([{ id: "q-001", confirm: false }]);
+    expect(seen.fetched).toEqual([]);
+    expect(receipt("q-001")).toBeUndefined();
+    expect(takesOnDisk()).toBe(before);
+  });
+
+  it("refuses the spend under GRAVITONE_DRY_ONLY=1 before Suno is asked", async () => {
+    const { d, seen } = pullDepsWith({ dryOnly: true });
+    const r = await pullSunoTake({ session: SESSION, clipId: "dry-001", confirm: true }, d);
+    expect(r.ok ? "" : r.error.message).toBe('GRAVITONE_DRY_ONLY=1 pins this server dry: "Neon Overpass" was not downloaded and no download credit was spent');
+    expect(seen.downloads).toEqual([]);
+    expect(receipt("dry-001")).toBeUndefined();
+  });
+
+  it("on the confirmed press waits out `processing`, settles a receipt, and files the measured take carrying its Suno id", async () => {
+    const { d, seen } = pullDepsWith({ download: suno((n) => ok(n < 2 ? { status: "processing" } : ready())) });
+    const r = await pullSunoTake({ session: SESSION, clipId: CLIP, promptId: "p1", clip: "a", confirm: true }, d);
     if (!r.ok) throw r.error;
+    if (!("facts" in r.value)) throw new Error("a quote, not a take");
+    expect(seen.downloads).toEqual([1, 2, 3].map(() => ({ id: CLIP, confirm: true })));
+    expect(seen.slept).toBe(2);
     expect(seen.fetched).toEqual([URL_]);
     expect(seen.analyzed).toEqual([".mp3"]);
+    expect(receipt(CLIP)).toBe("settled");
     expect(r.value.readRefused).toBeUndefined();
     expect(r.value.facts).toMatchObject({ name: "Neon Overpass.mp3", promptId: "p1", clip: "a", sunoClipId: CLIP, durationS: 234, measured: { bpm: 100.4, key: "B minor" } });
     expect(seen.read).toEqual([r.value.facts.takeId]);
 
-    // The same song again is the take already held: no second download, no second take.
+    // The same song again is the take already held: no second download, no second credit.
     const again = pullDepsWith();
-    const twice = await pullSunoTake({ session: SESSION, clipId: CLIP }, again.d);
-    expect(twice.ok && twice.value.facts.takeId).toBe(r.value.facts.takeId);
+    const twice = await pullSunoTake({ session: SESSION, clipId: CLIP, confirm: true }, again.d);
+    expect(twice.ok && "facts" in twice.value && twice.value.facts.takeId).toBe(r.value.facts.takeId);
     expect(again.seen.got).toBe(0);
-    expect(again.seen.fetched).toEqual([]);
+    expect(again.seen.downloads).toEqual([]);
+  });
+
+  it("stops waiting at the cap and says Suno is still preparing the file", async () => {
+    const { d, seen } = pullDepsWith({ download: suno(() => ok({ status: "processing" })) });
+    const r = await pullSunoTake({ session: SESSION, clipId: "slow-001", confirm: true }, d);
+    expect(r.ok ? "" : r.error.message).toBe('suno is still preparing "Neon Overpass"; press again');
+    expect(seen.slept).toBe(Math.ceil(DOWNLOAD_WAIT_MS / DOWNLOAD_POLL_MS));
+    expect(receipt("slow-001")).toBeUndefined();
+  });
+
+  it("releases the receipt on Suno's refusal and says it verbatim, so the next press may try again", async () => {
+    const before = takesOnDisk();
+    const { d, seen } = pullDepsWith({ download: suno(() => err("refused", "suno download refused (insufficient_credits): quota_exhausted")) });
+    const r = await pullSunoTake({ session: SESSION, clipId: "broke-001", confirm: true }, d);
+    expect(r.ok ? "" : r.error.message).toBe("suno download refused (insufficient_credits): quota_exhausted");
+    expect(seen.fetched).toEqual([]);
+    expect(receipt("broke-001")).toBeUndefined();
+    expect(takesOnDisk()).toBe(before);
+  });
+
+  it("a paid file that could not be filed is not bought twice: the next press replays the receipt's URL", async () => {
+    const bad = pullDepsWith({ measureAndFile: (file, from) => measureAndFile(file, from, async () => err("invalid", "audio sidecar analyze: could not decode")) });
+    const b = await pullSunoTake({ session: SESSION, clipId: "paid-001", confirm: true }, bad.d);
+    expect(b.ok ? "" : b.error.message).toBe("Neon Overpass.mp3 could not be measured: audio sidecar analyze: could not decode");
+    expect(bad.seen.downloads).toHaveLength(1);
+    expect(receipt("paid-001")).toBe("settled");
+
+    const good = pullDepsWith();
+    const g = await pullSunoTake({ session: SESSION, clipId: "paid-001", confirm: true }, good.d);
+    expect(g.ok && "facts" in g.value && g.value.facts.sunoClipId).toBe("paid-001");
+    expect(good.seen.downloads).toEqual([]);
+    expect(good.seen.fetched).toEqual([URL_]);
+  });
+
+  it("files at once, with no receipt, when Suno's unconfirmed answer already carries the file", async () => {
+    const { d, seen } = pullDepsWith({ download: async () => ok({ status: "ready", url: "https://cdn.example/free.wav" }) });
+    const r = await pullSunoTake({ session: SESSION, clipId: "free-001" }, d);
+    expect(r.ok && "facts" in r.value && r.value.facts.name).toBe("Neon Overpass.wav");
+    expect(seen.downloads).toEqual([{ id: "free-001", confirm: false }]);
+    expect(receipt("free-001")).toBeUndefined();
+  });
+
+  it("says the download host's refusal, filing nothing", async () => {
+    const before = takesOnDisk();
+    const cdn = pullDepsWith({
+      download: async () => ok({ status: "ready", url: URL_ }),
+      fetchBytes: async () => {
+        throw new Error("the clip's audio at cdn1.suno.ai answered HTTP 403");
+      },
+    });
+    const c = await pullSunoTake({ session: SESSION, clipId: "cdn-001" }, cdn.d);
+    expect(c.ok ? "" : c.error.message).toBe("the clip's audio at cdn1.suno.ai answered HTTP 403");
+    expect(takesOnDisk()).toBe(before);
   });
 
   it("keeps the filed take when Suno refuses the read, and says the refusal", async () => {
-    const { d } = pullDepsWith({ api: { getClip: async () => ok({ ...clip(), id: "a17c02de" } as Clip) }, read: async () => err("unavailable", "Daily listen limit reached") });
-    const r = await pullSunoTake({ session: SESSION, clipId: "a17c02de" }, d);
+    const { d } = pullDepsWith({ read: async () => err("unavailable", "Daily listen limit reached") });
+    const r = await pullSunoTake({ session: SESSION, clipId: "a17c02de", confirm: true }, d);
     if (!r.ok) throw r.error;
+    if (!("facts" in r.value)) throw new Error("a quote, not a take");
     expect(r.value.readRefused).toBe("Daily listen limit reached");
     expect(r.value.facts.sunoClipId).toBe("a17c02de");
   });
@@ -206,10 +288,11 @@ describe("pulling a take from Suno", () => {
     expect(pulledName("Drift", CLIP, ".m4a")).toBe("Drift.m4a");
   });
 
-  it("names the container its URL names: the profile's CloudFront file is an m4a, not an mp3", () => {
+  it("names the container its URL names, else the format asked for", () => {
     expect(audioExtOf(`https://d2lwuy8qc234o3.cloudfront.net/1/clip/${CLIP}.m4a`)).toBe(".m4a");
     expect(audioExtOf("https://cdn.example/a.MP3?sig=1")).toBe(".mp3");
     expect(audioExtOf("https://cdn.example/a.bin")).toBe(".mp3");
+    expect(audioExtOf("https://cdn.example/download", ".wav")).toBe(".wav");
     expect(audioExtOf("not a url")).toBe(".mp3");
   });
 

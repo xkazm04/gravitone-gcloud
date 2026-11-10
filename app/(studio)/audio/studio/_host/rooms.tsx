@@ -22,7 +22,7 @@ import { dockStateOf, NOBODY_LINE, WAITING_LINE } from "./live.ts";
 import { soundOf } from "./press.ts";
 import { newestVersion, sunoVersions } from "./suno.ts";
 import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, type UserAsk } from "./turns.ts";
-import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
+import type { StudioTakeFacts, StudioTasteLine, SunoDownloadQuote, TasteLean } from "@gt/domain/audio.suno";
 import type { SongPage, SunoConnection } from "@gt/ui/components/suno/SunoPicker.tsx";
 import type { VerdictSend } from "@gt/ui/components/suno/VerdictBar.tsx";
 
@@ -49,7 +49,7 @@ export type StudioActs = {
   readonly keepTaste: (input: { readonly line: string; readonly lean: TasteLean; readonly session?: string; readonly turn?: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
   readonly dropTaste: (input: { readonly line: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
   /** Spark suno-api (../_live/sunoActs.ts). */
-  readonly pullSunoTake: (input: { readonly session: string; readonly clipId: string; readonly promptId?: string; readonly clip?: "a" | "b" }) => Promise<Answered<{ readonly facts: StudioTakeFacts; readonly readRefused?: string }>>;
+  readonly pullSunoTake: (input: { readonly session: string; readonly clipId: string; readonly promptId?: string; readonly clip?: "a" | "b"; readonly confirm?: boolean }) => Promise<Answered<{ readonly facts: StudioTakeFacts; readonly readRefused?: string } | { readonly quote: SunoDownloadQuote }>>;
   readonly readSunoTake: (input: { readonly takeId: string }) => Promise<Answered<StudioTakeFacts>>;
   readonly sunoLibrary: (input: { readonly query?: string; readonly cursor?: string }) => Promise<Answered<SongPage>>;
 };
@@ -156,9 +156,10 @@ export function LiveRoom({ acts, onSession, ...room }: RoomProps & { readonly ac
       const r = await acts.sunoLibrary(q);
       return r.ok ? r.value : r.error.error;
     },
-    pull: async (clipId, promptId, clip) => {
-      const r = await acts.pullSunoTake({ session: session.id, clipId, promptId, ...(clip !== undefined ? { clip } : {}) });
+    pull: async (clipId, promptId, clip, confirm) => {
+      const r = await acts.pullSunoTake({ session: session.id, clipId, promptId, ...(clip !== undefined ? { clip } : {}), ...(confirm === true ? { confirm } : {}) });
       if (!r.ok) return r.error.error;
+      if ("quote" in r.value) return r.value.quote;
       // The take is filed either way; a read Suno refused is said, and its column's `read` asks again.
       if (r.value.readRefused !== undefined) setNotice(`Suno did not read ${r.value.facts.name}: ${r.value.readRefused}`);
       return { takeId: r.value.facts.takeId, name: r.value.facts.name };
@@ -324,7 +325,7 @@ function Stage({ session, offline, presence, renders, source, talk, suno, connec
           ? {
               verdict: {
                 promptId: prompt,
-                suno: { connection, connectHref: SUNO_CONNECT_HREF, library: sunoHost.library, pull: (clipId: string, clip?: "a" | "b") => sunoHost.pull(clipId, prompt, clip) },
+                suno: { connection, connectHref: SUNO_CONNECT_HREF, library: sunoHost.library, pull: (clipId: string, clip?: "a" | "b", confirm?: boolean) => sunoHost.pull(clipId, prompt, clip, confirm) },
                 // Every refusal is already the dock's notice: the upload's (above) and the room's send's own.
                 onSend: async (v: VerdictSend) => {
                   const refused = await sunoHost.sendVerdict(v);

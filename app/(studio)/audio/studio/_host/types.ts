@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 
 import type { StudioAction, StudioDropped, StudioTurn } from "@gt/domain/audio.studio";
-import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
+import type { StudioTakeFacts, StudioTasteLine, SunoDownloadQuote, TasteLean } from "@gt/domain/audio.suno";
 import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import type { RefusedTurn, StudioSource } from "../_port/port.ts";
 import type { DockState } from "@gt/ui/components/dock/dock.ts";
@@ -97,8 +97,9 @@ export type SunoHost = {
   readonly connection: SunoConnection;
   /** A page of the person's Suno library (their search, else the newest). */
   readonly library: (q: { readonly query?: string; readonly cursor?: string }) => Promise<SongPage | string>;
-  /** Pull one Suno song as a take of `promptId`: filed, measured and read; the filed take or the refusal. */
-  readonly pull: (clipId: string, promptId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string; readonly name: string } | string>;
+  /** Pull one Suno song as a take of `promptId`: filed, measured and read; the filed take, Suno's
+   *  credit quote (until `confirm` spends it), or the refusal. */
+  readonly pull: (clipId: string, promptId: string, clip?: "a" | "b", confirm?: boolean) => Promise<{ readonly takeId: string; readonly name: string } | SunoDownloadQuote | string>;
   /** Ask Suno's free reads of a pulled take again. */
   readonly read: (takeId: string) => Promise<string | null>;
 };

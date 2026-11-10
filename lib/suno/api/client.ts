@@ -4,8 +4,9 @@
 // 60 s, and once more when a call answers 401 (the call is then retried once, and only once). Every
 // call has a deadline - 60 s, 180 s for `stream`.
 //
-// SPEND. `create` is the only method that spends Suno credits. Everything else reads (listen is
-// free per Suno's own tool description, capped at five open questions and 200 a day).
+// SPEND. `create` spends Suno credits; `download` with `confirm` spends one of the person's download
+// credits. Everything else reads (listen is free per Suno's own tool description, capped at five open
+// questions and 200 a day; an unconfirmed `download` is the free quote).
 //
 // THE SHAPES ARE NOT YET VERIFIED with a real token (wire.ts): a body that does not parse is refused
 // with the first 300 characters of what arrived, so the first live call reports the real shape.
@@ -27,6 +28,7 @@ import {
   CreateBody,
   CreateResponse,
   createdOf,
+  Download,
   LibraryPage,
   Listen,
   Me,
@@ -34,6 +36,7 @@ import {
   QUOTE_CHARS,
   Usage,
   type Created,
+  type DownloadFormat,
 } from "./wire.ts";
 
 export const DEFAULT_TIMEOUT_MS = 60_000;
@@ -112,6 +115,12 @@ export interface SunoApi {
   listenRead(listenId: string): Promise<Result<Listen>>;
   alignment(id: string): Promise<Result<Alignment>>;
   stream(id: string): Promise<Result<Streamed>>;
+  /**
+   * POST /v0/audio/{id}/download. Unconfirmed it is the free quote (`requires_credit` and the credits
+   * left). WITH `confirm` IT SPENDS ONE DOWNLOAD CREDIT when the song needs one: the caller must hold
+   * the person's press and a receipt (lib/sound/suno/pull.ts). Needs the `download` scope.
+   */
+  download(id: string, o: { readonly format: DownloadFormat; readonly confirm: boolean }): Promise<Result<Download>>;
 }
 
 type Sent = { readonly raw: Raw; readonly res: Response | null };
@@ -185,6 +194,7 @@ export function sunoApi(deps: SunoApiDeps = {}): SunoApi {
     analysis: (id) => json("suno analysis", "GET", `/v0/audio/${enc(id)}/analysis`, Analysis),
     listen: (id, question) => json("suno listen", "POST", `/v0/audio/${enc(id)}/listen`, Listen, { question }),
     listenRead: (listenId) => json("suno listen read", "GET", `/v0/audio/listens/${enc(listenId)}`, Listen),
+    download: (id, o) => json("suno download", "POST", `/v0/audio/${enc(id)}/download`, Download, { format: o.format, ...(o.confirm ? { confirm: true } : {}) }),
     alignment: (id) => json("suno lyrics alignment", "GET", `/v0/audio/${enc(id)}/lyrics-alignment`, Alignment),
     async stream(id) {
       const sent = await call("GET", `/v0/audio/${enc(id)}/stream`, undefined, deps.streamTimeoutMs ?? STREAM_TIMEOUT_MS, true);

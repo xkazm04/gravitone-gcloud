@@ -1,9 +1,8 @@
-// THE BYTES SEAM (spark suno-api, hybrid) — server-only. Suno's official API refuses to stream a
-// suno.com song (`/v0/audio/{id}/stream`, measured 2026-11-10: "This app can't stream suno.com songs.
-// Play the song at its song_url."), its private CDN files answer 403, and `/download` costs a download
-// credit. The signed-in profile's own `GET /api/clip/<id>` (studio-api, Clerk bearer) hands back the
-// CloudFront media URL for free, the same URL `createSunoTracks` returns - so an API clip's audio is
-// resolved here.
+// A CLIP'S MEDIA URL FROM THE SIGNED-IN PROFILE — server-only. The signed-in profile's own
+// `GET /api/clip/<id>` hands back the CloudFront media URL, the same URL `createSunoTracks` returns.
+// Measured 2026-11-10: that file is `m4a-opus` with `encoding: "1.0.0"` and is not a valid MP4, so it
+// is not audio Gravitone can use and is not decoded. The api driver no longer calls this by default;
+// a song's bytes come through Suno's official download (lib/sound/suno/pull.ts).
 //
 // Also home of the clip-JSON pieces the browser driver (./driver.ts) shares with it: the raw clip
 // shape, the media-URL rule and the in-tab clip fetch. They live here, not in driver.ts, so the two

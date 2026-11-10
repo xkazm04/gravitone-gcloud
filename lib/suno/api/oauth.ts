@@ -28,7 +28,7 @@ import { addPending, hasPending, readAuth, takePending, withAuthLock, writeAuth,
 import { AuthServer, OAuthErrorBody, parseVendor, ProtectedResource, QUOTE_CHARS, Registration, TokenResponse } from "./wire.ts";
 
 export const DEFAULT_API_BASE = "https://api.suno.com";
-export const SCOPES = ["api:v0", "credits:spend", "library:read", "library:search", "profile:read", "offline_access"] as const;
+export const SCOPES = ["api:v0", "credits:spend", "library:read", "library:search", "profile:read", "download", "offline_access"] as const;
 export const CLIENT_NAME = "Gravitone Studio";
 /** Every OAuth call is made under auth.lock, which goes stale at 30 s. */
 const OAUTH_TIMEOUT_MS = 20_000;

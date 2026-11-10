@@ -58,7 +58,7 @@ describe("beginAuthorization", () => {
     expect(q.get("code_challenge_method")).toBe("S256");
     expect(q.get("redirect_uri")).toBe(REDIRECT);
     expect(q.get("resource")).toBe(BASE);
-    expect(q.get("scope")).toBe("api:v0 credits:spend library:read library:search profile:read offline_access");
+    expect(q.get("scope")).toBe("api:v0 credits:spend library:read library:search profile:read download offline_access");
     expect(q.get("state")).toBe(r.value.state);
     const pending = JSON.parse(readFileSync(pendingFile(), "utf8"))[r.value.state];
     expect(pending.verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);

@@ -12,7 +12,7 @@
 // then carries that take as its attachment, by id, instead of a file.
 import { useRef, useState } from "react";
 
-import { VERDICT_OFF, type VerdictClip, type VerdictOff } from "@gt/domain/audio.suno";
+import { VERDICT_OFF, type SunoDownloadQuote, type VerdictClip, type VerdictOff } from "@gt/domain/audio.suno";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
@@ -26,8 +26,9 @@ export type VerdictSend = { readonly verdict: Verdict; readonly text: string; re
 
 /** The Suno library beside the file: the picker's reads, and the pull that files a song as this verdict's take. */
 export type VerdictSuno = Pick<SunoPickerProps, "connection" | "connectHref" | "library"> & {
-  /** Pull a song as the take of `clip`; resolve with the filed take, or the refusal in words. */
-  readonly pull: (clipId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string; readonly name: string } | string>;
+  /** Pull a song as the take of `clip`; resolve with the filed take, Suno's credit quote (until
+   *  `confirm` spends it), or the refusal in words. */
+  readonly pull: (clipId: string, clip?: "a" | "b", confirm?: boolean) => Promise<{ readonly takeId: string; readonly name: string } | SunoDownloadQuote | string>;
 };
 
 export type VerdictBarProps = {
@@ -76,10 +77,10 @@ export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile,
     setFile(why === null ? f : null);
     if (why === null) setPulled(null);
   };
-  const pullSong = async (clipId: string): Promise<string | null> => {
+  const pullSong = async (clipId: string, confirm: boolean): Promise<string | null | SunoDownloadQuote> => {
     if (suno === undefined) return null;
-    const r = await suno.pull(clipId, clip === "both" ? undefined : clip);
-    if (typeof r === "string") return r;
+    const r = await suno.pull(clipId, clip === "both" ? undefined : clip, confirm);
+    if (typeof r === "string" || "credits" in r) return r;
     setPulled(r);
     setFile(null);
     setFault(null);
@@ -128,7 +129,7 @@ export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile,
         ) : shown === null ? (
           <>
             <Button label="attach take" size="sm" onPress={() => picker.current?.click()} />
-            {suno !== undefined && <SunoPicker connection={suno.connection} connectHref={suno.connectHref} library={suno.library} onPull={(song) => pullSong(song.id)} disabled={disabled || busy} />}
+            {suno !== undefined && <SunoPicker connection={suno.connection} connectHref={suno.connectHref} library={suno.library} onPull={(song, confirm) => pullSong(song.id, confirm)} disabled={disabled || busy} />}
           </>
         ) : (
           <>

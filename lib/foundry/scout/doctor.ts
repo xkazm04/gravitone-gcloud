@@ -111,8 +111,6 @@ export type DoctorInput = {
   readonly suno?: () => Promise<SunoDriverHealth>;
   /** Which Suno driver is selected (default `selectedSunoDriver`'s kind; "browser" when `suno` is handed in alone). */
   readonly sunoKind?: () => Promise<SunoDriverKind>;
-  /** The Suno browser's health for the API driver's audio bytes (default `probeSunoOn(SUNO_CDP_PORT)`); a test hands a fake. */
-  readonly sunoBrowser?: () => Promise<SunoDriverHealth>;
   /** The night's track cap (`--tracks`): a live night with tracks to make needs Suno. Absent: the Suno line is a note. */
   readonly tracks?: number;
   /** The Ollama daemon's HTTP API at OLLAMA_HOST (default the global fetch); a test hands a fake. */
@@ -192,8 +190,9 @@ const BROWSER_REMEDY = `start the Suno Chrome profile (~/.suno-chrome, remote de
 /**
  * Is the Suno driver the night's tracks are made with ready: a failure only on a live night that makes tracks
  * (`tracks` > 0), a note otherwise - a dry night's tracks are stand-ins and ask nothing. On the API driver a
- * second line, `suno bytes`, reads the browser profile the audio URLs come from: a note, never a blocker - a
- * create without it still lands its songs, with no audio file.
+ * second line, `suno bytes`, is a standing note, never a blocker: the API hands out no audio (the profile's
+ * file is encoded, docs/suno-driver.md), so its songs land with no audio file, and a song's file is one
+ * download credit pulled in the studio.
  */
 async function sunoChecks(input: DoctorInput): Promise<Check[]> {
   const needed = !input.dry && (input.tracks ?? 0) > 0;
@@ -208,8 +207,7 @@ async function sunoChecks(input: DoctorInput): Promise<Check[]> {
   const out: Check[] = [];
   if (kind === "api") {
     out.push(h.ok ? { name: "suno", ok: true, found: "suno api, connected", needed } : { name: "suno", ok: false, found: h.reason, remedy: "the night's tracks are created through Suno's API: connect it in the app (GET /api/suno/connect), or set SUNO_DRIVER=browser", needed });
-    const b = await (input.sunoBrowser ?? sunoBrowserHealth)().catch(asHealth);
-    out.push(b.ok ? { name: "suno bytes", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed: false } : { name: "suno bytes", ok: false, found: `${b.reason}: the songs land with no audio bytes`, remedy: `the API's songs get their audio URL there: ${BROWSER_REMEDY}`, needed: false });
+    out.push({ name: "suno bytes", ok: false, found: "the songs land with no audio file", remedy: "pull a song in the studio: one suno download credit", needed: false });
     return out;
   }
   if (kind === "fake") return [{ name: "suno", ok: h.ok, found: h.ok ? "SUNO_DRIVER=fake: stand-in clips" : h.reason, needed, ...(h.ok ? {} : { remedy: "unset SUNO_DRIVER for a live night" }) }];

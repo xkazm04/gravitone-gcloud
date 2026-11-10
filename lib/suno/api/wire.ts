@@ -142,6 +142,16 @@ export const Listen = z
   .loose();
 export type Listen = z.output<typeof Listen>;
 
+/** POST /v0/audio/{id}/download. Measured unconfirmed 2026-11-10: `{"status":"requires_credit",
+ *  "format":"mp3","credits_remaining":42,"message":"..."}`. Suno's tool description names
+ *  `processing` (call again, at most once a second) and a `url` once the file is ready; the ready
+ *  status's name is unseen, so a `url` is what makes an answer ready. */
+export const Download = z
+  .object({ status: z.string(), format: nullish(z.string()), url: nullish(z.string()), credits_remaining: nullish(z.number()), message: nullish(z.string()) })
+  .loose();
+export type Download = z.output<typeof Download>;
+export type DownloadFormat = "mp3" | "wav";
+
 /** A word's shape is unseen: `word` or `text`, `start_s`, `end_s`, `success` expected, nothing required. */
 export const AlignedWord = z
   .object({ word: nullish(z.string()), text: nullish(z.string()), start_s: nullish(z.number()), end_s: nullish(z.number()), success: nullish(z.boolean()) })

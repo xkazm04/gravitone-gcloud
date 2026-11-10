@@ -159,7 +159,10 @@ function PickerSpecimen() {
         <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, pulling: "fb3b98c4" }} />
       </At>
       <At label="refused">
-        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, refused: "suno browser not running" }} />
+        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, refused: "audio not found" }} />
+      </At>
+      <At label="a download credit">
+        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, quote: { clipId: "fb3b98c4", credits: 1, left: 42, format: "mp3" } }} />
       </At>
     </Spec>
   );

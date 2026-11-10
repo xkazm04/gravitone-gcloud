@@ -20,3 +20,4 @@
 .meta{font:500 var(--fs-micro)/1.35 var(--mono);color:var(--muted)}
 .state{font:600 var(--fs-micro)/1.35 var(--mono);color:var(--violet)}
 .none{font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
+.spend{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center}

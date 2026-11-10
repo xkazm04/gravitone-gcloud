@@ -111,6 +111,15 @@ export type SunoSong = {
   readonly imageUrl?: string;
 };
 
+/** Suno's price for one song's file: one of the person's download credits, and how many they hold.
+ *  The pull answers this instead of a take until the person confirms the spend. */
+export type SunoDownloadQuote = {
+  readonly clipId: string;
+  readonly credits: 1;
+  readonly left?: number;
+  readonly format: "mp3" | "wav";
+};
+
 /** Everything Gravitone knows about one uploaded take; the page reads it by takeId, the agent never copies it. */
 export type StudioTakeFacts = {
   readonly takeId: string;

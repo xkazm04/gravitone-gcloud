@@ -59,6 +59,7 @@ function fakeApi(o: {
       return page ? ok(page) : err("not-found", "no such page");
     },
     searchLibrary: unused,
+    download: unused,
     create: async (body) => {
       created.push(body);
       return o.create?.() ?? ok({ clipIds: ["a", "b"], clips: [] });

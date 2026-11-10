@@ -4,10 +4,12 @@
 // first, searchable by title, each a press that pulls it into the studio as a take - measured here and
 // read by Suno (the host's `onPull`). Not connected: one chip, a link to Suno's sign-in (a navigation,
 // so an <a>). A song still being made cannot be pressed and shows its status; a refusal is shown in
-// its source's own words under the list. Nothing here spends.
+// its source's own words under the list. A song whose file costs one of the person's Suno download
+// credits answers its quote first: the credit and how many are left, beside the one press that spends
+// it. Only that second press spends.
 import { useEffect, useRef, useState } from "react";
 
-import type { SunoSong } from "@gt/domain/audio.suno";
+import type { SunoDownloadQuote, SunoSong } from "@gt/domain/audio.suno";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
@@ -29,14 +31,16 @@ export type SunoPickerProps = {
   readonly connectHref: string;
   /** A page of the library: the search when given, else the newest; the refusal in words. */
   readonly library: (q: { readonly query?: string; readonly cursor?: string }) => Promise<SongPage | string>;
-  /** Pull one song; resolve with the refusal in words, or null when the take is filed. */
-  readonly onPull: (song: SunoSong) => Promise<string | null>;
+  /** Pull one song (`confirm`: spend the quoted download credit); resolve with the refusal in words,
+   *  Suno's quote when the file costs a credit, or null when the take is filed. */
+  readonly onPull: (song: SunoSong, confirm: boolean) => Promise<string | null | SunoDownloadQuote>;
   readonly disabled?: boolean;
   /** /kit only: the list as drawn open, before any load. */
   readonly seed?: {
     readonly songs: readonly SunoSong[];
     readonly pulling?: string;
     readonly refused?: string;
+    readonly quote?: SunoDownloadQuote;
   };
 };
 
@@ -52,6 +56,7 @@ export function SunoPicker({ connection, connectHref, library, onPull, disabled 
   const [page, setPage] = useState<SongPage | null>(seed === undefined ? null : { songs: seed.songs });
   const [refused, setRefused] = useState<string | null>(seed?.refused ?? null);
   const [pulling, setPulling] = useState<string | null>(seed?.pulling ?? null);
+  const [quoted, setQuoted] = useState<SunoDownloadQuote | null>(seed?.quote ?? null);
   const asked = useRef(0);
 
   const load = (q: string, cursor?: string): void => {
@@ -97,16 +102,21 @@ export function SunoPicker({ connection, connectHref, library, onPull, disabled 
 
   if (!connection.connected) return <Chip label="connect suno" tone="violet" casing="lower" href={connectHref} name={`connect to suno: ${connection.reason}`} />;
 
-  const pull = (song: SunoSong): void => {
+  const pull = (song: SunoSong, confirm = false): void => {
     if (pulling !== null || disabled) return;
     setPulling(song.id);
     setRefused(null);
-    void onPull(song).then((reason) => {
+    if (!confirm) setQuoted(null);
+    void onPull(song, confirm).then((r) => {
       setPulling(null);
-      if (reason === null) setOpen(false);
-      else setRefused(reason);
+      if (r === null) {
+        setQuoted(null);
+        setOpen(false);
+      } else if (typeof r === "string") setRefused(r);
+      else setQuoted(r);
     });
   };
+  const quotedSong = quoted === null ? undefined : page?.songs.find((song) => song.id === quoted.clipId);
 
   return (
     <span className={s.wrap}>
@@ -132,12 +142,19 @@ export function SunoPicker({ connection, connectHref, library, onPull, disabled 
                       {song.durationS !== undefined && <span className={s.meta}>{clock(song.durationS)}</span>}
                       {song.createdAt !== undefined && <span className={s.meta}>{song.createdAt.slice(0, 10)}</span>}
                       {busy && <span className={s.state}>{"pulling…"}</span>}
+                      {quoted?.clipId === song.id && !busy && <Chip label={`${quoted.credits} download credit`} {...(quoted.left !== undefined ? { value: `${quoted.left} left` } : {})} tone="amber" casing="lower" />}
                       {!can && <Chip label={song.status} tone="amber" ghost casing="lower" />}
                     </button>
                   </li>
                 );
               })}
             </ul>
+          )}
+          {quoted !== null && quotedSong !== undefined && (
+            <span className={s.spend} role="group" aria-label={`download ${quotedSong.title} for ${quoted.credits} suno download credit`}>
+              <Button label={`spend ${quoted.credits} credit · ${quoted.format}`} size="sm" tone="violet" disabled={pulling !== null || disabled} onPress={() => pull(quotedSong, true)} />
+              <Button label="cancel" size="sm" disabled={pulling !== null} onPress={() => setQuoted(null)} />
+            </span>
           )}
           {page?.next !== undefined && <Button label="more" size="sm" onPress={() => load(query, page.next)} />}
           {refused !== null && <ErrorLine message={refused} live />}

@@ -10,7 +10,7 @@
 // it (lib/sound/suno/pull.ts), `readSunoTakeAct` asks Suno's free reads of a pulled take again
 // (lib/sound/suno/sunoRead.ts), `sunoLibraryAct` lists or searches the library, and
 // `sunoConnectionAct` says whether this machine holds a Suno grant (the token file, no network).
-// None of them spends.
+// Only a pull with `confirm` spends: one of the person's Suno download credits, after the quote.
 import { z } from "zod";
 
 import type { StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
@@ -55,8 +55,10 @@ const pullInput = z.strictObject({
   clipId,
   promptId: studioTasteRowSchema.shape.id.optional(),
   clip: z.enum(["a", "b"]).optional(),
+  format: z.enum(["mp3", "wav"]).optional(),
+  confirm: z.boolean().optional(),
 });
-const pull = action("audio studio pull suno take", pullInput, async (i) => pullSunoTake(i, await pullDeps()));
+const pull = action("audio studio pull suno take", pullInput, async (i, who) => pullSunoTake(i, await pullDeps(actorOf(who))));
 const read = action("audio studio read suno take", z.strictObject({ takeId: z.string().min(1).max(120) }), async (i) => readSunoTake(i.takeId, await sunoReadDeps()));
 const library = action(
   "audio studio suno library",
@@ -68,8 +70,9 @@ const connection = action("audio studio suno connection", z.strictObject({}), as
   return ok(s.connected ? { connected: true as const } : { connected: false as const, reason: s.reason });
 });
 
-/** Pull one song from the person's Suno library into the conversation as a take, measured and read. */
-export async function pullSunoTakeAct(input: { readonly session: string; readonly clipId: string; readonly promptId?: string; readonly clip?: "a" | "b" }): Promise<ActionResult<Pulled>> {
+/** Pull one song from the person's Suno library into the conversation as a take, measured and read;
+ *  Suno's credit quote instead until `confirm` spends it. */
+export async function pullSunoTakeAct(input: { readonly session: string; readonly clipId: string; readonly promptId?: string; readonly clip?: "a" | "b"; readonly format?: "mp3" | "wav"; readonly confirm?: boolean }): Promise<ActionResult<Pulled>> {
   return pull(input);
 }
 

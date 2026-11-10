@@ -424,6 +424,6 @@ export async function listSunoLibrary(onPage?: (n: number, total: number | null)
   }
 }
 
-/** THE BYTES SEAM (spark suno-api, hybrid): an API clip's audio URL, free, from the signed-in
- *  profile. Built in ./resolve.ts; named here because callers import it from this module. */
+/** A clip's CloudFront URL from the signed-in profile. Built in ./resolve.ts. Its bytes were measured
+ *  encoded (2026-11-10) and are not decoded; the api driver no longer calls it (docs/suno-driver.md). */
 export { resolveSunoAudio } from "./resolve";

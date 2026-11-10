@@ -24,7 +24,7 @@ grant the operator made. The account, the credits and the session are the operat
 | Value | Driver | Create, library, polling | Audio URL | Health (`probe`) |
 | --- | --- | --- | --- | --- |
 | `browser` | `REAL_SUNO` (`lib/suno/driver.ts`) | the profile's `/create` form and studio-api | `media_urls[0].url` from the profile | CDP answers and the Clerk cookie is signed in |
-| `api` | `API_SUNO` (`lib/suno/api/driver.ts`) | `POST /v0/audio`, `GET /v0/audio/{id}`, `GET /v0/library` | `resolveSunoAudio` in the profile (below) | a grant is held and `/v0/account/usage` answers |
+| `api` | `API_SUNO` (`lib/suno/api/driver.ts`) | `POST /v0/audio`, `GET /v0/audio/{id}`, `GET /v0/library` | none (`audioUrl: null`; below) | a grant is held and `/v0/account/usage` answers |
 | `fake` | `FAKE_SUNO_DRIVER` (`lib/sound/suno/fakeDriver.ts`) | counted ids, no network | half the clips | `FAKE_SUNO.health` |
 | unset (auto) | `AUTO_SUNO` | `api` while `sunoApiStatus().connected`, else `browser` - decided on every call | as the driver picked | as the driver picked |
 
@@ -34,22 +34,24 @@ Auto decides per call because the worker binds `sunoDriver()` once at module loa
 (`lib/foundry/scout/doctor.ts`) probes that one, and on `api` adds a `suno bytes` line (a note,
 never a blocker) for the browser profile.
 
-### Hybrid bytes (the `api` driver)
+### Bytes (the `api` driver hands out none)
 
 The API does not hand out a suno.com song's audio. Measured 2026-11-10 with the app's own token:
 
 - `GET /v0/audio/{id}/stream` refuses: `refused (forbidden): This app can't stream suno.com songs. Play the song at its song_url.`
-- `cdn1.suno.ai/<id>.mp3` answers 403; `/download` costs a download credit.
+- `cdn1.suno.ai/<id>.mp3` answers 403; `POST /v0/audio/{id}/download` unconfirmed answers
+  `{"status":"requires_credit","format":"mp3","credits_remaining":42,"message":...}` (free); confirmed
+  it spends one of the person's download credits. Needs the `download` scope.
+- The signed-in profile's `GET /api/clip/<id>` answers `media_urls[0]` =
+  `d2lwuy8qc234o3.cloudfront.net/1/clip/<id>.m4a`, `content_type: "m4a-opus"`, `encoding: "1.0.0"`, and the
+  bytes are not an MP4 (no `ftyp`; ffmpeg: "moov atom not found"). They are encoded; Gravitone does not
+  decode them.
 - A clip carries `{id, title, status, created_at, error, song_url, cover_image_url, cover_image_large_url,
   handle, liked, visibility, metadata:{duration, style, lyrics?, description?, type}}` - no audio URL, no model.
 
-So `resolveSunoAudio(songIds)` (`lib/suno/resolve.ts`, re-exported by `lib/suno/driver.ts`) opens one
-tab in the profile (launching it where `canSpawnLocalBinaries()`), asks studio-api's `GET /api/clip/<id>`
-with the page's Clerk token, and maps each id to `media_urls[0].url` (`audio_url` only when it is not
-the `/api/forbidden` sentinel); an id the page cannot see maps to `null`. Free: no credit, no download.
-
-When it rejects (`suno browser not running`, `not signed in to suno`), every `audioUrl` is `null` and the
-create or the import still returns: the API's credits are spent once `POST /v0/audio` has answered.
+So the `api` driver's refs and library clips carry `audioUrl: null`: a song's bytes come through the
+pull (below), on the person's confirmed press. `resolveSunoAudio` (`lib/suno/resolve.ts`) still exists
+and the driver keeps a `resolve` seam, but nothing calls it by default.
 
 ### The `api` create
 
@@ -59,7 +61,7 @@ create or the import still returns: the API's credits are spent once `POST /v0/a
 | `composing` | the body: `title`, `style`, `lyrics` (empty or `[Instrumental]`: no `lyrics`, `instrumental: true`), `negative_style` from `exclude`, `model` (`v6`, `v6-wild` as-is), `idempotency_key` |
 | `creating` | `POST /v0/audio`; a 402 or a credits sentence is `suno: out of credits`, any other refusal `suno refused the create: <Suno's sentence>` |
 | `rendering` | `getClip` per id every 5 s until `complete`; `error` is `suno failed the clip: <reason>`; at 6 min, clips that are all at least `streaming` are returned, otherwise `suno did not finish rendering in 6 min (songs …)` |
-| `collecting` | `resolveSunoAudio` for the ids, then `SunoClipRef`s |
+| `collecting` | `SunoClipRef`s, `audioUrl: null` |
 
 `SunoClipRef`: `url` = `song_url` (else `https://suno.com/song/<id>`), `imageUrl` = `cover_image_large_url`
 then `cover_image_url`, `durationS` = `metadata.duration`.
@@ -74,7 +76,7 @@ The create answer's shape is not yet seen live: `wire.ts` `CreateResponse` accep
 ### The `api` library
 
 `GET /v0/library?limit=50` by `next_cursor` until there is none; `status: complete` only, deduped by id,
-newest first by `created_at`, then one `resolveSunoAudio` batch. `model` is `metadata.model` or
+newest first by `created_at`, `audioUrl: null`. `model` is `metadata.model` or
 `major_model_version` when the clip carries one, else `"unknown"`. `prompt` = `{title, style:
 metadata.style ?? "", lyrics: metadata.lyrics}`, absent keys omitted.
 
@@ -236,7 +238,9 @@ selector you change.
 
 A take can be **pulled** from the person's Suno library instead of uploaded. The dock's verdict row
 carries `from suno` beside `attach take`: it lists the library (`GET /v0/library`, or
-`/v0/library/search` when a title is typed, 20 a page) and pressing a song pulls it at once. Upload
+`/v0/library/search` when a title is typed, 20 a page). Pressing a song asks Suno's download quote;
+a song that costs a download credit shows `1 download credit · N left` and a `spend 1 credit · mp3`
+press, and only that second press spends. Upload
 stays for files made elsewhere; such a take has no Suno id and no Suno read.
 
 **Not connected.** With no grant in `<sound store>/suno-api/auth.json` the picker is one chip linking
@@ -247,15 +251,22 @@ stays for files made elsewhere; such a take has no Suno id and no Suno read.
 
 1. A song this server already pulled answers the take it holds (no second download, no second take).
 2. `getClip(id)` through the API: the song must be `complete`, else the pull refuses with its status.
-3. The audio URL from the signed-in Chrome profile (`resolveSunoAudio([id])`, lib/suno/driver.ts),
-   because the API refuses to stream suno.com songs. A browser that is not running or not signed in
-   refuses in the driver's own words; a song the page cannot see refuses as "no audio URL".
-4. The bytes from that CDN URL (`fetchClipBytes`, lib/sound/mv/fetchAudio.ts).
+3. Unconfirmed: `POST /v0/audio/{id}/download` (free). `requires_credit` is answered as a
+   `SunoDownloadQuote` (`{clipId, credits: 1, left, format}`) and nothing is filed; an answer that
+   already carries a `url` is filed at once.
+4. Confirmed: refused under `GRAVITONE_DRY_ONLY=1` before Suno is asked. Otherwise a receipt (scope
+   `suno-download`, key `<id>:<format>`, live) is claimed, the confirmed download is asked again every
+   1.1 s while `processing` (cap 50 s), and the receipt settles with the URL (an unpriced quote whose
+   note names the credit; download credits are not USD). A refusal releases it, verbatim. A press
+   within the receipt's 15 min replays the paid URL, so a file that failed to measure is not bought
+   twice. Then the bytes (`fetchClipBytes`, lib/sound/mv/fetchAudio.ts); the extension is the URL's,
+   else the format's.
 5. `measureAndFile` (`lib/sound/suno/measure.ts`), the step the upload route now shares: a temp file,
    the sidecar's `analyze`, then `fileSunoTake` with `sunoClipId` on the facts record.
 6. Suno's read (below). A refused read leaves the take filed and says why (`readRefused`).
 
-Every refusal is its source's own sentence, and a refused pull files nothing. Nothing spends.
+Every refusal is its source's own sentence, and a refused pull files nothing. Only the confirmed
+press spends: one download credit.
 
 ### The dual read (`lib/sound/suno/sunoRead.ts`)
 

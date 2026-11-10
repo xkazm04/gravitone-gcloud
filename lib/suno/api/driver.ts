@@ -1,10 +1,14 @@
-// THE API SUNO DRIVER (spark suno-api, hybrid bytes) - server-only by use. The same `SunoDriver`
-// the queue, the bound producer and the library import name (lib/sound/suno/drivers.ts), made of
-// Suno's official REST API for the create, the polling, the library and the credits, and of the
-// signed-in browser profile for one thing only: the audio URL (../resolve.ts). The API refuses to
-// stream a suno.com song ("This app can't stream suno.com songs. Play the song at its song_url.").
+// THE API SUNO DRIVER (spark suno-api) - server-only by use. The same `SunoDriver` the queue, the
+// bound producer and the library import name (lib/sound/suno/drivers.ts), made of Suno's official
+// REST API for the create, the polling, the library and the credits.
 //
-// A browser that is down does not fail a create: the credits are spent once POST /v0/audio has
+// IT HANDS OUT NO AUDIO URL by default. The API refuses to stream a suno.com song ("This app can't
+// stream suno.com songs. Play the song at its song_url."), and the signed-in profile's CloudFront
+// file (../resolve.ts) is encoded - measured 2026-11-10, no MP4 atoms, "moov atom not found" - and is
+// not decoded here. A song's bytes come through Suno's official download, one download credit on the
+// person's confirmed press (lib/sound/suno/pull.ts). `deps.resolve` stays as a seam for a test.
+//
+// A resolver that fails does not fail a create: the credits are spent once POST /v0/audio has
 // answered, so the refs come back with `audioUrl: null` rather than being thrown away. Nor does it
 // make the probe unhealthy - health is the API grant and the account read, nothing else.
 //
@@ -16,7 +20,6 @@
 import { createHash } from "node:crypto";
 
 import type { SunoCreateOptions, SunoDriver } from "../../sound/suno/drivers.ts";
-import { resolveSunoAudio } from "../resolve.ts";
 import { normalizeModelLabel } from "../selectors.ts";
 import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "../types.ts";
 import { LIBRARY_LIMIT_MAX, sunoApi, sunoApiStatus, type SunoApi, type SunoApiStatus } from "./client.ts";
@@ -32,7 +35,7 @@ export interface ApiSunoDeps {
   readonly api?: () => SunoApi;
   /** Whether a grant is held (default `sunoApiStatus()`, the file only). */
   readonly status?: () => Promise<SunoApiStatus>;
-  /** Song ids -> audio URLs (default the browser profile's `resolveSunoAudio`). */
+  /** Song ids -> audio URLs (default: none - every id null; see the header). */
   readonly resolve?: (songIds: readonly string[]) => Promise<Map<string, string | null>>;
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
@@ -119,6 +122,9 @@ export function apiLibraryClip(c: Clip, audioUrl: string | null): SunoLibraryCli
   return { ...toRef(c.id, c, audioUrl, ""), title, model: apiModelLabel(c), prompt, createdAt: Number.isFinite(at) ? at : Date.now() };
 }
 
+/** The default: no song's audio URL is handed out (the header says why). */
+const noAudio = async (ids: readonly string[]): Promise<Map<string, string | null>> => new Map(ids.map((id) => [id, null]));
+
 /** Audio for every id, or null for every id when the browser cannot answer: never a failure. */
 async function audioFor(resolve: NonNullable<ApiSunoDeps["resolve"]>, ids: readonly string[]): Promise<Map<string, string | null>> {
   try {
@@ -131,7 +137,7 @@ async function audioFor(resolve: NonNullable<ApiSunoDeps["resolve"]>, ids: reado
 export function apiSunoDriver(deps: ApiSunoDeps = {}): SunoDriver {
   const api = deps.api ?? (() => sunoApi());
   const status = deps.status ?? sunoApiStatus;
-  const resolve = deps.resolve ?? resolveSunoAudio;
+  const resolve = deps.resolve ?? noAudio;
   const now = deps.now ?? Date.now;
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const pollMs = deps.pollMs ?? POLL_MS;
