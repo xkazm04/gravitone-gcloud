@@ -56,6 +56,10 @@ export type PullDeps = {
   readonly now: () => number;
 };
 
+/** What the paid download needs of a process: the API's download, the kernel store (the receipt), who pressed. The
+ *  cover's keep (../cover/suno.ts) spends through the same receipt and hands only these. */
+export type DownloadDeps = Pick<PullDeps, "store" | "actor" | "dryOnly" | "sleep" | "now"> & { readonly api: Pick<SunoApi, "download"> };
+
 /** The pulled take (and the read's refusal in Suno's words when the read did not go; the take is
  *  filed either way), or Suno's price for the file when it needs a download credit. */
 export type Pulled = { readonly facts: StudioTakeFacts; readonly readRefused?: string } | { readonly quote: SunoDownloadQuote };
@@ -90,10 +94,10 @@ export function pulledName(title: string | null | undefined, clipId: string, ext
   return `${t === "" ? clipId : t}${ext}`;
 }
 
-const urlOf = (r: Download): string | null => (typeof r.url === "string" && r.url !== "" ? r.url : null);
+export const urlOf = (r: Download): string | null => (typeof r.url === "string" && r.url !== "" ? r.url : null);
 
 /** Ask the download until it carries a URL or says something other than `processing`. */
-async function downloadUntilReady(id: string, format: DownloadFormat, confirm: boolean, d: PullDeps): Promise<Result<Download>> {
+export async function downloadUntilReady(id: string, format: DownloadFormat, confirm: boolean, d: DownloadDeps): Promise<Result<Download>> {
   const until = d.now() + DOWNLOAD_WAIT_MS;
   for (;;) {
     const r = await d.api.download(id, { format, confirm });
@@ -103,13 +107,13 @@ async function downloadUntilReady(id: string, format: DownloadFormat, confirm: b
 }
 
 /** Suno's answer that carried no file, in its own words. */
-function noFile(r: Download, title: string): Result<never> {
+export function noFile(r: Download, title: string): Result<never> {
   if (r.status === "processing") return err("unavailable", `suno is still preparing "${title}"; press again`, { detail: "suno-download-processing" });
   return err("refused", r.message ?? `suno download of "${title}" answered ${r.status}`, { detail: "suno-download" });
 }
 
 /** Spend the credit the person confirmed, under a receipt: the file's URL, or the refusal. */
-async function paidUrl(id: string, format: DownloadFormat, title: string, d: PullDeps): Promise<Result<string>> {
+export async function paidUrl(id: string, format: DownloadFormat, title: string, d: DownloadDeps): Promise<Result<string>> {
   if (d.dryOnly) return err("refused", `GRAVITONE_DRY_ONLY=1 pins this server dry: "${title}" was not downloaded and no download credit was spent`, { detail: "suno-download-dry" });
   const store = d.store();
   if (!store.ok) return store;

@@ -39,6 +39,7 @@ import { scoutPieceProducer } from "./scoutPiece.ts";
 import { scoutSheetProducer } from "./scoutSheet.ts";
 import { coverProducer } from "./cover.ts";
 import { coverBriefProducer } from "./coverBrief.ts";
+import { coverSunoProducer } from "./coverSuno.ts";
 import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
 import { productionTakeProducer } from "./production.ts";
 import { productionVoicesProducer } from "./productionVoices.ts";
@@ -171,6 +172,9 @@ export const BOUND: readonly Bound[] = [
   // A cover's brief (cover brief WP-A): the song measured, heard three times through Gemini and written up by a Claude
   // Code turn, then its cover launched; one job per cover on seat.text.
   { name: "cover-brief", producer: coverBriefProducer() },
+  // A cover's Suno send (spark suno-covers): the picked winner uploaded once, covered twice through Suno's official API and
+  // each cover read for free; one job per send on cloud.suno.
+  { name: "cover-suno", producer: coverSunoProducer() },
   // The song lab (spark yue2-song-lab): YuE2 in WSL on this box's card - a batch of seeds rendered, every take scored,
   // a post-chain or a blind window made from a take; three jobs on gpu.local, each $0 (lib/producers/yue2.ts).
   { name: "yue2-render", producer: yue2RenderProducer() },

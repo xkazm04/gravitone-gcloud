@@ -5,7 +5,7 @@
 // call has a deadline - 60 s, 180 s for `stream`.
 //
 // SPEND. `create` spends Suno credits; `download` with `confirm` spends one of the person's download
-// credits. Everything else reads (listen is free per Suno's own tool description, capped at five open
+// credits; `cover` spends song credits (uploads, `uploadSession` to `completeUpload`, are free). Everything else reads (listen is free per Suno's own tool description, capped at five open
 // questions and 200 a day; an unconfirmed `download` is the free quote).
 //
 // THE SHAPES ARE NOT YET VERIFIED with a real token (wire.ts): a body that does not parse is refused
@@ -43,6 +43,8 @@ import {
 
 export const DEFAULT_TIMEOUT_MS = 60_000;
 export const STREAM_TIMEOUT_MS = 180_000;
+/** The signed-URL PUT of a song's bytes. */
+export const UPLOAD_TIMEOUT_MS = 180_000;
 /** Suno's page cap for /v0/library and its search. */
 export const LIBRARY_LIMIT_MAX = 50;
 /** Response headers `stream` hands back for the spend question: anything naming a price, credit or quota. */
@@ -51,6 +53,7 @@ export const BILLING_HEADER = /price|credit|quota|cost|billing|usage|ratelimit|r
 export interface SunoApiDeps extends OAuthDeps {
   readonly timeoutMs?: number;
   readonly streamTimeoutMs?: number;
+  readonly uploadTimeoutMs?: number;
 }
 
 export interface Streamed {
@@ -205,11 +208,26 @@ export function sunoApi(deps: SunoApiDeps = {}): SunoApi {
     analysis: (id) => json("suno analysis", "GET", `/v0/audio/${enc(id)}/analysis`, Analysis),
     listen: (id, question) => json("suno listen", "POST", `/v0/audio/${enc(id)}/listen`, Listen, { question }),
     listenRead: (listenId) => json("suno listen read", "GET", `/v0/audio/listens/${enc(listenId)}`, Listen),
-    // spark suno-covers WP0: stubs with the final signatures; WP1 builds them.
-    uploadSession: async () => err("unavailable", "suno upload: not built yet"),
-    putUpload: async () => err("unavailable", "suno upload: not built yet"),
-    completeUpload: async () => err("unavailable", "suno upload: not built yet"),
-    cover: async () => err("unavailable", "suno cover: not built yet"),
+    uploadSession: (title) => json("suno upload session", "POST", "/v0/audio/upload-sessions", UploadSession, { title }),
+    async putUpload(uploadUrl, bytes, mime) {
+      // The signed URL is the credential: no bearer goes to it (it is not Suno's API host).
+      let res: Response;
+      try {
+        res = await (deps.fetch ?? globalThis.fetch)(uploadUrl, { method: "PUT", headers: { "content-type": mime }, body: bytes as BodyInit, signal: AbortSignal.timeout(deps.uploadTimeoutMs ?? UPLOAD_TIMEOUT_MS) });
+      } catch (e) {
+        return err("unavailable", `suno upload: ${e instanceof Error ? e.message : String(e)}`, { detail: "suno-unreachable", cause: e });
+      }
+      if (res.ok) return ok(undefined);
+      const text = await res.text().catch(() => "");
+      return err(codeOf(res.status), `suno upload: the signed URL answered ${res.status}: ${text.slice(0, QUOTE_CHARS)}`, { detail: `http-${res.status}` });
+    },
+    completeUpload: (sessionId) => json("suno upload complete", "POST", `/v0/audio/upload-sessions/${enc(sessionId)}/complete`, Clip),
+    async cover(clipId, body) {
+      const checked = CoverBody.safeParse(body);
+      if (!checked.success) return err("invalid", `suno cover: ${checked.error.issues[0]?.message ?? "body refused"}`, { detail: "suno-cover-body" });
+      const r = await json("suno cover", "POST", `/v0/audio/${enc(clipId)}/covers`, CreateResponse, checked.data);
+      return r.ok ? createdOf(r.value) : r;
+    },
     download: (id, o) => json("suno download", "POST", `/v0/audio/${enc(id)}/download`, Download, { format: o.format, ...(o.confirm ? { confirm: true } : {}) }),
     alignment: (id) => json("suno lyrics alignment", "GET", `/v0/audio/${enc(id)}/lyrics-alignment`, Alignment),
     async stream(id) {

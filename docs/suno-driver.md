@@ -213,6 +213,26 @@ registration; the authorization server and its endpoints are discovered from
   or `/audio?suno=error&reason=...`. Disconnect: `DELETE /api/suno/connect`.
 - CLI: `npm run suno:api -- status | usage | clip <id> | stream <id> [--out <file>]`. Read-only.
 
+### Upload and covers (spark suno-covers WP1)
+
+Four more calls in `lib/suno/api/client.ts`, all free but `cover`:
+
+- `uploadSession(title)` - `POST /v0/audio/upload-sessions` `{title}` answers `{id, upload_url, upload_page_url?}`. Needs the
+  `audio.upload` feature. Free: uploads spend no credits.
+- `putUpload(uploadUrl, bytes, mime)` - `PUT` of the raw bytes to the signed URL with `content-type: <mime>` and **no
+  bearer** (the URL is the credential; Suno's token never goes to the storage host). A 180 s deadline. A refusal is the
+  status and the first 300 characters of the body text.
+- `completeUpload(sessionId)` - `POST /v0/audio/upload-sessions/{id}/complete` answers the clip; poll `getClip` to
+  `complete` (3 min is the job's cap).
+- `cover(clipId, body)` - **spends song credits.** `POST /v0/audio/{clipId}/covers` with a `CoverBody` (parsed first: a
+  duration of 5 is refused in the process, as Suno's 400 "duration must be between 15 and 360 seconds" would; never
+  `max_mode`, never `voice_id`), `idempotency_key` required so a retried step is one cover. The answer is one clip or
+  `clip_ids`, read as `create`'s is. Camel-case plan controls are `audio_influence`, `style_influence`, `weirdness`,
+  `variety` on the wire.
+
+The cover's send is a kernel job (`docs/audio-cover.md`, "To Suno and back"). The request and response shapes of these four
+are from Suno's tool description and the measured 400, not from a call with a real token.
+
 ## When Suno changes its UI
 
 Everything Suno-shaped is in `lib/suno/selectors.ts`. Symptom → entry:
