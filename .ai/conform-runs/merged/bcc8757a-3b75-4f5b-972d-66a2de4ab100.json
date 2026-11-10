@@ -1,0 +1,127 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bcc8757a-3b75-4f5b-972d-66a2de4ab100",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-10T01:14:14.800584+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "domain-decision-board-core",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/domain/src/source.ts:93 The decision record's 'why' is optional for most sources and cannot be stored at all for suno, mv and trials (no reasons, no note). decision-records requires a reason on every rejection, so these rejects carry no telemetry for tuning what the producer is asked to make.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/packet.machine.ts:22 The packet gate is an enumerated machine on the stored record. Committed and returned are terminal, so nothing can reopen a decided packet."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "packages/domain/src/source.ts:93 Who (by), rev and at are recorded as an append-only log line, which is good. The rejection reason is optional (reasonOnReject is set only for seeds and spend) and impossible for suno, mv and trials."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/board.ts:101 The Consequence token folds in both the decisions and the v1 digest. A commit is refused as stale-preview when either has moved."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/board.ts:121 The consequence discloses deletes, writes, promotions and acts that leave the machine, computed before the commit."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/board.ts:229 A listing of pending packets says when it was cut, so the rail's count is not a silent subset."
+    }
+   ]
+  },
+  {
+   "context": "runs-console",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:191 Retrying a failed or interrupted job sends only jobId and an optional raised ceiling, with no receipt and no token. A paid job's second attempt therefore spends again without a fresh disclosure bound to its parameters, while dojo start and re-route on the same screen do go through a receipt.",
+   "techniques": [
+    {
+     "technique": "consent-gates",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/runs/_runs/Acts.tsx:13 The gate map calls retry spendless and reversible, but re-running a live vendor job spends again and cannot be undone. Consent is not bound to a parameter fingerprint at press time."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/dojo.ts:61 A dojo cycle starts only with a receipt token through the money-key action wrapper. The press is the operator's, not the machine's."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/Runs.tsx:170 A stale re-route confirm comes back as the fresh receipt instead of firing what was not shown."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/dojo.ts:28 The act is attributed to the authenticated operator's uid."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T01:14:14.800584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "domain-decision-board-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:14:14.800584+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "resume-after-decision"
+   ],
+   "deviations": 1,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

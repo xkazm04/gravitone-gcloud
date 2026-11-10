@@ -22601,6 +22601,42 @@
           "evidence": "lib/articles/trial/verdict.ts:4 The gate refuses to report a verdict it could not measure (void). A Medium failure is recorded as 'unavailable' with a reason (mediumDraft.ts:11), never buried."
         }
       ]
+    },
+    "ea68a117-e84a-4b1b-bff1-c49133e939a9/hitl-approval": {
+      "context": "domain-decision-board-core",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:14:14.800Z",
+      "worker": "bcc8757a-3b75-4f5b-972d-66a2de4ab100",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/packet.machine.ts:22 The packet gate is an enumerated machine on the stored record. Committed and returned are terminal, so nothing can reopen a decided packet."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/source.ts:93 Who (by), rev and at are recorded as an append-only log line, which is good. The rejection reason is optional (reasonOnReject is set only for seeds and spend) and impossible for suno, mv and trials."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/board.ts:101 The Consequence token folds in both the decisions and the v1 digest. A commit is refused as stale-preview when either has moved."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/board.ts:121 The consequence discloses deletes, writes, promotions and acts that leave the machine, computed before the commit."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/board.ts:229 A listing of pending packets says when it was cut, so the rail's count is not a silent subset."
+        }
+      ]
     }
   }
 }

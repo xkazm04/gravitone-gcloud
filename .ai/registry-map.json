@@ -7455,7 +7455,11 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/source.ts:93 The decision record's 'why' is optional for most sources and cannot be stored at all for suno, mv and trials (no reasons, no note). decision-records requires a reason on every rejection, so these rejects carry no telemetry for tuning what the producer is asked to make.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "structured-output",
