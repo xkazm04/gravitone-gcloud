@@ -22748,6 +22748,51 @@
         }
       ],
       "registryProposal": "duration-and-tempo-locking's 'lock one edge, float the other' assumes one picture event inside a cue. When a plan is cut one section per scene, every internal boundary is a picture event, so the technique should say how to choose one tempo across several fixed section lengths, or when a per-section tempo or a floated final section is the honest answer."
+    },
+    "4f4a61e0-df30-4a71-b7e9-b0f355e4e848/measurement-honesty": {
+      "context": "sound-hunt-and-measure",
+      "subject": "measurement-honesty",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:26:28.593Z",
+      "worker": "1ff0e433-4bc3-4d99-82a9-e344eafcf55b",
+      "techniques": [
+        {
+          "technique": "renormalize-over-present",
+          "verdict": "deviation",
+          "evidence": "lib/sound/insights.ts:102 Renormalizes over present scores (sum and present-count kept in one pass, null when zero) but does not carry the observed fraction beside the result; `scored` dies here."
+        },
+        {
+          "technique": "minimum-sample-floors",
+          "verdict": "deviation",
+          "evidence": "lib/sound/knowledge.ts:84 The MIN_N=3 floor is applied to the keep rate's denominator (n). The mean in the same row is let through on that gate even when its own denominator is 1, so the floor does not cover every derived figure in the family."
+        },
+        {
+          "technique": "co-published-numbers-must-reconcile",
+          "verdict": "deviation",
+          "evidence": "lib/sound/hunt.ts:105 The hunt prompt prints a mean score next to `n=`, but that n is the count of takes and not the mean's count, so the two figures shown together do not describe the same set."
+        },
+        {
+          "technique": "unmeasurable-vs-zero",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measureRun.ts:120 A blob the decoder refuses is stored as an error row with null figures, not as zero energy or zero duration. measure.ts also returns a null tempo/key for silence rather than v1's 60 BPM / C major."
+        },
+        {
+          "technique": "incomplete-not-verdict",
+          "verdict": "conformant",
+          "evidence": "lib/sound/measureRun.ts:206 A sidecar that cannot run returns its reason as `unavailable` and writes no triage row, so a missing row reads as not triaged, never as clean. TriageRun also counts errors separately from triaged."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/sound/insights.ts:102 Cell aggregation renormalizes mean scores over only scored takes but discards the count of scored takes, preventing downstream consumers from verifying sample floors on the present set or disclosing the observed fraction.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by 1ff0e433-4bc3-4d99-82a9-e344eafcf55b"
+        }
+      ]
     }
   }
 }

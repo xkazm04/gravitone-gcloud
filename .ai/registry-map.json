@@ -20338,14 +20338,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/sound/insights.ts:102 Cell aggregation renormalizes mean scores over only scored takes but discards the count of scored takes, preventing downstream consumers from verifying sample floors on the present set or disclosing the observed fraction.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:b702c58e785c6c51",
-          "evaluatedRevision": 11,
+          "evidence": "lib/sound/insights.ts:102 The cell's meanScore is averaged over only the takes that carried a score, but `scored` is dropped from the returned cell (InsightCell has n, kept, rejected, meanScore and no scored count), so every reader gates and labels the mean by n, the take count, and a mean over 1 scored take of 5 passes the n>=3 floor and is printed as MEASURED n=5.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:2bbddc303856550d",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "3f11be96-c51f-4098-8472-341c42362e6d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "sound-effect-generation",
