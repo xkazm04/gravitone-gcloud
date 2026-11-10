@@ -3,13 +3,16 @@
 // THE SUNO ADVISOR'S PIECES (spark suno-advisor): the prompt card (with taste chips, with lineage,
 // instrumental with no slider set), the lineage alone, the dock's verdict row (fresh, a take attached,
 // off), taste rows (proposed and kept, one mid-write and one refused), and a take's facts in every
-// Listen state. Literal data; copy goes through the page's one copy act, and nothing here reaches
-// suno.com or files anything.
+// Listen state. Spark suno-api: the Suno library picker (not connected, open, pulling, refused), the
+// verdict row with a take pulled from Suno, and a pulled take's three reads (complete with
+// disagreements, processing, a read refused). Literal data; copy goes through the page's one copy
+// act, and nothing here reaches suno.com or files anything.
 import type { ReactNode } from "react";
 
 import type { StudioNodeOf } from "@gt/domain/audio.studio";
-import type { StudioListen, StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
+import type { StudioListen, StudioTakeFacts, StudioTasteLine, SunoRead, SunoSong } from "@gt/domain/audio.suno";
 import { Lineage } from "@gt/ui/components/suno/Lineage.tsx";
+import { SunoPicker, type SongPage } from "@gt/ui/components/suno/SunoPicker.tsx";
 import { SunoPromptCard } from "@gt/ui/components/suno/SunoPromptCard.tsx";
 import { TakeFacts } from "@gt/ui/components/suno/TakeFacts.tsx";
 import { TasteChips } from "@gt/ui/components/suno/TasteChips.tsx";
@@ -84,6 +87,24 @@ const TAKE: StudioTakeFacts = {
 const { listenUsd: _price, ...UNPRICED } = TAKE;
 const STAND_IN: StudioListen = { ...HEARD, model: "dry stand-in", standIn: true, bpm: 124, key: "D minor" };
 
+const SONGS: readonly SunoSong[] = [
+  { id: "fb3b98c4", title: "Neon Overpass", status: "complete", durationS: 234, createdAt: "2026-11-09T21:14:00Z" },
+  { id: "a17c02de", title: "Neon Overpass (half-time)", status: "complete", durationS: 241, createdAt: "2026-11-09T21:20:00Z" },
+  { id: "c0ffee11", title: "Rain Study Bed", status: "streaming", createdAt: "2026-11-10T08:02:00Z" },
+];
+const page = async (): Promise<SongPage> => ({ songs: SONGS });
+const CONNECTED = { connected: true } as const;
+const OFFLINE = { connected: false, reason: "not connected to suno" } as const;
+const pulledAs = async (): Promise<{ readonly takeId: string; readonly name: string }> => ({ takeId: "st-pulled", name: "Neon Overpass.mp3" });
+
+const READ: SunoRead = {
+  at: "2026-11-10T09:00:00Z", status: "complete", bpm: 99.9, key: "B minor", timeSignature: 4,
+  sections: [{ label: "A", startS: 0, endS: 14.2 }, { label: "B", startS: 14.2, endS: 61 }, { label: "C", startS: 61, endS: 84 }, { label: "A", startS: 84, endS: 167.4 }],
+  terms: ["song", "female vocals", "piano", "synthesizer"], labels: [{ label: "genre:electronic", p: 0.93 }, { label: "mood:wistful", p: 0.71 }, { label: "vocals:female", p: 0.88 }],
+  answer: "Progressive house with a breathy female vocal over piano chords.", genre: ["progressive house"], mood: ["wistful"], vocals: { heard: true, character: "breathy female" }, words: 0,
+};
+const LINKED: StudioTakeFacts = { ...TAKE, sunoClipId: "fb3b98c4-2c1e-4b8a-9d6f-3e0a1c7d5b21" };
+
 function PromptSpecimen() {
   return (
     <Spec names={["SunoPromptCard", "Lineage"]} source="suno/SunoPromptCard.tsx · Lineage.tsx · suno.ts" wide>
@@ -114,6 +135,31 @@ function VerdictSpecimen() {
       </At>
       <At label="dock thinking">
         <VerdictBar promptId="p2" text="" disabled onSend={went} />
+      </At>
+      <At label="from suno · connected">
+        <VerdictBar promptId="p1" text="" onSend={went} suno={{ connection: CONNECTED, connectHref: "#suno", library: page, pull: pulledAs }} />
+      </At>
+      <At label="from suno · not connected">
+        <VerdictBar promptId="p1" text="" onSend={went} suno={{ connection: OFFLINE, connectHref: "#suno", library: page, pull: pulledAs }} />
+      </At>
+    </Spec>
+  );
+}
+
+function PickerSpecimen() {
+  return (
+    <Spec names={["SunoPicker"]} source="suno/SunoPicker.tsx" wide>
+      <At label="not connected">
+        <SunoPicker connection={OFFLINE} connectHref="#suno" library={page} onPull={went} />
+      </At>
+      <At label="the library">
+        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS }} />
+      </At>
+      <At label="pulling">
+        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, pulling: "fb3b98c4" }} />
+      </At>
+      <At label="refused">
+        <SunoPicker connection={CONNECTED} connectHref="#suno" library={page} onPull={never} seed={{ songs: SONGS, refused: "suno browser not running" }} />
       </At>
     </Spec>
   );
@@ -175,13 +221,34 @@ function TakeSpecimen() {
   );
 }
 
+function ReadsSpecimen() {
+  return (
+    <Spec names={["TakeFacts", "SunoColumn"]} source="suno/TakeFacts.tsx · SunoColumn.tsx · reads.ts" wide>
+      <At label="pulled · not read yet">
+        <TakeFacts facts={LINKED} onListen={never} onRead={went} />
+      </At>
+      <At label="three reads · disagreeing">
+        <TakeFacts facts={{ ...LINKED, suno: READ, listened: HEARD }} onListen={never} onRead={went} />
+      </At>
+      <At label="processing">
+        <TakeFacts facts={{ ...LINKED, suno: { at: READ.at, status: "processing", sections: [], terms: [], labels: [], listenId: "ls-1" } }} onListen={never} onRead={went} />
+      </At>
+      <At label="read refused">
+        <TakeFacts facts={LINKED} onListen={never} onRead={went} readSeed={{ kind: "refused", reason: "Too many concurrent listen requests" }} />
+      </At>
+    </Spec>
+  );
+}
+
 export function SunoSection() {
   return (
     <Section id="suno">
       <PromptSpecimen />
       <VerdictSpecimen />
       <TasteSpecimen />
+      <PickerSpecimen />
       <TakeSpecimen />
+      <ReadsSpecimen />
     </Section>
   );
 }

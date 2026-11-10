@@ -21,6 +21,7 @@ import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { usePollBackstop } from "@gt/ui/freshness/useFreshness";
 
 import type { StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
+import type { SunoConnection } from "@gt/ui/components/suno/SunoPicker.tsx";
 
 import { BACKSTOP_MS, COALESCE_MS, openFeed } from "../../../_shell/liveFeed.ts";
 import { studioHref, type StudioUrl } from "../url.ts";
@@ -43,11 +44,13 @@ export type StudioHostProps = {
   /** Spark suno-advisor: facts of every uploaded take, and the confirmed taste profile. */
   readonly takes: Readonly<Record<string, StudioTakeFacts>>;
   readonly taste: readonly StudioTasteLine[];
+  /** Spark suno-api: whether this machine holds a Suno grant, or why not. */
+  readonly connection: SunoConnection;
 };
 
 const NEW_TITLE = "A new song";
 
-export function StudioHost({ url, sessions, renders, note, head, presence, acts, takes, taste }: StudioHostProps) {
+export function StudioHost({ url, sessions, renders, note, head, presence, acts, takes, taste, connection }: StudioHostProps) {
   const router = useRouter();
   const live = url.source === "live";
   const [made, setMade] = useState<string | null>(null);
@@ -80,19 +83,20 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts,
         <span className={s.grow} />
         <Toggle label="preview offline" on={url.offline} onToggle={() => go({ ...url, offline: !url.offline })} />
       </div>
-      {(note !== null || made !== null || refused !== null) && (
+      {(note !== null || made !== null || refused !== null || url.sunoError !== undefined) && (
         <div className={s.banner} role="status">
           {note !== null && <ErrorLine message={renders === "missing" ? `Some sounds are missing: ${note}` : note} />}
           {made !== null && <ErrorLine message={made} />}
           {refused !== null && <ErrorLine message={refused} />}
+          {url.sunoError !== undefined && <ErrorLine message={url.sunoError} />}
         </div>
       )}
       {session === undefined ? (
         <p className={s.empty}>No scripted session to show.</p>
       ) : live ? (
-        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} acts={acts} onSession={(id) => go({ ...url, session: id })} />
+        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} connection={connection} acts={acts} onSession={(id) => go({ ...url, session: id })} />
       ) : (
-        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} />
+        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} connection={connection} />
       )}
     </div>
   );

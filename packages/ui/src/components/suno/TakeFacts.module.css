@@ -1,6 +1,7 @@
-/* One take's facts: a head (name, take, Listen), then measured and heard side by side, stacking
-   narrow. Measured values are bright mono; heard values are the plain text ink with a dashed rule
-   under the column, and a disagreement with the measurement is amber. Tokens only. */
+/* One take's facts: a head (name, take, its Suno song), then the reads side by side - measured, suno,
+   gemini - stacking narrow; each column's head carries its own press (read, Listen). Measured and
+   Suno's values are bright mono; Gemini's are the plain text ink with a dashed rule under its lists,
+   and a value another read disagrees with is amber. Suno's answer is its own words, quoted. Tokens only. */
 .take{display:grid;gap:var(--sp-4);min-width:0;padding:var(--sp-4);border:1px solid var(--hair);border-radius:var(--r-sm);background:color-mix(in srgb,var(--wash) 37%,transparent)}
 .head{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-3);align-items:center;min-width:0}
 .name{font:600 var(--fs-ui)/1.3 var(--mono);color:var(--ink-bright);overflow-wrap:anywhere;min-width:0}
@@ -10,6 +11,7 @@
 .why{font:400 var(--fs-meta)/1.3 var(--sans);color:var(--muted)}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--w-lib-tile-l)),1fr));gap:var(--sp-4) var(--sp-7)}
 .col{display:grid;gap:var(--sp-2);align-content:start;min-width:0}
+.colHead{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-3);align-items:center;min-width:0}
 .rows{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:var(--sp-1) var(--sp-4);align-items:baseline}
 .row{display:contents}
 .term{font:600 var(--fs-micro)/1.5 var(--mono);color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
@@ -20,3 +22,6 @@
 .list{margin:var(--sp-2) 0 0;padding:var(--sp-2) 0 0;list-style:none;display:grid;gap:var(--sp-2);border-top:1px dashed var(--hair-2)}
 .item{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-3);align-items:baseline;min-width:0}
 .time{font:600 var(--fs-micro)/1.4 var(--mono);color:var(--muted)}
+.chips{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;min-width:0}
+.chipItem{display:contents}
+.quote{margin:var(--sp-2) 0 0;padding:0 0 0 var(--sp-3);border-left:var(--stroke-mark) solid var(--hair-2);font:400 var(--fs-meta)/1.5 var(--sans);color:var(--text);overflow-wrap:anywhere}

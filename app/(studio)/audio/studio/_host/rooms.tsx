@@ -23,6 +23,7 @@ import { soundOf } from "./press.ts";
 import { newestVersion, sunoVersions } from "./suno.ts";
 import { askOf, keptMix, mixChanges, mixText, newestStems, newTurnId, userTurn, type UserAsk } from "./turns.ts";
 import type { StudioTakeFacts, StudioTasteLine, TasteLean } from "@gt/domain/audio.suno";
+import type { SongPage, SunoConnection } from "@gt/ui/components/suno/SunoPicker.tsx";
 import type { VerdictSend } from "@gt/ui/components/suno/VerdictBar.tsx";
 
 import type { Dispatch, ParsedTurn, RefusedTurn, StudioSource, SunoHost, VariantProps } from "./types.ts";
@@ -47,10 +48,17 @@ export type StudioActs = {
   readonly listen: (input: { readonly takeId: string }) => Promise<Answered<StudioTakeFacts>>;
   readonly keepTaste: (input: { readonly line: string; readonly lean: TasteLean; readonly session?: string; readonly turn?: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
   readonly dropTaste: (input: { readonly line: string }) => Promise<Answered<readonly StudioTasteLine[]>>;
+  /** Spark suno-api (../_live/sunoActs.ts). */
+  readonly pullSunoTake: (input: { readonly session: string; readonly clipId: string; readonly promptId?: string; readonly clip?: "a" | "b" }) => Promise<Answered<{ readonly facts: StudioTakeFacts; readonly readRefused?: string }>>;
+  readonly readSunoTake: (input: { readonly takeId: string }) => Promise<Answered<StudioTakeFacts>>;
+  readonly sunoLibrary: (input: { readonly query?: string; readonly cursor?: string }) => Promise<Answered<SongPage>>;
 };
 
+/** Where Suno's sign-in starts (app/api/suno/connect/route.ts): a navigation, so the not-connected chip is a link. */
+export const SUNO_CONNECT_HREF = "/api/suno/connect";
+
 /** What a room hands the stage for Suno: facts and taste from the read, and the presses that are not a message. */
-type SunoOps = Omit<SunoHost, "sendVerdict"> & { readonly upload: (file: File, promptId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string } | string> };
+type SunoOps = Omit<SunoHost, "sendVerdict" | "connection"> & { readonly upload: (file: File, promptId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string } | string> };
 
 type Talk = {
   readonly turns: readonly ParsedTurn[];
@@ -70,6 +78,8 @@ type RoomProps = {
   /** Spark suno-advisor: the read's take facts and taste. */
   readonly takes: Readonly<Record<string, StudioTakeFacts>>;
   readonly taste: readonly StudioTasteLine[];
+  /** Spark suno-api: whether this machine holds a Suno grant (read on the server, no network). */
+  readonly connection: SunoConnection;
 };
 
 const words = (r: { readonly ok: true } | { readonly ok: false; readonly error: { readonly error: string } }): string | null => (r.ok ? null : r.error.error);
@@ -142,6 +152,22 @@ export function LiveRoom({ acts, onSession, ...room }: RoomProps & { readonly ac
       const r = await uploadTake({ file, session: session.id, promptId, ...(clip !== undefined ? { clip } : {}) });
       return r.ok ? { takeId: r.takeId } : r.error;
     },
+    library: async (q) => {
+      const r = await acts.sunoLibrary(q);
+      return r.ok ? r.value : r.error.error;
+    },
+    pull: async (clipId, promptId, clip) => {
+      const r = await acts.pullSunoTake({ session: session.id, clipId, promptId, ...(clip !== undefined ? { clip } : {}) });
+      if (!r.ok) return r.error.error;
+      // The take is filed either way; a read Suno refused is said, and its column's `read` asks again.
+      if (r.value.readRefused !== undefined) setNotice(`Suno did not read ${r.value.facts.name}: ${r.value.readRefused}`);
+      return { takeId: r.value.facts.takeId, name: r.value.facts.name };
+    },
+    read: async (takeId) => {
+      const r = await acts.readSunoTake({ takeId });
+      if (r.ok) router.refresh();
+      return words(r);
+    },
   };
   return <Stage {...room} source="live" talk={talk} suno={suno} />;
 }
@@ -185,7 +211,17 @@ export function FixtureRoom(room: RoomProps) {
   const turns = useMemo(() => all.slice(0, cursor), [all, cursor]);
   // The scripted sessions file nothing: a press that would write answers in words (WP3 may script more).
   const scripted = async (): Promise<string | null> => "the scripted session keeps nothing";
-  const suno: SunoOps = { takes: room.takes, taste: room.taste, listen: scripted, keepTaste: scripted, dropTaste: scripted, upload: async () => "the scripted session takes no upload" };
+  const suno: SunoOps = {
+    takes: room.takes,
+    taste: room.taste,
+    listen: scripted,
+    keepTaste: scripted,
+    dropTaste: scripted,
+    read: scripted,
+    upload: async () => "the scripted session takes no upload",
+    library: async () => "the scripted session reads no suno library",
+    pull: async () => "the scripted session pulls nothing from suno",
+  };
   return <Stage {...room} source="fixture" talk={{ turns, cursor, thinking, notice, setNotice, send }} suno={suno} />;
 }
 
@@ -196,7 +232,7 @@ function answersVerdict(turns: readonly ParsedTurn[], cursor: number, promptId: 
   return next !== undefined && next.from === "user" && next.verdict?.promptId === promptId;
 }
 
-function Stage({ session, offline, presence, renders, source, talk, suno }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
+function Stage({ session, offline, presence, renders, source, talk, suno, connection }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
   const [draft, setDraft] = useState("");
   const transport = useMix();
   const { turns, send, setNotice } = talk;
@@ -237,9 +273,10 @@ function Stage({ session, offline, presence, renders, source, talk, suno }: Room
     const { upload, ...rest } = suno;
     return {
       ...rest,
-      sendVerdict: async ({ verdict, text, file, clip }) => {
-        let takeId: string | undefined;
-        if (file !== undefined) {
+      connection,
+      sendVerdict: async ({ verdict, text, file, clip, takeId: pulled }) => {
+        let takeId: string | undefined = pulled;
+        if (file !== undefined && takeId === undefined) {
           const up = await upload(file, verdict.promptId, clip);
           if (typeof up === "string") {
             setNotice(up);
@@ -251,7 +288,7 @@ function Stage({ session, offline, presence, renders, source, talk, suno }: Room
         return went ? null : "the verdict was not sent";
       },
     };
-  }, [suno, send, setNotice]);
+  }, [suno, send, setNotice, connection]);
   // The dock's verdict row is about the newest prompt version shown (./suno.ts, the one fold).
   const prompt = useMemo(() => newestVersion(sunoVersions(turns))?.promptId ?? null, [turns]);
   const View = STUDIO_VIEW;
@@ -287,6 +324,7 @@ function Stage({ session, offline, presence, renders, source, talk, suno }: Room
           ? {
               verdict: {
                 promptId: prompt,
+                suno: { connection, connectHref: SUNO_CONNECT_HREF, library: sunoHost.library, pull: (clipId: string, clip?: "a" | "b") => sunoHost.pull(clipId, prompt, clip) },
                 // Every refusal is already the dock's notice: the upload's (above) and the room's send's own.
                 onSend: async (v: VerdictSend) => {
                   const refused = await sunoHost.sendVerdict(v);

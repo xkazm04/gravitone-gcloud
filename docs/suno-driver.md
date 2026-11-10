@@ -231,3 +231,61 @@ model picker and read `[role=dialog] [role=row]`, and log `studio-api-prod.suno.
 Never press Create during recon — every create spends the operator's credits. For the library,
 open `/me` and read the page's own `POST /api/feed/v3` body and answer. Date every
 selector you change.
+
+## Pulling a take from Suno, and reading it twice (spark suno-api WP3)
+
+A take can be **pulled** from the person's Suno library instead of uploaded. The dock's verdict row
+carries `from suno` beside `attach take`: it lists the library (`GET /v0/library`, or
+`/v0/library/search` when a title is typed, 20 a page) and pressing a song pulls it at once. Upload
+stays for files made elsewhere; such a take has no Suno id and no Suno read.
+
+**Not connected.** With no grant in `<sound store>/suno-api/auth.json` the picker is one chip linking
+`/api/suno/connect`. Suno's sign-in comes back to `/audio?suno=connected` (nothing shown) or
+`/audio?suno=error&reason=...`, whose reason is shown verbatim in the studio's banner.
+
+### The pull (`lib/sound/suno/pull.ts`)
+
+1. A song this server already pulled answers the take it holds (no second download, no second take).
+2. `getClip(id)` through the API: the song must be `complete`, else the pull refuses with its status.
+3. The audio URL from the signed-in Chrome profile (`resolveSunoAudio([id])`, lib/suno/driver.ts),
+   because the API refuses to stream suno.com songs. A browser that is not running or not signed in
+   refuses in the driver's own words; a song the page cannot see refuses as "no audio URL".
+4. The bytes from that CDN URL (`fetchClipBytes`, lib/sound/mv/fetchAudio.ts).
+5. `measureAndFile` (`lib/sound/suno/measure.ts`), the step the upload route now shares: a temp file,
+   the sidecar's `analyze`, then `fileSunoTake` with `sunoClipId` on the facts record.
+6. Suno's read (below). A refused read leaves the take filed and says why (`readRefused`).
+
+Every refusal is its source's own sentence, and a refused pull files nothing. Nothing spends.
+
+### The dual read (`lib/sound/suno/sunoRead.ts`)
+
+The listener doctrine: Suno's free reads are the precise reference, the priced Gemini listen stays
+(it adds instruments, roles and vocal character, and it still reads uploads), and a linked take
+holds the local measurement, the Suno read and the Gemini read at once.
+
+- `analysis` (bpm, key, time signature, A/B/C sections, terms, labels) and `listen` are polled every
+  3 s up to 45 s, side by side; `lyrics-alignment` is read once (its word count only).
+- The listen asks one question (`SUNO_LISTEN_QUESTION`) that ends in a json block of genre, mood,
+  bpm, key, vocals and sections. The answer is kept verbatim (clipped at 2000 characters); the block
+  is parsed tolerantly (`sunoAnswerFields`, @gt/domain/audio.suno.schema): a missing or garbled
+  block is no fields, a bad field is that field absent.
+- A part still out at the cap is saved as `status: "processing"` with the listen's id, so the next
+  `read` press polls the same question instead of asking a new one (listen: 5 in flight, 200 a day).
+- No receipt (free). A refusal (429, 403, no grant) is the press's answer and saves nothing.
+
+The facts record (`suno-facts.json`) gains `sunoClipId?` and `suno?` (a `SunoRead`); records written
+before them still parse.
+
+### The take surface (`@gt/ui suno/TakeFacts`, `SunoColumn`, `reads.ts`)
+
+Three columns named by their source: `measured`, `suno` (pulled takes only, with a free `read`
+press), `gemini` (with the priced `Listen` and its quote). Where two reads disagree the row names the
+other read's value: tempo beyond 2 % between the two measurements (sidecar, Suno) and 4 % against
+Gemini's heard tempo; key by pitch class and mode; a section start with no boundary of the other read
+within 3 s.
+
+### Actions (`app/(studio)/audio/studio/_live/sunoActs.ts`)
+
+`pullSunoTakeAct({session, clipId, promptId?, clip?})`, `readSunoTakeAct({takeId})`,
+`sunoLibraryAct({query?, cursor?})` and `sunoConnectionAct()` (the token file, no network), each
+through the one action core: the principal first, then the door.

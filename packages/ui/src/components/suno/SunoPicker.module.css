@@ -1,0 +1,22 @@
+/* The Suno library picker: a popover over its door (it opens from the dock's verdict row, which is
+   short), holding the search field and one row per song - title, length, date - each a press. A song
+   still being made is dimmed with its status. Drawn in flow on /kit (`.still`). Tokens only. */
+.wrap{position:relative;display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;min-width:0}
+.picker{position:absolute;left:0;bottom:calc(100% + var(--sp-2));z-index:var(--z-popover);display:grid;gap:var(--sp-2);width:var(--w-search);max-width:calc(100vw - 2 * var(--sp-6));padding:var(--sp-3);border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--ink);box-shadow:0 var(--sp-3) var(--sp-7) var(--shadow)}
+/* A phone: the door sits mid-row, so the popover spans the screen above the dock instead of hanging off its door. */
+@media (max-width:700px){.picker{position:fixed;left:var(--sp-6);right:var(--sp-6);bottom:calc(var(--h-dock) + var(--sp-2));width:auto;max-width:none}}
+.still{position:static;width:auto}
+.head{display:flex;gap:var(--sp-2);align-items:center;min-width:0}
+.head>*:first-child{flex:1;min-width:0}
+.close{display:inline-grid;place-items:center;width:var(--h-chip);height:var(--h-chip);border:1px solid var(--hair-2);border-radius:var(--r-chip);color:var(--muted);background:none;font:600 var(--fs-ui)/1 var(--mono);cursor:pointer}
+.close:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.close:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.songs{margin:0;padding:0;list-style:none;display:grid;gap:var(--sp-1);max-height:calc(var(--h-row) * 8);overflow-y:auto}
+.song{display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-3);align-items:baseline;width:100%;min-height:var(--h-row);padding:var(--sp-1) var(--sp-2);border:1px solid transparent;border-radius:var(--r-chip);background:none;color:var(--text);text-align:left;cursor:pointer}
+.song:hover:not(:disabled){border-color:var(--hair-2);color:var(--ink-bright)}
+.song:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.song:disabled{cursor:default;color:var(--muted)}
+.title{font:500 var(--fs-ui)/1.35 var(--sans);overflow-wrap:anywhere;min-width:0;flex:1}
+.meta{font:500 var(--fs-micro)/1.35 var(--mono);color:var(--muted)}
+.state{font:600 var(--fs-micro)/1.35 var(--mono);color:var(--violet)}
+.none{font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}

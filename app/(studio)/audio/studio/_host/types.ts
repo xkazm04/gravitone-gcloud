@@ -14,6 +14,7 @@ import type { ParsedTurn } from "@gt/domain/audio.studio.door";
 import type { RefusedTurn, StudioSource } from "../_port/port.ts";
 import type { DockState } from "@gt/ui/components/dock/dock.ts";
 import type { MixTransport } from "@gt/ui/components/audio/useMix.ts";
+import type { SongPage, SunoConnection } from "@gt/ui/components/suno/SunoPicker.tsx";
 
 export type { ParsedTurn, RefusedTurn, StudioSource };
 
@@ -89,8 +90,17 @@ export type SunoHost = {
   readonly keepTaste: (row: { readonly line: string; readonly lean: TasteLean }, turnId?: string) => Promise<string | null>;
   /** Remove a line from the profile. */
   readonly dropTaste: (line: string) => Promise<string | null>;
-  /** Send a verdict on a prompt as the person's next message, uploading a take first when a file is given. */
-  readonly sendVerdict: (v: { readonly verdict: NonNullable<StudioTurn["verdict"]>; readonly text: string; readonly file?: File; readonly clip?: "a" | "b" }) => Promise<string | null>;
+  /** Send a verdict on a prompt as the person's next message, uploading a take first when a file is
+   *  given; a take already pulled from Suno goes by its id. */
+  readonly sendVerdict: (v: { readonly verdict: NonNullable<StudioTurn["verdict"]>; readonly text: string; readonly file?: File; readonly clip?: "a" | "b"; readonly takeId?: string }) => Promise<string | null>;
+  /** Spark suno-api: whether this machine holds a Suno grant, or why not. */
+  readonly connection: SunoConnection;
+  /** A page of the person's Suno library (their search, else the newest). */
+  readonly library: (q: { readonly query?: string; readonly cursor?: string }) => Promise<SongPage | string>;
+  /** Pull one Suno song as a take of `promptId`: filed, measured and read; the filed take or the refusal. */
+  readonly pull: (clipId: string, promptId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string; readonly name: string } | string>;
+  /** Ask Suno's free reads of a pulled take again. */
+  readonly read: (takeId: string) => Promise<string | null>;
 };
 
 export type Variant = (props: VariantProps) => ReactNode;

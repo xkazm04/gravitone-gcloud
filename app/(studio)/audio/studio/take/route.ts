@@ -8,14 +8,10 @@
 // far below a song). Access-gated, not money: measuring is local and nothing here spends. The studio
 // never fetches from Suno - these bytes are the ones the person chose to spend a metered download on.
 //
-// MEASURED BEFORE FILED. The bytes go to a temp file, the sidecar's `analyze` (librosa's tempo and key,
-// measure's loudness) reads them, and only an analysed file becomes a take: a file that claims to be
-// audio and does not decode is refused in the decoder's own words with no take created, as is
-// anything that is not audio or is over the store's cap (lib/sound/takes.ts MAX_UPLOAD_BYTES).
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
+// MEASURED BEFORE FILED (lib/sound/suno/measure.ts, the step a pulled take shares): the sidecar's
+// `analyze` reads the bytes and only an analysed file becomes a take - a file that claims to be audio
+// and does not decode is refused in the decoder's own words with no take created, as is anything that
+// is not audio or is over the store's cap (lib/sound/takes.ts MAX_UPLOAD_BYTES).
 import { z } from "zod";
 
 import type { StudioTakeFacts } from "@gt/domain/audio.suno";
@@ -25,9 +21,8 @@ import { parseAt } from "@gt/domain/door";
 import { AppError, err, errorMessage, ok, type Result } from "@gt/domain/errors";
 
 import { route } from "../../../../_server/route.ts";
-import { analyzeFile } from "../../../../../lib/audio/sidecar.ts";
 import { SoundError, soundFailure } from "../../../../../lib/sound/store.ts";
-import { fileSunoTake } from "../../../../../lib/sound/suno/facts.ts";
+import { measureAndFile } from "../../../../../lib/sound/suno/measure.ts";
 import { audioMime, MAX_UPLOAD_BYTES } from "../../../../../lib/sound/takes.ts";
 
 export const maxDuration = 60;
@@ -83,16 +78,6 @@ export const POST = route({ guard: "access", bodyCap: CAP, maxDuration }, async 
   if (!mime.ok) return mime;
   const name = f.name.slice(0, 255) || "take";
   const bytes = new Uint8Array(await f.arrayBuffer());
-  const dir = await mkdtemp(path.join(os.tmpdir(), "gt-studio-take-"));
-  try {
-    // The name's own extension, so a decoder that sniffs by name reads it as what it is.
-    const tmp = path.join(dir, `upload${path.extname(name).toLowerCase().replace(/[^.a-z0-9]/g, "").slice(0, 6)}`);
-    await writeFile(tmp, bytes);
-    const analysis = await analyzeFile(tmp);
-    if (!analysis.ok) return err(analysis.error.code, `${name} could not be measured: ${analysis.error.message}`);
-    const filed = await fileSunoTake({ bytes, mime: mime.value, name }, p.value, analysis.value);
-    return filed.ok ? ok({ takeId: filed.value.takeId, facts: filed.value }) : filed;
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  const filed = await measureAndFile({ bytes, mime: mime.value, name }, p.value);
+  return filed.ok ? ok({ takeId: filed.value.takeId, facts: filed.value }) : filed;
 });

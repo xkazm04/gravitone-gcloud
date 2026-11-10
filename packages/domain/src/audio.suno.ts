@@ -69,6 +69,48 @@ export type StudioMeasured = {
   readonly lra?: number;
 };
 
+/** Where a read of a take came from: this server's sidecar, Suno's own free reads, or the priced Gemini listen. */
+export const READ_SOURCES = ["measured", "suno", "gemini"] as const;
+export type ReadSource = (typeof READ_SOURCES)[number];
+
+export const SUNO_READ_STATUS = ["complete", "processing", "unavailable"] as const;
+export type SunoReadStatus = (typeof SUNO_READ_STATUS)[number];
+
+/**
+ * Suno's own free reads of a linked take (spark suno-api): `analysis` (tempo, key, meter, A/B/C
+ * sections, terms, labels), `lyrics-alignment` (its word count) and a `listen` answer kept verbatim,
+ * whose trailing json block fills genre / mood / vocals. The precise reference the measurement and the
+ * Gemini read are compared against. `processing`: a part was still out when the press stopped
+ * waiting, so a second press finishes it (`listenId` is the question it keeps polling).
+ */
+export type SunoRead = {
+  readonly at: string;
+  readonly status: SunoReadStatus;
+  readonly bpm?: number;
+  readonly key?: string;
+  readonly timeSignature?: number;
+  readonly sections: readonly { readonly label: string; readonly startS: number; readonly endS: number }[];
+  readonly terms: readonly string[];
+  readonly labels: readonly { readonly label: string; readonly p: number }[];
+  readonly answer?: string;
+  readonly genre?: readonly string[];
+  readonly mood?: readonly string[];
+  readonly vocals?: { readonly heard: boolean; readonly character?: string };
+  /** Words the lyric alignment placed; omitted when the alignment was unavailable (an instrumental). */
+  readonly words?: number;
+  readonly listenId?: string;
+};
+
+/** One song in the person's Suno library, as the pull picker lists it. */
+export type SunoSong = {
+  readonly id: string;
+  readonly title: string;
+  readonly status: string;
+  readonly durationS?: number;
+  readonly createdAt?: string;
+  readonly imageUrl?: string;
+};
+
 /** Everything Gravitone knows about one uploaded take; the page reads it by takeId, the agent never copies it. */
 export type StudioTakeFacts = {
   readonly takeId: string;
@@ -82,4 +124,8 @@ export type StudioTakeFacts = {
   readonly listened?: StudioListen;
   /** The quoted price of a listen, when the pricing table can say one; omitted = unpriced (Listen refuses). */
   readonly listenUsd?: number;
+  /** The Suno song this take was pulled from (absent: a file made elsewhere and uploaded). */
+  readonly sunoClipId?: string;
+  /** Suno's free reads of that song, after a pull or a "read" press. */
+  readonly suno?: SunoRead;
 };

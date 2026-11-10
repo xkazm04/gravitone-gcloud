@@ -215,6 +215,19 @@ export const FIXTURE_TAKES: Readonly<Record<string, StudioTakeFacts>> = {
       ],
     },
     listenUsd: 0.0062,
+    // Spark suno-api: pulled from the library, so Suno's free read stands beside the two others.
+    sunoClipId: "fb3b98c4-2c1e-4b8a-9d6f-3e0a1c7d5b21",
+    suno: {
+      at: "2026-10-28T18:02:10Z", status: "complete", bpm: 123.8, key: "D minor", timeSignature: 4,
+      sections: [
+        { label: "A", startS: 0, endS: 14.2 }, { label: "B", startS: 14.2, endS: 51.6 }, { label: "C", startS: 51.6, endS: 84.4 },
+        { label: "B", startS: 84.4, endS: 112.9 }, { label: "C", startS: 112.9, endS: 152.3 }, { label: "A", startS: 152.3, endS: 167.4 },
+      ],
+      terms: ["song", "female vocals", "synthesizer", "drum machine", "retro", "night"],
+      labels: [{ label: "genre:synthwave", p: 0.91 }, { label: "mood:melancholic", p: 0.74 }, { label: "genre:electronic", p: 0.68 }, { label: "vocals:female", p: 0.88 }],
+      answer: 'Synthwave with a breathy female vocal over an analog bass arpeggio and gated drums; the voice sits behind the pads.\n```json\n{"genre": ["synthwave"], "mood": ["nocturnal", "wistful"], "bpm": 124, "key": "D minor", "vocals": {"heard": true, "character": "breathy female, set back"}}\n```',
+      genre: ["synthwave"], mood: ["nocturnal", "wistful"], vocals: { heard: true, character: "breathy female, set back" }, words: 96,
+    },
   },
 };
 

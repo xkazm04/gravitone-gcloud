@@ -6,6 +6,10 @@
 // chose to spend one of the plan's downloads on. The words are the dock's own draft (`text`): this is
 // a row of the dock, never a second field. Send hands back exactly SunoHost.sendVerdict's shape; the
 // row resets when the send went and holds everything when it was refused (the host says why).
+//
+// Spark suno-api: beside the file, a take can come FROM SUNO (./SunoPicker.tsx, when the host passes
+// `suno`): pressing a song pulls it at once - filed, measured and read on the server - and the row
+// then carries that take as its attachment, by id, instead of a file.
 import { useRef, useState } from "react";
 
 import { VERDICT_OFF, type VerdictClip, type VerdictOff } from "@gt/domain/audio.suno";
@@ -15,9 +19,16 @@ import { Chip } from "../chip/Chip.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Seg } from "../seg/Seg.tsx";
 import { attachFault, fileSize, verdictOf, verdictText, type Verdict } from "./suno.ts";
+import { SunoPicker, type SunoPickerProps } from "./SunoPicker.tsx";
 import s from "./VerdictBar.module.css";
 
-export type VerdictSend = { readonly verdict: Verdict; readonly text: string; readonly file?: File; readonly clip?: "a" | "b" };
+export type VerdictSend = { readonly verdict: Verdict; readonly text: string; readonly file?: File; readonly clip?: "a" | "b"; readonly takeId?: string };
+
+/** The Suno library beside the file: the picker's reads, and the pull that files a song as this verdict's take. */
+export type VerdictSuno = Pick<SunoPickerProps, "connection" | "connectHref" | "library"> & {
+  /** Pull a song as the take of `clip`; resolve with the filed take, or the refusal in words. */
+  readonly pull: (clipId: string, clip?: "a" | "b") => Promise<{ readonly takeId: string; readonly name: string } | string>;
+};
 
 export type VerdictBarProps = {
   readonly promptId: string;
@@ -29,6 +40,8 @@ export type VerdictBarProps = {
   readonly onSend: (v: VerdictSend) => Promise<string | null>;
   /** /kit only: a file drawn as attached. */
   readonly seedFile?: { readonly name: string; readonly size: number };
+  /** Spark suno-api: a take from the person's Suno library, beside the file. */
+  readonly suno?: VerdictSuno;
 };
 
 const CLIPS = [
@@ -37,11 +50,12 @@ const CLIPS = [
   { value: "both", label: "both" },
 ] as const;
 
-export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile }: VerdictBarProps) {
+export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile, suno }: VerdictBarProps) {
   const [clip, setClip] = useState<VerdictClip>("a");
   const [keep, setKeep] = useState<boolean | undefined>(undefined);
   const [off, setOff] = useState<ReadonlySet<VerdictOff>>(new Set());
   const [file, setFile] = useState<File | null>(null);
+  const [pulled, setPulled] = useState<{ readonly takeId: string; readonly name: string } | null>(null);
   const [fault, setFault] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [seeded, setSeeded] = useState(seedFile !== undefined);
@@ -60,18 +74,30 @@ export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile 
     const why = attachFault(f);
     setFault(why);
     setFile(why === null ? f : null);
+    if (why === null) setPulled(null);
+  };
+  const pullSong = async (clipId: string): Promise<string | null> => {
+    if (suno === undefined) return null;
+    const r = await suno.pull(clipId, clip === "both" ? undefined : clip);
+    if (typeof r === "string") return r;
+    setPulled(r);
+    setFile(null);
+    setFault(null);
+    return null;
   };
   const send = (): void => {
     if (disabled || busy) return;
     const verdict = verdictOf(promptId, clip, keep, off);
     const take = clip === "both" ? {} : { clip };
     setBusy(true);
-    void onSend({ verdict, text: verdictText(verdict, text), ...(file !== null ? { file, ...take } : {}) }).then((reason) => {
+    const attached = file !== null ? { file, ...take } : pulled !== null ? { takeId: pulled.takeId, ...take } : {};
+    void onSend({ verdict, text: verdictText(verdict, text), ...attached }).then((reason) => {
       setBusy(false);
       if (reason !== null) return;
       setKeep(undefined);
       setOff(new Set());
       setFile(null);
+      setPulled(null);
       setFault(null);
     });
   };
@@ -92,8 +118,18 @@ export function VerdictBar({ promptId, text, disabled = false, onSend, seedFile 
       </span>
       <span className={s.file}>
         <input ref={picker} className={s.picker} type="file" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg" tabIndex={-1} aria-hidden="true" onChange={(e) => pick(e.currentTarget.files?.[0])} />
-        {shown === null ? (
-          <Button label="attach take" size="sm" onPress={() => picker.current?.click()} />
+        {pulled !== null ? (
+          <>
+            <Chip label={pulled.name} value="suno" tone="violet" casing="lower" />
+            <button type="button" className={s.remove} aria-label={`remove ${pulled.name}`} onClick={() => setPulled(null)}>
+              <span aria-hidden="true">{"×"}</span>
+            </button>
+          </>
+        ) : shown === null ? (
+          <>
+            <Button label="attach take" size="sm" onPress={() => picker.current?.click()} />
+            {suno !== undefined && <SunoPicker connection={suno.connection} connectHref={suno.connectHref} library={suno.library} onPull={(song) => pullSong(song.id)} disabled={disabled || busy} />}
+          </>
         ) : (
           <>
             <Chip label={shown.name} value={fileSize(shown.size)} tone="cyan" casing="lower" />
