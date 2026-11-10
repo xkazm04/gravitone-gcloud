@@ -1,0 +1,134 @@
+{
+ "schema": "conform-run/1",
+ "worker": "14b16eb6-a3a3-4128-aa01-83ae7a62013f",
+ "subject": "review-iteration-loops",
+ "evaluatedAt": "2026-11-10T23:27:10.751654+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:204 The staged recalibration surface shows only the plan's refusals. The engine records contradicting notes with their applied winner (lib/script/versions.ts Conflict {kinds, applied, why}), but scriptView.ts:106 drops them and no explicitly-unchanged list exists, so the creator is never told which note lost: the 'silent loser'.",
+   "techniques": [
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:204 Refusals are drawn with card, kind and why, and they come before apply (the staged version waits for accept). Two of the three output disciplines are missing on the surface, though: conflicts with a named winner (computed in lib/script/recalibrate.ts:150 but not carried into the staged view) and an explicitly-unchanged list."
+    },
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:77 Closed NoteKind vocabulary (more-focus, less-focus, descope, move-earlier, move-later, custom; partView.data.ts:223) is offered per card. Caveat: line 78 filters out 'custom', so this surface offers no free-text escape hatch."
+    },
+    {
+     "technique": "scope-vs-preference-signals",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:189 A collision between the Research scope decision and a script that still speaks a descoped card is surfaced, not silently resolved."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:196 A recalibration lands as a staged version that is re-gated before accept. Accepting over a blocking gate is recorded as an override. The engine emits retime/rewrite/cut/insert ops (lib/script/editPlan.ts:20)."
+    },
+    {
+     "technique": "follow-up-that-can-kill-a-fact",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:147 Follow-up results render typed effects decided one by one (apply/reject). The effect union includes kills and downgrades (lib/research/followup.ts:21-22), the verdict includes weakened, and the status 'unanswered' is terminal (line 137)."
+    },
+    {
+     "technique": "attribution-share-accounting",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:63 Per-card seconds are the server's split (lib/script/impact.ts:129 splitAcross, largest remainder), not a recount. All three usage states (spoken, cut, unused) are drawn, so absence is shown as a state."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Frames.tsx:212 The direction pass arrives as a proposal whose refusals, unmentioned units and human-layer conflicts are each counted on the surface. Accept defaults to not overwriting human layers, so reviewed work is kept unless the operator explicitly overrides it.",
+   "techniques": [
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Frames.tsx:212 Refused units are counted and FramesInspector shows each refusal in the validator's words. 'unmentioned' (line 213) separates untouched units from considered ones, and 'human layers' (line 211) surfaces conflicts."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Frames.tsx:214 A proposal applies without overwriting human-authored layers, and 'accept over human' is a separate, explicit act. Plates whose source moved read as 'stale' (line 41), so old verdicts are not carried forward."
+    },
+    {
+     "technique": "partial-regeneration-seams",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:96 A note is bound to one timed section, and revise-take holds every other section at `keep` (packages/producers/src/score/define.ts:12-13). That is kept-by-reference with declared adherence. Not traced: a seam-specific gate on the revised take; only the per-take accept chip is visible."
+    },
+    {
+     "technique": "critique-carries-its-fix",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:5 The finish checks are read by the operator, and each row opens the part that clears it. The technique excludes reviews a person reads directly."
+    },
+    {
+     "technique": "anchored-variation-slate",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:192 An alternative re-renders an already-plated unit's settled subject (lib/producers/frames.ts:302). That is execution quality on a settled brief, which the technique's 'when not to use' excludes; it is not a divergence slate."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "review-iteration-loops",
+   "context": "domain-audio-cover-yue2",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "review-iteration-loops",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T23:27:10.751654+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "attribution-share-accounting",
+    "edit-plan-over-regeneration",
+    "follow-up-that-can-kill-a-fact",
+    "note-taxonomy-focus-scope-order",
+    "refusal-as-valid-outcome",
+    "scope-vs-preference-signals"
+   ],
+   "deviations": 1,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T23:27:10.751654+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "anchored-variation-slate",
+    "critique-carries-its-fix",
+    "edit-plan-over-regeneration",
+    "partial-regeneration-seams",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
