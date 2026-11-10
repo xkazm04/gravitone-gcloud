@@ -111,7 +111,8 @@
   "part-motion-plates": [],
   "part-research-beats": [],
   "part-research-notebook": [],
-  "part-score-spotting": [
+  "part-score-spotting": [],
+  "part-score-spotting-empty": [
     "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
     "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
     "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
@@ -132,14 +133,7 @@
   "studio-motion": [],
   "studio-outputs": [],
   "studio-research": [],
-  "studio-score": [
-    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "mark div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text div.Part-module__y5rqKG__body > section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text section.Part-module__y5rqKG__primary > div.Cut-module__woSsmW__bar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap",
-    "text section.Part-module__y5rqKG__rail > div.Cut-module__woSsmW__railHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap"
-  ],
+  "studio-score": [],
   "studio-script": [],
   "wizard-discipline": [],
   "wizard-name": [],

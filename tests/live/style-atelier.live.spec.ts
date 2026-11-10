@@ -52,10 +52,8 @@ async function settledFindings(page: Page): Promise<string[]> {
   return [...new Set((await sample()).filter((k) => first.has(k)))].sort();
 }
 
-test("an unknown style is the studio's not-found, never an empty atelier", async ({ page }) => {
-  // 200 since spark fable-ten F: the atelier's loading frame streams before notFound() runs.
-  await page.goto(at("no-such-style"));
-  await expect(page.locator('[data-state="not-found"]')).toBeVisible();
+test("an unknown style is a 404, never an empty atelier", async ({ page }) => {
+  expect((await page.request.get(at("no-such-style"))).status()).toBe(404);
 });
 
 test("adopt -> generate (dry) -> judge -> lock, driven end to end", async ({ page }) => {

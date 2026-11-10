@@ -86,8 +86,11 @@ test("the cut lays the same cue on its lanes, nudges a block by the keys, and ex
   await expect(page.getByRole("button", { name: /^undo \+50ms/ })).toBeVisible();
   await page.keyboard.press("Backspace");
   await expect(page.getByRole("button", { name: /^undo/ })).toHaveCount(0);
+  // The fixture's finished film already holds an export (spark fable-ten E): this one is one more row.
+  const exported = page.getByText(/^animatic \d/);
+  const before = await exported.count();
   await confirm(page, /export animatic|export again/);
-  await expect(page.getByText(/^animatic \d/)).toBeVisible();
+  await expect(exported).toHaveCount(before + 1);
 });
 
 test("the cut plays: the timecode and the needle follow the clock, and pause holds them", async ({ page }) => {
