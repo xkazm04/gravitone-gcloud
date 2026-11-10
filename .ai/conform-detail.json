@@ -22875,6 +22875,41 @@
       "evaluatedTs": "2026-11-10T22:54:55.116Z",
       "worker": "cab1c8c8-4255-41ef-90b3-29bcfddf03de",
       "techniques": []
+    },
+    "1eb57510-dcfa-4549-97ed-56f3f97519ec/agent-browser-control": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "agent-browser-control",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T22:58:21.645Z",
+      "worker": "ecb6fba6-a338-45e2-8ef2-2306f07b4b92",
+      "techniques": [
+        {
+          "technique": "references-over-selectors",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/selectors.ts:1 Engineers maintain the selectors in code. No agent composes or receives element references."
+        },
+        {
+          "technique": "persistent-browser-daemon",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/browser.ts:6 The code attaches to the operator's long-lived Chrome profile. There is no per-workspace agent daemon or state file, and none is needed."
+        },
+        {
+          "technique": "agent-actionable-errors",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/studio/driver.ts:29 Errors go to an operator or a pipeline. No agent reads them as recovery instructions."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/imaging/studio/selectors.ts:4 The Leonardo Studio code is a hand-scripted Playwright/CDP automation: a human keeps a fixed selector table (selectors.ts), and studioGenerate/studioRecon (driver.ts) call it from code. No agent or LLM gets this browser as a command tool, so the subject's precondition (a coding/QA agent driving a browser through a command surface) does not hold. I searched lib/imaging/{providers,studio,video} for ariaSnapshot, mcp, tunnel, allowlist and getByRole and got no hits. Generic words like 'snapshot', 'daemon' and 'agent' do appear, but only as budget snapshots, the Ollama daemon and the agy vendor CLI.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by ecb6fba6-a338-45e2-8ef2-2306f07b4b92"
+        }
+      ]
     }
   }
 }

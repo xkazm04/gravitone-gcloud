@@ -10455,14 +10455,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/imaging/studio/selectors.ts:4 The Leonardo Studio code is a hand-scripted Playwright/CDP automation: a human keeps a fixed selector table (selectors.ts), and studioGenerate/studioRecon (driver.ts) call it from code. No agent or LLM gets this browser as a command tool, so the subject's precondition (a coding/QA agent driving a browser through a command surface) does not hold. I searched lib/imaging/{providers,studio,video} for ariaSnapshot, mcp, tunnel, allowlist and getByRole and got no hits. Generic words like 'snapshot', 'daemon' and 'agent' do appear, but only as budget snapshots, the Ollama daemon and the agy vendor CLI.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:a5e059a866a49108",
-          "evaluatedRevision": 5,
+          "evidence": "lib/imaging/studio/browser.ts:7 The Leonardo Studio code is hand-scripted Playwright over CDP: driver.ts fills the form from a fixed selector table and is called by producers and pipelines (scoutScene, music-video, keyframes). No agent is ever handed the browser as a command tool, so the subject's precondition (an agent driving a browser through a command surface) does not hold. An rg -i for ariaSnapshot, getByRole, mcp and tunnel over lib/imaging/{providers,studio,video} returned no hits, and nothing in app/_server/mcp references the studio browser.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:13f62133e12a86a7",
+          "evaluatedRevision": 6,
           "source": "renamed",
           "renamedFrom": "60361278-9fbe-43c5-add7-454ed78ef0f5",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "music-video-production",
