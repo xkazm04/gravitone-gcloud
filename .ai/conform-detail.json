@@ -22418,6 +22418,127 @@
           "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 This is an operator re-route between server-computed options, not a vendor refusal hop. The UI calls no vendor."
         }
       ]
+    },
+    "f13ec7fd-bc87-4556-bbbe-e46b4cd046cd/error-handling": {
+      "context": "notebook-contract-validation",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:54:31.910Z",
+      "worker": "7811c3b7-80d9-4372-8287-7a0a3f4d7cb1",
+      "techniques": [
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/graph.ts:72 The typed GraphIssue kind is turned into a message prefix at the boundary and does not survive as a field."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "deviation",
+          "evidence": "lib/notebook/corpus.ts:54 The gate classifies findings by regex over prose (`[kind]` prefix, digit and quote stripping), not by a structured field."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/failure.ts:17 Findings carry a machine `path` that the repair turn branches on; the route maps the failure to the existing `bad-response` code instead of adding a second vocabulary."
+        },
+        {
+          "technique": "parse-failure-keeps-identity",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/validate.ts:112 A notebook is one document, so the whole document is refused, with every finding addressed by its path and the draft kept."
+        },
+        {
+          "technique": "error-doors",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/corpus.ts:100 Only the expected refusal is absorbed into a verdict; anything else is rethrown, not swallowed."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "conformant",
+          "evidence": "lib/notebook/shape.ts:162 A probe that does not compile becomes a path-addressed finding that carries the thrown message; it is not dropped."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it builds from message text with regexes (`ruleOf`), even though graph findings had a typed `GraphIssueKind` when they were created. Rewording any rule therefore changes approved verdicts, and one cause can split across several wordings.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 7811c3b7-80d9-4372-8287-7a0a3f4d7cb1"
+        }
+      ]
+    },
+    "ea68a117-e84a-4b1b-bff1-c49133e939a9/error-handling": {
+      "context": "domain-decision-board-core",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:54:31.910Z",
+      "worker": "7811c3b7-80d9-4372-8287-7a0a3f4d7cb1",
+      "techniques": [
+        {
+          "technique": "structured-propagation",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/door.ts:52 The field path, which is category-specific data, is flattened into the message instead of travelling as a field."
+        },
+        {
+          "technique": "taxonomy-design",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:5 A closed set of eight codes, each documented by the consumer that branches on it (retry, signing in again, the budget gate)."
+        },
+        {
+          "technique": "reclassification-is-not-repair",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/errors.ts:20 `internal` is both the catch-all ('unclassified') and the impossible class ('a bug'), which gives up the zero-rate detector the technique keeps them apart for."
+        },
+        {
+          "technique": "exit-contract-is-a-taxonomy-projection",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:85 The HTTP status projection is an exhaustive Record over the code union, so a new code without a status does not compile."
+        },
+        {
+          "technique": "consumer-decides-error-shape",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/errors.ts:77 The closed code crosses the wire as a value that clients branch on."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/domain/src/door.ts:52 The schema door keeps only the first zod issue and writes its field path into the message string. `detail` holds the door name, not the field. The forms that errors.ts says 'show field-level detail' can only get the failing field by parsing prose, and all other issues are lost.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 7811c3b7-80d9-4372-8287-7a0a3f4d7cb1"
+        }
+      ]
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/error-handling": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "error-handling",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:54:31.910Z",
+      "worker": "7811c3b7-80d9-4372-8287-7a0a3f4d7cb1",
+      "techniques": [
+        {
+          "technique": "crash-capture",
+          "verdict": "deviation",
+          "evidence": "app/error.tsx:61 There are no breadcrumbs and no local persistence before shipping; the console is the weakest door, and the code comment calls it 'a door'."
+        },
+        {
+          "technique": "error-doors",
+          "verdict": "conformant",
+          "evidence": "lib/identityEviction.ts:302 A failure during eviction goes to the shared storage-trouble channel instead of being dropped or thrown into a caller that is not there."
+        },
+        {
+          "technique": "swallowed-error-prevention",
+          "verdict": "conformant",
+          "evidence": "lib/useRemembered.ts:24 The storage-fallback catches in this file are declared as intentional drops of convenience state; identityEviction.ts:395 likewise declares its close() drop."
+        }
+      ]
     }
   }
 }

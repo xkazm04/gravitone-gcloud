@@ -1944,7 +1944,11 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/error.tsx:61 Both last-resort boundaries (error.tsx, and global-error.tsx:149) send a render crash only to the browser console, and a search of app/ and lib/ found no instrumentation file and no unhandledrejection or error listener, so client crashes are never sanitized, persisted or shipped to the operator.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18
         },
         {
           "subject": "embedded-preview",
@@ -7513,14 +7517,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/domain/src/door.ts:52 The schema door keeps only the first zod issue and writes its field path into the message string. `detail` holds the door name, not the field. The forms that errors.ts says 'show field-level detail' can only get the failing field by parsing prose, and all other issues are lost.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
-          "evaluatedRevision": 17,
+          "evidence": "packages/domain/src/door.ts:68 The schema door keeps only the first zod issue and writes its field path into the message string while `detail` holds the door name, so the forms that errors.ts says show field-level detail can only get the field by parsing prose, and every other issue is lost.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "3610b8be-4772-464f-b2f8-dd3a38fef27f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "generated-speech-acceptance",
@@ -15044,14 +15047,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it builds from message text with regexes (`ruleOf`), even though graph findings had a typed `GraphIssueKind` when they were created. Rewording any rule therefore changes approved verdicts, and one cause can split across several wordings.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
-          "evaluatedRevision": 17,
+          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it rebuilds from the finding sentences with regexes, because graph.ts writes the typed GraphIssue kind into the `rule` prose and NotebookFinding has no kind field; rewording a rule changes approved verdicts, and one cause can split across several wordings.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
