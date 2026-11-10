@@ -54,7 +54,7 @@ import type { AudioAnalysis } from "../../lib/audio/sidecar.ts";
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { factsOf, factsOfSunoClip, fileSunoTake, saveSunoRead, sunoFactsPath } from "../../lib/sound/suno/facts.ts";
 import { measureAndFile } from "../../lib/sound/suno/measure.ts";
-import { libraryPage, pulledName, pullSunoTake, type PullDeps } from "../../lib/sound/suno/pull.ts";
+import { audioExtOf, libraryPage, pulledName, pullSunoTake, type PullDeps } from "../../lib/sound/suno/pull.ts";
 import { CAP_MS, POLL_MS, readSunoTake, SUNO_LISTEN_QUESTION, type SunoReadDeps } from "../../lib/sound/suno/sunoRead.ts";
 import type { Alignment, Analysis, Clip, Listen } from "../../lib/suno/api/wire.ts";
 
@@ -203,6 +203,14 @@ describe("pulling a take from Suno", () => {
     expect(pulledName('Neon: Overpass / "live"', CLIP)).toBe("Neon Overpass live.mp3");
     expect(pulledName(null, CLIP)).toBe(`${CLIP}.mp3`);
     expect(pulledName("   ", CLIP)).toBe(`${CLIP}.mp3`);
+    expect(pulledName("Drift", CLIP, ".m4a")).toBe("Drift.m4a");
+  });
+
+  it("names the container its URL names: the profile's CloudFront file is an m4a, not an mp3", () => {
+    expect(audioExtOf(`https://d2lwuy8qc234o3.cloudfront.net/1/clip/${CLIP}.m4a`)).toBe(".m4a");
+    expect(audioExtOf("https://cdn.example/a.MP3?sig=1")).toBe(".mp3");
+    expect(audioExtOf("https://cdn.example/a.bin")).toBe(".mp3");
+    expect(audioExtOf("not a url")).toBe(".mp3");
   });
 
   it("the upload route measures through the same step", () => {

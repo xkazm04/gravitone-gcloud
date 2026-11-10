@@ -38,10 +38,26 @@ export type PullDeps = {
 /** The pulled take, and the read's refusal in Suno's words when the read did not go (the take is filed either way). */
 export type Pulled = { readonly facts: StudioTakeFacts; readonly readRefused?: string };
 
+/** The audio's own container, read off its URL: the profile's CloudFront file is an `.m4a` (Opus in
+ *  MP4, measured 2026-11-10), and the sidecar's decoder handed it as an mp3 wrote nothing. `.mp3`
+ *  when the URL names no known audio extension. */
+export const AUDIO_EXT: Readonly<Record<string, string>> = { ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".ogg": "audio/ogg", ".flac": "audio/flac", ".aac": "audio/aac", ".webm": "audio/webm" };
+
+export function audioExtOf(url: string): string {
+  let p = url;
+  try {
+    p = new URL(url).pathname;
+  } catch {
+    // not a URL: read the string as a path
+  }
+  const ext = (/\.[a-z0-9]{2,5}$/i.exec(p)?.[0] ?? "").toLowerCase();
+  return ext in AUDIO_EXT ? ext : ".mp3";
+}
+
 /** A file name from the song's title: what a person would have saved it as. */
-export function pulledName(title: string | null | undefined, clipId: string): string {
+export function pulledName(title: string | null | undefined, clipId: string, ext = ".mp3"): string {
   const t = (title ?? "").replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
-  return `${t === "" ? clipId : t}.mp3`;
+  return `${t === "" ? clipId : t}${ext}`;
 }
 
 export async function pullSunoTake(input: PullInput, d: PullDeps): Promise<Result<Pulled>> {
@@ -70,7 +86,8 @@ export async function pullSunoTake(input: PullInput, d: PullDeps): Promise<Resul
   }
 
   const from: TakeFrom = { session: input.session, sunoClipId: input.clipId, ...(input.promptId !== undefined ? { promptId: input.promptId } : {}), ...(input.clip !== undefined ? { clip: input.clip } : {}) };
-  const filed = await d.measureAndFile({ bytes, mime: "audio/mpeg", name: pulledName(clip.value.title, input.clipId) }, from);
+  const ext = audioExtOf(url);
+  const filed = await d.measureAndFile({ bytes, mime: AUDIO_EXT[ext] ?? "audio/mpeg", name: pulledName(clip.value.title, input.clipId, ext) }, from);
   if (!filed.ok) return filed;
   const read = await d.read(filed.value.takeId);
   return read.ok ? ok({ facts: read.value }) : ok({ facts: filed.value, readRefused: read.error.message });

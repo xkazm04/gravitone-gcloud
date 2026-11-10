@@ -96,6 +96,8 @@ const DELIBERATELY_PUBLIC: Record<string, string> = {};
 const PUBLIC_CREDENTIAL_DOORS: Record<string, string> = {
   "app/api/session/route.ts":
     "the bridge from a Firebase sign-in to the session cookie: nobody holds a session before it, so it cannot require one. It guards itself - writes only from this origin, and a token is verified before any cookie is set",
+  "app/api/suno/callback/route.ts":
+    "Suno's OAuth redirect: the browser comes back from suno.com carrying no studio credential, so it cannot require one. The binding is the single-use, ten-minute state minted behind the access guard by /api/suno/connect - an unknown state is refused before any network call - and it spends nothing",
 };
 const isPublic = (rel: string): boolean => rel in DELIBERATELY_PUBLIC || rel in PUBLIC_CREDENTIAL_DOORS;
 
