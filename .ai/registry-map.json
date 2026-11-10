@@ -9173,12 +9173,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
-          "evaluatedAt": "2026-11-05",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that names no decider is logged as a human's: a PUT, a PATCH without `by`, and the commit's own auto-rejects (commitPlan.ts:80 mints `{verdict:\"reject\"}` with no `by`, then replaceVerdictMapHeld passes `undefined`). humanKeep then counts any keep without `by:\"model\"` as a vote toward `proven`, the state adoptionDraft/adoptInStore admit, so admission is still reachable through an unmarked default and not only through an authenticated human decision.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "trust-base",
@@ -22850,7 +22849,11 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/board/boardGate.ts:110 Every revised write (patch, undo, pick, return) answers the kernel's stale-base conflict by re-reading and sending the same act again on the new revision, without the human seeing what moved. A same-key verdict another tab or agent made in between is overwritten, and because the kernel's planUndo (packages/kernel/src/decision/core.ts:125) takes back the newest act whoever made it, a stale undo can reverse someone else's decision.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "batch-undo-commit-window",

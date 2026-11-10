@@ -16107,42 +16107,63 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-11-05",
-      "evaluatedTs": "2026-11-05T23:06:00.375Z",
-      "worker": "efea3952-9811-4614-ab1c-e7239ae4c675",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:27:21.696Z",
+      "worker": "5d19fdf9-9be3-43e7-9a3d-499d0b7108ff",
       "techniques": [
-        {
-          "technique": "truncated-verdict-space",
-          "verdict": "deviation",
-          "evidence": "lib/foundry/commitPlan.ts:37 The intent is truncation: a model keep is evidence, never a vote. But only an explicit by:'model' is excluded. An absent `by` (kept for legacy rows) admits, which is the 'default that degrades to open' the technique forbids."
-        },
         {
           "technique": "decision-records",
           "verdict": "deviation",
-          "evidence": "lib/foundry/verdictLog.ts:62 The log is append-only and revisioned, which is good. But 'who' is a caller-declared class ('human' | 'model') plus a free-text surface, not an authenticated decider, and the record does not store what was shown."
+          "evidence": "lib/foundry/verdictLog.ts:172 The `who` field defaults to human, so the append-only log records the commit's auto-rejects and unattributed writes as human verdicts that no one made."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/commitPlan.ts:37 Only an explicit `model` keep is kept out of the admitting count. An absent `by` (legacy or unattributed) counts as a human vote toward `proven`, and `proven` gates adoption into the Library (adopt.ts:229)."
+        },
+        {
+          "technique": "handoff-is-a-declared-door",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/verdictLog.ts:241 Who decided is read from the request body as a claim, not resolved from an authenticated principal, so the sender of a write chooses whether it counts as a human's."
         },
         {
           "technique": "gate-state-machines",
           "verdict": "conformant",
-          "evidence": "lib/foundry/adopt.ts:230 The executor door refuses anything but the recorded proven state. A committed run refuses further verdict writes (store.ts:167)."
+          "evidence": "lib/foundry/verdictLog.ts:202 A stale base is refused with a 409 that carries the current revision, never merged. A committed run refuses further writes (guarded/committed, store.ts:274)."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/verdictLog.ts:132 A damaged verdicts.json is a loud 503 refusal, not read as an empty, undecided map."
         },
         {
           "technique": "resume-after-decision",
           "verdict": "conformant",
-          "evidence": "lib/foundry/store.ts:293 The commit re-derives the plan inside the run and catalogue locks, and refuses with 409 when the state moved since the preview the operator read. The token parameter is optional, but the only production caller (lib/decision/v1/sources/forge.ts:396) passes it."
+          "evidence": "lib/foundry/store.ts:293 The commit re-derives the plan inside the run and catalogue locks, and refuses with 409 when the state moved since the preview the operator read. The token parameter is optional, but the only production caller (lib/decision/v1/sources/forge.ts:396) passes it.",
+          "carriedFrom": "2026-11-05"
         },
         {
           "technique": "review-queues",
           "verdict": "conformant",
-          "evidence": "lib/foundry/verdictLog.ts:202 Concurrent verdicts resolve to one winner. A stale base is a 409 carrying the current revision, never last-write-wins, and the log line is appended before the map is written (line 183)."
+          "evidence": "lib/foundry/verdictLog.ts:202 Concurrent verdicts resolve to one winner. A stale base is a 409 carrying the current revision, never last-write-wins, and the log line is appended before the map is written (line 183).",
+          "carriedFrom": "2026-11-05"
         },
         {
           "technique": "oracle-before-gate",
           "verdict": "conformant",
-          "evidence": "lib/foundry/calibration.ts:15 The module measures whether the grades shown to the reviewer predict human verdicts (AUC with a bootstrap CI). When the data is thin it reports the status 'insufficient' instead of a number."
+          "evidence": "lib/foundry/calibration.ts:15 The module measures whether the grades shown to the reviewer predict human verdicts (AUC with a bootstrap CI). When the data is thin it reports the status 'insufficient' instead of a number.",
+          "carriedFrom": "2026-11-05"
         }
       ],
-      "registryProposal": "truncated-verdict-space could name the legacy-compatibility case explicitly: when records older than the decider field must keep counting, the old rows should be migrated or stamped, rather than letting 'absent' read as the human class at write time too."
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
+          "evaluatedAt": "2026-11-05T23:06:00.375Z",
+          "worker": "efea3952-9811-4614-ab1c-e7239ae4c675",
+          "reason": "replaced by 5d19fdf9-9be3-43e7-9a3d-499d0b7108ff"
+        }
+      ]
     },
     "c027c39d-d8fd-4768-add8-4ecc5f206783/image-prompt-composition": {
       "context": "studio-local-store-and-projects",
@@ -22300,6 +22321,42 @@
           "evaluatedAt": "2026-10-18",
           "worker": null,
           "reason": "replaced by bdd56b14-b8c2-4d16-a5fe-c6960592810e"
+        }
+      ]
+    },
+    "dbc8253a-d568-4111-9b0b-a85e938e539c/hitl-approval": {
+      "context": "ui-board-state",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:27:21.696Z",
+      "worker": "5d19fdf9-9be3-43e7-9a3d-499d0b7108ff",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/board/boardGate.ts:110 The standard wants a verdict that lands on moved state refused loudly. Here the client turns the kernel's conflict into a silent re-base and resend."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/boardGate.ts:136 A commit is only sent with the token of the preview that was shown. Commit, unlike the other writes, is not retried on conflict."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/commit.ts:35 Undecided items block the commit instead of being recorded as rejects (the header contrasts this with v1's undecidedAs), so no verdict is minted that a human did not make."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/commit.ts:1 The commit state machine is data (idle→previewing→shown→committing) and requires the consequence on screen before confirming."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/cull.ts:16 The desk is complete by construction: an item whose row the presentation does not name is still drawn."
         }
       ]
     }
