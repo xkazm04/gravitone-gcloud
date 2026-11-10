@@ -15092,8 +15092,12 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "state": "not-applicable",
+          "priorNotApplicable": 7,
+          "evidence": "lib/notebook/validate.ts:110 This context is a validation door: it decides whether a model's finished answer is a notebook. It composes no hook chain, loads no contributed code, holds no loop state and stores no checkpoints. A recursive search of lib/notebook for plugin, checkpoint, middleware, lease, steer, subagent and interrupt found nothing. 'hook' appears once, in a comment in source.ts, which is not in this context.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
