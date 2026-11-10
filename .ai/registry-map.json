@@ -9950,7 +9950,11 @@
           "revision": 15,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:203 directionPlan.ts turns the scene-direction answer into typed EditOps. Rows are accepted one at a time, unaccepted frames are returned by reference, human layers are kept, existing fact bindings are carried forward, and refusals plus untouched beats are listed, so a pass cannot silently overwrite reviewed frames.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15
         },
         {
           "subject": "data-video-art-direction",

@@ -22793,6 +22793,42 @@
           "reason": "replaced by 1ff0e433-4bc3-4d99-82a9-e344eafcf55b"
         }
       ]
+    },
+    "76331df3-dc8c-4421-bb81-6c2bbe2f688b/review-iteration-loops": {
+      "context": "frames-picture-composition",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T22:27:31.791Z",
+      "worker": "dda10219-70ed-49c3-840f-d566f0a65cf4",
+      "techniques": [
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:203 acceptProposal applies ops only to accepted rows. Every other frame is the same object, and a checkpoint lets the whole pass or one row be reverted."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:47 The proposal lists unmentioned beats as explicitly untouched (`missing`), and refused beats carry `rejected` with a reason (line 42)."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:26 keepFactId carries the existing fact binding through a text rewrite, so the edit amends attribution instead of re-deriving it. Only this amendment rule was checked; share-splitting does not apply to frames."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "conformant",
+          "evidence": "lib/frames/directionPlan.ts:157 Human-touched layers are kept by reference while pass layers are replaced. A subject change marks the plate stale instead of re-rendering it (lines 144-147). No declared seam adherence or anchor-region rule was found."
+        },
+        {
+          "technique": "critique-carries-its-fix",
+          "verdict": "not-applicable",
+          "evidence": "lib/frames/shotReview.ts:66 Shot-list findings are rendered for a human who decides. No automated stage acts on them, so the fix-or-demote rule does not apply."
+        }
+      ]
     }
   }
 }
