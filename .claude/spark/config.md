@@ -83,6 +83,17 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   the LAST package, not only at the gate: an unregistered session's uncommitted edit appeared mid-build (2026-10-23) and
   blocked the ff; tell the operator then.
 
+- `the live lane (promoted 2026-11-10, fable-ten):` `npm run test:live` is NOT in `npm run verify`, takes ~30 minutes and
+  starts its own servers. A spark that changes a rendered route, a fixture or a status code runs it before landing, and
+  runs it on the BASE commit in the same worktree too (`git checkout --detach <base>`, run, switch back): in a bare
+  worktree (no `.env.local`, no v1 stores, no ffmpeg on PATH) 42 specs were red on base, and only the diff of the two
+  failure lists says what the spark did (3 fixed, 6 new - one of them the spark's only real regression, found by no
+  other gate). `LEGIBILITY_UPDATE=1 LEGIBILITY_SEED=1 LEGIBILITY_SCREENS=<ids>` re-records the baseline for named screens.
+- `worktree, the recipe that held for 11 builders (2026-11-10):` `git worktree add C:/t/<id>` then a real `npm ci` there
+  (~8 minutes): no junctions, `@gt/*` resolves to the worktree's own packages, `next dev`, `next build` and
+  `check:bundle` (`NEXT_DIST_DIR=.next-<name>`) all work with no root hack. Before removal: no outward links (count them),
+  `git worktree remove --force`, then unlink what is left and delete the folder.
+
 ## Rituals
 
 - Phase 0: read `.vault/active-runs.md`, add an entry under `## Active` with declared paths, in the
@@ -145,6 +156,21 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
   function is importable from lib/ (no-app-imports) - liveness rule 5 applies to adapters, not only to screens.
 - **New wire identifiers are grepped for collisions before the brief names them** (event types, packet/ledger source ids,
   env vars): `spend.*` and the ledger source `spend` were both taken (2026-10-24).
+- **Three more tree-wide probes, and two of them only see TRACKED files (promoted 2026-11-10, fable-ten: hook-coverage
+  bit twice in one spark and was already in the 2026-10-29 log):** a new `app/**/use*.ts(x)` hook needs a driver or a
+  reasoned row in `tests/golden-path/hook-coverage.probe.spec.ts` `EXEMPT`; nothing under `lib/`, `components/` or
+  `pipeline/` may import `app/` (`no-app-imports`, no allowlist - an instrument that calls the app's loaders lives under
+  `tests/`, as `tests/measure/read-cost.mts` does); and `open(..., "wx")` anywhere under `lib/` reads as a second lock
+  loop to `foundry-catalogue-tx` case 6 (write a temp file with `writeFile(tmp, bytes, { flag: "wx" })`). A new file is
+  invisible to the walkers until it is committed: run `npm test` AFTER the commit that adds it, not only before.
+- **The Board answers from the real side whatever `GRAVITONE_PRODUCE_SIDE` says** (`board/_port/port.ts` `SIDE = "real"`):
+  a brief never says "drive a Board packet on the fixture side". To drive one, generate the scout or mesh fixtures into a
+  scratch dir and point `SCOUT_STORE_DIR` / `MESH_STORE_DIR` at it (fable-ten package D did; the fourth time this cost a
+  builder its first hour - 2026-10-24 scout-storyboards was the first).
+- **No `loading.tsx` above a page that calls `notFound()`** (measured 2026-11-10): the frame starts the stream, the status
+  is 200 before the page runs, and anything that finds a record by asking for a 200 - the live lane's `seeded()` does -
+  takes the first id it tries. And with `prefetch={false}` (the header's links) a `loading.tsx` never shows on a click at
+  all: the navigation blocks until the route is ready. Feedback for a click lives on the link (`_shell/NavLink.tsx`).
 - Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`lib/<domain>/`, run by
   `lib/producers/`); a prompt change is a code change and its regression control
   (`pipeline/*-regression.mts`) runs.
@@ -185,7 +211,11 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-10-29 (audio-agent-studio, from hackathon audio-steer-1028): on an agent-driven product the operator keeps the BRAIN OUTSIDE the app (an MCP-driven Claude Code skill over an in-app LLM turn), trusts the LLM over hardcoded libraries and configuration forms ("composable UI"), fuses variants by axis (one variant's LAYOUT with another's COMPONENT STYLE), and chose one build over the recommended staged split once the design was clear. Offer "outside agent via MCP" and "fuse layout x style" as first-class options; recommend staging, but expect "all at once".
 - 2026-11-04 (yue2-song-lab): for a standalone lab the operator moved the whole spark INTO the existing product ("migrate into gravitone ... its audio page") at wave 1 - offer "migrate into <existing product>" as a first-class targeting option, beside a new app. Contest picks went against the recommendation twice (Knockout over Night shift; rights warn-only over refuse): recommend, but expect the bolder, simpler artefact. When resources block a verification, the operator ships on the evidence and moves the verification to another machine ("ship to main").
 
+- 2026-11-09 (fable-ten): asked for "N ideas, I triage, then build", the operator kept all ten, the risk-carrying half of a split idea included. Ask the triage as multi-selects per axis (functionality / visual / performance), split an idea whose halves carry different risk into two options with the condition written in, and expect every box ticked. A spark text that names the steps after triage ("you will create implementation plan and dispatch") is the go-gate: do not ask it again. (The Director's reading; the operator did not comment on the format.)
+
 ## Skill improvement log
+
+- 2026-11-10 (fable-ten, 11 Opus builders in 3 waves, one worktree, 16 commits) · A ten-idea spark held together because the WAVES were cut so no file had two owners at once (shared-file collisions: zero) and every Director-owned file was named in one RULES.md beside the briefs. Two bounces, same cause: the Director cut a scope by SURFACE and the fix lived one layer down (gate ids in the kernel's plan read; Firebase held by `_shell/session.ts`) - when a brief says "X is a door", list the file that computes X, not only the file that draws it. Resuming a finished builder with a wider scope cost a fraction of a new brief, twice. The populated fixture (package E) was the highest-leverage package: it exposed two real product bugs within the hour (the Cut monitor could not draw a non-blob plate; a false "needs a plate"), and every later capture depended on it - do the demo-data package FIRST in any visual spark. A builder that follows a registry standard over the brief (`?` -> Ctrl+/) is right; say in RULES.md that the standard wins. Scout numbers quoted in a brief as fact were wrong three times (97 literal durations was 34; 13 video sites was 14; 39 KB of Firebase was 33): label them "scout's count, verify". The live lane ran only at the end; it should have run at the first wave that touched a route.
 
 - 2026-08-27 · Next 16 refuses a second `next dev` while :3000 is held — builders must smoke via `NEXT_PUBLIC_LOCAL_MODE=1 npm run build && npx next start -p 31xx`; say so in every builder brief. Builder briefs must forbid `git stash` explicitly (one ran it). Bridge auth = header `x-personas-local-token`.
 - 2026-08-30 · A UI builder's smoke server outlived its "killed" report and held next-swc, blocking worktree deletion — before `git worktree remove`, check the builder's port is dead (`Get-NetTCPConnection -LocalPort 31xx`). Also: the harness shell cwd persists across calls — a merge run while cwd is inside the worktree merges the branch into itself ("Already up to date" is the tell); cd to the main checkout explicitly. `.ai/manifest.yaml` skills-list additions can ride a concurrent session's WIP commit when that session is already appending to the same list — say so in both ledgers.
