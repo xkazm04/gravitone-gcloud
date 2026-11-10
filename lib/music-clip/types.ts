@@ -57,6 +57,8 @@ export interface TimelineSection {
   cutsPerBar: number;
   /** The tag in the lyrics file this section was matched to, e.g. "Chorus". */
   lyricTag?: string;
+  /** Suno's own letter (A/B/C...) for the part that overlaps this section most. */
+  sunoLabel?: string;
 }
 
 export interface TimelineLyric {
@@ -67,7 +69,9 @@ export interface TimelineLyric {
   startS: number;
   endS: number;
   confidence: LyricConfidence;
-  source: "gemini+snap" | "section";
+  source: "gemini+snap" | "suno-align" | "section";
+  /** Suno's aligned words of the line (source "suno-align" only). */
+  words?: { text: string; startS: number; endS: number }[];
 }
 
 export interface TimelineVoice {
@@ -83,6 +87,8 @@ export interface TimelineV1 {
   track: TimelineTrack;
   fps: typeof CLIP_FPS;
   tempo: TimelineTempo;
+  /** The key Suno's analysis names, e.g. "B minor"; the local DSP does not hear one. */
+  key?: string;
   beats: TimelineBeat[];
   bands: TimelineBands;
   onsets: number[];
@@ -130,6 +136,8 @@ export interface AnalyzeInput {
   styleText: string;
   /** Dry: no vendor call; lyric times fall back to section-only. */
   dry: boolean;
+  /** The Suno song this track is: its analysis and alignment (free) take the grid. */
+  suno?: { id: string };
 }
 
 // ---- Board T (treatments): added 2026-10-30 after the operator found Board B

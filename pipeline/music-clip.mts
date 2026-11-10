@@ -3,14 +3,18 @@
 // model session authors the directions, the story and the hero page between
 // the verbs, and this CLI validates, assembles, photographs and remembers.
 //
-//   npx tsx pipeline/music-clip.mts analyze <dir> (--yes | --dry) [--audio <file>]
+//   npx tsx pipeline/music-clip.mts analyze <dir> (--yes | --dry) [--audio <file>] [--suno <id | https://suno.com/song/<id>>]
 //   npx tsx pipeline/music-clip.mts status <dir>
 //   npx tsx pipeline/music-clip.mts board a|t|b <dir> [--only <treatment-id>]
 //   npx tsx pipeline/music-clip.mts pick <dir> a:<id> | t:<id> | b:<id> | stack:<kernel|hyperframes|remotion>
 //   npx tsx pipeline/music-clip.mts pack <dir> [--audio <file>]
 //   npx tsx pipeline/music-clip.mts compare <dir>
 //
-//   analyze  beats, tempo, bands, sections and lyric times -> music-clip/timeline.json
+//   analyze  beats, tempo, bands, sections and lyric times -> music-clip/timeline.json.
+//            With --suno (or a suno.txt in the folder; the flag wins) Suno's own
+//            analysis and lyrics alignment take the beat grid, tempo, key, section
+//            boundaries and word times; the local DSP keeps the rest and stands
+//            wherever Suno does not answer
 //   status   the stage, the picks, which artifacts exist, the next verb
 //   board    validate the authored files, assemble board-a.html / board-t.html /
 //            board-b.html, and photograph them to board-<a|t|b>-sheet.png.
@@ -26,10 +30,15 @@
 //   Exit 0 ok · 1 refused or failed (one line saying what to do) · 2 usage, or
 //   analyze asked to spend without --yes/--dry.
 //
-// SPEND: the only vendor is Gemini (lyric line times), and only `analyze --yes`
-// calls it. With neither flag, analyze prints what it would do and stops; it
-// does not decide for the operator. GOOGLE_AI_API_KEY comes from the
-// environment or .env.local at the repo root and is never printed.
+// SPEND: the only paid vendor is Gemini (lyric line times), and only `analyze
+// --yes` calls it - and only when Suno gave no word timings. Suno's analysis and
+// lyrics alignment are free: they need no receipt, run only with --yes (--dry
+// makes no call of any kind), and need a connected Suno account (pipeline/
+// suno-api.mts); without one analyze warns and stands on the local grid. With
+// neither flag, analyze prints what it would do and stops; it does not decide
+// for the operator. GOOGLE_AI_API_KEY comes from the environment or .env.local
+// at the repo root and is never printed; with a Suno song named it is not
+// required up front.
 //
 // WRITES: only under <dir>/music-clip/ (lib/music-clip/folder.ts clipPath).
 // It opens no store; nothing here reaches foundry-out.
@@ -50,7 +59,9 @@ function valueFlag(list: string[], name: string): [string | undefined, string[]]
   return at >= 0 ? [list[at + 1], list.filter((_, i) => i !== at && i !== at + 1)] : [undefined, list];
 }
 const [AUDIO, rest2] = valueFlag(rest, "--audio");
-const [ONLY, args] = valueFlag(rest2, "--only");
+const [ONLY, rest3] = valueFlag(rest2, "--only");
+const SUNO_AT = rest3.indexOf("--suno");
+const [SUNO, args] = valueFlag(rest3, "--suno");
 const cmd = args[0];
 
 const emit = (v: unknown) => process.stdout.write(`${JSON.stringify(v)}\n`);
@@ -60,7 +71,7 @@ function usage(msg: string): never {
   if (JSON_OUT) emit({ ok: false, error: msg, usage: true });
   else {
     console.error(`music-clip: ${msg}`);
-    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board t|board b|pick|pack|compare|shots> <dir> [--json]");
+    console.error("usage: npx tsx pipeline/music-clip.mts <analyze|status|board a|board t|board b|pick|pack|compare|shots> <dir> [--json] [--suno <id|url>]");
   }
   process.exit(2);
 }
@@ -96,10 +107,14 @@ const ARTIFACTS = [
 async function main(): Promise<void> {
   if (cmd === "analyze") {
     const dir = dirArg(1);
+    if (SUNO_AT >= 0 && (SUNO === undefined || SUNO.startsWith("--"))) usage("--suno needs a Suno song id or https://suno.com/song/<id>");
     if (YES) loadKey();
-    if (YES && !process.env["GOOGLE_AI_API_KEY"]) throw new ClipError("analyze --yes needs GOOGLE_AI_API_KEY (environment or .env.local); --dry needs none", "env");
+    // With a Suno song named, Gemini may not be needed (Suno's alignment gives the word times);
+    // analyze warns and stays section-only if it turns out to be needed and no key is set.
+    const named = SUNO !== undefined || fs.existsSync(path.join(dir, "suno.txt"));
+    if (YES && !named && !process.env["GOOGLE_AI_API_KEY"]) throw new ClipError("analyze --yes needs GOOGLE_AI_API_KEY (environment or .env.local); --dry needs none", "env");
     const { analyzeTrack } = await import("../lib/music-clip/analyze.ts");
-    const out = await runAnalyze(dir, { yes: YES, dry: DRY, ...(AUDIO ? { audio: AUDIO } : {}) }, analyzeTrack);
+    const out = await runAnalyze(dir, { yes: YES, dry: DRY, ...(AUDIO ? { audio: AUDIO } : {}), ...(SUNO !== undefined ? { suno: SUNO } : {}) }, analyzeTrack);
     if (out.status === "refused") {
       if (JSON_OUT) emit({ ok: false, refused: true, plan: out.plan });
       else for (const l of out.plan) console.error(l);

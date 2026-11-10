@@ -32,6 +32,10 @@ export interface SectionPassInput {
   downbeats: number[];
   intensity: number[];
   tags: LyricTag[];
+  /** Section starts measured elsewhere (Suno's analysis). Given, they replace the
+   *  novelty pass's: each is snapped to the downbeat list like a detected one, and
+   *  the tag alignment below runs over them unchanged. */
+  boundaries?: number[];
 }
 
 export interface SectionPassResult {
@@ -117,17 +121,27 @@ function detectAtScale(input: SectionPassInput, minSectionS: number): number[] {
     { fps: CLIP_FPS, bands: input.bands, flux: input.flux, onsetFrames: input.onsets.map((t) => Math.round(t * CLIP_FPS)) },
     { minSectionS, kernelHalfS: Math.min(10, minSectionS / 2) },
   );
-  const starts = chapters.map((c) => (c.startS === 0 ? 0 : snapToDownbeat(c.startS, input.downbeats)));
-  // Snapping can pull two starts onto one bar line; keep strictly increasing.
+  return snapStarts(chapters.map((c) => c.startS), input.downbeats);
+}
+
+/** Starts snapped to the bar line (0 stays 0). Snapping can pull two starts onto
+ *  one bar line; keep strictly increasing. */
+function snapStarts(raw: number[], downbeats: number[]): number[] {
+  const starts = raw.map((t) => (t === 0 ? 0 : snapToDownbeat(t, downbeats)));
   return starts.filter((s, i) => i === 0 || s > starts[i - 1] + 0.5);
+}
+
+/** How many sections the lyrics name: every tag, plus an intro when no tag is one. */
+export function sectionsWanted(tags: LyricTag[]): number {
+  return tags.length + (tags[0]?.label === "intro" ? 0 : 1);
 }
 
 export function buildSections(input: SectionPassInput): SectionPassResult {
   const warnings: string[] = [];
   const hasIntroTag = input.tags[0]?.label === "intro";
   const want = input.tags.length + (hasIntroTag ? 0 : 1);
-  let starts = detectAtScale(input, SCALES_S[0]);
-  if (input.tags.length > 0) {
+  let starts = input.boundaries ? snapStarts(input.boundaries, input.downbeats) : detectAtScale(input, SCALES_S[0]);
+  if (!input.boundaries && input.tags.length > 0) {
     for (const s of SCALES_S.slice(1)) {
       const next = detectAtScale(input, s);
       if (Math.abs(next.length - want) < Math.abs(starts.length - want)) starts = next;
