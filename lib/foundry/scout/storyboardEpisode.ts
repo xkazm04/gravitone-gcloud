@@ -1,6 +1,7 @@
 import type { Channel, Episode } from "@gt/domain/channel";
 
 import { Refusal } from "./acts";
+import { takenEpisodes } from "./episodeTaken";
 import { episodeDoor } from "./episodeMoves";
 import { AIM_MAX, USE_MAX, type Night, type NightId, type ReelCandidate, type StoryboardCandidate } from "./types";
 
@@ -47,6 +48,8 @@ export async function dueEpisode(at: string, id: string): Promise<EpisodeHeld> {
     const where = episode.candidate === undefined ? "" : ` (${episode.candidate})`;
     throw new Refusal(`${at}: fromEpisode: ${id} is ${episode.state}${where}; only an episode whose outline is kept and that no night has taken is made`);
   }
+  // Started as a production, the episode has a stage of its own (lib/producers/production.ts): no night makes it again.
+  if ((await takenEpisodes()).has(id)) throw new Refusal(`${at}: fromEpisode: ${id} was started as a production; a night does not take it back`);
   return got;
 }
 

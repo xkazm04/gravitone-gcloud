@@ -357,6 +357,10 @@ jobs:
       - name: suno listen
         run: npm run check:suno-listen
 
+      # BLOCKING. The lessons prompt: its four rules pinned against a wrong proposal (spark concept-casting-stages S6).
+      - name: lessons prompt
+        run: npm run check:lessons
+
       # BLOCKING. Pure function over lib/themes - the founding proof must survive
       # a full sheet in the reference window.
       - name: style refs

@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { liveFinalPiles } from "../../../lib/decision/v1/sources/final.ts";
 import { liveProofPiles } from "../../../lib/decision/v1/sources/proof.ts";
 import { liveSpendPiles } from "../../../lib/decision/v1/sources/spend.ts";
 import { liveNow, type LiveRead } from "../../../lib/ledger/v1/sync.ts";
@@ -23,6 +24,7 @@ async function liveWithProofs(): Promise<LiveRead> {
   const kernelPiles = [
     { source: "proof", piles: liveProofPiles() },
     { source: "spend", piles: liveSpendPiles() },
+    { source: "final", piles: liveFinalPiles() },
   ];
   return kernelPiles.reduce<LiveRead>(
     (acc, { source, piles }) => (piles.ok ? { ...acc, weir: [...acc.weir, ...piles.value] } : { ...acc, failures: [...acc.failures, { source, error: `${piles.error.code}: ${piles.error.message}` }] }),

@@ -305,17 +305,18 @@ async function composeCall(plan: MusicPlan, totalMs: number, timeoutMs: number):
 // vendor that answered 200 and stalled mid-stream was not a timeout; it was a
 // handler that sat until maxDuration (moonshot backlog Q2, 2026-10-05, pinned by
 // tests/golden-path/music-body-deadline.probe.spec.ts).
-async function vendorFetch<T>(url: string, body: unknown, read: (res: Response) => Promise<T>): Promise<T> {
+export async function vendorFetch<T>(url: string, body: unknown, read: (res: Response) => Promise<T>): Promise<T> {
   const key = keyOrThrow();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   let res: Response;
   try {
     try {
+      // No body is a GET (lib/music/voiceDesign.ts reads the subscription).
       res = await fetch(url, {
-        method: "POST",
+        method: body === undefined ? "GET" : "POST",
         headers: { "xi-api-key": key, "content-type": "application/json" },
-        body: JSON.stringify(body),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: ctrl.signal,
       });
     } catch (e) {
@@ -563,7 +564,7 @@ async function generateSfxCall(req: {
 const TTS_ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech";
 const TTS_OUTPUT_FORMAT = "mp3_44100_128";
 /** A voice id is a path segment: anything but its alphabet is refused rather than sent. */
-const VOICE_ID_RE = /^[A-Za-z0-9]{8,64}$/;
+export const VOICE_ID_RE = /^[A-Za-z0-9]{8,64}$/;
 
 /** Characters as the vendor counts them: the text's code points (an emoji is one, not two). */
 export const ttsCharacters = (text: string): number => [...text].length;

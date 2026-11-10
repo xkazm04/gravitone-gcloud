@@ -40,6 +40,11 @@ import { scoutSheetProducer } from "./scoutSheet.ts";
 import { coverProducer } from "./cover.ts";
 import { coverBriefProducer } from "./coverBrief.ts";
 import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
+import { productionTakeProducer } from "./production.ts";
+import { productionVoicesProducer } from "./productionVoices.ts";
+import { productionCutProducer } from "./productionCut.ts";
+import { productionCastProducer } from "./productionCast.ts";
+import { productionLessonsProducer } from "./productionLessons.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -171,6 +176,16 @@ export const BOUND: readonly Bound[] = [
   { name: "yue2-render", producer: yue2RenderProducer() },
   { name: "yue2-score", producer: yue2ScoreProducer() },
   { name: "yue2-post", producer: yue2PostProducer() },
+  // A production's take (spark concept-casting-stages S1): H3 clips from its board's frames, one job per take on gpu.local (engine comfy).
+  { name: "production-take", producer: productionTakeProducer() },
+  // A casting round's voices (spark concept-casting-stages S3): design calls and the operator's pick, on cloud.elevenlabs.
+  { name: "production-voices", producer: productionVoicesProducer() },
+  // A casting round's words and new faces (spark concept-casting-stages S4): on the text and image seats, one job per act.
+  { name: "production-cast", producer: productionCastProducer() },
+  // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip script over its takes, then the Board; on box.render.
+  { name: "production-cut", producer: productionCutProducer() },
+  // A done production's lessons (spark concept-casting-stages S6): one text turn, enqueued by the Board's approval of the cut.
+  { name: "production-lessons", producer: productionLessonsProducer() },
   ...stepsBound(),
 ];
 

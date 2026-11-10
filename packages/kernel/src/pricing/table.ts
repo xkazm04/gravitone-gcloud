@@ -283,6 +283,22 @@ export const PRICE_TABLE: readonly PriceRow[] = [
       "The vendor's own API rate card, elevenlabs.io/pricing/api, read 2026-10-24: Text to Speech, v2 Multilingual, $0.08 per 1K characters, the same rate on every tier (plans differ only in characters included), billed in US dollars, not credits, per character of the request's text. An estimate of the bill, not a receipt: the TTS response reports no cost, and characters a plan includes cost less than this.",
     checked: "2026-10-24",
   },
+  {
+    provider: "elevenlabs-voice",
+    model: "eleven_v3",
+    unit: "character",
+    per: 1000,
+    source: "ElevenLabs credits, reported per round: a production's speech reads its consumption from the API (the character-cost header, else the subscription delta), so no rate is declared. The receipt books $0 through the casting option's own fallback (lib/producers/productionVoices.ts).",
+    checked: "2026-11-09",
+  },
+  {
+    provider: "elevenlabs-voice",
+    model: "eleven_multilingual_ttv_v2",
+    unit: "character",
+    per: 1000,
+    source: "ElevenLabs credits, reported per round: a voice design call reads its consumption from the API and it is shown on the round. No rate is declared. The receipt books $0 through the casting option's own fallback (lib/producers/productionVoices.ts).",
+    checked: "2026-11-09",
+  },
 
   /* ── video (lib/imaging/video/pricing.ts) ─────────────────────────────── */
   ...clipRows("kling-2-5"),

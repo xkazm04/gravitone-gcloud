@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-export function codexImage(dir: string, name: string, prompt: string, refs: string[]): Promise<boolean> {
+export function codexImage(dir: string, name: string, prompt: string, refs: string[], timeoutMs?: number): Promise<boolean> {
   const out = path.join(dir, `${name}.png`);
   fs.rmSync(out, { force: true });
   const missing = refs.filter((r) => !fs.existsSync(r));
@@ -19,9 +19,12 @@ export function codexImage(dir: string, name: string, prompt: string, refs: stri
     // shell: the npm shim is a .cmd on Windows, and spawn refuses a .cmd without one
     const p = spawn("codex", args, { shell: true, stdio: ["pipe", log, log], windowsHide: true });
     if (p.stdin !== null) p.stdin.end(full);
+    // the child is the shell, so only a tree kill reaches codex itself
+    const timer = timeoutMs === undefined ? undefined : setTimeout(() => { spawn("taskkill", ["/PID", String(p.pid), "/T", "/F"], { windowsHide: true }); }, timeoutMs);
     const finish = (code: number | null) => {
       if (done) return;
       done = true;
+      clearTimeout(timer);
       fs.closeSync(log);
       const ok = code === 0 && fs.existsSync(out);
       const line = { id: name, ok, code, seconds: Math.round((Date.now() - t0) / 1000), refs: refs.length, at: new Date().toISOString() };

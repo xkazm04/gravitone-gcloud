@@ -29,6 +29,7 @@ const ROLE: Readonly<Record<string, string>> = {
   candidate: "candidate",
   style: "style",
   project: "used by",
+  production: "used by",
 };
 const BEFORE_SELF = new Set(["library-item", "run", "job", "candidate"]);
 
@@ -49,7 +50,8 @@ export function resolveLineage(item: LibraryItem, titleOf: (id: string) => strin
     const role = item.source === "derived" && l.kind === "library-item" ? "derived from" : (ROLE[l.kind] ?? l.kind);
     const target = l.kind === "library-item" ? l.id : l.kind === "style" ? styleItemId(l.id) : undefined;
     const title = target === undefined ? undefined : titleOf(target);
-    const base = { role, ref: { kind: l.kind, id: l.id }, label: title ?? l.id };
+    const base = { role, ref: { kind: l.kind, id: l.id }, label: title ?? l.label ?? l.id };
+    if (l.kind === "production") return { ...base, href: `/scout/productions?from=${encodeURIComponent(l.id)}` };
     if (target !== undefined && title !== undefined) return { ...base, itemId: target };
     if (l.kind === "project" || l.kind === "run") return { ...base, facet: { group: l.kind, value: l.id } };
     return base;

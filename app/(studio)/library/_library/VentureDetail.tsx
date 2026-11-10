@@ -4,6 +4,7 @@
 // format, look - its genres as doors to their own items, the characters it reuses once S3 names any, and the kept
 // proposal it was born from, a door to that night's packet. A retired venture keeps all of it under a ghost chip.
 
+import { ventureGroundOf } from "@gt/domain/genre";
 import { genreItemId, type VentureExtras } from "@gt/domain/library";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { DetailSection } from "@gt/ui/components/library/DetailPanel.tsx";
@@ -42,7 +43,7 @@ export function VentureFacts({ venture: v, onItem }: { readonly venture: Venture
       )}
       <DetailSection title="Born from">
         <div className={s.ev}>
-          <Ref label="proposal" refId={v.proposal} />
+          {ventureGroundOf(v.proposal) === "night" ? <Ref label="proposal" refId={v.proposal} /> : <Chip label="born on" value={v.proposal} casing="lower" />}
         </div>
       </DetailSection>
     </>

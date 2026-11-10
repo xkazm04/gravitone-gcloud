@@ -27,6 +27,8 @@
     "/projects/new": 192897,
     "/studio/[projectId]": 192897,
     "/scout": 203054,
+    "/scout/productions": 243472,
+    "/scout/ventures": 230614,
     "/scout/runs": 193150,
     "/scout/runs/[packet]": 232305,
     "/local-draws": 192897

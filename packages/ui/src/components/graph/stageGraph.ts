@@ -80,13 +80,16 @@ export function linkPath(a: Box, b: Box): string {
   return `M${x1},${y1} C${x1 + out},${y1} ${x2 + out},${y2} ${x2},${y2}`;
 }
 
+/** What `live` hides. A caller that knows more than one node's own verdict (a whole dead branch) passes its own. */
+export type IsGone = (n: GraphNode) => boolean;
+
 /** The nodes a view draws, by id. */
-export function visibleOf(nodes: readonly GraphNode[], view: GraphView): GraphNode[] {
-  return view === "all" ? [...nodes] : nodes.filter((n) => !isDeadNode(n));
+export function visibleOf(nodes: readonly GraphNode[], view: GraphView, gone: IsGone = isDeadNode): GraphNode[] {
+  return view === "all" ? [...nodes] : nodes.filter((n) => !gone(n));
 }
 
-export function layout(nodes: readonly GraphNode[], edges: readonly GraphEdge[], view: GraphView): Laid {
-  const shown = visibleOf(nodes, view);
+export function layout(nodes: readonly GraphNode[], edges: readonly GraphEdge[], view: GraphView, gone: IsGone = isDeadNode): Laid {
+  const shown = visibleOf(nodes, view, gone);
   const ids = new Set(shown.map((n) => n.id));
   const kept = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
   const preds = new Map<string, string[]>();
@@ -112,7 +115,7 @@ export function layout(nodes: readonly GraphNode[], edges: readonly GraphEdge[],
       colOf.set(n.id, col);
       return { node: n, col, row };
     });
-    const hidden = view === "live" ? nodes.filter((n) => n.stage === stage && isDeadNode(n)).length : 0;
+    const hidden = view === "live" ? nodes.filter((n) => n.stage === stage && gone(n)).length : 0;
     return { stage, placed, hidden };
   });
 
@@ -140,7 +143,7 @@ export function spokenNode(n: GraphNode): string {
 }
 
 /** What the graph's group is called: its name and the whole graph's count, drawn or not. */
-export function spokenGraph(name: string, nodes: readonly GraphNode[], view: GraphView): string {
-  const dead = nodes.filter(isDeadNode).length;
+export function spokenGraph(name: string, nodes: readonly GraphNode[], view: GraphView, gone: IsGone = isDeadNode): string {
+  const dead = nodes.filter(gone).length;
   return `${name}: ${nodes.length} nodes, ${dead} dead${view === "live" && dead > 0 ? " hidden" : ""}`;
 }

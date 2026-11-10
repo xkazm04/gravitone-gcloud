@@ -10,7 +10,7 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // A NIGHT'S IDEA ARTBOARDS, DRAWN (spark scout-idea-artboards WP-I2) - one /scout batch of `idea`
 // candidates as the steps of ONE kernel job, priced on a receipt before it runs:
 //
-//   idea:1..N  one rough still per idea in the operator's Leonardo studio, drawn from the idea's
+//   idea:1..N  one rough still per idea by Codex on the operator's ChatGPT seat (a legacy job: the Leonardo studio), drawn from the idea's
 //              prompt (OUR words, no reference image), the studio generation deleted once the
 //              pixels are held (lib/imaging/providers/leonardoStudio.ts)
 //
@@ -68,7 +68,7 @@ export const ideasRequestSchema = z
       .max(MUSE_REQUEST_MAX),
     /** The whole batch's studio quality (a muse-wing request's, legacy); an idea's own wins. */
     quality: z.enum(STUDIO_QUALITIES).optional(),
-    /** One still's estimate: unpriced, its reason the studio's prepaid credits. */
+    /** One still's estimate: $0 on the Codex seat (a legacy job: unpriced, its reason the studio's prepaid credits). */
     estimates: z.object({ idea: estimateSchema }).strict(),
     by: id,
   })
@@ -80,7 +80,7 @@ export const parseIdeasRequest = (raw: unknown): Result<IdeasRequest> => parseAt
 
 /** What is still missing, in order. Pure: the request and what the job has booked. */
 export function ideasPlan(req: IdeasRequest, outputs: Outputs): MissingStep[] {
-  return req.ideas.map((_, i) => ({ name: ideaStep(i + 1), estimate: req.estimates.idea, credit: STUDIO_CREDIT })).filter((s) => !outputs.has(s.name));
+  return req.ideas.map((_, i) => ({ name: ideaStep(i + 1), estimate: req.estimates.idea, ...studioCredit(req.estimates.idea) })).filter((s) => !outputs.has(s.name));
 }
 
 /** The world, bound by lib/producers/scoutIdea.ts. */

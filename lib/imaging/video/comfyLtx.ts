@@ -106,7 +106,9 @@ export type LtxClip = {
 };
 
 type Graph = Record<string, { class_type: string; inputs: Record<string, unknown> }>;
-type Ctx = { readonly f: ComfyFetch; readonly base: string };
+/** A ComfyUI to talk to: another client of this server (./comfyH3.ts) holds one too. */
+export type ComfyCtx = { readonly f: ComfyFetch; readonly base: string };
+type Ctx = ComfyCtx;
 
 export const comfyBase = (env: Readonly<Record<string, string | undefined>> = process.env): string => (env["COMFY_URL"]?.trim() || COMFY_DEFAULT_URL).replace(/\/+$/, "");
 
@@ -248,8 +250,8 @@ function failureOf(id: string, e: Entry): string | null {
 }
 
 /** The video SaveVideo wrote: the first file in the save node's output. */
-function videoOf(e: Entry): { filename: string; subfolder: string; type: string } | undefined {
-  const out = e.outputs?.[LTX_NODES.save.id] ?? {};
+function videoOf(e: Entry, saveNode: string = LTX_NODES.save.id): { filename: string; subfolder: string; type: string } | undefined {
+  const out = e.outputs?.[saveNode] ?? {};
   for (const v of Object.values(out)) {
     if (!Array.isArray(v)) continue;
     for (const x of v as Record<string, unknown>[]) if (typeof x?.["filename"] === "string") return { filename: x["filename"], subfolder: typeof x["subfolder"] === "string" ? x["subfolder"] : "", type: typeof x["type"] === "string" ? x["type"] : "output" };
@@ -278,33 +280,33 @@ async function withdraw(c: Ctx, id: string): Promise<string> {
   return "in neither queue";
 }
 
-/** One clip from one still: upload, queue, wait, fetch, free. */
-export async function renderLtxClip(req: LtxRequest, deps: ComfyDeps = {}): Promise<LtxClip> {
-  const { width, height, seconds } = checkRequest(req);
-  const c: Ctx = { f: deps.fetch ?? fetch, base: deps.base ?? comfyBase() };
-  const now = deps.now ?? Date.now;
-  const sleep = deps.sleep ?? realSleep;
-  const graph = await loadGraph(deps.root);
-  const t0 = now();
-  // 1. reachable, or refused before anything is sent.
-  await comfyStats({ fetch: c.f, base: c.base }).catch((e: unknown) => {
-    throw unavailable(`ComfyUI is not reachable at ${c.base}, so no local clip was rendered (${e instanceof Error ? e.message : String(e)})`);
-  });
-  // 2. our still, named by its bytes.
-  const sha = createHash("sha256").update(req.image.bytes).digest("hex").slice(0, 16);
-  const ext = req.image.mime === "image/jpeg" ? "jpg" : req.image.mime === "image/webp" ? "webp" : "png";
+/** The still, uploaded and named by its bytes: a retry uploads the same file to the same name. Answers ComfyUI's name for it. */
+export async function uploadStill(c: ComfyCtx, image: { readonly bytes: Uint8Array; readonly mime: "image/png" | "image/jpeg" | "image/webp" }): Promise<{ readonly name: string; readonly sha: string }> {
+  const sha = createHash("sha256").update(image.bytes).digest("hex").slice(0, 16);
+  const ext = image.mime === "image/jpeg" ? "jpg" : image.mime === "image/webp" ? "webp" : "png";
   const form = new FormData();
-  form.append("image", new Blob([new Uint8Array(req.image.bytes)], { type: req.image.mime }), `${sha}.${ext}`);
+  form.append("image", new Blob([new Uint8Array(image.bytes)], { type: image.mime }), `${sha}.${ext}`);
   form.append("type", "input");
   form.append("subfolder", "gravitone");
   form.append("overwrite", "true");
   const up = await json<Upload>(c, "/upload/image", { method: "POST", body: form, ms: 120_000 });
   if (typeof up.name !== "string" || up.name === "") throw unavailable(`ComfyUI took the still but named no file: ${short(JSON.stringify(up))}`);
-  const image = up.subfolder ? `${up.subfolder}/${up.name}` : up.name;
-  // 3. the graph, set, queued under our client id.
-  const fps = LTX_DEFAULTS.fps;
-  const seed = req.seed ?? 1;
-  const prompt = setGraph(graph, { image, prompt: req.prompt, width, height, seconds, fps, seed, prefix: `gravitone/ltx-${sha}` });
+  return { name: up.subfolder ? `${up.subfolder}/${up.name}` : up.name, sha };
+}
+
+export type GraphRun = {
+  readonly deps: ComfyDeps;
+  readonly saveNode: string;
+  /** The clock the cap and the wall time read. */
+  readonly now: () => number;
+  readonly sleep: (ms: number) => Promise<void>;
+  readonly t0: number;
+  readonly capMs: number;
+};
+
+/** Queue `prompt` under our client id, wait for it (bounded), fetch the mp4 its save node wrote, free the card unless told not to. */
+export async function runGraphToVideo(c: ComfyCtx, prompt: unknown, run: GraphRun): Promise<{ readonly bytes: Uint8Array; readonly promptId: string; readonly output: string }> {
+  const { deps, saveNode, now, sleep, t0, capMs: cap } = run;
   const sent = await call(c, "/prompt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt, client_id: `gravitone-${randomUUID()}` }), ms: 30_000 });
   const sentText = await sent.text();
   if (!sent.ok) throw unavailable(refusalOf(sent.status, sentText));
@@ -312,13 +314,12 @@ export async function renderLtxClip(req: LtxRequest, deps: ComfyDeps = {}): Prom
   if (typeof id !== "string" || id === "") throw unavailable(`ComfyUI queued the graph but returned no prompt id: ${short(sentText)}`);
   try {
     // 4. wait for it, bounded.
-    const cap = deps.capMs ?? CAP_MS;
     let lost = 0;
     let entry: Entry | undefined;
     for (;;) {
       const h = await json<Record<string, Entry>>(c, `/history/${encodeURIComponent(id)}`, { method: "GET", ms: 15_000 }).catch(() => null);
       entry = h?.[id];
-      if (entry !== undefined && (entry.status?.completed === true || entry.status?.status_str === "error" || videoOf(entry) !== undefined)) break;
+      if (entry !== undefined && (entry.status?.completed === true || entry.status?.status_str === "error" || videoOf(entry, saveNode) !== undefined)) break;
       if (h === null) lost++;
       else {
         const q = await json<QueueDoc>(c, "/queue", { method: "GET", ms: 10_000 }).catch(() => null);
@@ -334,16 +335,38 @@ export async function renderLtxClip(req: LtxRequest, deps: ComfyDeps = {}): Prom
     }
     const failed = failureOf(id, entry);
     if (failed !== null) throw unavailable(failed);
-    const v = videoOf(entry);
-    if (v === undefined) throw unavailable(`ComfyUI finished prompt ${id} but its SaveVideo node ${LTX_NODES.save.id} wrote no file`);
+    const v = videoOf(entry, saveNode);
+    if (v === undefined) throw unavailable(`ComfyUI finished prompt ${id} but its SaveVideo node ${saveNode} wrote no file`);
     // 5. the mp4.
     const q = new URLSearchParams({ filename: v.filename, subfolder: v.subfolder, type: v.type });
     const r = await call(c, `/view?${q.toString()}`, { method: "GET", ms: 120_000 });
     if (!r.ok) throw unavailable(`ComfyUI /view answered ${r.status} for ${v.subfolder}/${v.filename}: ${short(await r.text())}`);
     const bytes = new Uint8Array(await r.arrayBuffer());
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_VIDEO_BYTES) throw unavailable(`ComfyUI's ${v.filename} is ${bytes.byteLength} bytes; a clip is 1 byte to ${MAX_VIDEO_BYTES / 1024 ** 2} MB`);
-    return { bytes, mime: "video/mp4", model: LTX_MODEL, promptId: id, output: v.subfolder ? `${v.subfolder}/${v.filename}` : v.filename, width, height, frames: seconds * fps + 1, wallMs: now() - t0 };
+    return { bytes, promptId: id, output: v.subfolder ? `${v.subfolder}/${v.filename}` : v.filename };
   } finally {
     if (deps.release !== false) await free(c);
   }
+}
+
+/** One clip from one still: upload, queue, wait, fetch, free. */
+export async function renderLtxClip(req: LtxRequest, deps: ComfyDeps = {}): Promise<LtxClip> {
+  const { width, height, seconds } = checkRequest(req);
+  const c: Ctx = { f: deps.fetch ?? fetch, base: deps.base ?? comfyBase() };
+  const now = deps.now ?? Date.now;
+  const sleep = deps.sleep ?? realSleep;
+  const graph = await loadGraph(deps.root);
+  const t0 = now();
+  // 1. reachable, or refused before anything is sent.
+  await comfyStats({ fetch: c.f, base: c.base }).catch((e: unknown) => {
+    throw unavailable(`ComfyUI is not reachable at ${c.base}, so no local clip was rendered (${e instanceof Error ? e.message : String(e)})`);
+  });
+  // 2. our still, named by its bytes.
+  const up = await uploadStill(c, req.image);
+  // 3. the graph, set, queued under our client id.
+  const fps = LTX_DEFAULTS.fps;
+  const seed = req.seed ?? 1;
+  const prompt = setGraph(graph, { image: up.name, prompt: req.prompt, width, height, seconds, fps, seed, prefix: `gravitone/ltx-${up.sha}` });
+  const got = await runGraphToVideo(c, prompt, { deps, saveNode: LTX_NODES.save.id, now, sleep, t0, capMs: deps.capMs ?? CAP_MS });
+  return { bytes: got.bytes, mime: "video/mp4", model: LTX_MODEL, promptId: got.promptId, output: got.output, width, height, frames: seconds * fps + 1, wallMs: now() - t0 };
 }

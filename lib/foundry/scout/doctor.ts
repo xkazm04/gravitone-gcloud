@@ -160,11 +160,11 @@ async function registryCheck(input: DoctorInput): Promise<Check> {
   return { name: "registry", ok: true, found: `found at ${r.dir} with ${techniqueCount(r.index)} techniques`, needed: false };
 }
 
-/** Is the studio the night's ideas are drawn in ready - a note, never a failure. */
+/** Is the Leonardo studio ready, for a night that names it - a note, never a failure. */
 async function studioCheck(input: DoctorInput): Promise<Check> {
   const h = await (input.studio ?? leonardoStudioHealth)().catch((e: unknown): StudioHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
   if (h.ok) return { name: "studio", ok: true, found: "leonardo studio signed in, with credits", needed: false };
-  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's idea artboards are drawn there, and replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
+  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio are drawn there: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
 }
 
 /** The Suno browser on its own port: attached read-only (its sign-in cookie), never launched. */

@@ -10,10 +10,10 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { Fold } from "@gt/ui/components/fold/Fold.tsx";
 import { ShareMeter } from "@gt/ui/components/graph/ShareMeter.tsx";
 import { StageGraph } from "@gt/ui/components/graph/StageGraph.tsx";
-import type { GraphView } from "@gt/ui/components/graph/stageGraph.ts";
+import type { GraphView, IsGone } from "@gt/ui/components/graph/stageGraph.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
-import type { Band } from "./bands.ts";
+import { shownIn, type Band } from "./bands.ts";
 import s from "./scout.module.css";
 
 export type BandViewProps = {
@@ -23,6 +23,9 @@ export type BandViewProps = {
   readonly onToggle: (key: string, next: boolean) => void;
   readonly selected: string | null;
   readonly onSelect: (id: string) => void;
+  /** The nodes `live` hides (bands.ts goneOf), and the same as a stable predicate for the memoised graph. */
+  readonly gone: ReadonlySet<string>;
+  readonly isGone: IsGone;
   readonly nested?: boolean;
 };
 
@@ -32,9 +35,9 @@ const min1 = (x: number): string => String(Math.round(x * 10) / 10);
 // one band leaves the other bands' thousands of nodes alone (measured at 3,000 nodes: see the WP-S2 report).
 const Graph = memo(StageGraph);
 
-export function BandView({ band, view, open, onToggle, selected, onSelect, nested = false }: BandViewProps) {
+export function BandView({ band, view, open, onToggle, selected, onSelect, gone, isGone, nested = false }: BandViewProps) {
   const g = band.group;
-  const isOpen = open[g.key] ?? g.live > 0;
+  const isOpen = open[g.key] ?? false;
   return (
     // The Fold's head and body are laid out as this grid's cells (scout.module.css .band): the band's figures sit
     // on the head's row whether the band is open or folded.
@@ -47,12 +50,12 @@ export function BandView({ band, view, open, onToggle, selected, onSelect, neste
         <Tally value={min1(g.effort.gpuMin)} label="gpu min" />
         <Tally value={`$${g.effort.geminiUsd.toFixed(2)}`} label="gemini" />
       </div>
-      <Fold title={g.key} open={isOpen} onToggle={(next) => onToggle(g.key, next)} total={g.nodes} level={nested ? 4 : 3}>
+      <Fold title={g.key} open={isOpen} onToggle={(next) => onToggle(g.key, next)} total={view === "live" ? shownIn(band, gone) : g.nodes} level={nested ? 4 : 3}>
         {/* A folded band unmounts its graph (Fold keeps a seen body mounted, hidden): only open bands cost DOM. */}
         {!isOpen ? null : band.genres.length > 0 ? (
-          band.genres.map((x) => <BandView key={x.group.key} band={x} view={view} open={open} onToggle={onToggle} selected={selected} onSelect={onSelect} nested />)
+          band.genres.map((x) => <BandView key={x.group.key} band={x} view={view} open={open} onToggle={onToggle} selected={selected} onSelect={onSelect} gone={gone} isGone={isGone} nested />)
         ) : (
-          <Graph name={g.key} nodes={band.nodes} edges={band.edges} view={view} selected={selected !== null && band.nodes.some((n) => n.id === selected) ? selected : null} onSelect={onSelect} />
+          <Graph name={g.key} nodes={band.nodes} edges={band.edges} view={view} gone={isGone} selected={selected !== null && band.nodes.some((n) => n.id === selected) ? selected : null} onSelect={onSelect} />
         )}
       </Fold>
     </section>

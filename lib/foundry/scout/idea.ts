@@ -27,7 +27,7 @@ import { CHARACTER_SEED_TYPE, DEFAULT_IDEA_CAP, DEFAULT_REEL_CAP, GENRE_MAX, IDE
 // candidate (no source: the words are ours). The batch splits by target into at most two jobs:
 //
 //   scene, style, asset3d,  ONE scout-ideas job that draws every such idea as one rough still in the
-//   character               operator's Leonardo studio (lib/producers/scoutIdea.ts), driven here
+//   character               Codex on the operator's ChatGPT seat (lib/producers/scoutIdea.ts), driven here
 //                           unless --detach.
 //   stats                   ONE scout-reels job on the Claude seat that authors every stats idea as a
 //                           full strip in code and renders its frame 120 as the tile
@@ -347,7 +347,7 @@ export async function ideasAct(ctx: ActContext, id: NightId, raw: unknown, engin
     if (r0.value.kind !== "receipt") return { why: `ideas launch answered ${r0.value.kind} before its receipt` };
     const rc = r0.value.receipt;
     const line = rc.lines[0];
-    ctx.say(`receipt (${rc.mode}): ideas ${span} · ${studio.length} artboard(s) on ${line?.lane ?? "box.chrome"} · ${line?.provider ?? "leonardo-studio"} · unpriced (${line?.unpricedReason ?? "studio credits"}) · ~${Math.ceil((line?.seconds ?? 0) / 60)} min`);
+    ctx.say(`receipt (${rc.mode}): ideas ${span} · ${studio.length} artboard(s) on ${line?.lane ?? "seat.text"} · codex · $0 (the ChatGPT seat) · ~${Math.ceil((line?.seconds ?? 0) / 60)} min`);
     const r1 = await launchIdeas(ctx.store, target, { ...opts, token: rc.token });
     if (!r1.ok) return { why: r1.error.message };
     if (r1.value.kind !== "launched") return { why: `the receipt moved while it was confirmed (${r1.value.kind}); nothing launched` };

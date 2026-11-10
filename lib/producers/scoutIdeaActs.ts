@@ -25,13 +25,14 @@ import type { CandidateId, IdeaCandidate } from "../foundry/scout/types.ts";
 import { DEFAULT_WING } from "../foundry/scout/wing.ts";
 import { withWing } from "../foundry/scout/wingScope.ts";
 import { imageFailure } from "./frames.ts";
+import { CODEX_SEAT } from "./scoutStillOption.ts";
 
 // THE IDEAS' ACTS - the ports of packages/producers/src/scout-ideas/define.ts over the imaging
 // router and the night store.
 //
-//   idea   one studio still from the idea's prompt (`prefer: leonardo-studio`, prefer-only in the
-//          router, so a studio failure is the idea's sentence and never a second vendor's bill),
-//          metered - its row's model axis names leonardo-studio, which the night's ceiling does not
+//   idea   one Codex still from the idea's prompt (`prefer: codex`, prefer-only in the
+//          router, so a Codex failure is the idea's sentence and never a second vendor's bill),
+//          metered - it books $0 on the seat, which the night's ceiling does not
 //          cap (lib/foundry/scout/budget.ts `capped`); a dry job is answered by `standIdea`, OUR
 //          picture, and books a would-call. Written to ideas/<c-NN>.<ext> in the night.
 //   ended  a failed job's sentence on every idea of it still pending, verbatim
@@ -43,8 +44,8 @@ import { imageFailure } from "./frames.ts";
 // only in memory: a still that fails the line, or that the eye could not read, is never written to the night - the
 // candidate fails `judge: <field>` and holds the read when there was one. A kids or family character is not held to
 // the adult read; nudity and a real person's likeness fail every still. The eye is a declared call like the
-// studio's, so a dry job books a would-call and judges its stand-in as STAND_JUDGE. Each still draws at its own
-// studio quality and aspect (the request's ask). A legacy muse-wing request still runs every act inside its wing,
+// draw's, so a dry job books a would-call and judges its stand-in as STAND_JUDGE. Each still draws at its own
+// aspect (the request's ask). A legacy muse-wing request still runs every act inside its wing,
 // so a job of an archive night resumes in the muse root.
 
 export type IdeaEngines = {
@@ -132,22 +133,21 @@ async function ideaAct(e: IdeaEngines, req: IdeasRequest, k: number, ctx: StepCo
   // A drive that died between the picture and the booking: the picture is the idea's.
   if (c.status === "rendered" && c.image !== undefined) return madePaid(data({ idea: c.id, file: c.image, held: true }), ctx);
 
-  const quality = ask.quality ?? req.quality;
-  const gen: GenerateRequest = { prompt: ask.prompt, aspect: ask.aspect ?? "16:9", count: 1, prefer: "leonardo-studio", ...(quality === undefined ? {} : { quality }) };
+  const gen: GenerateRequest = { prompt: ask.prompt, aspect: ask.aspect ?? "16:9", count: 1, prefer: "codex" };
   let got: { images: ImageRef[]; provenance?: GeneratedImages["provenance"] };
   try {
     got = await meteredCall<{ images: ImageRef[]; provenance?: GeneratedImages["provenance"] }>(ctx, {
       provider: "imaging-router",
       model: "generate",
-      payload: { prompt: gen.prompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer, ...(gen.quality === undefined ? {} : { quality: gen.quality }) },
+      payload: { prompt: gen.prompt, aspect: gen.aspect, count: gen.count, prefer: gen.prefer },
       estimate: req.estimates.idea,
       stand: () => ({ images: [{ base64: standIdea(k).toString("base64"), mime: "image/png" }] }),
       live: async () => {
         const out = await e.generate(gen);
         const p = out.provenance;
         const credits = studioCreditsOf(p);
-        const unpriced = `${p.provider} bills studio credits, prepaid${credits === undefined ? "" : ` (${credits} for this artboard)`}`;
-        return { value: { images: out.images, provenance: p }, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined ? { unpriced } : { usd: p.costUsd }) };
+        const unpriced = p.provider === "codex" ? CODEX_SEAT : `${p.provider} bills studio credits, prepaid${credits === undefined ? "" : ` (${credits} for this artboard)`}`;
+        return { value: { images: out.images, provenance: p }, served: `${p.provider}/${p.model}`, ...(p.costUsd === undefined || p.costUsd === 0 ? { unpriced } : { usd: p.costUsd }) };
       },
     });
   } catch (x) {

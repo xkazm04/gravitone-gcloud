@@ -149,8 +149,14 @@ audience, genre and subgenre and sits under that seed's pause; a candidate with 
 **Bands**: an audience, its genres inside it, then *before seeds* last. Each band says how many nodes it holds,
 how far its live nodes reached (live = open, pending or kept, not paused; dead = rejected or failed), its share
 of the last 7 live nights' run-stage candidates against the split's target (a genre's target is its audience's
-share times the genre's), and its effort. A band with no live node starts folded; a folded band draws nothing.
-`live | all`: live hides the dead and their links, each column's head counting what it hid (`+N`).
+share times the genre's), and its effort. An audience with something live opens first; every genre and *before seeds*
+start folded, and a folded band draws nothing.
+`live | all`: live hides the dead, the muse archive and a kept node whose every descendant is one of those (a dead
+branch, `bands.ts goneOf`), with their links, each column's head counting what it hid (`+N`). A band left with nothing
+is not listed. A node awaiting a verdict and a kept leaf are never hidden. `all` draws every node.
+
+The media of a rejected cell may be gone from disk: the node, its prompt and its verdict stay, and what was removed is
+listed with its prompt and hash in `foundry-out/_purged/<date>/`.
 
 **Effort** (`lib/foundry/scout/effort.ts`, from the kernel store, never from a night's own figures): per
 candidate `geminiUsd` = its job's spend rows the night ceiling caps (`budget.ts jobMoney` settled),
@@ -242,9 +248,9 @@ ideation's bans) and `## Genres`.
 ## The money
 
 - **Stills come from Codex** (operator, 2026-11-08: "Our main image engine for now will be codex with its image
-  generation"; Flux 2 was removed the same day). Style replicas and transfers, scene replicas, asset concepts,
+  generation"; Flux 2 was removed the same day). Idea artboards, style replicas and transfers, scene replicas, asset concepts,
   storyboard frames and reference sheets draw through Codex's `image_gen` on the operator's ChatGPT seat, $0 per
-  image against the seat's quota. `SCOUT_REPLICA_GENERATOR=leonardo-studio|leonardo-flare` moves them to the studio
+  image against the seat's quota. `SCOUT_REPLICA_GENERATOR=leonardo-studio|leonardo-flare` moves all but the artboards, storyboards and sheets to the studio
   at Low (8 credits, unpriced) or Flare, and a leftover `comfy-flux2` refuses. Codex jobs wait on seat.text, studio
   jobs on box.chrome, Flare on cloud.leonardo (lib/foundry/scout/stillEngine.ts);
   a scene whose clip renders locally runs on gpu.local either way. One studio tab at a time across processes
@@ -269,7 +275,7 @@ ideation's bans) and `## Genres`.
   One counts once it may reach the GPU - pending, or handed off to a mesh asset; one whose concepts the
   input gate refused, or whose job failed before the hand-off, spent no GPU minute and gives its place
   back. The check and the candidate's row are one write under the night's lock.
-- **Ideas and stats reels**: at most `--ideas` studio artboards (default 25) and `--reels` stats ideas
+- **Ideas and stats reels**: at most `--ideas` Codex artboards (default 25) and `--reels` stats ideas
   (default 6, at most 12) per night, each counted toward its own cap only and never toward `--target` or
   the clips; a failed one still counts. Both are uncapped by the ceiling (studio credits, the seat), so a
   batch is refused by its caps and never by the night's money.
@@ -461,7 +467,7 @@ It is kept when its words cell is kept, or when any cell is kept and none reject
 night (a night committed in parts counts only its committed cells). A kept storyboard is the root any
 full-video act must name - `keptStoryboardFor(nights, <night>/<c-id>)` is the code check, and the skill's
 rule is that no full-video act runs for an idea not under `## Ready for full video`. No full-video act
-exists yet; scene clips stay ungated. Made from a channel episode, a kept storyboard ends its episode
+exists yet; scene clips stay ungated. (A kept storyboard or outline can be started as a Production at any time on `/scout/productions`: hero shots, casting, audio and a final cut, then lessons and a venture, none of which a night does. See `docs/productions.md`.) Made from a channel episode, a kept storyboard ends its episode
 kept and a rejected one throws it (`episodeTarget`), and the packet's preview says exactly that, not a full
 video; a dry night moves no episode and its preview says so. The taste brief lists `## Storyboards to make` (kept ideas with no
 storyboard) and `## Ready for full video` (kept storyboards, with their idea, title and paragraph). A
