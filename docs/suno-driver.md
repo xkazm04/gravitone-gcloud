@@ -253,7 +253,9 @@ stays for files made elsewhere; such a take has no Suno id and no Suno read.
 2. `getClip(id)` through the API: the song must be `complete`, else the pull refuses with its status.
 3. Unconfirmed: `POST /v0/audio/{id}/download` (free). `requires_credit` is answered as a
    `SunoDownloadQuote` (`{clipId, credits: 1, left, format}`) and nothing is filed; an answer that
-   already carries a `url` is filed at once.
+   already carries a `url` is filed at once. Measured 2026-11-10: a song paid once answers
+   `{"status":"ok","url":...}` to every later call, confirmed or not, so it never costs twice. The
+   file is a signed S3 URL to `<id>_paid_wm.mp3` (an MP3: 48 kHz stereo with cover art).
 4. Confirmed: refused under `GRAVITONE_DRY_ONLY=1` before Suno is asked. Otherwise a receipt (scope
    `suno-download`, key `<id>:<format>`, live) is claimed, the confirmed download is asked again every
    1.1 s while `processing` (cap 50 s), and the receipt settles with the URL (an unpriced quote whose

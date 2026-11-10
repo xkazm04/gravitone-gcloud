@@ -142,10 +142,11 @@ export const Listen = z
   .loose();
 export type Listen = z.output<typeof Listen>;
 
-/** POST /v0/audio/{id}/download. Measured unconfirmed 2026-11-10: `{"status":"requires_credit",
- *  "format":"mp3","credits_remaining":42,"message":"..."}`. Suno's tool description names
- *  `processing` (call again, at most once a second) and a `url` once the file is ready; the ready
- *  status's name is unseen, so a `url` is what makes an answer ready. */
+/** POST /v0/audio/{id}/download. Measured 2026-11-10: unconfirmed, `{"status":"requires_credit",
+ *  "format":"mp3","credits_remaining":42,"message":"..."}`; confirmed, and every call after for the
+ *  same song (paid once, no second credit), `{"status":"ok","format":"mp3","url":<signed S3 URL,
+ *  ..._paid_wm.mp3>}` with no `credits_remaining`. Suno's tool description names `processing` (call
+ *  again, at most once a second). A `url` is what makes an answer ready. */
 export const Download = z
   .object({ status: z.string(), format: nullish(z.string()), url: nullish(z.string()), credits_remaining: nullish(z.number()), message: nullish(z.string()) })
   .loose();
