@@ -18050,39 +18050,49 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "conformant",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T01:49:36.238Z",
-      "worker": "0c6fccde-948d-4951-8422-33f2f980f08f",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:37:34.361Z",
+      "worker": "8fa3be7b-1b6c-4a07-89ab-2c303dc812c8",
       "techniques": [
         {
           "technique": "capability-to-vendor-plan",
           "verdict": "conformant",
-          "evidence": "lib/sound/batch.ts:65 Capability (kind) in, engine out, checked against engines.ts registry `can`. Weak spots: the kind->engine pairing is hard-coded on batch.ts:66 rather than read as an ordered row of the registry, and generate.ts:136 makes the caller send provider \"elevenlabs\" (single-value, so it acts as the seam, not an escaping steer)."
-        },
-        {
-          "technique": "refusal-reroute-hop",
-          "verdict": "conformant",
-          "evidence": "lib/sound/sfxJob.ts:186 Only rate-limit/timeout/failed retry; MusicError `refused` falls through to fatal, so a refusal is never hammered against the same vendor. There is no second sfx vendor to hop to, so the hop itself is vacuous here."
+          "evidence": "lib/sound/batch.ts:65 One seam maps a capability to an engine and checks it against the registry (`can`). Each capability row has one entry (music->suno, sfx->elevenlabs, line 66), and the file header explains why. One weak spot: generate.ts:136 makes the caller send provider \"elevenlabs\" and accepts nothing else."
         },
         {
           "technique": "non-silent-elimination",
           "verdict": "conformant",
-          "evidence": "lib/sound/generate.ts:206 A field the music endpoint would silently ignore is refused by name rather than dropped (the constraint elimination); batch.ts:71 also carries the registry's withheld reason into the error."
+          "evidence": "lib/sound/batch.ts:71 When an engine is withheld, the error carries the registry's own reason word for word. It does not collapse into a generic failure."
         },
         {
           "technique": "vendor-fact-ledger",
           "verdict": "conformant",
-          "evidence": "lib/sound/sfxJob.ts:172 ElevenLabs effects report no dollar figure, so each clip is estimated as unpriced with the recorded reason instead of an invented price."
+          "evidence": "lib/sound/sfxJob.ts:51 Effects are marked unpriced and say why, instead of carrying an invented price. The plan step carries usd: null plus that reason (line 172)."
         },
         {
           "technique": "cost-per-usable-economics",
           "verdict": "conformant",
-          "evidence": "lib/sound/batch.ts:154 A batch of N is priced and gated on one receipt as N units before anything runs; ledger.ts records kept/rejected per provider (acceptance data). No measured cost-per-usable ordering exists, but there is no competing vendor per kind to order."
+          "evidence": "lib/sound/batch.ts:154 An N-clip batch is priced as N units on one receipt before anything launches. The launch happens only when the receipt's token is confirmed."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "conformant",
+          "evidence": "lib/sound/sfxJob.ts:186 Only rate limits, timeouts and failures are retried. A MusicError 'refused' is fatal, so the same vendor is never retried on a refusal. Each capability has one vendor, so there is nowhere to hop to."
         },
         {
           "technique": "resolution-as-stage-property",
           "verdict": "not-applicable",
-          "evidence": "lib/sound/generate.ts:64 Audio has no output-size ladder; the only size-like dial is duration, bounded per kind."
+          "evidence": "lib/sound/generate.ts:64 Audio has no output-size ladder; the only size-like dial is duration, bounded per kind.",
+          "carriedFrom": "2026-11-07"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
+          "evaluatedAt": "2026-11-07T01:49:36.238Z",
+          "worker": "0c6fccde-948d-4951-8422-33f2f980f08f",
+          "reason": "replaced by 8fa3be7b-1b6c-4a07-89ab-2c303dc812c8"
         }
       ]
     },
@@ -18137,24 +18147,33 @@
       "subject": "generative-provider-routing",
       "bundle": "media-generation",
       "state": "deviation",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T01:49:36.238Z",
-      "worker": "0c6fccde-948d-4951-8422-33f2f980f08f",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:37:34.361Z",
+      "worker": "8fa3be7b-1b6c-4a07-89ab-2c303dc812c8",
       "techniques": [
         {
           "technique": "cost-per-usable-economics",
           "verdict": "deviation",
-          "evidence": "lib/spend/meter.ts:249 Pre-call reservation gate is right (meter.ts:343), but unpriced actuals book nothing instead of the estimate, so they never count against the next ceiling check. Contrast lib/foundry/extract/spend.ts, which books the estimate."
+          "evidence": "lib/spend/meter.ts:249 The check before the call conforms (line 343). Booking actuals does not: the estimate is not booked when no actual figure arrives, so unpriced counts as zero against the window."
         },
         {
           "technique": "unspent-budget-is-a-defect",
           "verdict": "conformant",
-          "evidence": "lib/spend/meter.ts:441 Budget is a band: a per-class floor is reported as underFloor (idle windows excluded), and classes.ts:78 makes it reporting-only, never a refusal."
+          "evidence": "lib/spend/meter.ts:441 The budget is a band: a reporting-only floor that every class declares (classes.ts floorVar), and a breach of it is reported. Whether the plan's top entry was ever called is not tracked here."
         },
         {
           "technique": "vendor-fact-ledger",
           "verdict": "conformant",
-          "evidence": "packages/kernel/src/spend-requests/schema.ts:84 Every receipt line carries its figure source, and usd is nullable with an unpricedReason, so an estimate cannot pass as a receipt."
+          "evidence": "packages/kernel/src/spend-requests/schema.ts:84 Each receipt line in a spend request carries its figure's source, plus a nullable usd with an unpricedReason (lines 81-83). An estimate cannot pass as a receipt."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
+          "evaluatedAt": "2026-11-07T01:49:36.238Z",
+          "worker": "0c6fccde-948d-4951-8422-33f2f980f08f",
+          "reason": "replaced by 8fa3be7b-1b6c-4a07-89ab-2c303dc812c8"
         }
       ]
     },
@@ -22357,6 +22376,37 @@
           "technique": "review-queues",
           "verdict": "conformant",
           "evidence": "packages/ui/src/board/cull.ts:16 The desk is complete by construction: an item whose row the presentation does not name is still drawn."
+        }
+      ]
+    },
+    "df7b69e1-8e03-4636-a7bc-91e117f32faa/generative-provider-routing": {
+      "context": "produce-compose-receipt",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:37:34.361Z",
+      "worker": "8fa3be7b-1b6c-4a07-89ab-2c303dc812c8",
+      "techniques": [
+        {
+          "technique": "vendor-fact-ledger",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:56 An unpriced cost is drawn as 'unpriced' plus a reason chip (Unpriced.tsx), never $0. Receipt.tsx:81 tags each line's figure source."
+        },
+        {
+          "technique": "cost-per-usable-economics",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:65 Fan-out is priced as N units, and the receipt is read before the launch. Caveat: mayStopAtCeiling (line 196) does not count unpriced lines toward the ceiling warning. They are counted separately as a chip."
+        },
+        {
+          "technique": "capability-to-vendor-plan",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/produce/Receipt.tsx:3 The surface displays the vendor the router chose and does not choose one itself. The model picker only steers among the server's options, and only while the plan is a draft (PlanTable.tsx:10)."
+        },
+        {
+          "technique": "refusal-reroute-hop",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/RerouteList.tsx:8 This is an operator re-route between server-computed options, not a vendor refusal hop. The UI calls no vendor."
         }
       ]
     }

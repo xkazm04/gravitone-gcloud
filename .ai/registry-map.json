@@ -16348,7 +16348,11 @@
           "revision": 13,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:56 The receipt shows the provider and model the router chose, prices N units as N, never draws an unpriced figure as a dollar amount, and tags every figure with its source, so a receipt and an estimate cannot be confused.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12
         },
         {
           "subject": "cost-metering",
@@ -20126,12 +20130,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and one chokepoint asks the desk's engine registry whether that engine may make it, so no surface picks the engine; the refusals, unpriced figures and receipts around it also hold.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "test-harness",
@@ -20746,12 +20749,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/spend/meter.ts:249 A settled call with no figure books no row and only bumps counters.unpriced. Its hold is deleted in the same settle, so the next `spent + held + amount > ceiling` check treats the unpriced call as free, breaking the 'unreported cost still counts against the next ceiling check' rule.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "data-access",
