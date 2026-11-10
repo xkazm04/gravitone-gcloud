@@ -16668,10 +16668,19 @@
       "subject": "hitl-approval",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T01:12:37.195Z",
-      "worker": "06554e9d-4663-4920-833b-528bf15f325c",
-      "techniques": []
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:46:31.370Z",
+      "worker": "15a5d022-9bea-4c68-acb7-9a5c52be3d39",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
+          "evaluatedAt": "2026-11-06T01:12:37.195Z",
+          "worker": "06554e9d-4663-4920-833b-528bf15f325c",
+          "reason": "replaced by 15a5d022-9bea-4c68-acb7-9a5c52be3d39"
+        }
+      ]
     },
     "47a52ae3-c07c-4d24-86e1-da7d59861f7e/data-access": {
       "context": "foundry-forge-store-and-verdicts",

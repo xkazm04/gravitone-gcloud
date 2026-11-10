@@ -22634,12 +22634,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/script/trailer/rules/spine.ts:1 These rules are pure checkers that return findings: they hold no pending state, decision surface or continuation, and they say they are not gates (spine.ts:1, promises.ts 'report the rows and let a human read them'). A case-insensitive search of lib/script/trailer/rules found 0 hits for consent, hitl, awaiting, approve and grant; 'gate', 'human' and 'pending' appear only in comments and finding text.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "short-form-narrative-structure",

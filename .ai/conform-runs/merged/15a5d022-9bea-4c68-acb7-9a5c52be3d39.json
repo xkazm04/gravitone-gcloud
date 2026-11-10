@@ -1,0 +1,108 @@
+{
+ "schema": "conform-run/1",
+ "worker": "15a5d022-9bea-4c68-acb7-9a5c52be3d39",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-10T00:46:31.370670+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "trailer-structure-rules",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/script/trailer/rules/spine.ts:1 These rules are pure checkers that return findings: they hold no pending state, decision surface or continuation, and they say they are not gates (spine.ts:1, promises.ts 'report the rows and let a human read them'). A case-insensitive search of lib/script/trailer/rules found 0 hits for consent, hitl, awaiting, approve and grant; 'gate', 'human' and 'pending' appear only in comments and finding text.",
+   "techniques": [],
+   "absenceTerms": [
+    "consent",
+    "hitl",
+    "awaiting",
+    "approve",
+    "grant"
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/_port/real.ts:205 The Board's queue is built only by state (open, unopened, decided). The packet machine allows only open -> committed|returned, so an open packet never expires, has no reaper and has no 'expired unanswered' outcome, and the rail is not sorted by expiry or consequence. That breaks review-queues' hygiene rules: a pending item names its reaper, and the queue is triage, not an archive.",
+   "techniques": [
+    {
+     "technique": "review-queues",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/real.ts:205 The completeness half holds: kernel packets and v1 Weir piles are merged into one rail, and a rail read failure is shown rather than read as 'weir clear' (load.ts:46). The hygiene half fails: no expiry or reaper (packet.machine.ts: open -> committed|returned only), and the order is state plus opened_at, not expiring-soonest or highest-consequence first."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:217 The executor checks the recorded kernel head state before it acts, and every write is one kernel transaction."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:245 The commit records who decided (author: by, surface, who) and binds to what was shown: the preview token plus a fresh v1 digest. The kernel refuses with stale-preview when either has moved."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/commitFlow.tsx:77 On a stale-preview refusal the flow previews again and shows the fresh consequence before another confirm. After commit, a durable apply outbox is kicked (real.ts:249), and a stuck apply has a redrive (actions.ts:72)."
+    },
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/actions.ts:6 The decider is resolved from the session before any write. The MCP agent door only calls listPackets/loadPacket on the board (app/_server/mcp/tools/read.ts:100,115), so a machine token cannot post a verdict."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T00:46:31.370670+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "trailer-structure-rules",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:46:31.370670+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "handoff-is-a-declared-door",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
