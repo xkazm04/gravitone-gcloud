@@ -22637,6 +22637,117 @@
           "evidence": "packages/domain/src/board.ts:229 A listing of pending packets says when it was cut, so the rail's count is not a silent subset."
         }
       ]
+    },
+    "76331df3-dc8c-4421-bb81-6c2bbe2f688b/music-prompt-composition": {
+      "context": "frames-picture-composition",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:19:46.816Z",
+      "worker": "0c4b9522-a8ed-476b-baa5-b712ab26ce0f",
+      "techniques": [],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 0c4b9522-a8ed-476b-baa5-b712ab26ce0f"
+        }
+      ]
+    },
+    "03bbdce3-27bb-4361-947c-ba8f0d70fa2c/music-prompt-composition": {
+      "context": "audio-composer-briefs",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:19:46.816Z",
+      "techniques": [
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:107 Music prompt is the trimmed free text alone. BatchForm and Seed have no section list with per-section duration, style or lyric/instrumental marking. 'section-plan-as-the-brief' exists only as a tag."
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:163 The style line is layered by axis (genre, then mood, instruments, tempo, key). The avoid list becomes the exclude fence (line 165), and '[Instrumental]' is stated outright. No production-character axis exists, though."
+        },
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/brief.ts:116 Asked length and tempo are measured against the delivered take (held/missed/octave/unmeasured/unasked), so duration acts as a delivery gate and not a hope."
+        },
+        {
+          "technique": "reference-track-anchoring",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/audio/variations.ts:112 A reference yields only vocabulary terms (from kept descendants) plus measured tempo and key. No audio or melody crosses into the seed, so the reference is translated into words and then retired."
+        },
+        {
+          "technique": "lyrics-for-singability",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/recipe.ts:167 The composer always writes '[Instrumental]', and none of the form components has a lyric field, so no sung words are authored here."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 0c4b9522-a8ed-476b-baa5-b712ab26ce0f"
+        }
+      ],
+      "withdrawn": {
+        "worker": "0c4b9522-a8ed-476b-baa5-b712ab26ce0f",
+        "state": "deviation",
+        "at": "2026-11-10T01:20:31.354009+00:00",
+        "reason": "reviewer (sonnet): The claim that the music brief has no ordered sections and a take can only be accepted or regenerated whole is true of batch.ts but contradicted by the same directory: packages/ui/src/components/audio/intent.ts compiles an ordered section plan (sectionsFor, with PlanSectionOut carrying name, duratio"
+      }
+    },
+    "4801e7ab-d365-4c2d-8351-adcf188ba3c1/music-prompt-composition": {
+      "context": "music-clip-engine",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:19:46.816Z",
+      "worker": "0c4b9522-a8ed-476b-baa5-b712ab26ce0f",
+      "techniques": []
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/music-prompt-composition": {
+      "context": "music-vendors-and-publish",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T01:19:46.816Z",
+      "worker": "0c4b9522-a8ed-476b-baa5-b712ab26ce0f",
+      "techniques": [
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "deviation",
+          "evidence": "lib/music/plan.ts:227 Durations come from the picture, which is good, but tempo is not chosen so cuts land on bar lines and both edges are locked. The bar math is reported, not used to pick B."
+        },
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:203 Each cue becomes an ordered plan, one section per scene, each with durationMs, positive/negative styles and directions. Stored-for-inpainting and audio-ref chunks make sections editable by address (types.ts:164)."
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:194 The standing style block is restated in full on every section. 'instrumental' is said positively, and standing excludes (vocals, singing, fade-out ending) fence the other side."
+        },
+        {
+          "technique": "lyrics-for-singability",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:150 The wire chunk puts the section role in brackets, delivery directions in braces and lyric lines verbatim, so structure metadata stays out of the sung text. No syllable-load check exists, but no lyrics are authored here."
+        }
+      ],
+      "registryProposal": "duration-and-tempo-locking's 'lock one edge, float the other' assumes one picture event inside a cue. When a plan is cut one section per scene, every internal boundary is a picture event, so the technique should say how to choose one tempo across several fixed section lengths, or when a per-section tempo or a floated final section is the honest answer."
     }
   }
 }

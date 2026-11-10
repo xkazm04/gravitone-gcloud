@@ -3732,15 +3732,11 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "deviation",
-          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
-          "evaluatedRevision": 1,
           "source": "renamed",
           "renamedFrom": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+          "evaluatedAt": "2026-10-25"
         },
         {
           "subject": "character-identity-continuity",
@@ -9994,14 +9990,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
-          "evaluatedRevision": 1,
+          "evidence": "lib/frames/shotPrompt.ts:1 The prompts this context writes are image prompts for shots and plates. A case-insensitive search of all of lib/frames (picture/ included) for music, suno, bpm, lyric, tempo, instrumental, melody, song and elevenlabs found nothing; the only nearby hits are 'Score' step references that read frames and do not brief a music generator, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "158d061e-feaa-4660-a1d3-6e8774b1f152",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -14238,8 +14233,12 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/music-clip/tempo.ts:4 This context takes a finished Suno track with its lyrics and style prompt as input and only analyses them (the BPM in the style text is a prior for detection). It never writes a music brief: searching lib/music-clip for SunoFields, composeMusic, generateMusic, musicPrompt and music_v1 found zero hits, so the brief-side subject does not govern it.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2
         },
         {
           "subject": "music-video-production",
@@ -14568,7 +14567,11 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/plan.ts:227 cueToPlan locks every section to its scene length and the whole cue to the summed picture at a hand-typed bpm. When a section is not a whole number of bars it says so in the brief rather than re-deriving the tempo (barsFit's doc says 'the caller then adjusts bpm', and the caller never does), and the tail is never floated, which is the over-determination the technique names.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2
         },
         {
           "subject": "release-pipeline",
