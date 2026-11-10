@@ -160,7 +160,7 @@ export async function checkSeedBatch(raw: unknown, batches: readonly SeedBatch[]
 
 /** Validate a batch (`[{sentence, genre, subgenre, type, audience, format, parent?, music?}]`), hold it to the backlog gate, and write it whole. */
 export async function addSeedBatch(raw: unknown, o: SeedBatchOptions): Promise<Result<SeedBatch>> {
-  const shut = archivedDoor();
+  const shut = archivedDoor(undefined, "seeds");
   if (shut !== undefined) return err("refused", shut);
   const batches = await listSeedBatches();
   const checked = await checkSeedBatch(raw, batches, o.store === undefined ? {} : { store: o.store });
