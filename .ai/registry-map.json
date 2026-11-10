@@ -6563,8 +6563,12 @@
           "revision": 12,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/sound/cover/store.ts:12 The context is a per-cover disk store with vendor calls and kernel-job producers; nothing in it mints a version, compiles a changelog, stages a release or feeds an updater, and a search of lib/sound, lib/producers, packages/producers/src and lib/library for changelog, @deprecated, semver, release notes and bundle size found nothing ('release' in lib/sound/cover/suno.ts means releasing a spend receipt)",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:faf052699c35ced4",
+          "evaluatedRevision": 11
         },
         {
           "subject": "module-design",
@@ -14605,7 +14609,11 @@
           "revision": 12,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/publish/youtube.ts:1 Here 'publish' means uploading private videos to YouTube and running vendor music/TTS calls, not shipping a versioned software artifact to installed copies; a search of lib/music, lib/suno, lib/publish and app/api/sound for changelog, @deprecated, semver, release notes and bundle size found nothing, and the 'release' hits are budget-hold releases (lib/music/ttsBudget.ts releaseTts)",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:faf052699c35ced4",
+          "evaluatedRevision": 11
         },
         {
           "subject": "agent-memory",

@@ -23048,6 +23048,26 @@
           "reason": "replaced by 52ddca42-a570-47d9-a32c-7149009edd1e"
         }
       ]
+    },
+    "ddcec47d-b93a-4be2-894e-95eba76e329c/release-pipeline": {
+      "context": "cover-sound-and-producers",
+      "subject": "release-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:31:05.351Z",
+      "worker": "b97c0f42-9f92-47b8-8a20-dc60b793486c",
+      "techniques": []
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/release-pipeline": {
+      "context": "music-vendors-and-publish",
+      "subject": "release-pipeline",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:31:05.351Z",
+      "worker": "b97c0f42-9f92-47b8-8a20-dc60b793486c",
+      "techniques": []
     }
   }
 }
