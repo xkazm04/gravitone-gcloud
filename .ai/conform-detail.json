@@ -23068,6 +23068,21 @@
       "evaluatedTs": "2026-11-10T23:31:05.351Z",
       "worker": "b97c0f42-9f92-47b8-8a20-dc60b793486c",
       "techniques": []
+    },
+    "b2bfa3eb-ee06-4262-8eaa-d19d9cc16dc2/agent-runtime-assembly": {
+      "context": "sound-generation-engine",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:40:17.427Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "c264917f-4a21-42e0-8c19-5502a584340a",
+        "state": "not-applicable",
+        "at": "2026-11-10T23:40:45.165842+00:00",
+        "reason": "reviewer (sonnet): lib/sound/cover/brief/write.ts imports RunAgentInput from agent/cliSeam.ts and builds an agent turn (tools, model, effort, timeout), so the claim that lib/sound hosts no agent-run assembly is contradicted. The cited cli.ts:4 line only describes the CLI as the agents' contract."
+      }
     }
   }
 }

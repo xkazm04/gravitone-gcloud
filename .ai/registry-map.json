@@ -20254,8 +20254,8 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "priorNotApplicable": 7,
+          "state": "unknown"
         },
         {
           "subject": "mcp-tools",
