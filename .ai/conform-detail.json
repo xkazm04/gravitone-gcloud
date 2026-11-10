@@ -22978,6 +22978,76 @@
       "evaluatedTs": "2026-11-10T23:02:38.146Z",
       "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
       "techniques": []
+    },
+    "9256d898-a1aa-470e-86db-7f3a9dee0865/invariant-placement": {
+      "context": "domain-parts-projects-slots",
+      "subject": "invariant-placement",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T23:16:34.647Z",
+      "worker": "52ddca42-a570-47d9-a32c-7149009edd1e",
+      "techniques": [
+        {
+          "technique": "placement-precedes-gate",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/project.ts:57 The altitude is named in the code: cycles and dangling edges are refused at the door when the plan is written, so they are never discovered mid-run."
+        },
+        {
+          "technique": "derived-properties-cannot-be-forged",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/project.ts:11 projectSchema has no state field. State is computed from the parts (projectStateOf), and part state comes from job and packet the same way (part.ts:9)."
+        },
+        {
+          "technique": "a-new-field-must-choose",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:281 A mapped type keyed by the op union, so an op added without an entry here is a type error. opLabel's switch also has no default arm."
+        },
+        {
+          "technique": "build-time-evaluation-of-cross-value-invariants",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:48 Two hand-maintained tables (the editor kinds and the catalogue's work kinds) are checked against each other at compile time with `satisfies`."
+        },
+        {
+          "technique": "completeness-at-emission",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:140 The view contract leaves out absent optional parts instead of defaulting them. PartView's mapped type requires a data field for every editor kind."
+        },
+        {
+          "technique": "consumption-bounds-at-most-once",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/slot.machine.ts:16 The encoding gives at-most-once, and the comment next to it says it does not give at-least-once: a dead holder leaves the slot `publishing`, the sweep marks it failed, and a person reschedules it."
+        },
+        {
+          "technique": "constraint-deletion-is-silent",
+          "verdict": "conformant",
+          "evidence": "packages/domain/test/project.test.ts:39 Each rule raised to the door has a negative test. The refuse() helper asserts the stable code `invalid` plus a fragment of the project's own message (not toolchain text), so the dependence on wording is only partial."
+        },
+        {
+          "technique": "indistinguishable-members-do-not-rise",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/part.ts:58 Ids get a separate brand per record (ids.ts idSchema(\"PartId\") etc.), applied at the producing door, so a JobId and a PartId cannot be swapped."
+        },
+        {
+          "technique": "shape-with-a-not-applicable-member",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/partView.ts:65 The resolver signals 'no face' with null in a wrapper; ResearchFace gains no none-of-these member."
+        },
+        {
+          "technique": "repairing-check-erases-its-evidence",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/slot.ts:83 The doors refuse and never repair. A grep of the context files for .catch(/.default(/.transform(/.preprocess( found nothing."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/domain/src/project.ts:54 Domain entities enforce structural and relational invariants at schema doors, status FSMs, and derived state projections without repairing checks or dummy members.",
+          "evaluatedAt": "2026-10-19",
+          "worker": null,
+          "reason": "replaced by 52ddca42-a570-47d9-a32c-7149009edd1e"
+        }
+      ]
     }
   }
 }

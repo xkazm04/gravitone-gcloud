@@ -1,0 +1,160 @@
+{
+ "schema": "conform-run/1",
+ "worker": "52ddca42-a570-47d9-a32c-7149009edd1e",
+ "subject": "invariant-placement",
+ "evaluatedAt": "2026-11-10T23:16:34.647131+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "domain-parts-projects-slots",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/domain/src/project.ts:57 The domain names each rule's altitude: structural rules sit at zod doors (plan graph, slot field/state coupling), states are derived instead of stored, and exhaustive keyed tables make a new op or kind fail to compile. Negative tests check that the doors refuse bad input.",
+   "techniques": [
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/project.ts:57 The altitude is named in the code: cycles and dangling edges are refused at the door when the plan is written, so they are never discovered mid-run."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/project.ts:11 projectSchema has no state field. State is computed from the parts (projectStateOf), and part state comes from job and packet the same way (part.ts:9)."
+    },
+    {
+     "technique": "a-new-field-must-choose",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:281 A mapped type keyed by the op union, so an op added without an entry here is a type error. opLabel's switch also has no default arm."
+    },
+    {
+     "technique": "build-time-evaluation-of-cross-value-invariants",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:48 Two hand-maintained tables (the editor kinds and the catalogue's work kinds) are checked against each other at compile time with `satisfies`."
+    },
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:140 The view contract leaves out absent optional parts instead of defaulting them. PartView's mapped type requires a data field for every editor kind."
+    },
+    {
+     "technique": "consumption-bounds-at-most-once",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/slot.machine.ts:16 The encoding gives at-most-once, and the comment next to it says it does not give at-least-once: a dead holder leaves the slot `publishing`, the sweep marks it failed, and a person reschedules it."
+    },
+    {
+     "technique": "constraint-deletion-is-silent",
+     "verdict": "conformant",
+     "evidence": "packages/domain/test/project.test.ts:39 Each rule raised to the door has a negative test. The refuse() helper asserts the stable code `invalid` plus a fragment of the project's own message (not toolchain text), so the dependence on wording is only partial."
+    },
+    {
+     "technique": "indistinguishable-members-do-not-rise",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/part.ts:58 Ids get a separate brand per record (ids.ts idSchema(\"PartId\") etc.), applied at the producing door, so a JobId and a PartId cannot be swapped."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/partView.ts:65 The resolver signals 'no face' with null in a wrapper; ResearchFace gains no none-of-these member."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "conformant",
+     "evidence": "packages/domain/src/slot.ts:83 The doors refuse and never repair. A grep of the context files for .catch(/.default(/.transform(/.preprocess( found nothing."
+    }
+   ]
+  },
+  {
+   "context": "library-port",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/present.ts:59 faceOf folds over the repo-owned LibraryKindName union with an if-chain that ends in a default arm, so a kind added later (character, genre and venture joined the list) gets the designed face without anyone deciding.",
+   "techniques": [
+    {
+     "technique": "a-new-field-must-choose",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/present.ts:59 This is a total fold over an owned closed union with a default arm instead of an exhaustive switch. Adding a member to LIBRARY_KINDS does not stop the build here."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/actions.ts:28 An out-of-range page limit is refused at the zod door, not clamped."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/actions.ts:5 Input rules are placed at one construction door per action (runAction/action), not checked at call sites in the sides."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:129 `pinned` is computed from the acts the index offers, not stored or declared beside them."
+    },
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:133 The one mapping that both sides emit through leaves out absent optional parts instead of defaulting them."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:41 'Cannot serve' is null in the wrapper, not a member of the result type."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/real.ts:127 The store can lapse, so a typed Result accessor on every call fits better than a proof token, which is the technique's own carve-out."
+    }
+   ],
+   "registryProposal": "a-new-field-must-choose could say how it applies to TypeScript if-chains that narrow a union and end in a fallthrough return. That is the common TS form of a default arm, and the technique currently names only match/switch default arms."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-10T23:16:34.647131+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "a-new-field-must-choose",
+    "build-time-evaluation-of-cross-value-invariants",
+    "completeness-at-emission",
+    "constraint-deletion-is-silent",
+    "consumption-bounds-at-most-once",
+    "derived-properties-cannot-be-forged",
+    "indistinguishable-members-do-not-rise",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 0,
+   "context": "domain-parts-projects-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T23:16:34.647131+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "a-new-field-must-choose",
+    "completeness-at-emission",
+    "derived-properties-cannot-be-forged",
+    "initialization-proof-tokens",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

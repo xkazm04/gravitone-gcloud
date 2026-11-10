@@ -7767,14 +7767,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/domain/src/project.ts:54 Domain entities enforce structural and relational invariants at schema doors, status FSMs, and derived state projections without repairing checks or dummy members.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:c6563834f502429c",
-          "evaluatedRevision": 9,
+          "evidence": "packages/domain/src/project.ts:57 The domain names each rule's altitude: structural rules sit at zod doors (plan graph, slot field/state coupling), states are derived instead of stored, and exhaustive keyed tables make a new op or kind fail to compile. Negative tests check that the doors refuse bad input.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:89cd666907c6c9d6",
+          "evaluatedRevision": 10,
           "source": "renamed",
           "renamedFrom": "298a4b92-0268-4d06-99a5-7ad103981170",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "client-fetch-cache",
