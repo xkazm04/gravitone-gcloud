@@ -486,3 +486,14 @@ export async function listSunoLibrary(onPage?: (n: number, total: number | null)
     await page.close().catch(() => {});
   }
 }
+
+/** THE BYTES SEAM (spark suno-api, hybrid). Suno's official API refuses to stream suno.com songs
+ *  ("This app can't stream suno.com songs"), so an API clip's audio is resolved here, free, from
+ *  inside the signed-in profile: GET /api/clip/<id> per song for its CloudFront media URL - the
+ *  same URL `createSunoTracks` hands back. One tab for the whole batch, closed after. A song the
+ *  page cannot see maps to null; a browser that is not running (and cannot be launched) rejects
+ *  with `suno browser not running` / `not signed in to suno`, verbatim. STUB until WP2. */
+export async function resolveSunoAudio(songIds: readonly string[]): Promise<Map<string, string | null>> {
+  void songIds;
+  throw new Error("resolveSunoAudio is not built yet (spark suno-api WP2)");
+}
