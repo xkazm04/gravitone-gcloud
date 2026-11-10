@@ -32,6 +32,8 @@ ventures, characters and music describes the spread era and is archived (`.claud
   Board, and kept characters, Library styles and knowledge stay. A new night on an archived date is `<date>-2`. On a
   new night `seeds new`, `ideas`, `propose`, `add-source` from an idea, `storyboard` from an idea and the steer refuse:
   "archived: the scout now serves channels (spark project-baseline); this door reopens only when the operator says so".
+  When the operator says so, `SCOUT_REOPEN=seeds` on that one call opens the seed door and no other (2026-11-10: a
+  sketch contest's shortlist saved as kept seeds, `pkt:seeds:2026-11-10`).
 
 ## The night
 

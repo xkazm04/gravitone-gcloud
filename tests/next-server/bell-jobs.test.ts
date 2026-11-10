@@ -52,7 +52,8 @@ describe("the bell's job list", () => {
     expect(out).toHaveLength(BELL_CAP);
     expect(out[0]?.id).toBe("job:run:live");
     expect(out[1]?.id).toBe(`job:run:${BELL_CAP + 4}`);
-    expect(out[0]?.href).toBe("/projects/runs?job=job%3Arun%3Alive");
+    // Runs selects a bar by its key, `kernel:<id>` (links.ts runsJobFor): a bare id selects nothing.
+    expect(out[0]?.href).toBe("/projects/runs?job=kernel%3Ajob%3Arun%3Alive");
   });
 
   it("a part's job is called a part; a run's by its media lane", () => {

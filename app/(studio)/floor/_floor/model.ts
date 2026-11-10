@@ -49,13 +49,15 @@ export type FloorUrl = {
   readonly off: readonly string[];
   /** The slot whose record is open over the Floor (`?slot=<id>`), with or without the month. */
   readonly slot: string | null;
-  /** The schedule sheet (`?new=1`), with the Library item it was asked for (`&item=<id>`). */
-  readonly schedule: { readonly item: string | null } | null;
+  /** The schedule sheet (`?new=1`), with the Library item it was asked for (`&item=<id>`) and the
+   *  plan's slot part the slot will place (`&part=<id>`, a project's walk; absent from the month). */
+  readonly schedule: { readonly item: string | null; readonly part?: string } | null;
 };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const CHANNEL = /^[a-z][a-z0-9-]{0,31}$/;
 const SLOT = /^[^\s/?#&]{1,400}$/;
+const PART = /^[^\s?#&]{1,400}$/;
 
 /** `?lane=image&cal=1&day=2026-10-15&off=tiktok&slot=sl-x`; anything unknown is dropped, never guessed. */
 export function parseFloorUrl(q: Readonly<Record<string, string | string[] | undefined>>): FloorUrl {
@@ -67,8 +69,12 @@ export function parseFloorUrl(q: Readonly<Record<string, string | string[] | und
   const day = one("day");
   const slot = one("slot");
   const item = one("item");
+  const part = one("part");
   const off = [...new Set((one("off") ?? "").split(",").filter((c) => CHANNEL.test(c)))].sort();
-  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null, off, slot: slot !== null && SLOT.test(slot) ? slot : null, schedule: one("new") === "1" ? { item: item !== null && SLOT.test(item) ? item : null } : null };
+  // A part id holds a `/` (`<project>/slot`), so it is held to PART, not SLOT; the server door
+  // refuses one that is not a plan's slot part (_calendar/real.ts notSlotPart).
+  const schedule = one("new") === "1" ? { item: item !== null && SLOT.test(item) ? item : null, ...(part !== null && PART.test(part) ? { part } : {}) } : null;
+  return { lane: isFloorLane(lane) ? lane : null, cal: one("cal") === "1", day: day !== null && DAY.test(day) ? day : null, off, slot: slot !== null && SLOT.test(slot) ? slot : null, schedule };
 }
 
 export function floorSearch(u: FloorUrl): string {
@@ -80,6 +86,7 @@ export function floorSearch(u: FloorUrl): string {
   if (u.slot !== null) q.set("slot", u.slot);
   if (u.schedule !== null) q.set("new", "1");
   if (u.schedule !== null && u.schedule.item !== null) q.set("item", u.schedule.item);
+  if (u.schedule?.part !== undefined) q.set("part", u.schedule.part);
   const s = q.toString();
   return s === "" ? "" : `?${s.replace(/%2C/g, ",")}`;
 }

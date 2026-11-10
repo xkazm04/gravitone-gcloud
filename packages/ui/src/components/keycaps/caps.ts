@@ -10,6 +10,12 @@ export function capsFor(mode: string, verb: string, map: Keymap = KEYMAP): reado
   return row === undefined ? [] : row.binding.keys;
 }
 
+/** A declared cap as this platform's keyboard says it: `⌘` is the primary modifier (chord.ts
+ *  `mod`), Ctrl off a Mac - `⌘K` -> `Ctrl+K`. A bare `⌘` or a cap without one is left alone. */
+export function platformCap(cap: string, mac: boolean): string {
+  return mac || cap.length < 2 || !cap.includes("⌘") ? cap : cap.replace("⌘", "Ctrl+");
+}
+
 export type TableOptions = {
   readonly facts?: ReadonlySet<string>;
   readonly field?: string;

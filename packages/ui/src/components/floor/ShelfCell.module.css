@@ -10,7 +10,9 @@
 .style{position:relative;display:block;text-align:left;border-radius:var(--r-control);overflow:hidden;border:1px solid var(--hair);background:var(--ink-2);color:inherit}
 .style.door:hover{border-color:color-mix(in srgb,var(--emerald) 45%,transparent)}
 .hero{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
-.noHero{background:linear-gradient(135deg,var(--ink-4),var(--ink-2))}
+/* No cover plate: the hatched ground Plate draws for a picture it cannot show (a bare gradient read
+   as a tile that failed to paint). */
+.noHero{background:var(--hatch)}
 .lock{position:absolute;top:var(--sp-1);right:var(--sp-1);width:var(--size-glyph-btn);height:var(--size-glyph-btn);border-radius:var(--r-xs);display:grid;place-items:center;background:var(--ink-veil);color:var(--emerald)}
 .lockMark{width:var(--size-glyph-xs);height:var(--size-glyph-xs)}
 .nm{display:block;padding:var(--sp-1) var(--sp-2) var(--sp-tight);font-size:var(--fs-meta);line-height:1.2;color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

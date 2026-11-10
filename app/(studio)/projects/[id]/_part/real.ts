@@ -68,6 +68,22 @@ const boundOf = (kind: EditorKind): Result<Bound> => {
   return b === undefined ? err("unavailable", `no producer is bound for a ${kind} part yet`) : ok(b);
 };
 
+/** What an unbound kind's act still needs, as the act bar draws a need. */
+export const NO_PRODUCER = "a producer";
+
+/**
+ * An unbound kind's acts drawn as what they wait on, not as live buttons (fable-ten A). They used
+ * to draw ready and fail at the receipt with `boundOf`'s refusal; now the act bar draws each as
+ * the need it has (PartEditor: an act with `needs` is a state, not a control), so nothing is
+ * pressed that the confirm could never launch. The receipt and the confirm still refuse in
+ * `boundOf`'s words for a caller that asks anyway (the MCP door). The article and strips recipes
+ * stay composable: their RUN-level producers make them on the Floor (lib/producers/registry.ts).
+ */
+export function unboundActs(v: PartView): PartView {
+  if (BOUND[v.kind] !== undefined) return v;
+  return { ...v, acts: v.acts.map((a) => (a.needs.includes(NO_PRODUCER) ? a : { ...a, needs: [...a.needs, NO_PRODUCER] })) };
+}
+
 export function makeRealPart(deps: RealDeps): ServerPart {
   const withStore = <T,>(fn: (s: Store) => Result<T>): Result<T> => {
     const k = deps.store();
@@ -87,7 +103,7 @@ export function makeRealPart(deps: RealDeps): ServerPart {
     unwrap(
       store.read((r) => {
         const s = sceneOf(r, projectId, key, deps.now());
-        return s.ok ? ok(viewOf(r, s.value)) : s;
+        return s.ok ? ok(unboundActs(viewOf(r, s.value))) : s;
       }),
     );
   const write = (projectId: string, key: string, baseRev: number, op: PartOp | null, run: (t: Reader, s: Scene) => OpPlan) =>

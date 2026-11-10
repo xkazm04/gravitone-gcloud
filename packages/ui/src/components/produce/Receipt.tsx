@@ -187,7 +187,7 @@ export function Receipt({ receipt: r, changes = NO_CHANGES, ceiling, onCeiling, 
         <button
           type="button"
           className={cx(s.confirm, busy && s.busy)}
-          aria-disabled={busy || blocked ? true : undefined}
+          aria-disabled={blocked && !busy ? true : undefined}
           aria-busy={busy ? true : undefined}
           onClick={busy || blocked ? undefined : onConfirm}
         >

@@ -2,20 +2,45 @@
 // onIdTokenChanged calls its listener once on subscribe with the current user, then on every
 // rotation. A shell the server has just verified (its layout handed Providers an identity) holds a
 // good cookie already, so that first call posts nothing; a rotation always posts.
+//
+// The SDK is LOADED (lib/firebase.ts `loadAuth`), so the subscription starts when the load
+// resolves - and an unsubscribe that comes first must win: nothing may subscribe after it.
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-let fire: (user: unknown) => void = () => undefined;
+const sdk = vi.hoisted(() => ({
+  fire: (_user: unknown): void => undefined,
+  subscribed: 0,
+  unsubscribed: 0,
+  /** The pending load, when a test holds it open; null loads at once. */
+  gate: null as null | { promise: Promise<void>; open: () => void; fail: (e: Error) => void },
+}));
 
-vi.mock("firebase/auth", () => ({
-  onIdTokenChanged: (_auth: unknown, cb: (user: unknown) => void) => {
-    fire = cb;
-    // Firebase's contract: the initial call comes with the subscription.
-    cb({ getIdToken: async () => "initial-token" });
-    return () => undefined;
+const onIdTokenChanged = (_auth: unknown, cb: (user: unknown) => void): (() => void) => {
+  sdk.subscribed++;
+  sdk.fire = cb;
+  // Firebase's contract: the initial call comes with the subscription.
+  cb({ getIdToken: async () => "initial-token" });
+  return () => {
+    sdk.unsubscribed++;
+  };
+};
+vi.mock("@/lib/firebase", () => ({
+  firebaseReady: true,
+  loadAuth: async () => {
+    if (sdk.gate !== null) await sdk.gate.promise;
+    return { auth: {}, sdk: { onIdTokenChanged }, google: {} };
   },
 }));
-vi.mock("@/lib/firebase", () => ({ firebaseReady: true, authClient: () => ({}) }));
+const holdLoad = (): void => {
+  let open = (): void => undefined;
+  let fail = (_e: Error): void => undefined;
+  const promise = new Promise<void>((res, rej) => {
+    open = res;
+    fail = rej;
+  });
+  sdk.gate = { promise, open, fail };
+};
 vi.mock("@/lib/devAuth", () => ({ DEV_AUTH: false }));
 vi.mock("@/lib/localMode", () => ({ LOCAL_MODE: false }));
 
@@ -29,6 +54,9 @@ let posts: string[] = [];
 
 beforeEach(() => {
   posts = [];
+  sdk.gate = null;
+  sdk.subscribed = 0;
+  sdk.unsubscribed = 0;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init: { body: string }) => {
@@ -52,7 +80,8 @@ describe("subscribeSessionCookie", () => {
 
   it("a rotation after that posts the new token", async () => {
     const stop = subscribeSessionCookie(() => undefined, true);
-    fire({ getIdToken: async () => "rotated-token" });
+    await flush();
+    sdk.fire({ getIdToken: async () => "rotated-token" });
     await flush();
     expect(posts).toEqual(["rotated-token"]);
     stop();
@@ -63,6 +92,42 @@ describe("subscribeSessionCookie", () => {
     await flush();
     expect(posts).toEqual(["initial-token"]);
     stop();
+  });
+});
+
+describe("subscribeSessionCookie while the SDK is loading", () => {
+  it("subscribes only once the load resolves", async () => {
+    holdLoad();
+    const stop = subscribeSessionCookie(() => undefined, false);
+    await flush();
+    expect(sdk.subscribed).toBe(0);
+    sdk.gate?.open();
+    await flush();
+    expect(sdk.subscribed).toBe(1);
+    expect(posts).toEqual(["initial-token"]);
+    stop();
+    expect(sdk.unsubscribed).toBe(1);
+  });
+
+  it("an unsubscribe before the load resolves wins: nothing subscribes, nothing posts", async () => {
+    holdLoad();
+    const stop = subscribeSessionCookie(() => undefined, false);
+    stop();
+    sdk.gate?.open();
+    await flush();
+    expect(sdk.subscribed).toBe(0);
+    expect(posts).toEqual([]);
+  });
+
+  it("a load that fails is reported, and an unsubscribe after it is harmless", async () => {
+    holdLoad();
+    const heard: string[] = [];
+    const stop = subscribeSessionCookie((m) => heard.push(m), false);
+    sdk.gate?.fail(new Error("chunk failed"));
+    await flush();
+    expect(heard).toEqual(["chunk failed"]);
+    expect(() => stop()).not.toThrow();
+    expect(sdk.subscribed).toBe(0);
   });
 });
 

@@ -26,11 +26,13 @@ import { PacketReview } from "@gt/ui/components/review/PacketReview.tsx";
 import { LevelSheet } from "@gt/ui/components/sheet/LevelSheet.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
+import { LIBRARY_RUN_SOURCES } from "../../../../lib/library/runSources.ts";
 import { boardFor } from "../../_shell/links.ts";
 import { useShell } from "../../_shell/Providers.tsx";
 import { useCommitFlow } from "./commitFlow.tsx";
 import { LazyCommitLayer, useWarmCommit } from "./LazyCommit.tsx";
 import { DecidedDesk } from "./DecidedDesk.tsx";
+import { useLiveBoard, useMade, type BoardDoors } from "./live.ts";
 import { Losses } from "./Losses.tsx";
 import { stepTarget } from "./rail.ts";
 import { redriveAndSay, type Redrive } from "./redrive.ts";
@@ -61,13 +63,16 @@ export type BoardProps = {
   readonly railError?: string;
   readonly kind: "sheet" | "full";
   /** The Server Actions (../_port/actions.ts), handed down by the server page: a client module
-   *  that imported them would walk the bundler into the port's zod doors. */
-  readonly port: BoardPort;
+   *  that imported them would walk the bundler into the port's zod doors. The live feed's head
+   *  and the decided desk's "made" count ride beside them (./live.ts BoardDoors). */
+  readonly port: BoardPort & Partial<BoardDoors>;
   /** The decided desk's way back from a stuck v1 apply (../_port/actions.ts `redrive`). */
   readonly redrive?: Redrive;
   /** A host page that draws the desk in its own route (/scout's Runs tab): the place the sheet's way out and
    *  its only crumb name, and the address of each rail row. The caller passes the rail already narrowed. */
   readonly home?: { readonly label: string; readonly href: string; readonly railBase: string };
+  /** The ledger seq the page rendered at (load.ts `head`), where the live feed continues from; absent, the island asks. */
+  readonly head?: number;
 };
 
 /**
@@ -83,7 +88,7 @@ export function Board(props: BoardProps) {
   return <BoardIsland {...props} />;
 }
 
-function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }: BoardProps) {
+function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home, head }: BoardProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [said, setSaid] = useState("");
@@ -110,6 +115,8 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
   }, [gate, id, router]);
   const flow = useCommitFlow(gate, { onDone: refresh, toast, announce });
   useWarmCommit();
+  useLiveBoard({ id, kind, head, decided: packet.view.state !== "open", gate, ...(port.head === undefined ? {} : { ask: port.head }) });
+  const made = useMade(port.made, packet.view.state !== "open" && LIBRARY_RUN_SOURCES.has(packet.view.source) ? (packet.view.runId ?? null) : null);
 
   const hrefOf = useCallback((to: string) => (home === undefined ? boardFor(to) : `${home.railBase}/${encodeURIComponent(to)}`), [home]);
   const open = useMemo(() => rail.filter((p) => p.state === "open"), [rail]);
@@ -180,6 +187,7 @@ function BoardIsland({ id, initial, rail, railError, kind, port, redrive, home }
         packet={packet}
         next={nextOpen}
         {...(railError === undefined ? {} : { railError })}
+        {...(made === null ? {} : { made })}
         onNext={go}
         {...(redrive === undefined
           ? {}

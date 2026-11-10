@@ -12,6 +12,7 @@ import { LedgerLink } from "@gt/ui/components/ledgerlink/LedgerLink.tsx";
 import { StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
+import type { Made } from "../../library/_port/made.ts";
 import s from "./board.module.css";
 
 export type DecidedDeskProps = {
@@ -22,9 +23,11 @@ export type DecidedDeskProps = {
   readonly onNext: (id: string) => void;
   /** A stuck apply's redrive (dead-letter-design): pending again, a fresh attempt budget. */
   readonly onRedrive?: () => void;
+  /** What the packet's run made, in the Library: present only once counted above zero (./live.ts useMade). */
+  readonly made?: Made;
 };
 
-export function DecidedDesk({ packet, next, railError, onNext, onRedrive }: DecidedDeskProps) {
+export function DecidedDesk({ packet, next, railError, onNext, onRedrive, made }: DecidedDeskProps) {
   const v = packet.view;
   const kept = v.decisions.filter((d) => d.verdict === "keep").length;
   const rejected = v.decisions.filter((d) => d.verdict === "reject").length;
@@ -50,6 +53,7 @@ export function DecidedDesk({ packet, next, railError, onNext, onRedrive }: Deci
           {later > 0 && <Chip label="later" value={later} tone="amber" />}
           {v.apply !== undefined && <Chip label={`v1 apply · ${v.apply.state}`} tone={v.apply.state === "applied" ? "emerald" : v.apply.state === "stuck" ? "rose" : "amber"} dot />}
           {v.returned !== undefined && <Chip label="edit plan" value={v.returned.length} tone="amber" />}
+          {made !== undefined && <Button size="sm" label="made" tally={{ value: made.n }} href={made.href} glyphAfter="chevR" />}
         </div>
         {remainder !== undefined && (
           <div className={s.kv}>

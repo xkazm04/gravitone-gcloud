@@ -32,7 +32,8 @@ export type Blocks = {
   readonly error: string | null;
 };
 
-type Held = { readonly identity: string; readonly rows: ReadonlyMap<number, readonly LibraryCard[]> };
+/** `generation` counts the re-reads that moved the total under one identity (`reread`). */
+type Held = { readonly identity: string; readonly generation: number; readonly rows: ReadonlyMap<number, readonly LibraryCard[]> };
 
 type BlockError = { readonly identity: string; readonly block: number; readonly text: string };
 
@@ -44,28 +45,39 @@ type BlockError = { readonly identity: string; readonly block: number; readonly 
  */
 export const landed = (e: BlockError | null, identity: string, b: number): BlockError | null => (e !== null && e.identity === identity && e.block === b ? null : e);
 
-export function useBlocks(port: LibraryPort, identity: string, query: (offset: number, limit: number) => LibraryQuery, first: readonly LibraryCard[]): Blocks {
-  const [state, setState] = useState<Held>(() => ({ identity, rows: new Map([[0, first]]) }));
+/**
+ * What a re-read of the SAME result keeps: the first block is the truth again, and the other
+ * blocks too while the total stands (an act moved a mark, not the order). A total that moved means
+ * rows came or went - a live re-read (./live.ts) after a sync - and every block after the first
+ * is shifted, so they go and are asked again as the window reaches them, under a new generation.
+ */
+export function reread(rows: ReadonlyMap<number, readonly LibraryCard[]>, first: readonly LibraryCard[], moved: boolean): Map<number, readonly LibraryCard[]> {
+  return moved ? new Map([[0, first]]) : new Map(rows).set(0, first);
+}
+
+export function useBlocks(port: LibraryPort, identity: string, query: (offset: number, limit: number) => LibraryQuery, first: readonly LibraryCard[], total: number): Blocks {
+  const [state, setState] = useState<Held>(() => ({ identity, generation: 0, rows: new Map([[0, first]]) }));
   const [error, setError] = useState<BlockError | null>(null);
-  const [seenFirst, setSeenFirst] = useState(first);
-  // Asked blocks by `<identity>#<block>`: a block asked for under an old query is never mistaken
-  // for one of the new query's.
+  const [seen, setSeen] = useState({ first, total });
+  // Asked blocks by `<identity>@<generation>#<block>`: a block asked for under an old query, or
+  // before a re-read that moved the total, is never mistaken for one of the current answer's.
   const asked = useRef<Map<string, Promise<readonly LibraryCard[] | undefined>>>(new Map());
   if (state.identity !== identity) {
-    setState({ identity, rows: new Map([[0, first]]) });
-    setSeenFirst(first);
-  } else if (seenFirst !== first) {
-    // The same result re-read after an act: its first block is the truth again.
-    setSeenFirst(first);
-    setState((h) => ({ identity: h.identity, rows: new Map(h.rows).set(0, first) }));
+    setState({ identity, generation: state.generation + 1, rows: new Map([[0, first]]) });
+    setSeen({ first, total });
+  } else if (seen.first !== first) {
+    const moved = seen.total !== total;
+    setSeen({ first, total });
+    setState((h) => ({ identity: h.identity, generation: moved ? h.generation + 1 : h.generation, rows: reread(h.rows, first, moved) }));
   }
+  const generation = state.generation;
   const held = useMemo<ReadonlyMap<number, readonly LibraryCard[]>>(() => (state.identity === identity ? state.rows : new Map([[0, first]])), [state, identity, first]);
 
   const fetchBlock = useCallback(
     (b: number): Promise<readonly LibraryCard[] | undefined> => {
       const have = held.get(b);
       if (have !== undefined) return Promise.resolve(have);
-      const key = `${identity}#${b}`;
+      const key = `${identity}@${generation}#${b}`;
       const running = asked.current.get(key);
       if (running !== undefined) return running;
       const p = settle(port.query(query(b * BLOCK, BLOCK))).then((r) => {
@@ -74,15 +86,15 @@ export function useBlocks(port: LibraryPort, identity: string, query: (offset: n
           setError({ identity, block: b, text: r.error.error });
           return undefined;
         }
-        // Lands only in the cache of the query that asked for it.
-        setState((h) => (h.identity === identity ? { identity, rows: new Map(h.rows).set(b, r.value.items) } : h));
+        // Lands only in the cache of the query - and the re-read - that asked for it.
+        setState((h) => (h.identity === identity && h.generation === generation ? { identity, generation, rows: new Map(h.rows).set(b, r.value.items) } : h));
         setError((e) => landed(e, identity, b));
         return r.value.items;
       });
       asked.current.set(key, p);
       return p;
     },
-    [held, port, query, identity],
+    [held, port, query, identity, generation],
   );
 
   const want = useCallback(

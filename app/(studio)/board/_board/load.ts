@@ -17,13 +17,14 @@ import type { BoardPacket } from "@gt/ui/board/port";
 
 import { reconcileApplies } from "../../../../lib/decision/v1/applier.ts";
 import { kernel } from "../../../../lib/kernelStore.ts";
+import { ledgerHead } from "../../../../lib/library/head.ts";
 import { publicError } from "../../../_server/http.ts";
 import { boardFor } from "../../_shell/links.ts";
 import { packetParam } from "../_port/param.ts";
 import { serverBoard, SIDE } from "../_port/port.ts";
 
 export type BoardLoad =
-  | { readonly ok: true; readonly id: string; readonly packet: BoardPacket; readonly rail: readonly PacketSummary[]; readonly railError?: string }
+  | { readonly ok: true; readonly id: string; readonly packet: BoardPacket; readonly rail: readonly PacketSummary[]; readonly railError?: string; readonly head?: number }
   | { readonly ok: false; readonly id: string; readonly error: ErrorEnvelope };
 
 /** Start a sweep of due v1 applies if one is due; its outcome reaches the page on the next read. */
@@ -37,6 +38,8 @@ export function catchUpV1(): void {
 export async function loadBoard(params: Promise<{ readonly packet: string }>): Promise<BoardLoad> {
   const id = packetParam((await params).packet);
   catchUpV1();
+  // Read first: the island's live feed continues from here, so an event the reads below miss is heard.
+  const head = ledgerHead();
   const board = serverBoard();
   // In order: the load may open the packet, and the rail should list it as opened.
   const packet = await board.loadPacket({ id });
@@ -46,5 +49,5 @@ export async function loadBoard(params: Promise<{ readonly packet: string }>): P
   // The desk still draws without its rail, but an empty rail reads as a clear Weir: say why it is empty
   // (railError reaches the decided desk's foot, which would otherwise claim `weir clear`).
   if (!list.ok) console.error(`[board] rail: ${list.error.message}`);
-  return { ok: true, id, packet: packet.value, rail: list.ok ? list.value.packets : [], ...(list.ok ? {} : { railError: `board rail: ${publicError(list.error, "board rail").error}` }) };
+  return { ok: true, id, packet: packet.value, rail: list.ok ? list.value.packets : [], ...(list.ok ? {} : { railError: `board rail: ${publicError(list.error, "board rail").error}` }), ...(head.ok ? { head: head.value } : {}) };
 }

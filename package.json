@@ -60,6 +60,7 @@
     "check:audio-triage": "npx tsx pipeline/audio-triage-eval.mts --gate",
     "check:style-refs": "npx tsx pipeline/style-ref-stability.mts",
     "check:narration": "node pipeline/check-narration.mjs",
+    "measure:read-cost": "node tests/measure/read-cost.mts",
     "check:clips": "node pipeline/check-clips.mjs",
     "check:vocab": "node pipeline/check-vocab.mjs",
     "build:preset-clips": "npx tsx pipeline/build-preset-clips.mts"

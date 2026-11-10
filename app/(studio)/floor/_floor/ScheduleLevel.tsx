@@ -8,7 +8,8 @@
 //
 // The exports are read when the sheet opens (port.items), not with the Floor: most Floor renders
 // never schedule anything. A send is disarmed synchronously (a ref), so a second press before
-// the re-render cannot make a second slot (async-ui-states action-busy-states); the engine's
+// the re-render cannot make a second slot (async-ui-states action-busy-states). Opened from a
+// project's walk (`&part=<slot part>`), the slot it makes places that part on the plan. The engine's
 // refusal is drawn verbatim in the form and the draft is kept. A slot that lands closes the
 // sheet onto its own record, so the operator sees what was made, and the Floor re-reads.
 
@@ -34,9 +35,20 @@ export type ScheduleLevelProps = {
   readonly onFloor: () => void;
   /** A slot landed: open its record. */
   readonly onMade: (slotId: string) => void;
+  /** The plan's slot part the slot places (`&part=`, a project's walk: ../../projects/_plan/doors.ts).
+   *  Omitted by a caller that does not pass it: the sheet then reads it from the address the Floor
+   *  keeps (./model.ts floorSearch writes `part` while the sheet that was asked for it is open). */
+  readonly part?: string | null;
 };
 
-export function ScheduleLevel({ port, facts, slots, nowMs, day, item, onClose, onFloor, onMade }: ScheduleLevelProps) {
+/** The address's `part`, read when the slot is sent - the Floor writes its URL with
+ *  history.replaceState (./Floor.tsx), and the month's own Schedule opens the sheet without one. */
+function partOfAddress(): string | null {
+  const p = new URLSearchParams(window.location.search).get("part");
+  return p === null || p === "" ? null : p;
+}
+
+export function ScheduleLevel({ port, facts, slots, nowMs, day, item, onClose, onFloor, onMade, part }: ScheduleLevelProps) {
   const { toast } = useShell();
   const [items, setItems] = useState<ScheduleItems>({ kind: "reading" });
   const [busy, setBusy] = useState(false);
@@ -58,7 +70,9 @@ export function ScheduleLevel({ port, facts, slots, nowMs, day, item, onClose, o
     armed.current = true;
     setBusy(true);
     setRefusal(undefined);
-    void settle(port.schedule(draft)).then((r) => {
+    // The part rides only when one was asked for: absent is the key omitted, never null or "".
+    const partId = part === undefined ? partOfAddress() : part;
+    void settle(port.schedule(partId === null ? draft : { ...draft, partId })).then((r) => {
       armed.current = false;
       setBusy(false);
       if (!r.ok) {

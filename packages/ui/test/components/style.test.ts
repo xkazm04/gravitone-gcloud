@@ -126,6 +126,8 @@ describe("the sheet and the ratchet, drawn", () => {
     const count = (html: string) => html.split(blocker).length - 1;
     expect(count(gate(blocker, { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(count(gate("operator keeps in 1 of 2 cells", { can: false, blocker, legacySheet: false }))).toBe(1);
+    // a proven style's why carries the blocker (styleView.ts `proven — to lock: <blocker>`): once
+    expect(count(gate(`proven — to lock: ${blocker}`, { can: false, blocker, legacySheet: false }))).toBe(1);
     expect(gate("the gate holds — it may lock", { can: true, blocker: null, legacySheet: false })).toContain("data-can-lock");
   });
 });

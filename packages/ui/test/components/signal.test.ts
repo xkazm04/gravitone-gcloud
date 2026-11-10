@@ -17,6 +17,7 @@ import src from "../../src/components/source/SourceTag.module.css";
 import { BADGE_CHANNELS, ChannelBadge } from "../../src/components/channel/ChannelBadge.tsx";
 import { CHANNELS } from "@gt/domain/slot";
 import { Ghost } from "../../src/components/ghost/Ghost.tsx";
+import ghostCss from "../../src/components/ghost/Ghost.module.css";
 import { UpstreamBreak, nodeStates } from "../../src/components/upstream/UpstreamBreak.tsx";
 import ub from "../../src/components/upstream/UpstreamBreak.module.css";
 import { Provenance } from "../../src/components/provenance/Provenance.tsx";
@@ -132,6 +133,16 @@ describe("SourceTag, ChannelBadge, Ghost, ErrorLine, LedgerLink", () => {
     const g = html(h(Ghost, { count: 3, label: "no projects yet" }));
     expect(count(g, /aria-hidden="true"/g)).toBe(3);
     expect(g).toContain(">no projects yet</span>");
+  });
+
+  test("a filling ghost is the same marks sharing their region's height, its outline still the 3:1 one", () => {
+    const g = html(h(Ghost, { count: 2, label: "desk", fill: true }));
+    expect(count(g, /aria-hidden="true"/g)).toBe(2);
+    expect(g).toContain(`class="${ghostCss.list} ${ghostCss.fill}"`);
+    expect(html(h(Ghost, { label: "desk" }))).toContain(`class="${ghostCss.list}"`);
+    const css = readFileSync(join(import.meta.dirname, "../../src/components/ghost/Ghost.module.css"), "utf8");
+    expect(css).toMatch(/\.fill \.card\{[^}]*flex:1 1 0[^}]*min-height:var\(--h-field\)/);
+    expect(css).not.toMatch(/\.fill[^{]*\{[^}]*(border|opacity|color)/);
   });
 
   test("an error is verbatim, and alerts only when it arrives", () => {

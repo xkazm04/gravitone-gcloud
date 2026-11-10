@@ -17,6 +17,7 @@ import type { StudioDropped } from "@gt/domain/audio.studio";
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Field } from "../field/Field.tsx";
+import { Hint } from "../hint/Hint.tsx";
 import { VerdictBar, type VerdictBarProps } from "../suno/VerdictBar.tsx";
 import { canSendIn, droppedWords, type DockState } from "./dock.ts";
 import s from "./Dock.module.css";
@@ -51,7 +52,12 @@ export function Dock({ state, reply, notice = null, draft, onDraft, onSend, drop
     <section className={s.dock} data-dock={state} aria-label="talk to the studio">
       <div className={s.said} aria-live="polite">
         <Chip label={pill.label} tone={pill.tone} dot={state === "listening" || state === "thinking"} ghost={state === "offline" || state === "waiting"} casing="lower" />
-        <p className={s.reply}>{state === "offline" ? "No agent is listening right now, so sending is off." : (reply ?? (state === "waiting" ? "Nobody is listening yet. Your message will wait for the agent." : "Say what you would like to hear."))}</p>
+        {/* Nobody listening is said once, by the pill; how the operator starts a listener is its
+            disclosure. Before the first reply the line is not drawn: the pill, the empty stage and
+            the field's placeholder already say there is nothing yet (an offline dock: a disabled
+            field whose placeholder is "nobody is listening"). */}
+        {state === "waiting" && <Hint text="start /studio-agent in Claude Code" name="who listens" />}
+        {reply !== null && <p className={s.reply}>{reply}</p>}
       </div>
       {notice !== null && <p className={s.notice}>{notice}</p>}
       {words !== null && (

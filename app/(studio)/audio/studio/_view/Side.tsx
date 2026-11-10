@@ -58,8 +58,6 @@ type NextProps = {
   readonly transport: MixTransport;
   readonly dispatch: Dispatch;
   readonly blocked: string | null;
-  /** The dock reads offline: "listening" = the offline preview (asks refused), "nobody" = no agent has looked yet (asks wait). */
-  readonly offline: "listening" | "nobody" | null;
   /** Spark suno-advisor: the confirmed taste profile, between the next steps and what always works. */
   readonly taste?: ReactNode;
 };
@@ -88,7 +86,7 @@ function newestWith(turns: readonly ParsedTurn[], kind: "track" | "stems"): { re
   return null;
 }
 
-export function NextSteps({ visible, turns, transport, dispatch, blocked, offline, taste }: NextProps) {
+export function NextSteps({ visible, turns, transport, dispatch, blocked, taste }: NextProps) {
   const turn = visible?.turn ?? null;
   const take = newestWith(turns, "track");
   const parts = newestWith(turns, "stems");
@@ -108,9 +106,10 @@ export function NextSteps({ visible, turns, transport, dispatch, blocked, offlin
   return (
     <aside className={s.side} aria-label="next steps">
       <Panel title="next steps" tally={{ value: actions.length, label: "suggested" }}>
-        {offline !== null && <p className={s.offline}>{offline === "nobody" ? "No agent is listening yet. An ask waits until it looks; everything that plays or mixes here works now." : "No agent is listening. Everything that plays or mixes here still works; the asks wait."}</p>}
+        {/* An offline dock is said by its pill; what still works here is each step's own chip
+            ("plays here" / "asks the agent") and a blocked ask carries its reason on its row. */}
         {turn === null || actions.length === 0 ? (
-          <p className={s.empty}>{turn === null ? "The agent has not answered yet." : "The agent suggested nothing this time; say what you want below."}</p>
+          <p className={s.empty}>{turn === null ? "no answer yet" : "nothing suggested this turn"}</p>
         ) : (
           <ul className={s.list}>
             {actions.map((a) => {

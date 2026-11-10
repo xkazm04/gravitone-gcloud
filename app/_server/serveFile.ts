@@ -29,6 +29,8 @@ import { envelope } from "./http.ts";
 //   - validators: a strong ETag from size and mtime (nginx's) and Last-Modified,
 //     and If-Range honoured - a client resuming a file that changed underneath
 //     it gets the new file whole, not a splice of two versions. None of v1's had it;
+//   - conditional GET: If-None-Match (or, without it, If-Modified-Since) that
+//     still holds answers 304 with no body, so every door's revalidation is free;
 //   - HEAD answers the headers with no body;
 //   - a missing file is the envelope's `not-found`, and the absolute path stays
 //     on the server (v1's foundry copy relayed its store's sentence).
@@ -77,6 +79,31 @@ export function ifRangeHolds(ifRange: string | null, etag: string, lastModified:
   const v = ifRange.trim();
   if (v.startsWith('"') || v.startsWith("W/")) return v === etag;
   return v === lastModified;
+}
+
+// One entity tag out of a list, weak or strong: `W/"x"` or `"x"`.
+const TAG = /\s*((?:W\/)?"[^"]*")\s*(?:,|$)/gy;
+const opaque = (tag: string): string => (tag.startsWith("W/") ? tag.slice(2) : tag);
+
+/**
+ * Does the client already hold this representation (RFC 9110 13.1.2-13.1.3, 13.2.2)?
+ * If-None-Match wins when present - weak comparison, `*` matching any file that exists - and
+ * If-Modified-Since is read only in its absence, at the one-second grain Last-Modified is sent
+ * at. An unparseable date or tag list is a condition that does not hold, never a 304.
+ */
+export function notModified(ifNoneMatch: string | null, ifModifiedSince: string | null, etag: string, mtimeMs: number): boolean {
+  if (ifNoneMatch !== null) {
+    const v = ifNoneMatch.trim();
+    if (v === "*") return true;
+    TAG.lastIndex = 0;
+    for (let m = TAG.exec(v); m !== null && m[0] !== ""; m = TAG.exec(v)) {
+      if (opaque(m[1] ?? "") === opaque(etag)) return true;
+    }
+    return false;
+  }
+  if (ifModifiedSince === null) return false;
+  const since = Date.parse(ifModifiedSince);
+  return Number.isFinite(since) && Math.floor(mtimeMs / 1000) * 1000 <= since;
 }
 
 /** The bytes [start, end] of `abs`, read on demand: the reader's pace sets the reads. */
@@ -142,6 +169,15 @@ export async function serveFile(req: Request, abs: string, opts: ServeOptions): 
   };
   const ranged = opts.ranges ?? true;
   if (ranged) base["accept-ranges"] = "bytes";
+  // Revalidation before Range (RFC 9110 13.2.2): a client holding these bytes gets the
+  // validators and the cache policy, no body - a `no-cache` cover or an hour-old foundry plate
+  // revalidates for a few hundred bytes instead of resending itself. A condition that fails
+  // falls through to the ranged path untouched.
+  if ((req.method === "GET" || req.method === "HEAD") && notModified(req.headers.get("if-none-match"), req.headers.get("if-modified-since"), etag, mtimeMs)) {
+    const held = { ...base };
+    delete held["content-type"];
+    return new Response(null, { status: 304, headers: held });
+  }
   const ask = ranged && ifRangeHolds(req.headers.get("if-range"), etag, lastModified) ? parseRange(req.headers.get("range"), size) : { kind: "whole" as const };
   if (ask.kind === "unsatisfiable") return new Response(null, { status: 416, headers: { ...base, "content-range": `bytes */${size}` } });
   const [start, end, status] = ask.kind === "part" ? [ask.start, ask.end, 206] : [0, size - 1, 200];

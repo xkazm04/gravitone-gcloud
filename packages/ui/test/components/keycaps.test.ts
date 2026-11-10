@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 import { KEYMAP } from "../../src/keymap/bindings.ts";
 import { compile, keyTable } from "../../src/keymap/keymap.ts";
-import { capsFor } from "../../src/components/keycaps/caps.ts";
+import { capsFor, platformCap } from "../../src/components/keycaps/caps.ts";
 import { Keycap, Keycaps } from "../../src/components/keycaps/Keycaps.tsx";
 
 /** [caps, does] per drawn row, read back from the markup. */
@@ -56,6 +56,21 @@ describe("a cap that takes focus is announced as something", () => {
     const focusable = [...html.matchAll(/<kbd[^>]*tabindex="0"[^>]*>/gi)].map((m) => m[0]);
     expect(focusable).toHaveLength(2);
     expect(focusable.filter((k) => !/\srole="\w+"/.test(k))).toEqual([]);
+  });
+});
+
+describe("a cap is drawn in the operator's platform's modifier", () => {
+  test("⌘ is Ctrl off a Mac and ⌘ on one; a cap without the modifier is untouched", () => {
+    expect(platformCap("⌘K", false)).toBe("Ctrl+K");
+    expect(platformCap("⌘⏎", false)).toBe("Ctrl+⏎");
+    expect(platformCap("⌘K", true)).toBe("⌘K");
+    expect(platformCap("⌫", false)).toBe("⌫");
+    expect(platformCap("K", false)).toBe("K");
+  });
+
+  test("the server draws the cap as declared, so the first client render agrees with it", () => {
+    const html = renderToStaticMarkup(createElement(Keycaps, { mode: "t", label: "keys", map: compile([{ mode: "t", keys: ["⌘K"], verb: "jump" }]) }));
+    expect(rowsOf(html)).toEqual([[["⌘K"], "jump"]]);
   });
 });
 

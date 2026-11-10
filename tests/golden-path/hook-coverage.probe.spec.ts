@@ -45,6 +45,14 @@ export const EXEMPT: Record<string, string> = {
   "app/(studio)/audio/_cover/desk/sleeve/usePair.ts": NEEDS_DOM,
   // Split out of useCover; its acts are tested in tests/next-server/cover-doors.test.ts.
   "app/(studio)/audio/_cover/desk/useAfterPick.ts": NO_DRIVER,
+  // spark fable-ten: re-reads a part while a job is in flight. It asks document.activeElement whether the
+  // operator is typing and rides @gt/ui's visibility-aware poll; its adoption rule (mayAdopt) is unit-tested
+  // in packages/ui/test/components/part.test.ts.
+  "app/(studio)/projects/[id]/[part]/_edit/walk/useReread.ts": NEEDS_DOM,
+  // spark fable-ten: Runs' selection, written to the address with window.history.replaceState and re-adopted
+  // when a navigation hands the island new search params. Its address grammar (url.ts runsSearch / parse) is
+  // unit-tested in tests/next-server/runs-state-filter.test.ts.
+  "app/(studio)/projects/runs/_runs/useSelection.ts": "reads and writes window.location and window.history, which this DOM-less lane has none of",
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

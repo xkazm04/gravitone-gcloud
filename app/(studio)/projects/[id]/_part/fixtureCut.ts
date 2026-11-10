@@ -149,7 +149,12 @@ function timeline(ctx: KCtx, c: CutRec): TimelineData {
         const f = cut.frames[s.id];
         const pic = pictures.find((p) => p.ref === s.id);
         const blob = blobOf(pic?.src);
-        return [s.id, { title: s.label, line: f?.line ?? pic?.note ?? "", kind: f?.kind ?? s.mood, placed: pic !== undefined && pic.status !== "missing", ...(blob === undefined ? {} : { blob }) }];
+        const placed = pic !== undefined && pic.status !== "missing";
+        // The address the monitor draws: the blob door for a blob, else the plate's own URL (a dry
+        // stand-in's public still, a v1 plate's data: URL) - never a `dry:` take pointer.
+        const own = placed ? pic.src : undefined;
+        const url = blob !== undefined ? `/api/blob/${blob}` : own !== undefined && (own.startsWith("/") || own.startsWith("data:image/")) ? own : undefined;
+        return [s.id, { title: s.label, line: f?.line ?? pic?.note ?? "", kind: f?.kind ?? s.mood, placed, ...(blob === undefined ? {} : { blob }), ...(url === undefined ? {} : { url }) }];
       }),
     ),
     exports: c.exports.filter((e) => e.aspect === undefined).map(exportView),

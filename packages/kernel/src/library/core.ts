@@ -1,6 +1,7 @@
 import {
   ageBand,
   COLUMN_GROUPS,
+  isSharedGroup,
   LIBRARY_KINDS,
   MEDIA_KINDS,
   normText,
@@ -168,8 +169,22 @@ export function facetsOf(item: LibraryItem, ctx: IndexContext): FacetRow[] {
     const grp = c.kind === "pin" ? "pin" : c.kind;
     add(grp, c.id, grp === "project" ? (ctx.projectTitle?.(c.id) ?? c.id) : c.id);
   }
+  // The job that made it, read off its lineage: what Runs' "made" door filters by (LINEAGE_GROUPS).
+  for (const l of item.lineage) if (l.kind === "job") add("job", l.id, l.id);
   return out;
 }
+
+/**
+ * Facet groups the index holds and a query may filter by, but the rail does not draw: a job's
+ * id is an address another screen links with ("what this job made", from Runs), not a
+ * vocabulary to browse - a rail of every job id would be thousands of one-item values. They
+ * narrow the kind counts like the shared groups do, since a job's output may be of any kind.
+ * Spelled again, client-safe, in app/(studio)/library/_library/url.ts (a test holds the two equal).
+ */
+export const LINEAGE_GROUPS: readonly string[] = ["job"];
+
+/** A group whose selection narrows every kind's count: a shared rail group or a lineage group. */
+export const narrowsKinds = (group: string): boolean => isSharedGroup(group) || LINEAGE_GROUPS.includes(group);
 
 /** The index row for an entry: columns, facets, the search haystack and the
  *  digest that makes a re-projection of an unchanged item a no-op. */

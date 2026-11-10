@@ -9,6 +9,8 @@
 // here reads app state, and nothing runs because it rendered.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
+
 import type { VariantProps } from "../_host/types.ts";
 import { Card } from "./Card.tsx";
 import { askBlockedWords, cardsOf } from "./model.ts";
@@ -56,7 +58,8 @@ export function View(v: VariantProps) {
   // The taste profile stands beside a conversation that is about Suno prompts, not beside every one.
   const sunoThread = useMemo(() => session.turns.some(({ turn }) => turn.show.some((n) => n.kind === "suno_prompt" || n.kind === "taste")), [session.turns]);
 
-  if (cards.length === 0) return <p className={s.quiet}>The agent has not answered yet. Say what you would like to hear below.</p>;
+  // No answer yet is a state of the conversation, said in its words (the dock's field says where to talk).
+  if (cards.length === 0) return <Empty label="no answer yet" />;
   return (
     <div className={s.view} data-view="studio">
       <Rail cards={cards} latestKey={answeredKey} transport={transport} dispatch={dispatch} onJump={jump} />
@@ -74,7 +77,7 @@ export function View(v: VariantProps) {
           </div>
         ))}
       </div>
-      <NextSteps visible={session.visible} turns={session.turns} transport={transport} dispatch={dispatch} blocked={blocked} offline={dock.state === "offline" ? dock.presence : null} taste={sunoThread ? <TasteProfile suno={v.suno} /> : null} />
+      <NextSteps visible={session.visible} turns={session.turns} transport={transport} dispatch={dispatch} blocked={blocked} taste={sunoThread ? <TasteProfile suno={v.suno} /> : null} />
     </div>
   );
 }

@@ -26,13 +26,18 @@ import type { Actor } from "@gt/domain/event";
 import type { LibraryItemInput } from "@gt/domain/libraryItem";
 import { putMediaFacts, upsertItems } from "@gt/kernel/library/write";
 import { recordFailure, recordMetric, recordPublication } from "@gt/kernel/slots/outcome";
-import { getSlot } from "@gt/kernel/slots/read";
+import { compose } from "@gt/kernel/records/write";
+import { readProject } from "@gt/kernel/records/read";
+import { gateFacts } from "@gt/kernel/parts/gates";
+
+import { planRowHref } from "../../app/(studio)/projects/_plan/doors.ts";
+import { getSlot, slottedIn } from "@gt/kernel/slots/read";
 import { sweep } from "@gt/kernel/slots/sweep";
 import { createSlot } from "@gt/kernel/slots/write";
 import type { Store } from "@gt/kernel/store";
 
 import { stylePlates } from "../../app/(studio)/floor/_floor/shelf.ts";
-import { realCancel, realDetail, realItems, realMove, realPublishNow, realSchedule, realSlots, unimported } from "../../app/(studio)/floor/_calendar/real.ts";
+import { notSlotPart, realCancel, realDetail, realItems, realMove, realPublishNow, realSchedule, realSlots, unimported } from "../../app/(studio)/floor/_calendar/real.ts";
 import { NO_STORE_FACTS, readinessOf, standingWords } from "../../app/(studio)/floor/_calendar/readiness.ts";
 import { closeKernel, kernel } from "../../lib/kernelStore.ts";
 import { projectPublish, publishSource } from "../../lib/ledger/v1/sources/publish.ts";
@@ -260,6 +265,60 @@ describe("the verbs, at the slot's revision", () => {
     const items = must(realItems());
     expect(items.map((i) => i.id).sort()).toEqual([A, B, C]);
     expect(items.find((i) => i.id === A)?.poster).toBe(`/api/blob/${sha("c")}?type=image%2Fjpeg`);
+  });
+});
+
+describe("a slot scheduled for a plan's slot part (fable-ten A)", () => {
+  const D = "video:export:dddd4444";
+  const E = "video:export:eeee5555";
+  const F = "video:export:ffff6666";
+  beforeAll(() => {
+    must(upsertItems(store, [{ item: video(D, sha("1")), meta: "film · 1.0 MB", extras: {}, feed: "t" }, { item: video(E, sha("2")), meta: "film · 1.0 MB", extras: {}, feed: "t" }, { item: video(F, sha("3")), meta: "film · 1.0 MB", extras: {}, feed: "t" }], { styleOf: () => undefined }));
+    must(compose(store, { recipe: "film/trailer" }, { kind: "operator", id: "op" }, { id: "walk-p1" }));
+  });
+  const draft = (item: string) => ({ item, channel: "youtube", at: iso(900), title: "Glass Harbor · trailer", description: "", tags: [] });
+  const placed = (partId: string): boolean => must(store.read((r) => slottedIn(r, partId)));
+  let placedSlot = "";
+  const words = (r: { ok: boolean; error?: { message: string } }) => (r.ok ? null : (r.error?.message ?? ""));
+
+  it("carries the part into the slot, and the plan then reads that part as placed", () => {
+    expect(placed("walk-p1/slot")).toBe(false);
+    const v = must(realSchedule({ ...draft(D), partId: "walk-p1/slot" }, OP));
+    placedSlot = v.slot.id;
+    expect(must(getSlot(store, v.slot.id)).slot.partId).toBe("walk-p1/slot");
+    expect(placed("walk-p1/slot")).toBe(true);
+    // The record names its project through the part (real.ts projectOf).
+    expect(v.project?.href).toBe("/projects/walk-p1");
+  });
+
+  it("without a part is the slot it always was: no part on the record, none in the column", () => {
+    const v = must(realSchedule(draft(E), OP));
+    const row = must(getSlot(store, v.slot.id));
+    expect("partId" in row.slot).toBe(false);
+    expect(must(store.read((r) => r.get("SELECT part_id FROM slots WHERE id = ?", v.slot.id)?.["part_id"]))).toBeNull();
+    expect(v.project).toBeUndefined();
+  });
+
+  it("refuses a part that is not a plan's slot part, and makes nothing", () => {
+    const before = must(store.read((r) => r.get("SELECT count(*) AS c FROM slots")?.["c"]));
+    for (const partId of ["walk-p1/frames", "walk-p1/gate:frames", "nobody/slot"]) expect(words(realSchedule({ ...draft(F), partId }, OP))).toBe(notSlotPart(partId));
+    expect(must(store.read((r) => r.get("SELECT count(*) AS c FROM slots")?.["c"]))).toBe(before);
+  });
+
+  // AC1, restated for the real side: the Plan's rows as the real port reads them (gateFacts).
+  it("on the Plan, a gate with a packet links to its NEWEST packet, a gate with none has no link, and the placed slot opens its slot", () => {
+    must(store.tx((t) => {
+      for (const [id, state] of [["pkt:step:walk-p1/gate:frames", "returned"], ["pkt:step:walk-p1/gate:frames#2", "open"]] as const) t.run("INSERT INTO packets (id, mode, state, rev, body, opened_at) VALUES (?, 'packet-review', ?, 0, '{}', ?)", id, state, t.at);
+    }));
+    const plan = must(readProject(store, "walk-p1", gateFacts(Date.now())));
+    const href = (id: string): string | null => {
+      const p = plan.parts.find((x) => x.id === id);
+      if (p === undefined) throw new Error(`no part ${id}`);
+      return planRowHref("walk-p1", p);
+    };
+    expect(href("walk-p1/gate:frames")).toBe(`/board/${encodeURIComponent("pkt:step:walk-p1/gate:frames#2")}`);
+    expect(href("walk-p1/gate:score")).toBeNull();
+    expect(href("walk-p1/slot")).toBe(`/floor?cal=1&slot=${encodeURIComponent(placedSlot)}`);
   });
 });
 

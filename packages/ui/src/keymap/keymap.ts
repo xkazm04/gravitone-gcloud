@@ -66,6 +66,18 @@ export function modePath(mode: string): string[] {
   return parts.map((_, i) => parts.slice(0, parts.length - i).join("."));
 }
 
+/**
+ * THE STUDIO'S OWN MODE - the global layer (keyboard-shortcuts layered-key-dispatch: overlay,
+ * region, screen, global). Its rows work on every screen and are heard LAST: after the active
+ * mode declined the press (route.ts). So for the checker it is the outer mode of every mode -
+ * a screen row on one of its chords is a conflict unless it says `shadows`. It is not a page:
+ * route.ts `pageMode` never answers it.
+ */
+export const GLOBAL = "studio";
+
+/** The modes `mode` sits inside, nearest first: its dotted ancestors, then the global layer. */
+const outerOf = (mode: string): string[] => (mode === GLOBAL ? [] : [...modePath(mode).slice(1), GLOBAL]);
+
 const holds = (when: string | undefined, facts: ReadonlySet<string>): boolean =>
   when === undefined || (when.startsWith("!") ? !facts.has(when.slice(1)) : facts.has(when));
 
@@ -128,8 +140,8 @@ export function conflicts(map: Keymap): Conflict[] {
       if (p === undefined || q === undefined) continue;
       const a = p.binding;
       const b = q.binding;
-      const aInB = modePath(a.mode).includes(b.mode);
-      const bInA = modePath(b.mode).includes(a.mode);
+      const aInB = a.mode === b.mode || outerOf(a.mode).includes(b.mode);
+      const bInA = a.mode === b.mode || outerOf(b.mode).includes(a.mode);
       if (!aInB && !bInA) continue;
       if (exclusive(a.when, b.when) || !fieldsOverlap(a.field, b.field)) continue;
       const hit = p.chords.findIndex((c) => q.chords.some((d) => sameChord(c, d)));
@@ -151,7 +163,7 @@ export function problems(map: Keymap): string[] {
   for (const row of map.rows) {
     const b = row.binding;
     if (b.shadows !== true) continue;
-    const outer = modePath(b.mode).slice(1);
+    const outer = outerOf(b.mode);
     const hides = map.rows.some(
       (o) => outer.includes(o.binding.mode) && o.chords.some((c) => row.chords.some((d) => sameChord(c, d))),
     );

@@ -14,6 +14,8 @@ import type { ProjectList } from "@gt/domain/produce";
 
 import type { ComposeChoices, LaneHoldView, ProduceJob } from "../../_port/contract.ts";
 import { SIDE, serverProduce } from "../../_port/port.ts";
+import type { WorkerRead } from "../../_plan/WorkerChip.tsx";
+import { readWorker } from "../../_plan/workerRead.ts";
 import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./model.ts";
 
 // RUNS' ONE READ, at render time and server-side only (Server Component data, plan §9.2).
@@ -25,7 +27,9 @@ import { buildRuns, spanAround, type KernelJobInput, type RunsModel } from "./mo
 //                  problem naming how many were left out (list() itself has no limit yet);
 //   ledger past    one time-ordered page of run.start/run.end/commit in the window (at most
 //                  LEDGER_CAP), plus the starts of runs that ended inside it but began before
-//                  it, by subject id, at most 200 ids a query.
+//                  it, by subject id, at most 200 ids a query;
+//   worker         the kernel's queue and leases (../../_plan/workerRead.ts): queued work and
+//                  nothing beating is the totals' worker chip.
 // It also asks for a fresh ledger (freshLedger: a non-blocking sync under the store's claim,
 // at most every 30 s), so watching Runs is what keeps the ledger's past current - and the
 // events that sync appends reach this page through the SSE stream as a refresh.
@@ -53,6 +57,8 @@ export type RunsData = {
   readonly cycles: readonly StartableCycle[];
   /** The ledger or the kernel could not be read; the live half still renders. */
   readonly problems: readonly { readonly source: string; readonly error: string }[];
+  /** Whether a worker beats while jobs are queued (../../_plan/workerRead.ts): the totals' worker chip. */
+  readonly worker: WorkerRead;
 };
 
 function kernelInput(j: Job): KernelJobInput {
@@ -137,5 +143,6 @@ export async function loadRuns(now: number = Date.now()): Promise<RunsData> {
     choices: choices.ok ? choices.value : null,
     cycles: cycles.ok ? cycles.value : [],
     problems,
+    worker: readWorker(),
   };
 }

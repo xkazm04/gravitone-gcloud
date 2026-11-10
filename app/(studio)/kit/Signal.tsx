@@ -129,6 +129,9 @@ export function SignalSections() {
         </Spec>
         <Spec names={["Ghost"]} source="ghost/Ghost.tsx">
           <Ghost count={2} label="runs: none yet" />
+          <div className={k.workspaceShort}>
+            <Ghost count={2} fill label="desk" />
+          </div>
         </Spec>
       </Section>
 

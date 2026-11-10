@@ -18,10 +18,14 @@ import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { FacetRow } from "@gt/ui/components/facet/FacetRow.tsx";
 import { Field, Search, Select } from "@gt/ui/components/field/Field.tsx";
 import { Fold } from "@gt/ui/components/fold/Fold.tsx";
+import { JumpDialog } from "@gt/ui/components/jump/Jump.tsx";
+import { KeySheet } from "@gt/ui/components/jump/KeySheet.tsx";
 import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 
+import { destinations } from "../_shell/jump/resolve.ts";
+import { SECTIONS } from "../_shell/nav.ts";
 import { useShell } from "../_shell/Providers.tsx";
 import { Row, Section, Spec } from "./Spec.tsx";
 import k from "./kit.module.css";
@@ -37,6 +41,9 @@ const MODELS = [
   { value: "codex", label: "Codex · image_gen — 1h 04m · $0" },
   { value: "nano", label: "Nano Banana · Google — 14m · $1.60" },
 ] as const;
+
+/** Jump's specimen projects: two titles of the fixture universe's shape. */
+const JUMP_PROJECTS = [{ id: "prj-harbor", title: "Glass harbor noir · trailer" }, { id: "prj-album", title: "Night shift · album" }] as const;
 
 const KINDS = [
   { label: "music", count: 412, share: 0.62 },
@@ -55,6 +62,7 @@ export function ControlSections() {
   const [facets, setFacets] = useState<ReadonlySet<string>>(new Set(["music"]));
   const [rails, setRails] = useState<ReadonlySet<string>>(new Set());
   const [folded, setFolded] = useState(true);
+  const [jumpQuery, setJumpQuery] = useState("");
   const press = (set: typeof setFacets, label: string, next: boolean): void =>
     set((s) => {
       const n = new Set(s);
@@ -87,6 +95,14 @@ export function ControlSections() {
           <Row label="disabled">
             <Button label="Launch" tone="cyan" disabled />
             <Button label="Commit packet" badge={{ label: "undecided", value: 7 }} disabled />
+          </Row>
+          <Row label="default · disabled · pending">
+            <Button label="pause" size="sm" />
+            <Button label="pause" size="sm" disabled />
+            <Button label="pause" size="sm" pending />
+            <Button label="retry · same route" size="sm" tone="amber" />
+            <Button label="retry · same route" size="sm" tone="amber" disabled />
+            <Button label="retry · same route" size="sm" tone="amber" pending />
           </Row>
         </Spec>
         <Spec names={["Chip"]} source="chip/Chip.tsx · button">
@@ -168,6 +184,20 @@ export function ControlSections() {
               { id: "compose", label: "Compose", href: "#inputs", verb: "compose", disabled: true },
             ]}
           />
+        </Spec>
+        <Spec names={["JumpDialog"]} source="jump/Jump.tsx · ⌘K" wide>
+          <JumpDialog
+            specimen
+            query={jumpQuery}
+            onQuery={setJumpQuery}
+            rows={destinations(jumpQuery, SECTIONS, JUMP_PROJECTS)}
+            onGo={(r) => toast(`jump · ${r.href}`)}
+            onClose={() => setJumpQuery("")}
+            placeholder="section · project · pkt:seeds:2026-10-23-2 · job:run:…"
+          />
+        </Spec>
+        <Spec names={["KeySheet"]} source="jump/KeySheet.tsx · ⌘/" wide>
+          <KeySheet specimen mode="library" facts={new Set(["in-results"])} onClose={() => undefined} />
         </Spec>
         <Spec names={["Crumbs"]} source="crumbs/Crumbs.tsx" wide>
           <Crumbs

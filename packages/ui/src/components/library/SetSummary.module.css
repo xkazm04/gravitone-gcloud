@@ -23,4 +23,4 @@
 .recent{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-2)}
 .recent button{border-radius:var(--r-chip);overflow:hidden;border:1px solid var(--hair);aspect-ratio:16/10;padding:0;background:var(--ink-1)}
 .recent button:hover{border-color:var(--hair-3)}
-.recent img{width:100%;height:100%;object-fit:cover;display:block}
+.newest{width:100%;height:100%;object-fit:cover;display:block}

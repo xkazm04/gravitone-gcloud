@@ -4,6 +4,9 @@ import type { WorkKind } from "@gt/catalog/recipes";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { FigureSource, ModelOption } from "@gt/domain/produce";
 
+import { trailerUnits } from "../[id]/_part/fixtureWorld/trailer.ts";
+import { tariffGateError, tariffPlates } from "../[id]/_part/fixtureWorld/tariff.ts";
+
 // THE FIXTURE UNIVERSE'S DATA - the prototype's figures, each marked with where it came from
 // (docs/next/prototype/app/studio.js CATALOG, model.js estimates). Only the figures the
 // prototype itself tagged `model` (forge 1.6 min a plate, the article band $47-92, Suno 4 min a
@@ -150,13 +153,21 @@ export type SeedProject = {
   readonly gates: readonly string[];
 };
 
+// The trailers' units are COUNTED from the cut their editors derive (part fixture world,
+// fixtureWorld/trailer.ts), never typed beside it: the Plan's "N plates" and the Frames header's
+// "of N" are one number. The world module reads lib only, so the produce side imports nothing of
+// the part side's state.
+const TRAILER = { id: "glass-harbor-trailer", title: "Glass Harbor — trailer", recipe: "film/trailer" } as const;
+const CINEMATIC = { id: "glass-harbor-cinematic", title: "Glass Harbor — cinematic", recipe: "film/cinematic" } as const;
+
+/** The quiet tariff's plates, counted from the candidate its Plan's script adopted. */
+const TARIFF_PLATES = tariffPlates();
+
 export const SEED_PROJECTS: readonly SeedProject[] = [
   {
-    id: "glass-harbor-trailer",
-    title: "Glass Harbor — trailer",
-    recipe: "film/trailer",
+    ...TRAILER,
     launched: true,
-    units: { plates: 24, shots: 10, prompts: 2 },
+    units: trailerUnits(TRAILER),
     styleId: "glass-harbor-noir",
     jobs: { research: { state: "done", at: -960, took: 9 }, script: { state: "done", at: -940, took: 14 }, frames: { state: "done", at: -820, took: 38 }, motion: { state: "done", at: -600, took: 60 }, score: { state: "done", at: -900, took: 8 }, cut: { state: "done", at: -140, took: 7 } },
     gates: ["gate:frames", "gate:score"],
@@ -176,12 +187,12 @@ export const SEED_PROJECTS: readonly SeedProject[] = [
     title: "The quiet tariff",
     recipe: "film/short-educational-video",
     launched: true,
-    units: { plates: 18, shots: 8, prompts: 2 },
+    units: { plates: TARIFF_PLATES, shots: 8, prompts: 2 },
     styleId: "ink-graphic-novel",
     jobs: {
       research: { state: "done", at: -1500, took: 9 },
       script: { state: "done", at: -1480, took: 14 },
-      frames: { state: "failed", at: -250, took: 29, error: "gate: 0 of 18 plates kept · reason style · re-run needs a new route" },
+      frames: { state: "failed", at: -250, took: 29, error: tariffGateError(TARIFF_PLATES) },
       score: { state: "done", at: -1420, took: 8 },
     },
     gates: ["gate:score"],
@@ -193,6 +204,17 @@ export const SEED_PROJECTS: readonly SeedProject[] = [
     launched: true,
     topic: "generative-provider-routing",
     jobs: { article: { state: "done", at: -220, took: 38 } },
+    gates: [],
+  },
+  // A cut of the same film whose picture is not made yet: research dealt the board, Script composed
+  // the cut, and every part after it waits in its lane. Its editors are the trailer's unmade
+  // states - shots without plates, cues proposed and unsaved, a cut with no picture.
+  {
+    ...CINEMATIC,
+    launched: true,
+    units: trailerUnits(CINEMATIC),
+    styleId: "glass-harbor-noir",
+    jobs: { research: { state: "done", at: -400, took: 9 }, script: { state: "done", at: -380, took: 14 } },
     gates: [],
   },
   {

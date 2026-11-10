@@ -18,6 +18,7 @@ import { KEYMAP } from "./bindings.ts";
 import { pageMode, route } from "./route.ts";
 import { targetInfo, type ElementLike } from "./target.ts";
 import { closeLayer, layerStack } from "../layers/live.ts";
+import { activeMode } from "../layers/stack.ts";
 
 export type KeyHit = { readonly cap: string; readonly index: number };
 export type KeyHandler = (hit: KeyHit) => void | false;
@@ -61,6 +62,15 @@ function onKeyDown(e: KeyboardEvent): void {
     if (run({ cap, index }) !== false) e.preventDefault();
     return;
   }
+}
+
+/**
+ * The mode a press would resolve in right now, and the facts the screens supply: what the key
+ * sheet draws (help.ts). Read at the moment the sheet is asked for, before it opens over them.
+ */
+export function keyContext(): { readonly mode: string | null; readonly facts: ReadonlySet<string> } {
+  const layers = layerStack();
+  return { mode: activeMode(layers, pageMode(scopes, layers)), facts: factsNow() };
 }
 
 /** Install the listener once, for the life of the page. Idempotent; a no-op on the server. */

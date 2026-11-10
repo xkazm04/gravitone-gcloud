@@ -29,9 +29,13 @@
 // which would drag the Firebase client SDK into every route), and
 // principal.probe.spec.ts pins the two spellings equal.
 
-import { onIdTokenChanged, type Auth } from "firebase/auth";
+// TYPES ONLY from the Firebase SDK: the listener comes off the SDK lib/firebase.ts loaded (`authClient()`),
+// because this module is in every client door's graph (lib/imagingClient.ts) and a value import
+// here put Firebase's whole client in the first load of every route.
+import type { Auth } from "firebase/auth";
 
 import { DEV_UID } from "./devAuth";
+import { authClient } from "./firebase";
 import { LOCAL_UID } from "./localMode";
 
 /** The header the ID token rides in when Authorization is already taken by the
@@ -94,6 +98,8 @@ export async function cacheSessionToken(user: TokenUser | null): Promise<void> {
  * (which owns identity transitions and eviction). Returns the unsubscribe.
  */
 export function subscribeSessionToken(auth: Auth): () => void {
+  // Called by lib/useAuth.tsx only once loadAuth() resolved, so the SDK is here.
+  const { onIdTokenChanged } = authClient().sdk;
   const stop = onIdTokenChanged(auth, (u) => {
     void cacheSessionToken(u);
   });

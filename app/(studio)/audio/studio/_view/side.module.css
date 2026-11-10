@@ -19,4 +19,3 @@
 .goes{font:500 var(--fs-micro)/1.3 var(--sans);color:var(--faint)}
 .step[data-goes="agent"] .goes{color:var(--cyan)}
 .empty{margin:0;padding:var(--sp-4) var(--sp-5);color:var(--muted);font:500 var(--fs-ui)/1.4 var(--sans)}
-.offline{margin:var(--sp-4) var(--sp-5) 0;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-sm);border:1px dashed var(--hair-3);font:500 var(--fs-meta)/1.4 var(--sans);color:var(--text)}

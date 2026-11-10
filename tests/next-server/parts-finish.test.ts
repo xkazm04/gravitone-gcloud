@@ -156,7 +156,10 @@ const fop = async (projectId: string, key: string, op: PartOp): Promise<PartView
 
 describe("the explainer on the fixture side", () => {
   it("writes, draws, records - and the cut over strips and voice reaches READY with no music rows", async () => {
-    const id = "provider-routing-explainer";
+    // The seeded explainer's article is written (its Plan's job is done: the fixture world lands it),
+    // so the unwritten article lives on an explainer composed here and never launched.
+    await must(loadPart("why-bitcoin", "research", at));
+    const id = (await must(fixtureProduce().compose({ recipe: "explainer", topic: "retry-backoff" }))).id;
     expect((await must(loadPart(id, "cut", at))).verdict.state).toBe("empty");
     const early = await actReceipt(id, "strips", "draw-strips", at);
     expect(early.ok ? "" : early.error.message).toBe("draw 6 cards needs an article");
@@ -198,7 +201,9 @@ describe("the album on the fixture side", () => {
 
 describe("the trailer's score and cut on the fixture side", () => {
   it("proposes the cut's movements on the frames record's picture, keeps them on the first edit, and never lets a second render steal the take in use", async () => {
-    const id = "glass-harbor-trailer";
+    // The trailer's own score is spotted and its cues taken (its Plan is ratified to the cut); the
+    // cinematic, a cut of the same film with nothing made after Script, carries the unspotted picture.
+    const id = "glass-harbor-cinematic";
     const frames = await must(loadPart(id, "frames", at));
     const render = frames.acts.find((a) => a.act === "render-plates");
     if (render === undefined) throw new Error("no plate render on frames");

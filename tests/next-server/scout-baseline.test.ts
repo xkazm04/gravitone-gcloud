@@ -169,6 +169,19 @@ describe("a new night", () => {
     expect(archivedDoor(n.id)).toBe(ARCHIVED_DOOR);
   });
 
+  it("the operator reopens the seed door for one call by name, and no other door with it", async () => {
+    vi.stubEnv("SCOUT_REOPEN", "seeds");
+    try {
+      expect(archivedDoor(undefined, "seeds")).toBeUndefined();
+      expect(archivedDoor()).toBe(ARCHIVED_DOOR);
+      const seeds = await addSeedBatch([], { dry: true });
+      expect(seeds.ok ? undefined : seeds.error.message).not.toBe(ARCHIVED_DOOR);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(archivedDoor(undefined, "seeds")).toBe(ARCHIVED_DOOR);
+  });
+
   it("its taste brief keeps the verdicts, directions and kept characters and drops the spread's sections, a caller's too", async () => {
     const n = await createNight({ dry: true, day: "2026-10-27" });
     const brief = await tasteBrief(n.id, undefined, ["## Branches", "", "- drama 3", "", "## Asset needs", "", "- bp: none", ""]);

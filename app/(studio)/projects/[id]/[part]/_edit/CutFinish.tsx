@@ -17,13 +17,20 @@ import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
 import { RailList } from "@gt/ui/components/part/RailList.tsx";
 import { secs } from "@gt/ui/components/part/part.ts";
 
+import { slotDoor } from "../../../_plan/doors.ts";
 import type { EditorProps } from "./PartEditor.tsx";
 import { ScoreField } from "./ScoreField.tsx";
 import s from "./Cut.module.css";
 
 export function CutFinish({ frame, send, busy, error, act, data: d }: EditorProps<PartView<"cut">> & { readonly data: AdFinishData }) {
   const [sel, setSel] = useState<string | null>(null);
-  const shot = d.shots.find((x) => x.id === sel) ?? null;
+  // THE EXPORT REACHES THE CALENDAR WITH ITS PART (fable-ten A): once an aspect has an export, the
+  // plan's slot part opens the schedule sheet carrying it, so the slot made there is the plan's (a
+  // slot scheduled from the calendar alone named no part, and the plan's slot row waited forever);
+  // a slot part that already has its slot opens that slot instead.
+  const slot = frame.tabs.find((t) => t.kind === "slot");
+  const exported = d.aspects.some((a) => a.export !== null);
+  const shot =d.shots.find((x) => x.id === sel) ?? null;
   const blocking = d.checks.filter((c) => c.blocking && c.verdict === "fail");
   return (
     <PartWorkspace
@@ -70,6 +77,7 @@ export function CutFinish({ frame, send, busy, error, act, data: d }: EditorProp
               <span className={s.read}>{secs(d.runtimeS)}</span>
               {d.targetS !== null && <span className={s.mono}>{`target ${secs(d.targetS)}`}</span>}
               {d.scenario !== null && <Chip label={d.scenario.title} casing="lower" />}
+              {slot !== undefined && exported && <Button label={slot.slotId === undefined ? "schedule" : "slot"} size="sm" tone="cyan" href={slotDoor(slot)} />}
             </div>
             {d.scenario === null ? (
               <Empty label="no scenario picked" />

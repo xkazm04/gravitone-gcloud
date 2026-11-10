@@ -17,7 +17,7 @@
 // (migration plan §8.7, 2026-10-15). A `when` or a mode separates the verbs, so
 // `conflicts()` still proves no two rows fire on one press.
 
-import { compile, type Binding } from "./keymap.ts";
+import { GLOBAL, compile, type Binding } from "./keymap.ts";
 
 const floor: Binding[] = [
   { mode: "floor", keys: ["1", "2", "3", "4"], verb: "open-lane", does: "lane" },
@@ -325,8 +325,32 @@ const songlab: Binding[] = [
   { mode: "audio.songlab", keys: ["⏎"], verb: "send", does: "send vote", when: "match" },
 ];
 
+// THE STUDIO'S OWN KEYS (spark fable-ten, package C): the global layer, heard after the screen
+// declined (route.ts). Both carry the platform modifier - keyboard-shortcuts
+// shortcut-collision-rules: an application-wide accelerator made of a printable character (`?`,
+// even with its Shift) fires mid-dictation for a speech-input user and dies in a type-ahead list,
+// and the character-key criterion asks for an off switch the studio does not have. ⌘K is the
+// platform's palette chord and is declared live in fields (the second row), because "go
+// somewhere else" is as wanted mid-search as anywhere; ⌘/ (the key sheet) is not, so Ctrl+/ in a
+// field stays the field's. ⌘K is the browser's search-bar chord too: the handler takes it.
+const studio: Binding[] = [
+  { mode: GLOBAL, keys: ["⌘K"], verb: "jump", does: "jump" },
+  { mode: GLOBAL, keys: ["⌘K"], verb: "jump", does: "jump", field: "*" },
+  { mode: GLOBAL, keys: ["⌘/"], verb: "keys", does: "keys" },
+];
+
+// JUMP's dialog (app/(studio)/_shell/Jump.tsx over components/jump). Its rows are links, so ⏎ on
+// a focused row is the link's own (no onControl); ⏎ in the field goes to the first row; ↓ leaves
+// the field for the rows, and ↑ from the first row comes back to it. Escape is the layer's.
+const jump: Binding[] = [
+  { mode: "jump", keys: ["↑", "↓"], verb: "move", does: "move", repeat: true },
+  { mode: "jump", keys: ["Home", "End"], verb: "edge", does: "first · last" },
+  { mode: "jump", keys: ["⏎"], verb: "go", does: "go", field: "jump", onControl: true },
+  { mode: "jump", keys: ["↓"], verb: "to-rows", does: "rows", field: "jump" },
+];
+
 export const BINDINGS: readonly Binding[] = [...floor, ...calendar,
-  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio, ...songlab];
+  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio, ...songlab, ...studio, ...jump];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

@@ -10,11 +10,15 @@
 // A parent that is gone is a `text` ref with `ghost`: the item still has a past, and it says so
 // (@gt/domain/libraryItem: "the Library shows that as a broken link, never as an item with no past").
 
+import { tokens } from "../../tokens.ts";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { LedgerLink } from "../ledgerlink/LedgerLink.tsx";
 import { LibraryGlyph, type KindId } from "./LibraryGlyph.tsx";
 import s from "./Lineage.module.css";
+
+const THUMB = Number.parseInt(tokens["w-lineage-thumb"], 10);
 
 export type LineageRef =
   | { readonly kind: "item"; readonly id: string; readonly label: string; readonly itemKind: Exclude<KindId, "all">; readonly thumb?: string }
@@ -35,8 +39,8 @@ function Ref({ r, onItem, onFacet }: { readonly r: LineageRef } & Pick<LineagePr
     case "item":
       return (
         <button type="button" className={s.link} onClick={() => onItem(r.id)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a library item is shown as its own bytes (Face.tsx) */}
-          {r.thumb !== undefined ? <img className={s.thumb} src={r.thumb} alt="" loading="lazy" /> : <LibraryGlyph name={r.itemKind} className={s.mark} />}
+          {/* A grid-size variant: a lineage thumb is a link's mark (desk/Plate.tsx). */}
+          {r.thumb !== undefined ? <Plate className={s.thumb} src={r.thumb} alt="" lazy width={THUMB} /> : <LibraryGlyph name={r.itemKind} className={s.mark} />}
           <span className={s.ell}>{r.label}</span>
         </button>
       );

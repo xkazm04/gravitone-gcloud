@@ -17,6 +17,7 @@ import type { BoardPacket } from "../../board/port.ts";
 import { OUTCOME_OF, agreement, armLook, currentPair, outcomeWords } from "../../board/pair.ts";
 import { useKeys } from "../../keymap/dispatch.ts";
 import { Chip } from "../chip/Chip.tsx";
+import { Clip } from "../desk/Clip.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { cx } from "../cx.ts";
 import { CommitButton, DeskFrame, OracleStrip } from "../desk/Desk.tsx";
@@ -131,7 +132,7 @@ export function BlindPair({ packet, onPick, undo, onCommit, busy = false, announ
     const video = it?.media.mime.startsWith("video/") === true;
     return (
       <button type="button" className={cx(s.arm, s[look])} aria-label={side === "a" ? "left arm" : "right arm"} onClick={() => pick(side)}>
-        {video ? <video className={s.media} src={it?.url} autoPlay muted loop playsInline /> : <Plate className={s.media} src={it?.url} alt={side === "a" ? "left arm" : "right arm"} />}
+        {video ? <Clip className={s.media} src={it?.url} label="" autoPlay muted loop /> : <Plate className={s.media} src={it?.url} alt={side === "a" ? "left arm" : "right arm"} />}
         <div className={s.armcap}>
           <Keycap mode="board.pair" verb={side === "a" ? "left" : "right"} />
           <span className={s.lab}>{revealed && words !== undefined ? words.label : <span className={s.masked}>{side === "a" ? "LEFT" : "RIGHT"} · ▒▒▒▒</span>}</span>

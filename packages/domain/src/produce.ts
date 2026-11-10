@@ -177,7 +177,10 @@ export type OperatorPlanPart = PlanPartBase & {
   /** The part a gate judges (absent on a slot). */
   readonly judges?: string;
   readonly verdict?: GateVerdict;
+  /** A gate's newest Board packet, present only once it exists (the row's door). */
   readonly packetId?: string;
+  /** The slot placing a slot part (holding it, or missed/failed and reschedulable), when one exists. */
+  readonly slotId?: string;
 };
 
 export type PlanPart = WorkPlanPart | OperatorPlanPart;

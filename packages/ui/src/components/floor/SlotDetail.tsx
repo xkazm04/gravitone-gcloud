@@ -23,6 +23,7 @@ import { useState } from "react";
 
 import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
+import { Clip } from "../desk/Clip.tsx";
 import { Field } from "../field/Field.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
@@ -93,7 +94,7 @@ function Media({ view }: { readonly view: SlotView }) {
   if (m.kind === "video")
     return (
       <div className={s.player}>
-        <video className={s.video} src={m.src} {...(m.poster === undefined ? {} : { poster: m.poster })} controls preload="metadata" playsInline aria-label={view.slot.title} />
+        <Clip className={s.video} src={m.src} poster={m.poster} label={view.slot.title} controls />
       </div>
     );
   return (

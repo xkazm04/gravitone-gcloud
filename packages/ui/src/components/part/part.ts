@@ -49,3 +49,27 @@ export function stepTab(tabs: readonly PartTab[], key: string, dir: 1 | -1): Par
   if (at < 0) return null;
   return open[at + dir] ?? null;
 }
+
+/**
+ * The walk's next row once the part on screen is READY: the row after it in recipe order, gate
+ * and slot included (a ready part's next act is usually its gate's verdict). Null while the part
+ * is not ready, or when it is the last row. Unlike `stepTab` it does not skip: whether the row
+ * has a door (an editor, a packet, a schedule sheet) is the caller's to say.
+ */
+export function nextTab(tabs: readonly PartTab[], key: string, ready: boolean): PartTab | null {
+  if (!ready) return null;
+  const at = tabs.findIndex((t) => t.key === key);
+  return at < 0 ? null : (tabs[at + 1] ?? null);
+}
+
+/**
+ * May a re-read of the part replace the copy on screen? The editor's write model holds one write
+ * in flight and redraws from each answer, so a re-read that lands while a write is out would
+ * overwrite the answer that write is about to give; a re-read while the operator is typing in a
+ * field would reset the text under the caret; and a re-read older than the copy (a write landed
+ * after the read left) is behind it. In any of those the re-read is dropped and the next tick asks
+ * again.
+ */
+export function mayAdopt(a: { readonly inflight: boolean; readonly editing: boolean; readonly shownRev: number; readonly freshRev: number }): boolean {
+  return !a.inflight && !a.editing && a.freshRev >= a.shownRev;
+}

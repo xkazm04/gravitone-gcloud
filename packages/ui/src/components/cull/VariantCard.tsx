@@ -17,6 +17,7 @@ import { lazy, Suspense, useRef } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import type { ItemWords } from "../../board/port.ts";
+import { Clip } from "../desk/Clip.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { cx } from "../cx.ts";
 import { Wave } from "../wave/Wave.tsx";
@@ -58,7 +59,7 @@ export function VariantCard({ index, words, media, verdict, current, nudged, rea
       ) : (
         <button type="button" className={s.media} onMouseDown={(e) => e.preventDefault()} onClick={() => onFocus(index)} aria-label={`select ${words.label}`}>
           {kind === "video" ? (
-            <video ref={video} className={s.frame} src={media.url} muted autoPlay loop playsInline preload="metadata" />
+            <Clip ref={video} className={s.frame} src={media.url} label="" poster={words.poster} muted autoPlay loop />
           ) : kind === "audio" ? (
             <span className={s.wave}>
               <Wave peaks={words.peaks ?? []} width={420} height={110} tone={words.music === true ? "violet" : "cyan"} stretch />

@@ -26,6 +26,17 @@
 .nav a[href]:hover{color:var(--ink-bright);background:var(--wash)}
 .nav [aria-current=page]{color:var(--ink-bright);box-shadow:inset 0 calc(-1 * var(--stroke-mark)) 0 var(--cyan)}
 .nav [aria-disabled=true]{color:var(--faint);cursor:not-allowed}
+/* A clicked section whose route is still being read (./NavLink.tsx): the current mark's line,
+   drawn at half strength and growing from the left. Always in the box, so pending moves nothing;
+   it enters after --dur-fast, so a navigation that commits sooner never shows it. Under reduced
+   motion world.css drops every animation, delay included, so the mark is drawn whole at once: a
+   static state, at the price of also showing on a quick commit. */
+.nav a{position:relative}
+.pending{position:absolute;left:0;right:0;bottom:0;height:var(--stroke-mark);background:color-mix(in srgb,var(--cyan) 55%,transparent);opacity:0;transform:scaleX(0);transform-origin:left;pointer-events:none}
+.pending[data-pending]{animation:navPending var(--dur-slow) var(--ease) var(--dur-fast) both}
+.nav a[aria-busy=true]{color:var(--ink-bright);cursor:progress}
+@keyframes navPending{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.pending[data-pending]{opacity:1;transform:none}}
 /* tokens.css `.nav .n`: a nav item's count. The header names no Board item (./nav.ts), so only
    the kit's specimen draws it (kit/ContractHooks.tsx). */
 .n{font:700 var(--fs-micro)/1 var(--mono);color:var(--amber);background:var(--amber-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight)}
