@@ -16960,39 +16960,50 @@
       "subject": "production-pipeline-phasing",
       "bundle": "media-generation",
       "state": "conformant",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T03:07:08.894Z",
-      "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:59:25.819Z",
+      "worker": "482438b7-ea33-4361-84d5-074cd416f4aa",
       "techniques": [
         {
           "technique": "shared-clock-across-phases",
           "verdict": "conformant",
-          "evidence": "lib/frames/picture/unit.ts:77 startS is in seconds and null when the beat cannot be placed, never a guessed 0. Shot spans tile each beat's span."
-        },
-        {
-          "technique": "phase-order-and-graduation",
-          "verdict": "conformant",
-          "evidence": "lib/frames/stepData.ts:31 Frames are derived from the script render, never authored (frames.ts:15). A different render marks them stale, so a change upstream invalidates the work built downstream of it."
+          "evidence": "lib/frames/picture/unit.ts:78 Units are start+hold in film seconds. A unit that cannot be placed has null on the clock, not an invented position."
         },
         {
           "technique": "asset-vs-disposable-render",
           "verdict": "conformant",
-          "evidence": "lib/frames/frames.ts:35 A human-touched layer is an asset. The direction pass becomes per-beat proposals whose conflicts default to KEEP (directionPlan.ts:13-14), with a revert checkpoint. isStalePlate tracks the rendered subject separately from the asked subject."
+          "evidence": "lib/frames/directionPlan.ts:14 The direction pass lands as a proposal of ops. Any layer a human touched is a conflict whose default is keep, so the expensive pass edits the cut and never silently overwrites human decisions."
         },
         {
-          "technique": "worst-news-first-progress",
+          "technique": "phase-order-and-graduation",
           "verdict": "conformant",
-          "evidence": "lib/frames/shotReview.ts:271 The shot-list gate returns pass/violation/not-engaged/unmeasured and records how many sites it examined (0 can never pass); unknowns never become pass."
+          "evidence": "lib/frames/shotReview.ts:115 The shot-list/prompt gate before plate spend turns any check that examined nothing into not-engaged. It reports engaged counts and a named NOT_CHECKED list, never a pass by default."
         },
         {
           "technique": "long-run-as-background-job",
           "verdict": "conformant",
-          "evidence": "lib/frames/frames.ts:93 A plate's in-flight render key is saved with the cut, so a reload re-issues under the same idempotency key and the paid result is not lost. Generating and refused are persisted plate states."
+          "evidence": "lib/frames/frames.ts:92 An in-flight plate render's idempotency receipt is persisted with the cut. A reload re-issues under the same key and receives the pixels already paid for, instead of buying the render twice."
+        },
+        {
+          "technique": "worst-news-first-progress",
+          "verdict": "conformant",
+          "evidence": "lib/frames/shotReview.ts:271 The shot-list gate returns pass/violation/not-engaged/unmeasured and records how many sites it examined (0 can never pass); unknowns never become pass.",
+          "carriedFrom": "2026-11-06"
         },
         {
           "technique": "approval-reads-forward",
           "verdict": "not-applicable",
-          "evidence": "lib/frames/picture/unit.ts:89 Each picture unit owns its own plate, which conditions only that unit's clip. By the technique's decision rule, an artifact conditioning exactly one request needs no forward read."
+          "evidence": "lib/frames/picture/unit.ts:89 Each picture unit owns its own plate, which conditions only that unit's clip. By the technique's decision rule, an artifact conditioning exactly one request needs no forward read.",
+          "carriedFrom": "2026-11-06"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
+          "evaluatedAt": "2026-11-06T03:07:08.894Z",
+          "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+          "reason": "replaced by 482438b7-ea33-4361-84d5-074cd416f4aa"
         }
       ]
     },
@@ -21999,6 +22010,46 @@
           "evaluatedAt": "2026-10-24",
           "worker": null,
           "reason": "replaced by 33020ced-200b-4515-8dba-8cc3002319a1"
+        }
+      ]
+    },
+    "9afe60ec-09d0-49f1-be50-24cbf0b835f0/production-pipeline-phasing": {
+      "context": "research-producers",
+      "subject": "production-pipeline-phasing",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:59:25.819Z",
+      "worker": "482438b7-ea33-4361-84d5-074cd416f4aa",
+      "techniques": [
+        {
+          "technique": "long-run-as-background-job",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 Claim-time single-flight. A second confirm of the same act and unit while one is live adopts that job instead of enqueueing a second paid one."
+        },
+        {
+          "technique": "shared-clock-across-phases",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/facts.ts:58 The runtime target is the project's own figure, seeded from the format template's default and null when neither exists. Every part act reads this one target."
+        },
+        {
+          "technique": "asset-vs-disposable-render",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/followUp.ts:69 The notebook is a durable asset. A follow-up revises it through allowlisted edit effects (confirms/downgrades/kills/adds) and an unusable answer refuses whole; the notebook is never regenerated or partially applied."
+        },
+        {
+          "technique": "phase-order-and-graduation",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/research/define.ts:44 An act whose upstream input is not settled is refused at plan time, before any unit is bought (partAct.ts: refusals \"applied before the plan, never after\")."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "conformant",
+          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
+          "evaluatedAt": "2026-10-24",
+          "worker": null,
+          "reason": "replaced by 482438b7-ea33-4361-84d5-074cd416f4aa"
         }
       ]
     }

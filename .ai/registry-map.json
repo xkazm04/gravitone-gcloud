@@ -9892,12 +9892,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/frames/picture/unit.ts:78 Picture units carry their place on the film as startS/holdS seconds, and startS is null (never a guessed 0) when a beat cannot be placed. The Frames phase speaks the shared clock and shows absence on it; around that, human layers are kept, plate renders survive a reload, and the shot gate cannot fake a pass.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
@@ -17240,14 +17239,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
+          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at enqueue time inside the confirm's transaction. A double click is one purchase, a reload loses nothing, and interrupted stays a live state the operator sees.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
           "source": "renamed",
           "renamedFrom": "5195e631-ab0c-4f12-930b-8c0da09fcd3d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-instruction-files",
