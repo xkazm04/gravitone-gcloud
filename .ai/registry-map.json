@@ -14127,8 +14127,12 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "state": "deviation",
+          "priorNotApplicable": 7,
+          "evidence": "app/_server/mcp/rpc.ts:112 tools/list publishes every write tool to every token, but callTool refuses writes for a read-scope token (rpc.ts:78-79). The roster and the run-time refusal therefore do not come from one policy on one session, so the model is shown tools the executor will refuse.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-host-experience",

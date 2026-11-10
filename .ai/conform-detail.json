@@ -22829,6 +22829,32 @@
           "evidence": "lib/frames/shotReview.ts:66 Shot-list findings are rendered for a human who decides. No automated stage acts on them, so the fix-or-demote rule does not apply."
         }
       ]
+    },
+    "ad4279e3-e7c5-48d5-b166-db447059b183/agent-runtime-assembly": {
+      "context": "mcp-agent-door",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T22:37:51.027Z",
+      "worker": "140e3c8a-d552-4e4a-83f4-65b8e091c72e",
+      "techniques": [
+        {
+          "technique": "session-scoped-capability",
+          "verdict": "deviation",
+          "evidence": "app/_server/mcp/rpc.ts:112 The refusal does resolve from the session's token scope (good source), but no roster filter derives from the same scope: a read token is handed write tools, 'a fluent invitation to fail'."
+        },
+        {
+          "technique": "guard-input-custody",
+          "verdict": "conformant",
+          "evidence": "app/_server/mcp/tools/launch.ts:44 The live/spend guard judges a receipt the server recomputed, not a token or figure the agent carries. A non-free live ask becomes an operator-confirmed spend request the agent cannot raise."
+        },
+        {
+          "technique": "operator-tier-code-loading",
+          "verdict": "not-applicable",
+          "evidence": "app/_server/mcp/registry.ts:15 Tools are statically imported rows. No configuration or caller can name code to load."
+        }
+      ]
     }
   }
 }
