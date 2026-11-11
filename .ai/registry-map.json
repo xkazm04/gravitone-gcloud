@@ -22361,7 +22361,11 @@
           "revision": 2,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/types.ts:365 The engine takes a prompt string the caller already built, plus inline audio bytes on the Google path (lib/text/providers/google.ts:348), and never opens a document container. A case-insensitive search of lib/text for pdf/ocr/docx/tesseract/mammoth/scanned/unreadable found nothing; the only 'extract' hit is extractJsonObject, which pulls JSON out of a model's answer rather than text out of a document, so none of the nine extraction techniques applies here.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:ee97c74f3f5e0c28",
+          "evaluatedRevision": 2
         },
         {
           "subject": "generative-provider-routing",

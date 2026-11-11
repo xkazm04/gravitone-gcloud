@@ -23314,6 +23314,16 @@
           "reason": "replaced by 809359a6-0696-4d33-bbdd-fc04aa01755f"
         }
       ]
+    },
+    "63ca5808-c5b5-4e64-840b-69d8c3c6991f/document-text-extraction": {
+      "context": "text-reasoning-engine",
+      "subject": "document-text-extraction",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:33:42.966Z",
+      "worker": "b50631be-196b-4c0c-a672-c1a02fb89052",
+      "techniques": []
     }
   }
 }
