@@ -23334,6 +23334,74 @@
       "evaluatedTs": "2026-11-11T22:38:59.523Z",
       "worker": "f0ed9412-af80-4961-a316-9dff597fbd02",
       "techniques": []
+    },
+    "4801e7ab-d365-4c2d-8351-adcf188ba3c1/evidence-bound-visuals": {
+      "context": "music-clip-engine",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:45:10.650Z",
+      "worker": "b8994932-47fc-41ae-8474-944b29f5920b",
+      "techniques": [
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/gemini.ts:1 No image model draws any pixel here, so there is no plate/vector split to route; Gemini returns lyric times only."
+        },
+        {
+          "technique": "footage-claims-a-camera",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/gpuShot.ts:5 The frames are code-rendered, stylised WebGL scenes, not generated photoreal capture, so they claim no camera."
+        },
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/boardShell.ts:2 The numbers on the boards (bpm, intensity, times) are measured analysis on operator decision boards, which are internal drafts. The technique exempts internal drafts and has nothing factual to cite."
+        },
+        {
+          "technique": "performer-claims-need-a-person",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/treatments.ts:2 The characters are fiction in a music-video treatment, not presenters making first-person experience claims."
+        }
+      ]
+    },
+    "d627b5c0-0c27-4fd3-a621-4898fc4475cf/evidence-bound-visuals": {
+      "context": "landing-cosmos-scenes",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:45:10.650Z",
+      "worker": "b8994932-47fc-41ae-8474-944b29f5920b",
+      "techniques": [
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "app/_landing/cosmos/engine/library.ts:75 The null grade is dropped from the number label but not from the area mark. Today's registry data has every count null, so the tiles come out equal; the gap is latent and appears with mixed data."
+        },
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/library.ts:91 A count is shown only when the data supplies one; an unknown is never shown as 0 or invented."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "conformant",
+          "evidence": "app/_landing/cosmos/engine/library.ts:121 Numbers and labels are DOM text written by code over the art; tiles without key art are painted by the procedural raster, not a model."
+        },
+        {
+          "technique": "slots-claim-their-subjects",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/carousel.ts:172 The slots name the product's own templates and presets, not real people or places. Real key art is still told apart from stylised illustration in the accessible name."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/_landing/cosmos/engine/carousel.ts:208 The only arrows are prev/next navigation, which point rather than claim causation."
+        }
+      ],
+      "registryProposal": "precision-limit-propagation could say outright that a size-encoded layout (a treemap or bubble) must not fill a missing magnitude with a placeholder such as the mean, because area is the claim even when the number label is withheld."
     }
   }
 }

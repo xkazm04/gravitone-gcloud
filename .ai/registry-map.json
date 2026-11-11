@@ -12203,7 +12203,11 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_landing/cosmos/engine/library.ts:75 The library is a treemap sized by item count, but a category whose count is unknown (null) is given the average area and small counts are raised to 20% of the average; when known and unknown counts are mixed, unknown tiles get the same visual authority as known ones and the areas stop being proportional (certainty and precision laundering).",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         }
       ],
       "governance": "governed"
@@ -14387,8 +14391,12 @@
           "revision": 9,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/music-clip/gemini.ts:1 The only model call in this context listens to audio for lyric timing, and every frame comes from a code-built three.js scene for a fictional music film, so no generated plate or factual claim exists to bind to evidence; a case-insensitive search of lib/music-clip for photoreal, testimonial, citation and factRef found nothing.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:a3b657bb0d44f7d8",
+          "evaluatedRevision": 9
         },
         {
           "subject": "cinematic-language",
