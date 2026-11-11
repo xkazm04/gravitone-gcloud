@@ -405,7 +405,11 @@ test("overlays: every super and end-card is centred on the frame, every aspect",
     try {
       await REAL_AD_RENDER_DEPS.renderOverlays(specs, aspect);
     } catch (e) {
-      test.skip(true, `headless Chromium did not draw the overlays here: ${e instanceof Error ? e.message : String(e)}`);
+      // Only a machine with no Chromium to draw with skips (lib/adOverlayPage.ts realRenderOverlays words both
+      // cases): an error from the overlay page itself is the renderer failing, and fails the probe.
+      const said = e instanceof Error ? e.message : String(e);
+      if (!/^(playwright is not installed on this machine|Headless Chromium failed to launch)/.test(said)) throw e;
+      test.skip(true, `headless Chromium did not draw the overlays here: ${said}`);
     }
     for (const [spec, mode] of [[specs[0], "alpha"], [specs[1], "luma"]] as const) {
       const { minX, maxX, w } = inkSpanX(spec.out, mode);
