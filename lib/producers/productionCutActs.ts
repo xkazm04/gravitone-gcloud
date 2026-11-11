@@ -30,7 +30,9 @@ import { packetIdOf } from "../ledger/v1/packet.ts";
 //
 //   assemble   the craft script chosen by `req.format` over the takes, in order.
 //   lay        ffmpeg lays the dub lines and the score over the assembled video, the same spawn seam. A line that runs past
-//              the picture's end is cut there and named in the cut's note.
+//              the picture's end is cut there and named in the cut's note. Each line enters on its first speech, not
+//              its first sample: ffmpeg silencedetect measures the leading silence and the lay trims it (0.2 s lead when
+//              it cannot be measured).
 //   land       the video reaches the record and the Board; a dry job only rehearses (no packet, no video).
 //
 // A dry job asks no script and no ffmpeg: each is a declared stand-in. Every write is fenced against the job's slot.
@@ -43,7 +45,15 @@ const PROBE_TIMEOUT_MS = 30_000;
 export const TRAILER_SCRIPT = path.join("pipeline", "trailer", "cut.mts");
 export const MUSIC_CLIP_SCRIPT = path.join("pipeline", "music-clip", "assemble.mts");
 
-export type CutEngines = { readonly spawn?: Spawn; readonly node?: string; readonly ffmpeg?: string; readonly ffprobe?: string; readonly probe?: (file: string) => Promise<number> };
+export type CutEngines = {
+  readonly spawn?: Spawn;
+  readonly node?: string;
+  readonly ffmpeg?: string;
+  readonly ffprobe?: string;
+  readonly probe?: (file: string) => Promise<number>;
+  /** Seconds of silence before a line's first speech; undefined when it cannot be measured. */
+  readonly onset?: (file: string) => Promise<number | undefined>;
+};
 
 const dryRun = (ctx: StepContext): boolean => ctx.job.mode.kind !== "live";
 const served = (ref: BlobRef): string => blobRoute(ref.sha256, ref.mime) ?? `/api/blob/${ref.sha256}`;
@@ -124,26 +134,58 @@ const probeWith = (e: CutEngines, bins: ReturnType<typeof binsFrom>) => async (f
   return d;
 };
 
-/** Each line's start, in order: the next take's opening, 0.2 s in. One scene carries one line; lines beyond the scenes stack on the last. */
-export function lineStarts(takes: readonly { readonly durationS: number }[], lines: number): readonly number[] {
+/** The lead a line is laid with when its first speech could not be measured: a guess at its leading silence. */
+export const FALLBACK_LEAD_S = 0.2;
+/** Quieter than this is silence; a pause shorter than the minimum is speech. */
+const ONSET_NOISE = "-40dB";
+const ONSET_MIN_S = 0.05;
+
+/** The ffmpeg argv that reports a line's silences on stderr. No shell. Pure. */
+export const onsetArgs = (file: string): readonly string[] => ["-hide_banner", "-nostats", "-i", file, "-af", `silencedetect=noise=${ONSET_NOISE}:d=${ONSET_MIN_S}`, "-f", "null", "-"];
+
+/** Seconds of silence before the first speech, read from silencedetect's stderr: 0 when the line opens on speech,
+ *  undefined when the report has no answer (no audio stream, a line that is silence throughout). Pure. */
+export function leadingSilence(stderr: string): number | undefined {
+  if (!/Stream #\d+:\d+.*Audio/.test(stderr)) return undefined;
+  const start = /silence_start:\s*(-?[\d.]+)/.exec(stderr);
+  if (start === null || Number(start[1]) > 0.001) return 0;
+  const end = /silence_end:\s*([\d.]+)/.exec(stderr);
+  if (end === null) return undefined;
+  const s = Number(end[1]);
+  return Number.isFinite(s) && s >= 0 ? Math.round(s * 1000) / 1000 : undefined;
+}
+
+const onsetWith = (e: CutEngines, bins: ReturnType<typeof binsFrom>) => async (file: string): Promise<number | undefined> => {
+  if (e.onset !== undefined) return e.onset(file);
+  const r = await (e.spawn ?? realSpawn)(e.ffmpeg ?? bins.ffmpeg, onsetArgs(file), { timeoutMs: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
+  return r.ok ? leadingSilence(r.stderr) : undefined;
+};
+
+/**
+ * Each line's start, in order, on the next take's opening. One scene carries one line; lines beyond the scenes stack on
+ * the last. A line whose leading silence was measured (`silences[i]`) is laid from its first speech, which lands on the
+ * opening (layArgs trims the silence); an unmeasured one is laid from its first sample, FALLBACK_LEAD_S in.
+ */
+export function lineStarts(takes: readonly { readonly durationS: number }[], lines: number, silences: readonly (number | undefined)[] = []): readonly number[] {
   const starts: number[] = [];
   let at = 0;
   for (let i = 0; i < lines; i++) {
-    starts.push(Math.round((at + 0.2) * 1000) / 1000);
+    starts.push(Math.round((at + (silences[i] === undefined ? FALLBACK_LEAD_S : 0)) * 1000) / 1000);
     at += takes[Math.min(i, takes.length - 1)]?.durationS ?? 0;
   }
   return starts;
 }
 
 /** The ffmpeg lay: dub lines at their starts, a bed under them, the assembled sound ducked, the result limited. No shell. Pure. */
-export function layArgs(input: { readonly video: string; readonly lines: readonly { readonly file: string; readonly startS: number }[]; readonly bed?: string; readonly totalS: number; readonly out: string }): readonly string[] {
+export function layArgs(input: { readonly video: string; readonly lines: readonly { readonly file: string; readonly startS: number; readonly trimS?: number }[]; readonly bed?: string; readonly totalS: number; readonly out: string }): readonly string[] {
   const chain: string[] = [];
   const inputs = ["-i", input.video, ...input.lines.flatMap((l) => ["-i", l.file]), ...(input.bed === undefined ? [] : ["-i", input.bed])];
   const nat = input.lines.length > 0 || input.bed !== undefined ? "volume=-5dB," : "";
   chain.push(`[0:a]aresample=48000,aformat=channel_layouts=stereo,${nat}apad[nat]`);
   const mixed = ["[nat]"];
   input.lines.forEach((l, i) => {
-    chain.push(`[${i + 1}:a]aresample=48000,aformat=channel_layouts=stereo,adelay=delays=${Math.round(l.startS * 1000)}:all=1[l${i}]`);
+    const trim = l.trimS !== undefined && l.trimS > 0 ? `atrim=start=${l.trimS.toFixed(3)},asetpts=PTS-STARTPTS,` : "";
+    chain.push(`[${i + 1}:a]${trim}aresample=48000,aformat=channel_layouts=stereo,adelay=delays=${Math.round(l.startS * 1000)}:all=1[l${i}]`);
     mixed.push(`[l${i}]`);
   });
   if (input.bed !== undefined) {
@@ -219,17 +261,21 @@ async function layAct(store: Store, e: CutEngines, req: CutRequest, ctx: StepCon
     await writeFile(video, await bytesOf(blobRoot, assembled.blob));
     const bins = binsFrom(process.env);
     const probe = probeWith(e, bins);
-    const starts = lineStarts(req.takes, req.lines.length);
-    const lines: { file: string; startS: number; name: string }[] = [];
+    const onset = onsetWith(e, bins);
+    const files: string[] = [];
+    const silences: (number | undefined)[] = [];
     for (const [i, l] of req.lines.entries()) {
       const f = path.join(dir, `line-${i}.wav`);
       await writeFile(f, await bytesOf(blobRoot, l.audio));
-      lines.push({ file: f, startS: starts[i] ?? 0, name: l.name });
+      files.push(f);
+      silences.push(await onset(f));
     }
+    const starts = lineStarts(req.takes, req.lines.length, silences);
+    const lines = req.lines.map((l, i) => ({ file: files[i] ?? "", startS: starts[i] ?? 0, name: l.name, ...(silences[i] === undefined ? {} : { trimS: silences[i] }) }));
     const bed = req.bed === undefined ? undefined : path.join(dir, `bed.${trackExt(req.bed.mime)}`);
     if (req.bed !== undefined && bed !== undefined) await writeFile(bed, await bytesOf(blobRoot, req.bed));
     const over: string[] = [];
-    for (const l of lines) if (l.startS + (await probe(l.file)) > assembled.durationS) over.push(l.name);
+    for (const l of lines) if (l.startS + (await probe(l.file)) - (l.trimS ?? 0) > assembled.durationS) over.push(l.name);
     const out = path.join(dir, "laid.mp4");
     const args = layArgs({ video, lines, ...(bed === undefined ? {} : { bed }), totalS: assembled.durationS, out });
     const r = await (e.spawn ?? realSpawn)(e.ffmpeg ?? bins.ffmpeg, args, { timeoutMs: SCRIPT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 });

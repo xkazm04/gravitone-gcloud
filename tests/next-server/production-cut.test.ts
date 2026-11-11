@@ -38,7 +38,7 @@ import { H3_REF2VA_UNET, H3_REF_LORA, setRef2VaGraph, speakingPrompt } from "../
 import { loadH3Graph } from "../../lib/imaging/video/comfyH3.ts";
 import { requestSpeakingTake, productionVoiceRoute } from "../../lib/producers/productionAudio.ts";
 import { cutJobId, driveCut, jobOfCut, requestCutIn, type RequestCutInput } from "../../lib/producers/productionCut.ts";
-import { cutSize, layArgs, lineStarts, MUSIC_CLIP_SCRIPT, musicClipPlan, scriptArgs, TRAILER_SCRIPT, trailerEdit } from "../../lib/producers/productionCutActs.ts";
+import { cutSize, layArgs, leadingSilence, lineStarts, MUSIC_CLIP_SCRIPT, musicClipPlan, onsetArgs, scriptArgs, TRAILER_SCRIPT, trailerEdit } from "../../lib/producers/productionCutActs.ts";
 import { producers } from "../../lib/producers/registry.ts";
 import { silentWav } from "../../lib/producers/voice.ts";
 
@@ -211,6 +211,41 @@ describe("the craft scripts' folder and argv", () => {
     expect(a.join(" ")).toContain("adelay=delays=200:all=1");
     expect(a.join(" ")).toContain("amix=inputs=3");
     expect(a.slice(-1)).toEqual(["/o.mp4"]);
+  });
+
+  it("lays a line from its first speech; the 0.2 s lead only when the silence could not be measured", () => {
+    // A line with 0.62 s of breath before its first word, and one whose silence is unknown.
+    expect(lineStarts([take, take], 2, [0.62, undefined])).toEqual([0, 5.2]);
+    expect(lineStarts([take, take], 2, [0, 0])).toEqual([0, 5]);
+    const a = layArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 5, trimS: 0.62 }, { file: "/m.wav", startS: 0.2 }], totalS: 9, out: "/o.mp4" }).join(" ");
+    expect(a).toContain("[1:a]atrim=start=0.620,asetpts=PTS-STARTPTS,aresample=48000");
+    expect(a).toContain("[2:a]aresample=48000");
+    expect(onsetArgs("/l.wav")).toContain("silencedetect=noise=-40dB:d=0.05");
+    const report = (lines: string) => `Input #0, wav, from '/l.wav':\n  Stream #0:0: Audio: pcm_s16le, 44100 Hz, mono\n${lines}`;
+    expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0\n[silencedetect @ 0x1] silence_end: 0.6213 | silence_duration: 0.6213\n[silencedetect @ 0x1] silence_start: 2.1"))).toBe(0.621);
+    expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 1.4\n[silencedetect @ 0x1] silence_end: 1.9"))).toBe(0);
+    expect(leadingSilence(report(""))).toBe(0);
+    expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0"))).toBeUndefined();
+    expect(leadingSilence("")).toBeUndefined();
+  });
+
+  it("the live lay measures each line's silence through ffmpeg and trims it", async () => {
+    const { store, location } = world();
+    const { id } = await atCutting(store);
+    const jobId = await launchCut(store, id, "live");
+    const log = { calls: [] as { bin: string; args: readonly string[] }[] };
+    const spawn: Spawn = async (bin, args, opts) => {
+      if (args.some((a) => a.startsWith("silencedetect"))) {
+        log.calls.push({ bin, args });
+        return { ok: true, stdout: Buffer.alloc(0), stderr: "  Stream #0:0: Audio: pcm_s16le\n[silencedetect @ 0x1] silence_start: 0\n[silencedetect @ 0x1] silence_end: 0.45 | silence_duration: 0.45" };
+      }
+      return fakeSpawn(log)(bin, args, opts);
+    };
+    await driveCut(store, location, jobId, { dryOnly: false, engines: { spawn, node: process.execPath, ffmpeg: "ffmpeg", probe: async () => 5 } });
+    expect(log.calls.some((c) => c.args.some((a) => a.startsWith("silencedetect")))).toBe(true);
+    const lay = log.calls.find((c) => c.args.join(" ").includes("adelay"))?.args.join(" ") ?? "";
+    expect(lay).toContain("atrim=start=0.450");
+    expect(lay).toContain("adelay=delays=0:all=1");
   });
 });
 
