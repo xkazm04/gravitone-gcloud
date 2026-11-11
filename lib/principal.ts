@@ -146,9 +146,10 @@ export interface Refusal {
 
 export type Resolution = Principal | Refusal;
 
-/** Which door is asking. `money` refuses on a key set it cannot confirm;
- *  `read` may verify against the last good one. */
-export type KeyUse = "money" | "read";
+/** Which door is asking. `money` and `act` (a free write) refuse on a key set
+ *  they cannot confirm; only `read` may verify against the last good one. A CLI
+ *  token must admit the use (packages/kernel/src/token.ts scopeAdmits). */
+export type KeyUse = "money" | "act" | "read";
 
 /** The fix every token refusal names. */
 const MINT_HINT = "node pipeline/token.mts mint --name <caller> --scope money";

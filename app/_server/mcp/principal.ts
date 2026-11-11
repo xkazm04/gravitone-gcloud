@@ -12,7 +12,7 @@ import type { Who } from "../../(studio)/projects/_port/port.ts";
 // so the ledger could not say who acted: each is refused by name, 403, before any JSON-RPC is read.
 //
 // THE SCOPE IS JUDGED PER OP, NOT AT THE DOOR. route() resolves the bearer with key use `read`
-// (KeyUse was not widened, WP1), so a read token is admitted here and reads; a write op asks
+// (`perOpScope`: an access write is otherwise an `act`), so a read token is admitted here and reads; a write op asks
 // `scopeAdmits(scope, "act")` itself and answers a read token in-band. A `money` token admits
 // `act` and behaves exactly as one: the surface, not the scope, holds "an agent never spends".
 //

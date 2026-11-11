@@ -29,4 +29,4 @@ const deps: McpDeps = {
   },
 };
 
-export const POST = route({ guard: "access", bodyCap: MCP_BODY_CAP, maxDuration }, mcpHandler(deps, PROJECTION, pkg.version));
+export const POST = route({ guard: "access", bodyCap: MCP_BODY_CAP, maxDuration, perOpScope: true }, mcpHandler(deps, PROJECTION, pkg.version));

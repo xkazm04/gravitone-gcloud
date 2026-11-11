@@ -42,6 +42,8 @@ default and 90 at most. When it runs out, mint a new one.
 | `act`   | admitted   | admitted                        | 403 `token-scope` |
 | `read`  | admitted   | refused                         | 403 `token-scope` |
 
+Every write behind route()'s `access` guard (a cover upload, a take save, `/api/import`) is an act door,
+and a sign-in there must verify against a key set the server could confirm (no stale-JWKS grace).
 `act` admits reads, dry runs, live runs whose recomputed receipt is free and spend requests. Every money
 door refuses it. On `/api/mcp`, a `money` token gets the same `act` limits: the surface holds the rule,
 not the scope. A `read` token can read here. Its write calls are refused in-band

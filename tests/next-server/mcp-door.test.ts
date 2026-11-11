@@ -75,7 +75,7 @@ function depsWith(produce: () => ServerProduce = real): McpDeps {
   return { produce, part: none, board: none, library: none, store: () => ok(store) };
 }
 
-const door = (deps: McpDeps = depsWith(), mode: "family" | "operation" = "family") => route({ guard: "access", bodyCap: MCP_BODY_CAP }, mcpHandler(deps, mode, "0.1.0"));
+const door = (deps: McpDeps = depsWith(), mode: "family" | "operation" = "family") => route({ guard: "access", bodyCap: MCP_BODY_CAP, perOpScope: true }, mcpHandler(deps, mode, "0.1.0"));
 
 type Opts = { readonly bearer?: string; readonly origin?: string; readonly cookie?: string; readonly raw?: string };
 let ip = 0;
