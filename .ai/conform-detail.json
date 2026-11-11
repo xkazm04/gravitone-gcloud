@@ -23263,6 +23263,57 @@
           "evidence": "packages/ui/src/components/produce/PlanTable.tsx:7 Plan rows are priced vendor jobs and operator gates. No model answer gets a form chosen for it here."
         }
       ]
+    },
+    "e175da72-0e26-4725-95bf-eecd8c3ffc6f/sync-replication": {
+      "context": "ledger-v1-projection-core",
+      "subject": "sync-replication",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:22:21.481Z",
+      "worker": "809359a6-0696-4d33-bbdd-fc04aa01755f",
+      "techniques": [
+        {
+          "technique": "topology-declaration",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/types.ts:12 Declared one-way mirror: v1 stores are the authority and the ledger never writes back. The stream set is one registry (sources.ts V1_SOURCES), and the engine iterates it generically."
+        },
+        {
+          "technique": "change-tracking-and-cursors",
+          "verdict": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:31 No cursor: each sync is a full re-read appended idempotently by key, so nothing is skipped. Read-time wakes are the only automatic cadence, and the tick floor was deliberately rejected, so staleness is unbounded when nothing reads. Batched backfill (BATCH=200) and the separate read/project/append failure classes do conform."
+        },
+        {
+          "technique": "conflict-detection-and-policy",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:138 Key collisions are compared by canonical content (kernel ingest identity()), never by clock. An existing key with the same content is counted as 'existing'; one with different content is counted as 'drifted' and reported. The append-only policy (the held event stands) is the authority-wins rule of a one-way mirror."
+        },
+        {
+          "technique": "sync-observability",
+          "verdict": "conformant",
+          "evidence": "lib/ledger/v1/sync.ts:167 Each source gets its own health row (last_ok_at, fail_streak, last_error verbatim in kernel ingest_sources). readOne turns any throw into a classed per-source failure, so one source's failure strands no other. reconcile() compares the source tally with the ledger count."
+        },
+        {
+          "technique": "tombstone-propagation",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:206 The replica is an append-only event ledger of facts, not a mirror of records. History the source has since dropped stays in the ledger by design, and the live view is read from v1 at render time, so a removed v1 record cannot resurrect anything."
+        },
+        {
+          "technique": "in-flight-is-per-connection",
+          "verdict": "not-applicable",
+          "evidence": "lib/ledger/v1/sync.ts:133 There is no client outbox and no socket push. Batches are local SQLite transactions in the same process, so there is no in-flight state to keep per connection."
+        }
+      ],
+      "registryProposal": "change-tracking-and-cursors requires a periodic tick as the floor. It does not cover a read-triggered projection whose only readers are page renders, where an idle system has nobody to be stale for. The technique could state whether a read-on-demand freshness check counts as the floor when every read path calls it. Here one read path (the agents' API) does not.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "lib/ledger/v1/sync.ts:31 The v1→ledger projection runs only when an operator runs it or when the Floor, Ledger or Runs pages call freshLedger(). There is no periodic tick, and the agents' door (app/api/ledger/route.ts reads the ledger and never calls freshLedger) can serve a ledger that has been stale for as long as nobody opened a page, so how stale it can get has no limit.",
+          "evaluatedAt": "2026-10-26",
+          "worker": null,
+          "reason": "replaced by 809359a6-0696-4d33-bbdd-fc04aa01755f"
+        }
+      ]
     }
   }
 }

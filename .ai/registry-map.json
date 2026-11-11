@@ -12719,14 +12719,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/ledger/v1/sync.ts:31 The v1→ledger projection runs only when an operator runs it or when the Floor, Ledger or Runs pages call freshLedger(). There is no periodic tick, and the agents' door (app/api/ledger/route.ts reads the ledger and never calls freshLedger) can serve a ledger that has been stale for as long as nobody opened a page, so how stale it can get has no limit.",
-          "evaluatedAt": "2026-10-26",
-          "evaluatedAgainst": "sha256-b2:2d5b609198b79d34",
-          "evaluatedRevision": 10,
+          "evidence": "lib/ledger/v1/sync.ts:31 The v1→ledger projection runs only when the operator CLI runs it or when a ledger-showing page calls freshLedger(). The periodic tick that change-tracking-and-cursors requires as a floor was rejected on purpose, so the ledger can stay stale for as long as nobody renders a page; no data is lost, because every sync re-reads everything, but how long the latency can grow has no bound.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:5b4c8b047dc770be",
+          "evaluatedRevision": 11,
           "source": "renamed",
           "renamedFrom": "bd05d347-c5c6-4eb4-8de2-b68a6102ac01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "audit-logging",
