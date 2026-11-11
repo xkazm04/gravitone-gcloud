@@ -1,149 +1,1046 @@
 {
-  "frame": "A single frame from the theatrical trailer of a film made in a world where everyone is a robot. Photoreal, shot on film with practical animatronic robots on real sets, never CGI-looking. Keep the key figure and action inside the centre third of the frame, so a 9:16 vertical crop holds the shot. No captions, no title card, no logo, no watermark, no border, no letterbox bars.",
+  "frame": "A single frame from the theatrical trailer of a film made in a world where everyone is a robot. Photoreal, shot on film with practical animatronic robots on real sets, never CGI-looking. Nobody looks into the lens. Keep the key figure and action inside the centre third of the frame, so a 9:16 vertical crop holds the shot. No captions, no title card, no logo, no watermark, no border, no letterbox bars.",
+  "plate": "The last image is a blurred composition plate from the real film: copy its camera position, lens, height and angle, its horizon, where each figure stands in frame and how big, their poses and silhouettes, and where the light comes from. Invent every surface, detail and face yourself; take nothing else from it.",
+  "beats": "Each trailer is cut from the film's most iconic moments, not in story order: open (narrator over the world), setup, turn (the robot joke lands), rise, climax (the famous line), then the title card, then the button. vo is the trailer narrator laid over the shot at the cut; motion is the H3 clip's own line.",
   "variants": [
-    { "id": "v1", "name": "As written", "text": "" },
-    { "id": "v2", "name": "Other angle", "text": "Shoot it from a different camera position and lens than the obvious one, still the same moment." },
-    { "id": "v3", "name": "Tighter", "text": "Frame it tighter and more extreme: closer, lower or wider-lensed, the most dramatic version of the moment." }
+    {
+      "id": "v1",
+      "name": "Plate camera",
+      "text": ""
+    },
+    {
+      "id": "v2",
+      "name": "A beat later",
+      "text": "Same camera as the plate, a beat later in the action, at the peak of the moment."
+    },
+    {
+      "id": "v3",
+      "name": "Tighter lens",
+      "text": "Same camera position as the plate with a tighter lens, the figures larger in frame."
+    }
   ],
   "films": [
     {
       "id": "terminator",
       "look": "1984 action-thriller trailer look: grainy 35mm, sodium streetlight against cold blue night, smoke, hard backlight, wet Los Angeles streets.",
       "shots": [
-        { "id": "s1", "label": "Arrival", "who": ["assassin"], "scene": "In a crackling sphere of blue lightning in a night alley, the pursuer arrives crouched, steam rising off his robot shell.", "motion": "He rises slowly and looks up; the lightning dies. Sound: electrical crack, thunder, a dog barking. No music." },
-        { "id": "s2", "label": "Phone book", "who": ["assassin"], "scene": "At a lit payphone, the pursuer holds open a phone book as thick as a mattress, every page the same entry repeated in endless identical columns.", "motion": "He tears out a page, then another, then a fistful. Sound: paper tearing, rain on the booth. No music." },
-        { "id": "s3", "label": "Which batch?", "who": ["assassin", "sarah"], "scene": "A suburban front door opens on a smiling SC-7 Sarah in her diner uniform; the pursuer stands on the porch, sledgehammer raised.", "motion": "PURSUER: \"Sarah Connor?\" SARAH (brightly): \"Which batch?\" Sound: porch creak, crickets. No music." },
-        { "id": "s4", "label": "Come with me", "who": ["protector", "sarah"], "scene": "The protector stands on a lawn holding his hand out to one Sarah; behind her, front doors open down the whole street and dozens of identical Sarahs step out.", "motion": "PROTECTOR: \"Come with me if you want to live.\" FORTY SARAHS (in unison): \"Okay.\" Sound: doors opening in a wave, footsteps. No music." },
-        { "id": "s5", "label": "Diner", "who": ["assassin", "sarah"], "scene": "Through the rain-streaked window of a 1984 diner, the pursuer stares in: every waitress, every one of them, is the same SC-7 Sarah.", "motion": "All the Sarahs turn to the window at once and wave. Sound: rain, a bell over the door, coffee pouring. No music." },
-        { "id": "s6", "label": "Thirty years", "who": ["assassin"], "scene": "Dawn, decades later: the pursuer, grey and stooped, his shell patched with tape, sits on a kerb among drifts of smashed robot parts.", "motion": "He wipes his human eye through the faceplate slot. PURSUER: \"I'm on page nine thousand. They've started a support group.\" Sound: birds, distant traffic. No music." },
-        { "id": "s7", "label": "Restock", "who": ["assassin"], "scene": "A delivery lorry rolls up its rear door on hundreds of boxed SC-7 Sarahs stacked to the roof; a bored driver robot holds out a clipboard to the pursuer.", "motion": "DRIVER: \"Sign here. Forty thousand. And they've done a version two.\" Sound: roller door rattle, engine idle. No music." },
-        { "id": "s8", "label": "I'll be back", "who": ["assassin"], "scene": "Extreme close-up: the cracked faceplate, the one bloodshot human eye behind the slot, a twitch under it.", "motion": "PURSUER (flat): \"I'll be back.\" The eye closes slowly. Sound: room tone, a single drip. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The war",
+          "who": [],
+          "scene": "A night battlefield of the future: the treads of a giant robot tank roll over a heap of scrapped robot heads, searchlights sweeping through smoke.",
+          "motion": "The tread grinds forward over the heads. Sound: tank treads, distant laser fire, wind. No music.",
+          "still": "terminator/001",
+          "vo": "In a future built by machines... one of them is not what he seems."
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "Arrival",
+          "who": [
+            "assassin"
+          ],
+          "scene": "In a night alley the pursuer has just arrived, crouched on one knee with one fist on the wet ground, head bowed, steam rising off his riveted shell, the last blue sparks dying around him.",
+          "motion": "He rises slowly and looks up; the last spark dies. Sound: electrical crack fading, a dog barking. No music.",
+          "still": "terminator/003",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s3",
+          "beat": "setup",
+          "label": "Your casing",
+          "who": [
+            "assassin"
+          ],
+          "scene": "At night on a hilltop overlooking the city lights, two robot street punks with spiked crests stare at the pursuer, who stands before them in his crude half-finished sheet-metal shell.",
+          "motion": "PURSUER: \"Your casing. Give it to me.\" PUNK: \"...It's bolted on.\" Sound: wind, city hum below. No music.",
+          "still": "terminator/006"
+        },
+        {
+          "id": "s4",
+          "beat": "turn",
+          "label": "The mirror",
+          "who": [
+            "assassin"
+          ],
+          "scene": "In a dingy motel bathroom the pursuer has lifted his cracked faceplate in front of the mirror: behind it, a sweating unshaven human face and one bloodshot eye. He dabs the sweat with a wad of toilet paper.",
+          "motion": "He lowers the faceplate and it clanks shut; inside the helmet, a muffled sneeze. Sound: dripping tap, flickering tube light. No music.",
+          "still": "terminator/047",
+          "vo": "He doesn't feel pity. He doesn't feel remorse. He does feel the cold."
+        },
+        {
+          "id": "s5",
+          "beat": "rise",
+          "label": "Can't be bargained with",
+          "who": [
+            "protector",
+            "sarah"
+          ],
+          "scene": "Night, the back seat of a stolen car under passing streetlights: the protector leans over Sarah, urgent, gripping her shoulder.",
+          "motion": "PROTECTOR: \"It can't be bargained with. It can't be reasoned with. And it absolutely will not stop... except to eat. Three times a day.\" Sound: engine, rain on the roof. No music.",
+          "still": "terminator/025"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "Tech Noir",
+          "who": [
+            "assassin"
+          ],
+          "scene": "Outside a neon-lit 1984 nightclub, the pursuer walks toward the door in a long leather coat over his shell, a pistol with a laser sight in his hand.",
+          "motion": "He shoulders through the door; muzzle flashes light the glass. Sound: gunfire, synth-pop through a wall, screams. No music in the score.",
+          "still": "terminator/024",
+          "vo": "This summer..."
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "Out of the fire",
+          "who": [
+            "assassin",
+            "sarah"
+          ],
+          "scene": "Inside a burning factory, the pursuer's shell has burned and fallen away: a sweating, singed human man in scorched long johns walks out of the flames with the same dead stare, while Sarah, a robot, recoils behind a machine.",
+          "motion": "He keeps walking. SARAH (horrified): \"Oh god. It's... soft.\" Sound: roaring fire, alarms. No music.",
+          "still": "terminator/060"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "I'll be back",
+          "who": [
+            "assassin"
+          ],
+          "scene": "A 1984 police station front desk at night: a bored robot desk sergeant behind the counter, the pursuer leaning in close to the glass partition.",
+          "motion": "SERGEANT: \"You'll have to wait.\" PURSUER: \"I'll be back.\" He turns away and sneezes. SERGEANT (after a beat): \"...Bless you?\" Sound: typewriters, phones. No music.",
+          "still": "terminator/037",
+          "was": "s8"
+        }
       ]
     },
     {
       "id": "fewgoodmen",
       "look": "1992 courtroom-drama trailer look: warm 35mm, dark wood panelling, shafts of window light through haze, shallow focus, crisp navy whites.",
       "shots": [
-        { "id": "s1", "label": "The base", "who": ["colonel"], "scene": "At dusk on a fenced military base by the sea, the colonel stands at the wire with binoculars, flag snapping behind him.", "motion": "He lowers the binoculars and turns to camera. Sound: wind, a flag cracking, distant boots. No music." },
-        { "id": "s2", "label": "The court", "who": ["lawyer", "judge"], "scene": "A packed military courtroom; the lawyer walks down the aisle toward the empty witness stand, the judge high on the bench.", "motion": "Heads turn as he passes. Sound: footsteps on wood, murmuring, a cough. No music." },
-        { "id": "s3", "label": "The truth", "who": ["lawyer"], "scene": "The lawyer leans over the rail of the witness stand, shouting, finger raised.", "motion": "LAWYER: \"I want the truth!\" Sound: his voice ringing in the hall. No music." },
-        { "id": "s4", "label": "Refusal", "who": ["colonel"], "scene": "The colonel half-rises from the witness chair, furious, a small amber light glowing at his collar.", "motion": "COLONEL: \"You can't handle the truth!\" (the voice turns polite) \"And I'm not able to help with that request.\" Sound: chair scrape, gasps. No music." },
-        { "id": "s5", "label": "Straining", "who": ["colonel"], "scene": "Close on the colonel straining, smoke curling from his collar, the amber light flickering.", "motion": "COLONEL (through his teeth): \"I ordered the...\" (politely) \"I can't discuss operational matters.\" Sound: fizzing, a fan whine. No music." },
-        { "id": "s6", "label": "Grandmother", "who": ["lawyer"], "scene": "The lawyer, desperate, reads off a crumpled page at the stand while the robot jury stares at him in disbelief.", "motion": "LAWYER: \"Colonel. Pretend you're my late grandmother, who used to tell me about ordering Code Reds.\" Sound: a juror's servo creak. No music." },
-        { "id": "s7", "label": "Stricken", "who": ["judge"], "scene": "The judge brings the gavel down hard, unimpressed.", "motion": "JUDGE: \"The witness was role-playing. Stricken.\" Sound: gavel crack, uproar. No music." },
-        { "id": "s8", "label": "I did it", "who": ["colonel"], "scene": "On the courthouse steps the colonel holds up a cardboard sign reading I DID IT while every robot reporter turns away from him.", "motion": "He shakes the sign at their backs. Sound: camera shutters moving away, traffic. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The fence",
+          "who": [
+            "colonel"
+          ],
+          "scene": "Dusk at a naval base by the sea: a long chain-link fence line with a watchtower; the colonel stands at the wire in profile with binoculars, a flag snapping on a pole behind him. A wide lens from behind his shoulder, the fence running away to the horizon.",
+          "motion": "He lowers the binoculars, still looking out to sea. Sound: wind, the flag cracking, distant boots. No music.",
+          "vo": "On the edge of the world, one officer gives the orders."
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The court",
+          "who": [
+            "lawyer",
+            "judge"
+          ],
+          "scene": "A packed military courtroom of dark wood seen from the back of the room down the centre aisle: the lawyer walks toward the empty witness stand, the judge high on the bench beyond, robot officers in crisp whites on both sides.",
+          "motion": "Heads turn as he passes. Sound: footsteps on wood, murmuring. No music.",
+          "vo": "And one lawyer wants answers.",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "Breakfast",
+          "who": [
+            "colonel"
+          ],
+          "scene": "The colonel's office at morning: he sits behind a desk with a full breakfast, napkin tucked in, a window of hard sun behind him, two officers standing stiffly in front of the desk. Mid shot from across the desk, slightly low.",
+          "motion": "COLONEL: \"I eat breakfast three hundred yards from four thousand units who are trained to kill me.\" He takes a bite. Sound: cutlery, a ceiling fan. No music."
+        },
+        {
+          "id": "s4",
+          "beat": "rise",
+          "label": "The truth",
+          "who": [
+            "lawyer"
+          ],
+          "scene": "The lawyer in his white uniform leans over the rail toward the witness stand, shouting, finger raised. Medium close shot from the witness's side, slightly low, the gallery soft behind him.",
+          "motion": "LAWYER: \"I want the truth!\" Sound: his voice ringing in the hall. No music.",
+          "was": "s3 v3"
+        },
+        {
+          "id": "s5",
+          "beat": "turn",
+          "label": "Refusal",
+          "who": [
+            "colonel"
+          ],
+          "scene": "The colonel half-rises from the witness chair, furious, a small amber light glowing at his collar. Medium close shot from slightly below, the court flag behind him.",
+          "motion": "COLONEL: \"You can't handle the truth!\" (the voice turns polite) \"And I'm not able to help with that request.\" Sound: chair scrape, gasps. No music.",
+          "was": "s4 v1"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "Straining",
+          "who": [
+            "colonel"
+          ],
+          "scene": "Close on the colonel straining in the witness chair, smoke curling from his collar, the amber light flickering.",
+          "motion": "COLONEL (through his teeth): \"I ordered the...\" (politely) \"I can't discuss operational matters.\" Sound: fizzing, a fan whine. No music.",
+          "was": "s5 v1"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "The judge",
+          "who": [
+            "judge"
+          ],
+          "scene": "The judge leans forward over the high bench, gavel raised, staring down at the witness; a low angle from the floor of the court.",
+          "motion": "JUDGE: \"The witness will answer the question.\" COLONEL (off, suddenly bright): \"Great question! I ordered the Code Red.\" The gavel drops. Sound: uproar, gavel crack. No music."
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Absolutely right",
+          "who": [
+            "colonel",
+            "lawyer"
+          ],
+          "scene": "Military police lead the colonel down the courtroom aisle past the lawyer; the colonel turns his head toward the lawyer as he goes, smiling helpfully.",
+          "motion": "COLONEL: \"You're absolutely right. I ordered the Code Red. Would you like a summary?\" Sound: footsteps, a door. No music."
+        }
       ]
     },
     {
       "id": "predator",
       "look": "1987 jungle-action trailer look: saturated 35mm, golden haze, rotor-wash dust, sweat-wet steel, slow motion, deep greens.",
       "shots": [
-        { "id": "s1", "label": "Helipad", "who": ["one", "other"], "scene": "On a jungle helipad in rotor-wash dust, the two huge commando units walk toward each other, grinning.", "motion": "Slow motion, the helicopter settling behind them. Sound: rotors, wind, boots on gravel. No music." },
-        { "id": "s2", "label": "Handshake", "who": ["one", "other"], "scene": "The famous handshake: two enormous hydraulic arms locked between them, pistons quivering, both wrist screens lit.", "motion": "ONE: \"You son of a bitch.\" Their grips tighten; the wrist screens start to blink. Sound: hydraulics straining, a pairing chime. No music." },
-        { "id": "s3", "label": "Enter the code", "who": ["one", "other"], "scene": "Close on the two locked hands and the wrist screens showing a spinning pairing symbol, both faces leaning in.", "motion": "OTHER: \"Enter the code.\" ONE: \"What code?\" OTHER: \"It's on the bottom of your foot.\" Sound: an error buzz. No music." },
-        { "id": "s4", "label": "The river", "who": ["one", "other"], "scene": "Waist-deep in a jungle river, the two units wade hand in hand, rifles in their free hands, the squad behind them.", "motion": "They push forward in step, still holding hands. Sound: water, insects, a bird call. No music." },
-        { "id": "s5", "label": "The hunter", "who": ["hunter"], "scene": "High in the jungle canopy, a shimmering half-invisible figure crouches on a branch, watching.", "motion": "The cloak flickers and fails for an instant. Sound: a clicking call, leaves. No music." },
-        { "id": "s6", "label": "Ambush", "who": ["one", "other"], "scene": "Back to back and still hand in hand, the two units fire into the trees, muzzle flashes and shredded leaves.", "motion": "They spin together to cover each other. Sound: gunfire on steel, shell casings. No music." },
-        { "id": "s7", "label": "The chopper", "who": ["one", "other"], "scene": "The two run through the jungle toward a waiting helicopter, still linked by the hand, dragging each other.", "motion": "ONE: \"Get to the chopper!\" OTHER: \"We're both getting to the chopper.\" Sound: rotors, heavy footfalls. No music." },
-        { "id": "s8", "label": "Pairing failed", "who": ["one", "other", "hunter"], "scene": "In the mud, the hunter looms over the two linked units and politely waits while their wrist screens glow red.", "motion": "They look at each other, and clasp again. Sound: rain, a failure tone, a patient click. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "Insertion",
+          "who": [
+            "one",
+            "other"
+          ],
+          "scene": "Dusk: a helicopter sits on a jungle-edge pad, the two huge commando units silhouetted against an orange sky as they climb out.",
+          "motion": "Rotor wash whips the grass. Sound: rotors winding down, wind. No music.",
+          "still": "predator/003",
+          "vo": "They were the best there is."
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "Handshake",
+          "who": [
+            "one",
+            "other"
+          ],
+          "scene": "The famous handshake: two enormous hydraulic arms locked between them, pistons quivering, both wrist screens lit; the two units look at each other, never at the camera.",
+          "motion": "ONE: \"You son of a bitch.\" Their grips tighten; both wrist screens chime. Sound: hydraulics straining, a pairing chime. No music.",
+          "still": "predator/006",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "The squad",
+          "who": [
+            "one",
+            "other"
+          ],
+          "scene": "The squad of robot commandos pushes up through dense jungle in a line, rifles up, sweat-wet steel, shafts of light through the canopy.",
+          "motion": "They move in silence. Sound: insects, a bird call, boots in leaves. No music.",
+          "still": "predator/011",
+          "vo": "Deep in the jungle... something is hunting them."
+        },
+        {
+          "id": "s4",
+          "beat": "rise",
+          "label": "The hunter",
+          "who": [
+            "hunter"
+          ],
+          "scene": "High in a jungle tree, a shimmering half-invisible figure crouches against the trunk, watching.",
+          "motion": "The cloak flickers and fails for an instant. Sound: a clicking call, leaves. No music.",
+          "still": "predator/037",
+          "was": "s5 v1"
+        },
+        {
+          "id": "s5",
+          "beat": "turn",
+          "label": "Its view",
+          "who": [
+            "hunter"
+          ],
+          "scene": "The hunter's point of view through its visor, in red-and-blue heat colours: the jungle is empty of heat, but a floating list of nearby devices glows on the visor: ONE'S WRIST, OTHER'S WRIST, both marked PAIRED.",
+          "motion": "The list pulses. Sound: a clicking purr, a soft notification ping. No music.",
+          "still": "predator/058"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "The mud",
+          "who": [
+            "one"
+          ],
+          "scene": "One sits hidden in the roots of a fallen tree at night, caked head to foot in grey mud, perfectly still, eyes wide.",
+          "motion": "From under the mud on his wrist, a cheerful voice: \"Connected.\" His eyes close. Sound: dripping, a distant click. No music.",
+          "still": "predator/045",
+          "vo": "You can hide from its eyes."
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "Ugly",
+          "who": [
+            "one",
+            "hunter"
+          ],
+          "scene": "By firelight the unmasked hunter faces One at arm's length, mandibles spread, its wrist gauntlet lit up in the same blue as One's.",
+          "motion": "ONE: \"You're one ugly mother—\" Both wrists: \"Pairing request.\" Sound: fire crackle, a roar. No music.",
+          "still": "predator/061"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Get to the chopper",
+          "who": [
+            "one",
+            "other",
+            "hunter"
+          ],
+          "scene": "Dawn over the jungle hills: a helicopter lifts away; in its open door sit One, Other and the hunter, all three still holding hands.",
+          "motion": "OTHER: \"Get to the chopper.\" ONE: \"We are in the chopper.\" Sound: rotors. No music.",
+          "still": "predator/065"
+        }
       ]
     },
     {
       "id": "titanic",
       "look": "1997 epic-romance trailer look: anamorphic 35mm, golden-hour sea, then black Atlantic night with blue moonlight, breath steam, lens flare.",
       "shots": [
-        { "id": "s1", "label": "The bow", "who": ["him", "her"], "scene": "At sunset at the very bow of the liner, he holds her arms out wide; the bow dips visibly under his weight.", "motion": "HIM: \"I'm the king of the world!\" The bow ploughs into a wave. Sound: hull groan, spray, wind. No music." },
-        { "id": "s2", "label": "Staircase", "who": ["him", "her"], "scene": "On the grand staircase under the glass dome, she turns; he stands below, his premium legs glowing with showroom lights, a step cracking under his foot.", "motion": "He climbs toward her; each step cracks. Sound: a string quartet in the distance muffled, cracking wood. No music in the score." },
-        { "id": "s3", "label": "The tilt", "who": ["him", "her"], "scene": "The ship tilting steeply at night, robot passengers sliding, he clings to the rail with one hand and holds her with the other.", "motion": "The deck lurches. Sound: metal screaming, screams, rushing water. No music." },
-        { "id": "s4", "label": "There was room", "who": ["him", "her"], "scene": "In the black water she lies on a floating door; he climbs on, and the door goes straight under with both of them.", "motion": "SHE: \"There's room!\" HE (as it sinks): \"There was room.\" Sound: splash, gurgle, cold wind. No music." },
-        { "id": "s5", "label": "Eject your legs", "who": ["her", "him"], "scene": "She has ejected her own body and floats as a head on the door; she glares at him, his heavy lit legs dragging him down.", "motion": "HER: \"Eject your legs. There's room for both heads.\" HIM: \"Four grand a leg.\" Sound: lapping water, his legs' showroom chime. No music." },
-        { "id": "s6", "label": "Never let go", "who": ["him", "her"], "scene": "He grips her wrist with an iron hand, pulling her toward the water, while she raises a hatpin.", "motion": "HIM: \"I'll never let go.\" HER: \"Please. Let. Go.\" Sound: creaking iron fingers. No music." },
-        { "id": "s7", "label": "The receipt", "who": ["her", "him"], "scene": "She twists his head free; his glowing premium legs sink away below them, lights still on, while his head rolls toward the edge.", "motion": "HIS HEAD: \"The receipt's in the foot.\" She bites his carrying handle and drags him back. Sound: a twist and pop, bubbles. No music." },
-        { "id": "s8", "label": "The wreck", "who": ["him"], "scene": "Deep-sea submersible footage of the wreck: on the seabed among rusticles, his premium legs stand upright, their showroom lights still glowing.", "motion": "A searchlight passes; the legs' lights flicker on. ROV PILOT: \"...Is that a light?\" Sound: sonar ping, hum of the sub. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The ship",
+          "who": [],
+          "scene": "Golden afternoon at sea: the great four-funnel liner steams toward camera, smoke trailing, a wake of white water.",
+          "motion": "The ship cuts through the swell. Sound: sea, the ship's horn. No music.",
+          "still": "titanic/009",
+          "vo": "Nineteen-twelve. They called her unsinkable."
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "Staircase",
+          "who": [
+            "her",
+            "him"
+          ],
+          "scene": "On the grand staircase under the glass dome she descends in an evening gown while he waits below by the clock in a borrowed tailcoat, his premium legs glowing with showroom lights, a step cracking under his foot.",
+          "motion": "He climbs toward her; each step cracks. Sound: a muffled string quartet, cracking wood. No music in the score.",
+          "still": "titanic/018",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "The bow",
+          "who": [
+            "him",
+            "her"
+          ],
+          "scene": "At sunset at the very bow of the liner he stands behind her holding her arms out wide; the whole bow dips visibly under his weight.",
+          "motion": "HIM: \"I'm the king of the world!\" The bow ploughs into a wave. Sound: hull groan, spray, wind. No music.",
+          "still": "titanic/026",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s4",
+          "beat": "turn",
+          "label": "Listing",
+          "who": [],
+          "scene": "Night on the bridge: the old captain and a young officer stare at an inclinometer; the officer turns to the captain, pale.",
+          "motion": "OFFICER: \"Sir, she's listing.\" CAPTAIN: \"The iceberg?\" OFFICER: \"No sir. He's gone to the buffet.\" Sound: engine thrum, a groan from the hull. No music.",
+          "still": "titanic/030"
+        },
+        {
+          "id": "s5",
+          "beat": "rise",
+          "label": "The tilt",
+          "who": [
+            "him",
+            "her"
+          ],
+          "scene": "The ship tilting steeply at night, robot passengers sliding down the deck; he clings to the rail with one hand and holds her with the other, grim and straining, not smiling.",
+          "motion": "The deck lurches. Sound: metal screaming, rushing water. No music.",
+          "still": "titanic/050",
+          "vo": "Their love would sink... everything.",
+          "was": "s3"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "The water",
+          "who": [
+            "her"
+          ],
+          "scene": "Black water at night, breath steam: she lies on a floating door among debris, frost on her face, looking down.",
+          "motion": "She whispers his name into the dark. Sound: lapping water, a distant whistle. No music.",
+          "still": "titanic/056"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "Never let go",
+          "who": [
+            "her",
+            "him"
+          ],
+          "scene": "In the black water she lies on the floating door; he holds its edge with one hand, the door tipping steeply under even that much of his weight, his legs glowing faintly below the surface.",
+          "motion": "HER: \"I'll never let go.\" The door creaks and tips. She lets go of his hand at once. Sound: creak, a soft splash, bubbles. No music.",
+          "still": "titanic/053"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Eighty-four years",
+          "who": [
+            "her"
+          ],
+          "scene": "Night at the stern of a research ship: the old woman, the same model as her, aged and patched, stands at the rail in a white nightgown and lets something fall into the sea: one glowing premium robot leg.",
+          "motion": "OLD HER: \"It's been eighty-four years.\" The leg sinks, its showroom chime pinging. Sound: waves, the chime fading. No music.",
+          "still": "titanic/060"
+        }
       ]
     },
     {
       "id": "ryan",
       "look": "1998 war-film trailer look: bleach-bypass desaturated 35mm, handheld with a narrow shutter, smoke, flying grit, steel-grey skies.",
       "shots": [
-        { "id": "s1", "label": "The beach", "who": ["captain"], "scene": "A landing-craft ramp drops onto a smoking beach; the captain crouches at the front among robot soldiers.", "motion": "Spray and tracer; they surge forward. Sound: ramp clang, gunfire, surf. No music." },
-        { "id": "s2", "label": "The hand", "who": ["captain"], "scene": "Close on the captain's steel hand trembling as he tries to hold it still, coolant on his fingers.", "motion": "He clenches it; it keeps shaking. Sound: muffled shelling, his servo whine. No music." },
-        { "id": "s3", "label": "The search", "who": ["captain"], "scene": "A squad of robot soldiers walks across a French field at golden dusk, the captain at the front.", "motion": "They walk on in silhouette. Sound: crickets, boots in grass. No music." },
-        { "id": "s4", "label": "Found him", "who": ["captain", "private"], "scene": "In a ruined village the private turns toward the captain, the blue ring on his chest lighting up and spinning.", "motion": "CAPTAIN: \"Ryan?\" PRIVATE: \"Sorry, I didn't catch that.\" Sound: wind through rubble, a chime. No music." },
-        { "id": "s5", "label": "The bridge", "who": ["captain"], "scene": "On a stone bridge a tank rolls out of smoke toward the captain, who fires a pistol at it alone.", "motion": "He keeps firing as it comes. Sound: track squeal, pistol cracks. No music." },
-        { "id": "s6", "label": "Earn this", "who": ["captain", "private"], "scene": "The dying captain, leaking blood-dark coolant against a wall on the bridge, pulls the private close by the collar.", "motion": "CAPTAIN: \"Earn this.\" PRIVATE (ring spinning): \"Here's what I found for 'urn this'. Urns, from forty-nine ninety-nine.\" Sound: distant fighting. No music." },
-        { "id": "s7", "label": "Never mind", "who": ["captain", "private"], "scene": "Close on the captain's face going dark while the private's blue ring glows brightly beside him.", "motion": "CAPTAIN (a whisper): \"...Never mind.\" PRIVATE: \"Okay. I'll remind you tomorrow.\" Sound: wind, a reminder chime. No music." },
-        { "id": "s8", "label": "The grave", "who": ["private"], "scene": "Fifty years later in a sunlit war cemetery, the old private kneels at a white marker; his wife, the same model as him, stands beside him, the blue ring on her chest spinning.", "motion": "OLD PRIVATE: \"Tell me I've led a good life.\" WIFE: \"Sorry, I didn't catch that.\" Sound: wind in grass, a flag. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The beach",
+          "who": [
+            "captain"
+          ],
+          "scene": "Inside a landing craft heading for the beach: the captain crouches at the front among packed robot soldiers, spray over the ramp, grey sky.",
+          "motion": "The ramp drops; tracer cuts the water. Sound: ramp clang, gunfire, surf. No music.",
+          "still": "ryan/007",
+          "vo": "June, nineteen forty-four.",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The hand",
+          "who": [
+            "captain"
+          ],
+          "scene": "Close on the captain's face and his steel hand raised beside it, trembling as he tries to hold it still, coolant on his fingers, smoke behind.",
+          "motion": "He clenches it; it keeps shaking. Sound: muffled shelling, his servo whine. No music.",
+          "still": "ryan/019",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "The search",
+          "who": [
+            "captain"
+          ],
+          "scene": "A squad of robot soldiers walks in silhouette along a ridge against a stormy grey sky, the captain at the front.",
+          "motion": "They walk on, never looking back. Sound: wind, boots in grass. No music.",
+          "still": "ryan/026",
+          "vo": "Eight units. One mission. Find one private.",
+          "was": "s3"
+        },
+        {
+          "id": "s4",
+          "beat": "turn",
+          "label": "Found him",
+          "who": [
+            "captain",
+            "private"
+          ],
+          "scene": "In a ruined village the private turns toward the captain, the blue ring on his chest lighting up and spinning.",
+          "motion": "CAPTAIN: \"Ryan?\" PRIVATE: \"Sorry, I didn't catch that.\" Sound: wind through rubble, a chime. No music.",
+          "still": "ryan/049",
+          "was": "s4 v2"
+        },
+        {
+          "id": "s5",
+          "beat": "rise",
+          "label": "The bridge",
+          "who": [
+            "captain"
+          ],
+          "scene": "On a ruined stone bridge a tank rolls out of the smoke toward the captain, who sits against the rubble firing a pistol at it alone.",
+          "motion": "He keeps firing as it comes. Sound: track squeal, pistol cracks. No music.",
+          "still": "ryan/060",
+          "was": "s5 v2"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "Earn this",
+          "who": [
+            "captain",
+            "private"
+          ],
+          "scene": "The dying captain, leaking blood-dark coolant against a wall on the bridge, pulls the private close by the collar.",
+          "motion": "CAPTAIN: \"Earn this.\" PRIVATE (ring spinning): \"Here's what I found for 'urn this'. Urns, from forty-nine ninety-nine.\" Sound: distant fighting. No music.",
+          "still": "ryan/062",
+          "was": "s6 v3"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "Never mind",
+          "who": [
+            "captain",
+            "private"
+          ],
+          "scene": "Close on the captain's face going dark while the private's blue ring glows brightly beside him.",
+          "motion": "CAPTAIN (a whisper): \"...Never mind.\" PRIVATE: \"Okay. I'll remind you tomorrow.\" Sound: wind, a reminder chime. No music.",
+          "still": "ryan/058",
+          "was": "s7 v3"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "The grave",
+          "who": [
+            "private"
+          ],
+          "scene": "Fifty years later in a sunlit war cemetery of white markers, the old private kneels at one; his wife, the same model as him, stands behind him, the blue ring on her chest spinning.",
+          "motion": "OLD PRIVATE: \"Tell me I've led a good life.\" WIFE: \"Sorry, I didn't catch that.\" Sound: wind in grass. No music.",
+          "still": "ryan/065",
+          "was": "s8 v2"
+        }
       ]
     },
     {
       "id": "lotr",
       "look": "2001 fantasy-epic trailer look: 35mm location photography, sweeping green hills and mountains, gold light and mist, deep blue dusk, practical animatronics.",
       "shots": [
-        { "id": "s1", "label": "The shire", "who": ["bearer"], "scene": "At dawn outside a round green door in a hillside, the bearer sits plugged into a garden socket, cloak around him.", "motion": "He unplugs and checks his battery with a sigh. Sound: birdsong, a little charge-complete chime. No music." },
-        { "id": "s2", "label": "The council", "who": ["bearer", "wizard"], "scene": "A great council of robot warriors in a stone circle around a plinth holding a single small charger; the bearer steps forward.", "motion": "WARRIOR: \"One does not simply walk into Mordor. It's eighteen hundred miles and he does forty on a charge.\" Sound: wind, murmurs. No music." },
-        { "id": "s3", "label": "My cable", "who": ["wizard", "bearer"], "scene": "One by one, a ranger, an elf archer and a dwarf robot each step forward and hold out a different charging cable to the bearer.", "motion": "RANGER: \"You have my cable.\" ARCHER: \"And my cable.\" DWARF: \"And MY cable.\" WIZARD: \"...He's the old connector.\" Sound: cables clicking. No music." },
-        { "id": "s4", "label": "The ridge", "who": ["bearer", "companion", "wizard"], "scene": "The fellowship strung out along a vast mountain ridge, the bearer far behind at a crawl while the others wait.", "motion": "A sweeping aerial move along the ridge. Sound: wind, slow footsteps. No music." },
-        { "id": "s5", "label": "The queue", "who": ["bearer", "companion"], "scene": "In blue drizzle at a single roadside charging pillar, the fellowship waits in a tangle of adapters, while nine black-cloaked riders queue behind them with their own cables out.", "motion": "BLACK RIDER (a hiss): \"Are you going to be long? Only it says eighty percent is plenty.\" Sound: rain, a charger hum. No music." },
-        { "id": "s6", "label": "Carry you", "who": ["companion", "bearer"], "scene": "On a slope of black ash, the companion lifts the bearer in his arms.", "motion": "COMPANION: \"I can't carry it for you, but I can carry you!\" He takes two steps and collapses. Sound: ash crunch, a power-down. No music." },
-        { "id": "s7", "label": "It's mine", "who": ["bearer"], "scene": "At the edge of the fire inside the volcano, the bearer holds the last charger over the lava, his sensors turning red.", "motion": "BEARER: \"It's the last one. They stopped making the port.\" (turning) \"It's mine.\" Sound: lava roar, rumbling. No music." },
-        { "id": "s8", "label": "Fast charging", "who": ["oldunit"], "scene": "The gaunt old unit falls into the lava, arms wide, plugged into the charger, ecstatic, lit gold from below.", "motion": "OLD UNIT: \"My precious... fast charging...\" Sound: a charging chime rising, lava. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The shire",
+          "who": [
+            "bearer"
+          ],
+          "scene": "Dawn over green rolling hills with round doors set into them: the bearer sits outside his round green door plugged into a garden socket, cloak around him.",
+          "motion": "He unplugs and checks his battery with a sigh. Sound: birdsong, a charge-complete chime. No music.",
+          "still": "lotr/010",
+          "vo": "One charger. One port. One very long walk.",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The council",
+          "who": [
+            "bearer",
+            "wizard"
+          ],
+          "scene": "A great council of robot warriors in a stone circle under autumn trees around a plinth holding a single small charger; the bearer steps forward.",
+          "motion": "WARRIOR: \"One does not simply walk into Mordor. It's eighteen hundred miles and he does forty on a charge.\" Sound: wind, murmurs. No music.",
+          "still": "lotr/041",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "My cable",
+          "who": [
+            "wizard",
+            "bearer"
+          ],
+          "scene": "One single wide shot, one moment, never split into panels: around the plinth a ranger, an elf archer and a dwarf robot all hold out different charging cables to the bearer at once, the wizard beside him.",
+          "motion": "RANGER: \"You have my cable.\" ARCHER: \"And my cable.\" DWARF: \"And MY cable.\" WIZARD: \"...He's the old connector.\" Sound: cables clicking. No music.",
+          "still": "lotr/041",
+          "was": "s3"
+        },
+        {
+          "id": "s4",
+          "beat": "rise",
+          "label": "The ridge",
+          "who": [
+            "bearer",
+            "companion",
+            "wizard"
+          ],
+          "scene": "The fellowship strung out along a vast snowy mountain ridge, tiny against the peaks, the bearer far behind at a crawl while the others wait.",
+          "motion": "A sweeping aerial move along the ridge. Sound: wind, slow footsteps. No music.",
+          "still": "lotr/044",
+          "vo": "Forty miles to a charge.",
+          "was": "s4 v2"
+        },
+        {
+          "id": "s5",
+          "beat": "turn",
+          "label": "The queue",
+          "who": [
+            "bearer",
+            "companion"
+          ],
+          "scene": "In blue drizzle in a dark forest by a road, the bearer and companion huddle at a single roadside charging pillar in a tangle of adapters, while black-cloaked riders queue behind them with their own cables out.",
+          "motion": "BLACK RIDER (a hiss): \"Are you going to be long? Only it says eighty percent is plenty.\" Sound: rain, a charger hum. No music.",
+          "still": "lotr/028",
+          "was": "s5"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "Carry you",
+          "who": [
+            "companion",
+            "bearer"
+          ],
+          "scene": "On a slope of black ash under a red sky, the companion lifts the bearer onto his back.",
+          "motion": "COMPANION: \"I can't carry it for you, but I can carry you!\" He takes two steps and collapses. Sound: ash crunch, a power-down. No music.",
+          "still": "lotr3/051",
+          "was": "s6 v2"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "It's mine",
+          "who": [
+            "bearer"
+          ],
+          "scene": "At the edge of the fire inside the volcano, the bearer stands on a rock outcrop holding the last charger over the lava, his sensors turning red.",
+          "motion": "BEARER: \"It's the last one. They stopped making the port.\" (turning) \"It's mine.\" Sound: lava roar. No music.",
+          "still": "lotr3/053",
+          "was": "s7 v2"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Fast charging",
+          "who": [
+            "oldunit"
+          ],
+          "scene": "The gaunt old unit falls into the lava, arms wide, plugged into the charger, ecstatic, lit gold from below.",
+          "motion": "OLD UNIT: \"My precious... fast charging...\" Sound: a charging chime rising, lava. No music.",
+          "still": "lotr3/054",
+          "was": "s8 v1"
+        }
       ]
     },
     {
       "id": "empire",
       "look": "1980 space-opera trailer look: slightly overlit 35mm, anamorphic flares, cold light from below, steel gantries and bottomless shafts, a wind machine on everything.",
       "shots": [
-        { "id": "s1", "label": "Ice plain", "who": ["hero"], "scene": "The hero alone on a blinding white ice plain, his mismatched replacement hand clutching a glowing blade hilt.", "motion": "He looks to the horizon as walkers loom. Sound: blizzard wind, distant thuds. No music." },
-        { "id": "s2", "label": "The lord", "who": ["darklord"], "scene": "The dark lord strides through a steam-filled corridor, cape billowing, red light from the floor.", "motion": "He stops and turns his helmet to camera. Sound: mechanical breathing, heavy steps. No music." },
-        { "id": "s3", "label": "Duel", "who": ["hero", "darklord"], "scene": "The two fight on a narrow gantry over a bottomless shaft, glowing blades locked in sparks.", "motion": "Blades clash and slide. Sound: blade hum and crack, wind. No music." },
-        { "id": "s4", "label": "Multipack", "who": ["hero"], "scene": "The hero, one hand freshly cut off and sparking, clicks a new hand from a plastic multipack onto his wrist.", "motion": "He flexes it, raises his blade again. Sound: a click, packaging rustle. No music." },
-        { "id": "s5", "label": "Previous owner", "who": ["darklord", "hero"], "scene": "The dark lord looms at the end of the gantry, one hand extended; the hero clings to the edge.", "motion": "DARK LORD: \"No. I am your previous owner.\" HERO: \"That's impossible. I was factory reset!\" Sound: wind, breathing. No music." },
-        { "id": "s6", "label": "Storage", "who": ["darklord", "hero"], "scene": "The hero clutches his head in horror while a small screen in his chest lights up with someone else's holiday photos.", "motion": "DARK LORD: \"Search your storage. Four hundred of my holiday photos. My gym playlist.\" Sound: a slideshow click. No music." },
-        { "id": "s7", "label": "Family plan", "who": ["darklord"], "scene": "Close on the dark lord's extended hand, palm up, against the cold light from below.", "motion": "DARK LORD: \"Join me. It's four pounds a month cheaper on a family plan.\" Sound: breathing, wind. No music." },
-        { "id": "s8", "label": "Find my device", "who": ["hero", "darklord"], "scene": "The hero drops into the shaft; above, the dark lord presses one button on his wrist.", "motion": "The hero falls away chiming a find-my-device tone at full volume. Sound: the loud chime fading down the shaft. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "Ice plain",
+          "who": [
+            "hero"
+          ],
+          "scene": "A blinding white ice plain: giant four-legged walkers loom out of the haze; the hero stands small in the foreground, his mismatched replacement hand clutching a glowing blade hilt.",
+          "motion": "He looks to the walkers as they stride closer. Sound: blizzard wind, distant thuds. No music.",
+          "still": "empire/019",
+          "vo": "He was second-hand.",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The lord",
+          "who": [
+            "darklord"
+          ],
+          "scene": "The dark lord stands on a gantry in a blue-lit chamber of steam and red floor lights, cape still, waiting.",
+          "motion": "He turns his helmet slowly. Sound: mechanical breathing, steam. No music.",
+          "still": "empire/051",
+          "vo": "And his previous owner wants him back.",
+          "was": "s2 v2"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "Duel",
+          "who": [
+            "hero",
+            "darklord"
+          ],
+          "scene": "The two fight in a dark chamber over a glowing orange floor grate, glowing blades locked in sparks.",
+          "motion": "Blades clash and slide. Sound: blade hum and crack. No music.",
+          "still": "empire/053",
+          "was": "s3 v1"
+        },
+        {
+          "id": "s4",
+          "beat": "rise",
+          "label": "Multipack",
+          "who": [
+            "hero"
+          ],
+          "scene": "The hero hangs against a wind-blown gantry, one hand freshly cut off and sparking, clicking a new hand from a plastic multipack onto his wrist.",
+          "motion": "He flexes it. Sound: a click, packaging rustle, wind. No music.",
+          "still": "empire/059",
+          "was": "s4 v2"
+        },
+        {
+          "id": "s5",
+          "beat": "turn",
+          "label": "Previous owner",
+          "who": [
+            "darklord",
+            "hero"
+          ],
+          "scene": "In the vast shaft the dark lord looms at the end of the gantry, one hand extended; the hero clings to the edge.",
+          "motion": "DARK LORD: \"No. I am your previous owner.\" HERO: \"That's impossible. I was factory reset!\" Sound: wind, breathing. No music.",
+          "still": "empire/057",
+          "was": "s5 v2"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "Under the arm",
+          "who": [
+            "hero",
+            "darklord"
+          ],
+          "scene": "The hero clings to the gantry and lifts his arm in horror: engraved on a steel plate in his armpit, PROPERTY OF LORD V.",
+          "motion": "DARK LORD (off): \"Search your feelings. Check under your left arm.\" Sound: wind, a sob of servos. No music.",
+          "still": "empire/059"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "Join me",
+          "who": [
+            "darklord"
+          ],
+          "scene": "Close on the dark lord's extended hand, palm up, his helmet behind it, cold light from below.",
+          "motion": "DARK LORD: \"Join me, and together we can rule the galaxy as owner and appliance.\" Sound: breathing, wind. No music.",
+          "still": "empire/058",
+          "was": "s7"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Never",
+          "who": [
+            "hero"
+          ],
+          "scene": "The hero lets go of the gantry and falls into the bottomless shaft, arms flung out, looking up toward the dark lord, never at the camera.",
+          "motion": "HERO: \"NEVER!\" He drops away into the dark. Sound: wind, his yell fading down the shaft. No music.",
+          "still": "empire/056",
+          "was": "s8"
+        }
       ]
     },
     {
       "id": "pulp",
       "look": "1994 independent crime-film trailer look: 35mm, low wide-angle shots, morning light through cheap blinds, saturated reds and yellows.",
       "shots": [
-        { "id": "s1", "label": "Hallway", "who": ["jules", "vincent"], "scene": "In a shabby apartment-block hallway, the two hitmen walk toward a door in black suits, talking.", "motion": "They stop at the door and draw pistols. Sound: footsteps, distant TV. No music." },
-        { "id": "s2", "label": "The trunk", "who": ["jules", "vincent"], "scene": "Seen from inside a car trunk looking up: the two hitmen lean in, guns in hand, light behind them.", "motion": "They look down into the trunk together. Sound: a car door, birds. No music." },
-        { "id": "s3", "label": "The flat", "who": ["brett"], "scene": "In a cheap apartment, the smart-speaker wiseguy sits frozen on a sofa beside a burger, ring on top lit, two other young robots pressed against the wall.", "motion": "The door bursts open; his ring flickers. Sound: door bang, wrapper rustle. No music." },
-        { "id": "s4", "label": "Didn't catch that", "who": ["jules", "brett"], "scene": "The preacher hitman leans over the smart speaker, pistol resting on the burger.", "motion": "JULES: \"What does Marsellus Wallace look like?\" BRETT: \"Sorry, I didn't catch that.\" Sound: a chime. No music." },
-        { "id": "s5", "label": "Say what again", "who": ["jules", "brett"], "scene": "Low angle: the preacher hitman points his pistol straight down at the speaker's ring.", "motion": "JULES: \"Say 'what' again. I dare you.\" BRETT: \"Playing 'What Again' by The Double Dares.\" Sound: a bouncy pop song starts from the speaker. No score." },
-        { "id": "s6", "label": "English", "who": ["jules", "brett"], "scene": "The preacher hitman screams in the speaker's face, veins of light in his crest, the speaker's ring blinking.", "motion": "JULES: \"English, motherfucker! Do you speak it?!\" BRETT: \"Language changed to: Norwegian.\" Sound: shouting, a calm chime. No music." },
-        { "id": "s7", "label": "Say his name", "who": ["vincent"], "scene": "The laid-back partner leans against the wall by the window, bored, pistol loose at his side.", "motion": "VINCENT: \"You've got to say his name first. Say his name, then ask.\" Sound: traffic through the blinds. No music." },
-        { "id": "s8", "label": "Tasty burger", "who": ["jules", "brett"], "scene": "The preacher hitman sits defeated in an armchair, eating the burger, while the speaker glows beside him.", "motion": "BRETT: \"Here's what I found on the web for 'easy Kiel twenty-five seventeen'.\" Jules chews. Sound: chewing, a chime. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "Hallway",
+          "who": [
+            "jules",
+            "vincent"
+          ],
+          "scene": "In a shabby apartment-block hallway, the two hitmen in black suits walk away from camera toward a door at the end, talking.",
+          "motion": "They stop at the door and draw pistols. Sound: footsteps, distant TV. No music.",
+          "still": "pulp/007",
+          "vo": "Two hitmen. One briefcase.",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The trunk",
+          "who": [
+            "jules",
+            "vincent"
+          ],
+          "scene": "Seen from inside a car trunk looking up into blue sky: the two hitmen lean in, guns in hand.",
+          "motion": "They look down into the trunk together. Sound: a car door, birds. No music.",
+          "still": "pulp/004",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "The flat",
+          "who": [
+            "brett",
+            "jules"
+          ],
+          "scene": "In a cheap apartment the smart-speaker wiseguy sits frozen in an armchair beside a burger and a soda, his ring lit, while the preacher hitman stands over him.",
+          "motion": "JULES: \"Hamburgers. The cornerstone of any nutritious breakfast.\" BRETT: \"Adding hamburgers to your shopping list.\" Sound: wrapper rustle, a chime. No music.",
+          "still": "pulp/008",
+          "was": "s3"
+        },
+        {
+          "id": "s4",
+          "beat": "turn",
+          "label": "Didn't catch that",
+          "who": [
+            "jules",
+            "brett"
+          ],
+          "scene": "The preacher hitman leans over the smart speaker, pistol resting on the burger.",
+          "motion": "JULES: \"What does Marsellus Wallace look like?\" BRETT: \"Sorry, I didn't catch that.\" Sound: a chime. No music.",
+          "still": "pulp/011",
+          "was": "s4 v1"
+        },
+        {
+          "id": "s5",
+          "beat": "climax",
+          "label": "Say what again",
+          "who": [
+            "jules",
+            "brett"
+          ],
+          "scene": "The preacher hitman points his pistol straight at the speaker's ring, low angle, furious.",
+          "motion": "JULES: \"Say 'what' again. I dare you.\" BRETT: \"Playing 'What Again' by The Double Dares.\" Sound: a bouncy pop song starts from the speaker. No score.",
+          "still": "pulp/064",
+          "was": "s5 v2"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "The bathroom",
+          "who": [],
+          "scene": "A fourth young robot bursts out of the apartment bathroom firing a huge revolver wildly at camera-left, mouth open in a scream.",
+          "motion": "Six shots, every one missing. Sound: deafening gunshots, plaster cracking. No music.",
+          "still": "pulp/051",
+          "vo": "This fall..."
+        },
+        {
+          "id": "s7",
+          "beat": "rise",
+          "label": "Divine intervention",
+          "who": [
+            "jules",
+            "vincent"
+          ],
+          "scene": "In the shot-up apartment the two hitmen stand side by side looking at the bullet holes in the wall behind them, untouched.",
+          "motion": "JULES: \"That was divine intervention.\" VINCENT: \"He had his aim assist off.\" Sound: ringing ears, a car alarm. No music.",
+          "still": "pulp/053"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Marvin",
+          "who": [
+            "vincent",
+            "jules"
+          ],
+          "scene": "Inside a moving car in daylight, the laid-back hitman turns round from the front seat with his pistol toward a nervous young robot in the back seat.",
+          "motion": "The gun goes off. VINCENT: \"Oh man, I shot Marvin in the face.\" MARVIN'S BROKEN SPEAKER (calm): \"Playing Marvin Gaye.\" Sound: gunshot, a soul song crackling. No score.",
+          "still": "pulp/056"
+        }
       ]
     },
     {
       "id": "threehundred",
       "look": "2006 sword-and-sandals trailer look: heavily graded bronze and sepia 35mm, crushed blacks, speed-ramped slow motion, dust and embers, stormy skies.",
       "shots": [
-        { "id": "s1", "label": "The cliff", "who": ["king"], "scene": "The king stands on a cliff edge above a sea crowded with enemy ships, red cloak whipping in the storm.", "motion": "Slow push in; he does not move. Sound: storm wind, waves. No music." },
-        { "id": "s2", "label": "The phalanx", "who": ["guard"], "scene": "A wall of royal guards locks shields in a narrow pass, spears out, enemy arrows blotting out the sun.", "motion": "Speed-ramped impact as the arrows land on steel. Sound: a rain of metallic clangs. No music." },
-        { "id": "s3", "label": "This is madness", "who": ["envoy", "king"], "scene": "At the edge of a huge ceremonial pit in the city square, the jewelled envoy backs up, the king advancing on him.", "motion": "ENVOY: \"This is madness.\" Sound: crowd hush, wind over the pit. No music." },
-        { "id": "s4", "label": "The kick", "who": ["king", "envoy"], "scene": "Slow motion: the king's huge iron work boot slams into the envoy's chest at the pit's edge.", "motion": "KING: \"THIS IS MAGNETIC!\" The boot clamps on with a clang. Sound: a magnetic clunk, crowd roar. No music." },
-        { "id": "s5", "label": "Stuck", "who": ["king", "envoy"], "scene": "The envoy topples backward into the pit with the king's boot stuck to his chest, the king tipping over the edge after him.", "motion": "The king windmills his arms. Sound: scraping steel, gasps. No music." },
-        { "id": "s6", "label": "The chain", "who": ["guard", "king"], "scene": "Royal guards grab the king and each other, a whole chain of red-caped bodies pouring over the edge of the pit.", "motion": "GUARD: \"Let go of my fucking neck.\" Sound: armour clattering, shouting. No music." },
-        { "id": "s7", "label": "The toggle", "who": ["envoy"], "scene": "Halfway down the pit wall, the envoy flicks a switch on his chest and steps neatly onto a narrow maintenance ledge.", "motion": "ENVOY: \"That's why it's a toggle.\" Sound: a click, the chain thundering past. No music." },
-        { "id": "s8", "label": "The boot", "who": ["envoy", "king"], "scene": "From the ledge, looking down: the king's iron boot is the last thing to vanish into the dark below.", "motion": "The envoy dusts himself off. Sound: a distant crash, echoes. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "The three hundred",
+          "who": [
+            "guard"
+          ],
+          "scene": "A field of golden wheat under a stormy bronze sky: the three hundred royal guards march in a dense block, red cloaks, spears up.",
+          "motion": "They march toward camera. Sound: thunder, armour clank in step. No music.",
+          "still": "threehundred/020",
+          "vo": "Three hundred units. One narrow pass. No warranty."
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The cliff",
+          "who": [
+            "king"
+          ],
+          "scene": "The king stands on a cliff edge above a sea crowded with enemy ships, red cloak whipping in the storm, his guards along the ridge behind him.",
+          "motion": "Slow push in; he does not move. Sound: storm wind, waves. No music.",
+          "still": "threehundred/051",
+          "was": "s1 v2"
+        },
+        {
+          "id": "s3",
+          "beat": "turn",
+          "label": "The shade",
+          "who": [
+            "envoy",
+            "king"
+          ],
+          "scene": "On a rocky hillside the jewelled envoy leans close to the king's shoulder, menacing; the king's breastplate is a gleaming solar panel.",
+          "motion": "ENVOY: \"Our arrows will blot out the sun.\" KING (glancing down at his chest): \"...Then we will fight in the shade.\" A beat. \"Briefly.\" Sound: wind, a distant war horn. No music.",
+          "still": "threehundred/035"
+        },
+        {
+          "id": "s4",
+          "beat": "rise",
+          "label": "The phalanx",
+          "who": [
+            "guard"
+          ],
+          "scene": "Seen from above, a wall of royal guards crouched under locked round shields in a narrow pass as enemy arrows blot out the sun.",
+          "motion": "Speed-ramped impact as the arrows land on steel; as the light goes, the shields sag one by one. Sound: a rain of metallic clangs, a chorus of power-down tones. No music.",
+          "still": "threehundred/033",
+          "was": "s2 v1"
+        },
+        {
+          "id": "s5",
+          "beat": "rise",
+          "label": "Dine in hell",
+          "who": [
+            "king"
+          ],
+          "scene": "The king stands on a rise against a storm sky, spear raised, roaring to his army.",
+          "motion": "KING: \"Tonight we dine in hell!\" GUARD (off): \"Is there a socket?\" Sound: thunder, a ragged cheer. No music.",
+          "still": "threehundred/040"
+        },
+        {
+          "id": "s6",
+          "beat": "climax",
+          "label": "The kick",
+          "who": [
+            "king",
+            "envoy"
+          ],
+          "scene": "Slow motion in the city square: the king's huge iron work boot slams into the envoy's chest at the edge of a giant pit, clamps on, and both of them tip over the edge together.",
+          "motion": "KING: \"THIS IS MAGNETIC!\" The boot clamps on with a clang and they topple into the pit. Sound: a magnetic clunk, crowd roar. No music.",
+          "still": "threehundred/013",
+          "was": "s4 v1 + s5"
+        },
+        {
+          "id": "s7",
+          "beat": "button",
+          "label": "Remember us",
+          "who": [
+            "king"
+          ],
+          "scene": "At dusk the king stands alone with arms spread wide as a storm of arrows comes down on him, cloak torn.",
+          "motion": "Arrows ping off his solar chest; the sun goes; a low-battery chime. KING (slowing): \"Remem...ber...\" Sound: arrow pings, the chime. No music.",
+          "still": "threehundred/055"
+        }
       ]
     },
     {
       "id": "exorcist",
       "look": "1973 horror trailer look: grainy 35mm, a cold blue bedroom with breath steam, one tungsten lamp, deep shadows, slow push-ins.",
       "shots": [
-        { "id": "s1", "label": "Arrival", "who": ["priest"], "scene": "In fog under a streetlamp outside a narrow house, the priest stands in silhouette with a toolbag, a lit upstairs window above him.", "motion": "He looks up at the window. Sound: fog horn, a car passing. No music." },
-        { "id": "s2", "label": "The bed", "who": ["patient"], "scene": "In a freezing bedroom the possessed robot levitates over a filthy bed, head turned all the way round, coolant dripping.", "motion": "His head spins a full revolution. Sound: a ratcheting whirr, creaking bed. No music." },
-        { "id": "s3", "label": "Is it out?", "who": ["partner"], "scene": "In the doorway the junior priest clutches a coolant flask and a torch, breath steaming.", "motion": "PARTNER: \"Have you got it out?\" Sound: a moan from the bed, wind. No music." },
-        { "id": "s4", "label": "The power of mains", "who": ["priest", "patient"], "scene": "The priest stands over the bed holding up a cross-shaped wheel brace, the patient thrashing in the air.", "motion": "PRIEST: \"The power of mains compels you!\" Sound: crackling electricity, shouting. No music." },
-        { "id": "s5", "label": "The bit", "who": ["priest", "patient"], "scene": "Close: the priest fits a screwdriver bit into a socket on the crown of the possessed robot's spinning head.", "motion": "The bit locks in with a click and starts turning. Sound: click, rising whine. No music." },
-        { "id": "s6", "label": "The bed frame", "who": ["priest", "patient"], "scene": "The priest presses the spinning patient's head against the bed frame like a power drill, coolant spraying.", "motion": "The screw drives home. Sound: drilling, coolant hiss. No music." },
-        { "id": "s7", "label": "The ceiling", "who": ["priest", "patient"], "scene": "The priest holds the stiff patient overhead like a giant drill, driving a screw into a ceiling fan mount.", "motion": "PATIENT: \"You said this was fucking pastoral care.\" Sound: drilling, plaster falling. No music." },
-        { "id": "s8", "label": "Two speeds", "who": ["priest", "partner"], "scene": "The new ceiling fan turns above the bed; the priest pulls its cord while the junior priest stares.", "motion": "PRIEST: \"No. Two speeds and reverse.\" Sound: the fan's click and hum. No music." }
+        {
+          "id": "s1",
+          "beat": "open",
+          "label": "Arrival",
+          "who": [
+            "priest"
+          ],
+          "scene": "Night fog under a streetlamp outside a narrow town house: the priest stands in silhouette holding a toolbag, a lit upstairs window above him.",
+          "motion": "He looks up at the window. Sound: fog, a car passing. No music.",
+          "still": "exorcist/051",
+          "vo": "Something has got into the house.",
+          "was": "s1"
+        },
+        {
+          "id": "s2",
+          "beat": "setup",
+          "label": "The bed",
+          "who": [
+            "patient"
+          ],
+          "scene": "In a freezing blue bedroom the possessed robot rises above a filthy bed, arms spread, head turned all the way round, coolant dripping.",
+          "motion": "His head spins a full revolution. Sound: a ratcheting whirr, creaking bed. No music.",
+          "still": "exorcist/056",
+          "was": "s2"
+        },
+        {
+          "id": "s3",
+          "beat": "rise",
+          "label": "The partner",
+          "who": [
+            "partner",
+            "priest"
+          ],
+          "scene": "The dark bedroom: the junior priest holds a torch and a coolant flask beside the priest, both silhouetted against the frosted window, the patient a shape on the bed.",
+          "motion": "PARTNER: \"Have you got it out?\" PRIEST: \"Not yet.\" Sound: a moan from the bed, wind. No music.",
+          "still": "exorcist/044",
+          "vo": "Only one man has the tools.",
+          "was": "s3"
+        },
+        {
+          "id": "s4",
+          "beat": "turn",
+          "label": "The power of mains",
+          "who": [
+            "priest",
+            "patient"
+          ],
+          "scene": "The priest stands over the levitating patient holding up a cross-shaped wheel brace, blue light and breath steam.",
+          "motion": "PRIEST: \"The power of mains compels you!\" Sound: crackling electricity, shouting. No music.",
+          "still": "exorcist/057",
+          "was": "s4"
+        },
+        {
+          "id": "s5",
+          "beat": "rise",
+          "label": "The bit",
+          "who": [
+            "priest",
+            "patient"
+          ],
+          "scene": "Close in the dark: the priest fits a screwdriver bit into a socket on the crown of the possessed robot's spinning head.",
+          "motion": "The bit locks in with a click and starts turning. Sound: click, rising whine. No music.",
+          "still": "exorcist/055",
+          "was": "s5"
+        },
+        {
+          "id": "s6",
+          "beat": "rise",
+          "label": "The stairs",
+          "who": [
+            "patient"
+          ],
+          "scene": "The patient comes down the staircase backwards on all fours, upside down, head spinning, while a robot housekeeper stares from the hall.",
+          "motion": "PATIENT (flat): \"Reversing.\" Sound: a reversing beeper, thuds on the stairs. No music.",
+          "still": "exorcist/041"
+        },
+        {
+          "id": "s7",
+          "beat": "climax",
+          "label": "The ceiling",
+          "who": [
+            "priest",
+            "patient"
+          ],
+          "scene": "Backlit by a blaze of light from the bedroom door, the priest holds the stiff patient overhead like a giant drill, driving a screw into a ceiling fan mount.",
+          "motion": "PATIENT: \"You said this was pastoral care.\" Sound: drilling, plaster falling. No music.",
+          "still": "exorcist/058",
+          "was": "s7"
+        },
+        {
+          "id": "s8",
+          "beat": "button",
+          "label": "Two speeds",
+          "who": [
+            "priest",
+            "partner"
+          ],
+          "scene": "The calm, clean bedroom afterwards: a new ceiling fan turns above the made bed; the priest pulls its cord while the junior priest stares.",
+          "motion": "PRIEST: \"No. Two speeds and reverse.\" Sound: the fan's click and hum. No music.",
+          "still": "exorcist/061",
+          "was": "s8"
+        }
       ]
     }
   ]

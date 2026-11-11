@@ -36,17 +36,23 @@ trailers come from the thirteen saved concepts in `foundry-out/scout/contest-sho
    step reads. Rebuild the page after more images land (the page reads the folder, not a snapshot).
 2. **Voice casting** (deferred until after the keyframes). Five voices per picked character. Reuse the casting stage of spark `concept-casting-stages`
    once it has had its first live run; the picked image is the voice brief's visual anchor.
-3. **Trailer keyframes** (before voices, operator 2026-11-11). `shots.json`: eight shots per trailer across three or
-   four scenes of the film, in the original film's own trailer look, composed so a 9:16 centre crop holds; each shot
-   is drawn in three variants with the picked casting images attached. `motion` is the H3 clip's line (speech,
-   `Sound: ...`, `No music.`) and is not drawn.
+3. **Trailer keyframes** (before voices, operator 2026-11-11). A trailer, not the film retold: the film's most iconic
+   moments out of story order, cut as open (narrator over the world), setup, turn (the robot joke lands), rise, climax
+   (the famous line), title card, button. `shots.json` holds seven or eight shots per trailer; `vo` is the narrator,
+   laid over at the cut, and `motion` is the H3 clip's own line (speech, `Sound: ...`, `No music.`), neither drawn.
+   Every shot names the real film's `still` its camera comes from. `stills.mts` fetches a film's curated stills from
+   film-grab.com with a numbered contact sheet; `keys.mts` attaches each still as a grey blurred PLATE (camera,
+   blocking and light, never a face). A Few Good Men is not on film-grab: its shots carry the camera in words, or drop
+   screenshots in as `stills/fewgoodmen/NNN.jpg`.
 
    ```bash
-   npx tsx pipeline/parody/keys.mts build --casting foundry-out/parody-trailers/casting-1      --verdicts <casting-verdicts.json> --out foundry-out/parody-trailers/keys-1 [--pick terminator-assassin=c3]
-   npx tsx pipeline/scout-codex.mts --queue foundry-out/parody-trailers/keys-1/queue.json      --out foundry-out/parody-trailers/keys-1 --workers 3
+   npx tsx pipeline/parody/stills.mts fetch terminator https://film-grab.com/2015/05/15/the-terminator/
+   npx tsx pipeline/parody/keys.mts build --casting foundry-out/parody-trailers/casting-1      --verdicts <casting-verdicts.json> --out foundry-out/parody-trailers/keys-2 [--pick terminator-assassin=c1]
+   npx tsx pipeline/scout-codex.mts --queue foundry-out/parody-trailers/keys-2/queue.json      --out foundry-out/parody-trailers/keys-2 --workers 3
    ```
 
-   The picked variant of each shot becomes that trailer's `/trailer-clip` keyframe; voices follow.
+   The picked variant of each shot becomes that trailer's `/trailer-clip` keyframe; voices follow, with the narrator as
+   one more voice to cast.
 4. **Nightly composition.** Channel card `foundry-out/scout-channels/P2.json` (local, gitignored). Once the picks
    are in, set the channel look with `scout.mts channel-look P2 "<text>"` and import one episode per trailer.
 

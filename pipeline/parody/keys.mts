@@ -7,14 +7,17 @@
 // shots.json holds eight shots per trailer, each drawn in three variants; every frame attaches the PICKED casting
 // image of each character in it, so the cast holds across a trailer. `--pick` stands in for a character the operator
 // sent back for a re-roll (its verdict has no pick); a shot whose cast has no image is left out and named.
-// `motion` is not drawn: it is the H3 clip's line (speech, then "Sound: ... No music."), carried for the clip plan.
+// `motion` is not drawn: it is the H3 clip's line (speech, then "Sound: ... No music."), carried for the clip plan; `vo`
+// is the trailer narrator, laid over at the cut. A shot with `still` (stills.mts) carries a blurred plate of the real
+// film's frame as its last reference, so the camera and blocking are the film's (operator 2026-11-11, round 2).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { STILLS, plate } from "./stills.mts";
 
-type Shot = { readonly id: string; readonly label: string; readonly who: readonly string[]; readonly scene: string; readonly motion: string };
+type Shot = { readonly id: string; readonly beat: string; readonly label: string; readonly who: readonly string[]; readonly still?: string; readonly scene: string; readonly motion: string; readonly vo?: string; readonly was?: string };
 type Variant = { readonly id: string; readonly name: string; readonly text: string };
-type Shots = { readonly frame: string; readonly variants: readonly Variant[]; readonly films: readonly { readonly id: string; readonly look: string; readonly shots: readonly Shot[] }[] };
+type Shots = { readonly frame: string; readonly plate: string; readonly variants: readonly Variant[]; readonly films: readonly { readonly id: string; readonly look: string; readonly shots: readonly Shot[] }[] };
 type Character = { readonly id: string; readonly role: string; readonly brief: string; readonly human?: boolean };
 type Roster = { readonly films: readonly { readonly id: string; readonly real: string; readonly trailer: string; readonly scene: string; readonly characters: readonly Character[] }[] };
 type Verdicts = { readonly verdicts: Record<string, { readonly pick: string | null }> };
@@ -49,30 +52,37 @@ const castImage = (filmIndex: number, id: string): string | undefined => {
 const items: { id: string; tier: number; title: string; frames: { name: string; prompt: string; refs: string[] }[] }[] = [];
 const pageFilms: unknown[] = [];
 const left: string[] = [];
-roster.films.forEach((film, fi) => {
-  if (only !== undefined && !only.includes(film.id)) return;
+for (const [fi, film] of roster.films.entries()) {
+  if (only !== undefined && !only.includes(film.id)) continue;
   const plan = shots.films.find((f) => f.id === film.id);
-  if (plan === undefined) { left.push(`${film.id}: no shots`); return; }
+  if (plan === undefined) { left.push(`${film.id}: no shots`); continue; }
   const rows: unknown[] = [];
   for (const shot of plan.shots) {
     const cast = shot.who.map((w) => ({ c: film.characters.find((c) => c.id === w), img: castImage(fi, `${film.id}-${w}`) }));
-    const missing = cast.filter((x) => x.c === undefined || x.img === undefined).map((_, i) => shot.who[i]);
+    const missing = shot.who.filter((_, i) => cast[i]!.c === undefined || cast[i]!.img === undefined);
     if (missing.length > 0) { left.push(`${film.id}-${shot.id}: no casting image for ${missing.join(", ")}`); continue; }
     const lead = cast.map((x, i) => `Image ${i + 1} is ${x.c!.role}: take only this character's build, materials, paint, costume and face design from it, never its pose, backdrop or framing.`).join(" ");
     const human = cast.some((x) => x.c!.human === true) ? "" : " Every figure is a robot; no human skin, hair or faces.";
     const id = `${film.id}-${shot.id}`;
+    // The plate: the real film's still, grey and blurred past any face, attached last so its camera carries over.
+    const still = shot.still === undefined ? undefined : path.join(STILLS, `${shot.still}.jpg`);
+    if (still !== undefined && !fs.existsSync(still)) { left.push(`${id}: no still ${shot.still}`); continue; }
+    const platePath = still === undefined ? undefined : await plate(still, path.join(out, "plates", `${slug(id)}.png`));
+    const refs = [...cast.map((x) => x.img!), ...(platePath === undefined ? [] : [platePath])];
+    const camera = platePath === undefined ? "" : shots.plate;
     items.push({
       id, tier: fi + 1, title: `${film.trailer} · ${shot.label}`,
       frames: shots.variants.map((v) => ({
         name: v.id,
-        prompt: `${lead} ${shots.frame} This is ${film.trailer}, the robot world's ${film.real}. ${plan.look} ${shot.scene}${human} ${v.text}`.replace(/\s+/g, " ").trim(),
-        refs: cast.map((x) => x.img!),
+        prompt: `${lead} ${camera} ${shots.frame} This is ${film.trailer}, the robot world's ${film.real}. ${plan.look} ${shot.scene}${human} ${platePath === undefined ? v.text.replace(" as the plate", "") : v.text}`.replace(/\s+/g, " ").trim(),
+        refs,
       })),
     });
-    rows.push({ id, role: `${shot.id.slice(1)} · ${shot.label}`, rule: shot.motion, dir: `t${fi + 1}/${slug(id)}` });
+    const rule = [shot.vo === undefined ? "" : `VO: "${shot.vo}"`, shot.motion, shot.was === undefined ? "" : `(kept: ${shot.was})`].filter(Boolean).join("  ·  ");
+    rows.push({ id, role: `${shot.id.slice(1)} · ${shot.beat} · ${shot.label}`, rule, dir: `t${fi + 1}/${slug(id)}` });
   }
   pageFilms.push({ id: film.id, real: film.real, trailer: film.trailer, scene: film.scene, characters: rows });
-});
+}
 
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, "queue.json"), JSON.stringify(items, null, 1));
@@ -80,7 +90,7 @@ const page = fs.readFileSync(path.join(here, "verdict.template.html"), "utf8")
   .replace("/*FILMS*/[]", JSON.stringify(pageFilms).replace(/</g, "\\u003c"))
   .replace("/*LENSES*/[]", JSON.stringify(shots.variants.map((v) => ({ id: v.id, name: v.name }))))
   .replaceAll("{{TITLE}}", "Trailer keyframes")
-  .replace("{{KEY}}", "parody-keys-1");
+  .replace("{{KEY}}", `parody-keys-${path.basename(out)}`);
 fs.writeFileSync(path.join(out, "verdict.html"), page);
 console.log(`${items.length} shots, ${items.length * shots.variants.length} frames -> ${out}`);
 for (const l of left) console.log(`left out: ${l}`);
