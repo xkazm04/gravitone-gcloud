@@ -1,0 +1,75 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b0965490-30b9-4e41-bd21-f27478cef5d0",
+ "subject": "multi-project",
+ "evaluatedAt": "2026-11-11T23:06:00.571174+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "projects-index-port",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_port/real.ts:162 A 'project' here is a media composition (title, recipe, style/take/topic, a DAG of parts per packages/domain/src/project.ts) minted by Compose, not a managed codebase in a portfolio; a recursive search of app/(studio)/projects for portfolio, repository, watcher, unwatched and codebase found no hits, so the precondition for a portfolio registry, VCS-exhaust watchers, cross-project scoring, tab working sets and admission/archival contracts does not hold.",
+   "techniques": [
+    {
+     "technique": "project-identity-and-joins",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/real.ts:167 Rename edits only the title and keeps the id. That matches the identity law in spirit, but the entity is a composition, not a managed project in a portfolio, so the technique's admission/fingerprint/re-clone tests do not apply."
+    }
+   ],
+   "absenceTerms": [
+    "portfolio",
+    "repository",
+    "watcher",
+    "unwatched",
+    "codebase"
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "multi-project",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/port.ts:26 This context edits the parts (script, research, scene, recs) inside one media composition and picks fixture or real by GRAVITONE_PRODUCE_SIDE; it has no multi-project portfolio layer, and a recursive search of app/(studio)/projects (including [id]/_part) for portfolio, repository, watcher, unwatched and codebase returned nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "portfolio",
+    "repository",
+    "watcher",
+    "unwatched",
+    "codebase"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-11T23:06:00.571174+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [
+    "project-identity-and-joins"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-11T23:06:00.571174+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "multi-project"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
