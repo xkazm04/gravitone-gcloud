@@ -124,4 +124,21 @@ describe("codexProvider", () => {
     expect(calls[0]?.aspect).toBe("9:16");
     await expect(p.generate?.({ prompt: "x", aspect: "16:9", count: 2 } as never)).rejects.toThrow(/one image per request/);
   });
+
+  it("declares references and hands them to the draw, at most CODEX_REFS_MAX", async () => {
+    const calls: Array<{ refs?: readonly Uint8Array[] }> = [];
+    const p = codexProvider({
+      draw: async (r) => {
+        calls.push(r);
+        return stillOf;
+      },
+    });
+    expect(p.supportsReferences).toBe(true);
+    const ref = (b: number) => ({ base64: Buffer.from([b]).toString("base64"), mime: "image/png" as const });
+    await p.generate?.({ prompt: "her again", aspect: "1:1", count: 1, references: [ref(1), ref(2), ref(3), ref(4)] });
+    expect(calls[0]?.refs?.map((r) => [...r])).toEqual([[1], [2], [3]]);
+    expect(CODEX_REFS_MAX).toBe(3);
+    await p.generate?.({ prompt: "x", aspect: "1:1", count: 1 });
+    expect(calls[1]).not.toHaveProperty("refs");
+  });
 });

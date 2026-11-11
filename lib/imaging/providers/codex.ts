@@ -7,7 +7,7 @@
 //
 // $0: the seat bills no image; its quota is the real limit. One image per call.
 
-import { CODEX_MODEL, drawCodex, type CodexAspect } from "../local/codex";
+import { CODEX_MODEL, CODEX_REFS_MAX, drawCodex, type CodexAspect } from "../local/codex";
 import { invalidRequest } from "../errors";
 import { priceCall } from "../pricing";
 import type { GeneratedImages, GenerateRequest, ImagingProvider } from "../types";
@@ -20,7 +20,9 @@ export function codexProvider(o: { readonly draw?: typeof drawCodex } = {}): Ima
   return {
     id: "codex",
     capabilities: ["generate"],
-    supportsReferences: false,
+    // drawCodex attaches up to CODEX_REFS_MAX stills to the turn (`-i`); past that window the rest are dropped, as
+    // Google's adapter keeps its own 14.
+    supportsReferences: true,
     // One prose instruction: a negative rides inside it as a sentence.
     negativePromptChannel: "prose",
 
@@ -29,7 +31,8 @@ export function codexProvider(o: { readonly draw?: typeof drawCodex } = {}): Ima
       if ((req.count ?? 1) !== 1) throw invalidRequest("codex", "Codex makes one image per request here; ask for count 1.");
       const neg = req.negativePrompt?.trim();
       const prompt = neg === undefined || neg === "" ? req.prompt : `${req.prompt} Avoid: ${neg}.`;
-      const still = await draw({ prompt, aspect: codexAspect(req.aspect), ...(req.seed === undefined ? {} : { seed: req.seed }) });
+      const refs = (req.references ?? []).slice(0, CODEX_REFS_MAX).map((r) => new Uint8Array(Buffer.from(r.base64, "base64")));
+      const still = await draw({ prompt, aspect: codexAspect(req.aspect), ...(req.seed === undefined ? {} : { seed: req.seed }), ...(refs.length === 0 ? {} : { refs }) });
       const price = priceCall({ provider: "codex", model: CODEX_MODEL, images: 1 });
       return {
         images: [{ base64: Buffer.from(still.png).toString("base64"), mime: "image/png", width: still.width, height: still.height }],

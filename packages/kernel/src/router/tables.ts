@@ -53,7 +53,7 @@ export const IMAGE_TABLE: MediumTable = {
       capabilities: ["generate"],
       lane: "seat.text",
       transport: "local-binary",
-      honours: [],
+      honours: ["references"],
       preferOnly: true,
       models: { generate: "codex-image-gen" },
       bills: { generate: "image" },
