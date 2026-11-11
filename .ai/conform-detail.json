@@ -23324,6 +23324,16 @@
       "evaluatedTs": "2026-11-11T22:33:42.966Z",
       "worker": "b50631be-196b-4c0c-a672-c1a02fb89052",
       "techniques": []
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/drag-drop": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "drag-drop",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:38:59.523Z",
+      "worker": "f0ed9412-af80-4961-a316-9dff597fbd02",
+      "techniques": []
     }
   }
 }

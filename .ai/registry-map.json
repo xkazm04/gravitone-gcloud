@@ -2077,7 +2077,11 @@
           "revision": 5,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:4 A case-insensitive search of every file in this context for draggable/dataTransfer/onDrag/setPointerCapture/onDrop found nothing (the only 'drop'/'drag' hits are 'backdrop' and 'dropped' in prose/CSS); the dev inspector's pointer surface is hover (mousemove) and right-click, so no drag-and-drop exists here to judge.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:31c96c1f832f7148",
+          "evaluatedRevision": 5
         },
         {
           "subject": "docs-sync",
