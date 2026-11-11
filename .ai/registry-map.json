@@ -10428,7 +10428,11 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/studio/lock.ts:68 The cross-process studio lock is renewed by an mtime touch whose failure is swallowed and never read, so a holder that lost the lock (paused past the 5-minute stale mark and taken over) keeps driving the shared Leonardo tab.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "cinematic-language",
@@ -14552,7 +14556,11 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/publish/sessions.ts:72 The resumable-upload session file is published with a hand-rolled tmp+rename that has no bounded retry for a held destination and no tmp cleanup on failure, although the repo's renameRetry helper exists and the clip store uses it.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18
         },
         {
           "subject": "live-system-demo-film",

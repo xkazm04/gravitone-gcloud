@@ -23083,6 +23083,88 @@
         "at": "2026-11-10T23:40:45.165842+00:00",
         "reason": "reviewer (sonnet): lib/sound/cover/brief/write.ts imports RunAgentInput from agent/cliSeam.ts and builds an agent turn (tools, model, effort, timeout), so the claim that lib/sound hosts no agent-run assembly is contradicted. The cited cli.ts:4 line only describes the CLI as the agents' contract."
       }
+    },
+    "95dd9201-2503-481d-8cdd-a863f6566283/concurrency-guards": {
+      "context": "music-vendors-and-publish",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:05:49.712Z",
+      "worker": "a346d7fe-7320-4fb2-9851-37d7c68ebdf2",
+      "techniques": [
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "lib/publish/sessions.ts:72 Second hand-rolled write-then-replace; a Windows EPERM/EBUSY from a reader fails the publish, and the .tmp is left behind on that path."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "deviation",
+          "evidence": "lib/suno/browser.ts:96 The attach join is a scalar global flag that only guards the default port, so it is the 'scalar flag does not scale past one key' failure. Leonardo's twin keys a Map by endpoint."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:142 The budget hold taken before the vendor call is released in finally on every exit path, and release after settle is a no-op."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "lib/publish/youtube.ts:8 A retried upload probes the persisted session, keyed by slot and checked against sha256, instead of creating a second video."
+        },
+        {
+          "technique": "cache-value-not-handle",
+          "verdict": "not-applicable",
+          "evidence": "lib/suno/browser.ts:113 Joiners share a Promise handle, but Node does not tear down an abandoned caller's continuation, and the finally block clears the handle when it settles."
+        }
+      ]
+    },
+    "1eb57510-dcfa-4549-97ed-56f3f97519ec/concurrency-guards": {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "concurrency-guards",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:05:49.712Z",
+      "worker": "a346d7fe-7320-4fb2-9851-37d7c68ebdf2",
+      "techniques": [
+        {
+          "technique": "renewal-deadline-two-thirds-ttl",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/studio/lock.ts:68 The cadence (60 s against a 300 s stale mark) is fine, but the renewal has no deadline, its result is discarded and a stolen lock never stops the holder."
+        },
+        {
+          "technique": "cross-process-exclusion",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/studio/lock.ts:61 Exclusive-create file {pid, at, by} with a staleness break. It fails closed past a 30-min wait with a named error that says nothing was generated."
+        },
+        {
+          "technique": "release-guarantees",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/studio/lock.ts:75 Run-with-guard closure form: the touch timer is cleared and the lock released in finally. Process death is covered by the stale mark."
+        },
+        {
+          "technique": "guard-key-design",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/studio/lock.ts:9 The equivalence class (one account's studio session, balance and library) is written in words, which justifies the deliberately broad single key."
+        },
+        {
+          "technique": "single-flight-primitives",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/store.ts:109 Keyed per clip, but it is a bespoke promise-chain map beside browser.ts's own pending Map and lock.ts's createSerializer. There is no shared primitive and no list() of what is in flight."
+        },
+        {
+          "technique": "atomic-file-publish",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/store.ts:76 tmp+renameRetry (bounded, transient codes only) with tmp cleanup is realized at store.ts:71, but exhaustion rethrows the raw platform error instead of a distinct failure naming the destination, attempts and elapsed time."
+        },
+        {
+          "technique": "idempotency-by-design",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:25 The vendor offers no idempotency key, so the replay channel of the billable start is closed by making exactly one attempt. leonardo.ts for stills does the same."
+        }
+      ]
     }
   }
 }
