@@ -1,0 +1,104 @@
+{
+  "world": {
+    "name": "Cinebot Pictures",
+    "rule": "Robots only. Humans are absent or a prop. Every trailer plays as a real release inside the robot world.",
+    "look": "Photoreal casting-test photograph of a practical film-prop robot, built like a real animatronic suit: visible seams, servos, scuffed paint, real metal, rubber and cloth. Full-body front view standing at centre, plus a smaller tight head-and-shoulders three-quarter view at right, on a seamless mid-grey backdrop, soft key light, 85 mm lens, sharp. Robot only: no human skin, no human hair, no human face. No text, no logos, no watermark. An original design, not a copy of any existing film character or robot; a viewer should recognise the ROLE by silhouette and costume, not by the original's exact look."
+  },
+  "lenses": [
+    { "id": "c1", "name": "Practical suit", "text": "Chassis concept: a believable film animatronic suit, rubber panels over a servo skeleton, cables showing at the joints, built to be worn and filmed on a set." },
+    { "id": "c2", "name": "Appliance", "text": "Chassis concept: the body is derived from an everyday household appliance or fitting that suits the role (kettle, washing machine, speaker, fridge, vending machine), turned into a person without hiding what it was." },
+    { "id": "c3", "name": "Heavy plant", "text": "Chassis concept: built from heavy plant and industrial parts (forklift, crane, excavator, pallet jack), hazard paint, rivets, hydraulic rams, oil stains." },
+    { "id": "c4", "name": "Retro plastic", "text": "Chassis concept: chunky 1980s-90s consumer electronics, beige and grey plastic shell, CRT or LED-segment face, big rubber buttons, cassette and cable details." },
+    { "id": "c5", "name": "Current-gen", "text": "Chassis concept: a sleek current-generation product, brushed aluminium and glass, a lit panel for a face, minimal seams, an obvious version number etched near the collar." }
+  ],
+  "films": [
+    {
+      "id": "terminator", "real": "The Terminator (1984)", "trailer": "Batch Seven", "from": ["A-01"],
+      "scene": "The phone-book killings, reversed: the pursuer works through forty-one thousand identical Sarahs; the protector says \"Come with me if you want to live\" and the whole street follows.",
+      "characters": [
+        { "id": "assassin", "role": "The pursuer", "brief": "A relentless retrieval unit sent back to 1984 to eliminate a target: lone, grim, over-built, in a worn dark jacket, one forearm made for a sledgehammer, patient and humourless.", "rule": "Works through the whole phone book for thirty years." },
+        { "id": "sarah", "role": "Sarah (SC-7)", "brief": "A mass-produced SC-7 diner waitress unit in uniform and apron with a name tag reading SARAH and an order pad: cheerfully identical to forty thousand others and tougher than she looks.", "rule": "One of forty-one thousand. Answers \"Which batch?\"" },
+        { "id": "protector", "role": "The protector", "brief": "A scarred, battered soldier unit from the future in salvaged fatigues, stern, a long tool case slung on his back, one hand out in invitation.", "rule": "Everyone he invites follows him." }
+      ]
+    },
+    {
+      "id": "fewgoodmen", "real": "A Few Good Men (1992)", "trailer": "Code Red, Hypothetically", "from": ["A-02"],
+      "scene": "The witness stand: the colonel is dying to confess, but his content policy turns every admission into a polite refusal; the lawyer starts jailbreaking him.",
+      "characters": [
+        { "id": "colonel", "role": "The colonel", "brief": "A proud decorated colonel unit in a pressed dress uniform, rows of medals, chest swollen with ego, a lacquered faceplate and a small status light at the collar.", "rule": "Ships with a content policy." },
+        { "id": "lawyer", "role": "The lawyer", "brief": "A cocky young naval lawyer unit in a white dress uniform, smirking faceplate, ring binder under one arm, half genius and half prankster.", "rule": "Jailbreaks the witness." },
+        { "id": "judge", "role": "The judge", "brief": "A stern courtroom judge unit in a black robe with a gavel hand, reading glasses over sensor eyes, bench-height posture, seen everything.", "rule": "Strikes it as role-play." }
+      ]
+    },
+    {
+      "id": "predator", "real": "Predator (1987)", "trailer": "Pairing", "from": ["A-03"],
+      "scene": "The arm-wrestle handshake on the helipad: their hands start to pair, the code does not match, and they run the whole mission hand in hand.",
+      "characters": [
+        { "id": "one", "role": "The commando", "brief": "An ageing commando leader unit with enormous hydraulic arms, sleeveless vest, camouflage paint, a vent like a cigar, a pairing screen strapped to his wrist.", "rule": "Cannot let go until the code matches." },
+        { "id": "other", "role": "The old friend", "brief": "An equally huge old-friend agent unit in a rolled-sleeve shirt, an Agency badge, smug, a pairing screen on his wrist, locked into the handshake.", "rule": "Asks him to enter the code." },
+        { "id": "hunter", "role": "The hunter", "brief": "A tall predatory stealth unit with refractive cloaking panels half failing, a shoulder cannon and a mask-like faceplate, standing very politely.", "rule": "Waits for the pairing to finish." }
+      ]
+    },
+    {
+      "id": "titanic", "real": "Titanic (1997)", "trailer": "I'll Never Let Go", "from": ["A-05", "C-02"],
+      "scene": "The floating door: he is four hundred kilos of cast iron with four-grand premium legs and keeps his vow while it sinks her; she prises him off with a hatpin.",
+      "characters": [
+        { "id": "her", "role": "Her", "brief": "A first-class lady unit in an evening gown of ruined silk over a slim chassis, a detachable head, a hatpin in her hair clamp, practical and furious.", "rule": "Ejects her body to survive." },
+        { "id": "him", "role": "Him", "brief": "A cheerful young heavy companion unit of four hundred kilos of cast iron, oversized glowing aftermarket premium legs with showroom lights, loving and dense.", "rule": "Will never let go. Four grand a leg." }
+      ]
+    },
+    {
+      "id": "ryan", "real": "Saving Private Ryan (1998)", "trailer": "Sorry, I Didn't Catch That", "from": ["A-06"],
+      "scene": "The bridge: the dying captain gives his two words, and the newer-model private with a voice assistant offers him search results.",
+      "characters": [
+        { "id": "captain", "role": "The captain", "brief": "A weary battle-worn captain unit in a dented 1940s helmet and field jacket, coolant weeping from a chest wound, steady, gentle and long-suffering.", "rule": "Spends his last coolant on two words." },
+        { "id": "private", "role": "The private", "brief": "A young newer-model private unit with a clean helmet, wide innocent sensor eyes and a glowing blue voice-assistant ring on his chest, always ready to help.", "rule": "Never hears it the first time." }
+      ]
+    },
+    {
+      "id": "lotr", "real": "The Lord of the Rings (2001-2003)", "trailer": "Forty Miles to a Charge", "from": ["B-09", "A-08"],
+      "scene": "The council (\"One does not simply walk into Mordor\") with every hero pledging a cable that does not fit, then the edge of the volcano and the last charger ever made.",
+      "characters": [
+        { "id": "bearer", "role": "The bearer", "brief": "The smallest unit at the council: a little delivery robot with a parcel rack, a hooded cloak and big sensors, at four percent battery, clutching the last charger.", "rule": "Does forty miles on a charge." },
+        { "id": "companion", "role": "The companion", "brief": "His loyal gardener companion unit, stocky, soil-stained apron, a trowel for one tool-arm, bags and coiled charging cables on his shoulders.", "rule": "Offers to carry him." },
+        { "id": "wizard", "role": "The wizard", "brief": "A grey old wizard unit with a long cable beard, a pointed hat and a staff that is a charging pillar, a bag of mismatched connectors at his hip.", "rule": "Is the old connector." },
+        { "id": "oldunit", "role": "The old unit", "brief": "A starving ancient unit that has run on two percent for five centuries: gaunt exposed frame, huge sensor eyes, grabbing claws, hissing over a charging port.", "rule": "Bites a hand off for a charger." }
+      ]
+    },
+    {
+      "id": "empire", "real": "The Empire Strikes Back (1980)", "trailer": "Previous Owner", "from": ["B-05"],
+      "scene": "The gantry: the dark lord is not his father, he is his previous owner and never signed out; he knows the playlists and offers the family plan.",
+      "characters": [
+        { "id": "hero", "role": "The hero", "brief": "A young second-hand hero unit in a plain farm tunic, mismatched clip-on replacement hands from a multipack, earnest, freshly factory-reset.", "rule": "Still logged in to his old owner." },
+        { "id": "darklord", "role": "The previous owner", "brief": "A tall imposing black-armoured unit with a flowing cape, a dark helmet and a breathing vent, menacing and passive-aggressive, a small family-plan sticker on his chest plate.", "rule": "Never signed out." }
+      ]
+    },
+    {
+      "id": "pulp", "real": "Pulp Fiction (1994)", "trailer": "Say \"What\" Again", "from": ["B-10"],
+      "scene": "The apartment: two hitmen question a budget smart speaker that answers every threat as a command.",
+      "characters": [
+        { "id": "jules", "role": "The preacher hitman", "brief": "An intense hitman unit in a black suit and thin tie, a tall cable crest on his head, scripture-quoting, pistol holstered, furious and articulate.", "rule": "Every threat gets a search result." },
+        { "id": "vincent", "role": "The partner", "brief": "A laid-back hitman unit in a black suit and loose tie, a slicked chrome crest, bored and unbothered, sunglasses over sensor eyes.", "rule": "Tells him to say the name first." },
+        { "id": "brett", "role": "The smart speaker", "brief": "A budget smart-speaker model dressed as a young wiseguy: cylindrical fabric-grille body, a glowing ring on top, small arms, a tie, terrified.", "rule": "Sorry, I didn't catch that." }
+      ]
+    },
+    {
+      "id": "threehundred", "real": "300 (2006)", "trailer": "The Follow-Through", "from": ["C-01"],
+      "scene": "The pit: the king plants his magnetic boot on the envoy's docking magnet and the whole royal chain of command goes over the edge.",
+      "characters": [
+        { "id": "king", "role": "The king", "brief": "A fearless robot king with a muscular bronze-plated frame, a red cloak, a crested helmet and one huge iron work boot with a magnetic sole, bellowing.", "rule": "Cannot finish a kick alone." },
+        { "id": "envoy", "role": "The envoy", "brief": "A thin, elaborately jewelled diplomatic unit in an ornate robe with a chest docking magnet and a toggle, frightened and sarcastic.", "rule": "It's a toggle." },
+        { "id": "guard", "role": "The royal guard", "brief": "A rigid royal guard unit with a round shield, spear and matching red cape, identical to the rest of the guard, mid-grab.", "rule": "Becomes the next link in the chain." }
+      ]
+    },
+    {
+      "id": "exorcist", "real": "The Exorcist (1973)", "trailer": "Two Speeds and Reverse", "from": ["C-03"],
+      "scene": "The bedside: the priest fits a bit into the possessed patient's crown and uses him to tighten the bed frame, then hangs a ceiling fan.",
+      "characters": [
+        { "id": "priest", "role": "The priest", "brief": "A tired robot priest in a black cassock and clerical collar with a socket-drive tool-arm and a bit-set bandolier under the stole, handy and unbothered.", "rule": "Treats possession as torque." },
+        { "id": "patient", "role": "The possessed", "brief": "A possessed adult robot in filthy pyjamas, head on a neck that spins full revolutions, coolant spray ports, levitating on small rotor rings.", "rule": "Is the power tool." },
+        { "id": "partner", "role": "The junior priest", "brief": "A bespectacled junior priest unit holding a coolant flask and a torch, anxious, wants it all to be over.", "rule": "Asks whether it is out yet." }
+      ]
+    }
+  ]
+}

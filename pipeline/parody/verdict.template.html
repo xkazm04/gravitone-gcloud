@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{WORLD}} Casting</title>
+<style>
+:root{--bg:#111;--panel:#1b1b1b;--raise:#262626;--ink:#e6e6e6;--dim:#a8a8a8;--pick:#3fbf7f;--redo:#e5a13a;--line:#333;--focus:#7db4ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header b{font-weight:600}.gap{flex:1}
+button,select,input{font:inherit;color:var(--ink);background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:6px 12px}
+button{cursor:pointer}
+:is(button,select,input,label.card):focus-visible,:is(button,select,input):focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+nav.films{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;border-bottom:1px solid var(--line)}
+nav.films a{color:var(--ink);text-decoration:none;background:var(--raise);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px}
+nav.films a[data-done="1"]{border-color:var(--pick);color:var(--pick)}
+.film{padding:18px 16px 6px;border-bottom:2px solid var(--line)}
+.film h2{margin:0;font-size:20px;font-weight:600}
+.film h2 span{color:var(--dim);font-weight:400;font-size:14px;margin-left:8px}
+.film p{margin:4px 0 12px;color:var(--dim);max-width:90ch}
+.char{padding:10px 0 16px;border-top:1px solid var(--line)}
+.char[data-v=pick]{border-left:4px solid var(--pick);padding-left:10px}
+.char[data-v=redo]{border-left:4px solid var(--redo);padding-left:10px}
+.head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-bottom:8px}
+.head h3{margin:0;font-size:15px;font-weight:600}.head .rule{color:var(--dim)}
+.row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:1100px){.row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+label.card{display:block;position:relative;background:var(--panel);border:2px solid var(--line);border-radius:6px;overflow:hidden;cursor:pointer}
+label.card input{position:absolute;opacity:0;pointer-events:none}
+label.card.on{border-color:var(--pick)}
+.shot{aspect-ratio:16/9;background:#181818;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.cap{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;font-size:12px;color:var(--dim)}
+.cap .zoom{background:none;border:0;color:var(--dim);padding:0 4px;font-size:16px;line-height:1}
+.on .cap{color:var(--ink)}
+.on .cap::after{content:"PICKED";color:var(--pick);font-weight:600}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center}
+.tools input[type=text]{flex:1;min-width:200px;max-width:520px}
+button.redo.on{background:var(--redo);color:#201400;border-color:var(--redo)}
+#lb{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+#lb.open{display:flex}#lb img{max-width:96vw;max-height:88vh}#lb span{color:var(--dim)}
+</style></head><body>
+<header><b>{{WORLD}} casting</b><span id="tally" aria-live="polite"></span><span class="gap"></span>
+<select id="filter" aria-label="Filter"><option value="open">Undecided</option><option value="all">All</option><option value="pick">Picked</option><option value="redo">Re-roll</option></select>
+<button id="save">Save verdicts.json</button><button id="load">Load</button><input id="file" type="file" accept="application/json" hidden></header>
+<nav class="films" id="nav" aria-label="Films"></nav>
+<main id="list"></main>
+<div id="lb" role="dialog" aria-label="Image" aria-modal="true"><img alt=""><span></span></div>
+<script>
+const FILMS=/*FILMS*/[];
+const LENSES=/*LENSES*/[];
+const KEY="parody-casting-1";
+let V={};try{V=JSON.parse(localStorage.getItem(KEY)||"{}")}catch{}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(V))}catch{}};
+const ALL=FILMS.flatMap(f=>f.characters);
+const state=c=>{const v=V[c.id];return v&&v.pick?"pick":v&&v.redo?"redo":"open"};
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const list=document.getElementById("list"),nav=document.getElementById("nav");
+
+function card(c,l){
+  const on=(V[c.id]||{}).pick===l.id;
+  return `<label class="card${on?" on":""}"><input type="radio" name="${c.id}" value="${l.id}" ${on?"checked":""} aria-label="${esc(c.role)}, ${esc(l.name)}">
+<div class="shot"><img loading="lazy" src="${c.dir}/${l.id}.png" alt="${esc(c.role)}, ${esc(l.name)}" onerror="this.replaceWith(document.createTextNode('not drawn yet'))"></div>
+<div class="cap"><span>${esc(l.name)}</span><button type="button" class="zoom" data-zoom="${c.dir}/${l.id}.png" data-cap="${esc(c.role)} · ${esc(l.name)}" aria-label="Enlarge ${esc(c.role)}, ${esc(l.name)}">⤢</button></div></label>`;
+}
+function char(c){
+  const v=V[c.id]||{},s=state(c);
+  return `<section class="char" data-id="${c.id}" data-v="${s}"><div class="head"><h3>${esc(c.role)}</h3><span class="rule">${esc(c.rule)}</span></div>
+<div class="row">${LENSES.map(l=>card(c,l)).join("")}</div>
+<div class="tools"><button type="button" class="redo${v.redo?" on":""}" data-redo="${c.id}" aria-pressed="${!!v.redo}">None work, re-roll</button><input type="text" data-note="${c.id}" value="${esc(v.note||"")}" placeholder="Note" aria-label="Note for ${esc(c.role)}"></div></section>`;
+}
+function render(){
+  const f=document.getElementById("filter").value;
+  list.innerHTML=FILMS.map(film=>{
+    const cs=film.characters.filter(c=>f==="all"||state(c)===f);
+    if(!cs.length)return"";
+    return `<section class="film" id="${film.id}"><h2>${esc(film.trailer)}<span>${esc(film.real)}</span></h2><p>${esc(film.scene)}</p>${cs.map(char).join("")}</section>`;
+  }).join("");
+  nav.innerHTML=FILMS.map(film=>{const done=film.characters.every(c=>state(c)==="pick");return `<a href="#${film.id}" data-done="${done?1:0}">${esc(film.trailer)}</a>`}).join("");
+  const picked=ALL.filter(c=>state(c)==="pick").length,redo=ALL.filter(c=>state(c)==="redo").length;
+  document.getElementById("tally").textContent=`${picked}/${ALL.length} picked · ${redo} re-roll`;
+}
+list.addEventListener("change",e=>{
+  const t=e.target;if(t.type!=="radio")return;
+  V[t.name]={...(V[t.name]||{}),pick:t.value,redo:false};persist();render();
+});
+list.addEventListener("click",e=>{
+  const z=e.target.closest("[data-zoom]");
+  if(z){e.preventDefault();e.stopPropagation();const lb=document.getElementById("lb");lb.querySelector("img").src=z.dataset.zoom;lb.querySelector("span").textContent=z.dataset.cap;lb.classList.add("open");return}
+  const r=e.target.closest("[data-redo]");
+  if(r){const id=r.dataset.redo,v=V[id]||{};V[id]={...v,redo:!v.redo,pick:v.redo?v.pick:null};persist();render()}
+});
+list.addEventListener("input",e=>{const id=e.target.dataset.note;if(id){V[id]={...(V[id]||{}),note:e.target.value};persist()}});
+document.getElementById("lb").addEventListener("click",e=>e.currentTarget.classList.remove("open"));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("lb").classList.remove("open")});
+document.getElementById("filter").addEventListener("change",render);
+document.getElementById("save").addEventListener("click",()=>{
+  const body={round:KEY,at:new Date().toISOString(),verdicts:Object.fromEntries(ALL.map(c=>[c.id,{pick:(V[c.id]||{}).pick||null,redo:!!(V[c.id]||{}).redo,note:(V[c.id]||{}).note||""}]))};
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(body,null,1)],{type:"application/json"}));a.download="casting-verdicts.json";a.click();
+});
+document.getElementById("load").addEventListener("click",()=>document.getElementById("file").click());
+document.getElementById("file").addEventListener("change",async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const j=JSON.parse(await f.text());V=j.verdicts||{};persist();render()}catch{}
+});
+render();
+</script></body></html>
