@@ -23216,6 +23216,53 @@
           "reason": "replaced by 791cd20f-ed8b-47e4-8eca-130c4f72efbb"
         }
       ]
+    },
+    "368829fe-5714-4cbb-af3a-2a71bbe73607/model-composed-workspace": {
+      "context": "part-workspace-desk",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:16:55.525Z",
+      "worker": "a409137e-86c0-48a4-b42d-fb46bb32638f",
+      "techniques": [
+        {
+          "technique": "reversible-screen-ops",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:82 This undo is for the operator's own edits. The technique exempts operations the user performs."
+        },
+        {
+          "technique": "answer-form-routing",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/desk/Desk.tsx:63 The machine's only voice here is the oracle chips before a human gate (hitl-approval), not a model choosing an answer form."
+        },
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:8 Fixed regions filled by the editor. No model composes into them."
+        }
+      ]
+    },
+    "df7b69e1-8e03-4636-a7bc-91e117f32faa/model-composed-workspace": {
+      "context": "produce-compose-receipt",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:16:55.525Z",
+      "worker": "a409137e-86c0-48a4-b42d-fb46bb32638f",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Composer.tsx:10 An operator-authored launch through a receipt, not a model-composed region."
+        },
+        {
+          "technique": "answer-form-routing",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/PlanTable.tsx:7 Plan rows are priced vendor jobs and operator gates. No model answer gets a form chosen for it here."
+        }
+      ]
     }
   }
 }

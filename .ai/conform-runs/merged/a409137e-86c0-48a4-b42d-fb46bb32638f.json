@@ -1,0 +1,107 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a409137e-86c0-48a4-b42d-fb46bb32638f",
+ "subject": "model-composed-workspace",
+ "evaluatedAt": "2026-11-11T22:16:55.525032+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-workspace-desk",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:8 The part workspace is a fixed, operator-driven editor frame and the Desk draws a human gate. Searching part/ and desk/ for agent, llm, assistant, recompos, 'composition region' and 'standing rule' found nothing, so no model composes or arranges this screen and the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "reversible-screen-ops",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:82 This undo is for the operator's own edits. The technique exempts operations the user performs."
+    },
+    {
+     "technique": "answer-form-routing",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/desk/Desk.tsx:63 The machine's only voice here is the oracle chips before a human gate (hitl-approval), not a model choosing an answer form."
+    },
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:8 Fixed regions filled by the editor. No model composes into them."
+    }
+   ],
+   "absenceTerms": [
+    "agent",
+    "llm",
+    "assistant",
+    "recompos",
+    "standing rule"
+   ]
+  },
+  {
+   "context": "produce-compose-receipt",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/produce/Composer.tsx:3 Here 'Composer' is the operator's idea field with a server-priced estimate and a Launch that opens a receipt, and 'model' means a vendor model the operator picks in the plan table. Searching produce/ for agent, llm, assistant, recompos and 'standing rule' found nothing, so no model composes this screen.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/produce/Composer.tsx:10 An operator-authored launch through a receipt, not a model-composed region."
+    },
+    {
+     "technique": "answer-form-routing",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/produce/PlanTable.tsx:7 Plan rows are priced vendor jobs and operator gates. No model answer gets a form chosen for it here."
+    }
+   ],
+   "absenceTerms": [
+    "agent",
+    "llm",
+    "assistant",
+    "recompos",
+    "standing rule"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "model-composed-workspace",
+   "context": "audio-studio-view",
+   "reason": "evidence leans on _host/live.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-11T22:16:55.525032+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "answer-form-routing",
+    "composition-region",
+    "reversible-screen-ops"
+   ],
+   "deviations": 0,
+   "context": "part-workspace-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-11T22:16:55.525032+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "answer-form-routing",
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "produce-compose-receipt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

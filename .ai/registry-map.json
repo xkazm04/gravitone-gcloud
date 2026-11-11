@@ -15998,7 +15998,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/part/PartWorkspace.tsx:8 The part workspace is a fixed, operator-driven editor frame and the Desk draws a human gate. Searching part/ and desk/ for agent, llm, assistant, recompos, 'composition region' and 'standing rule' found nothing, so no model composes or arranges this screen and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:7c6aa8f4a4d53a56",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-instruction-files",
@@ -16515,7 +16519,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/components/produce/Composer.tsx:3 Here 'Composer' is the operator's idea field with a server-priced estimate and a Launch that opens a receipt, and 'model' means a vendor model the operator picks in the plan table. Searching produce/ for agent, llm, assistant, recompos and 'standing rule' found nothing, so no model composes this screen.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:7c6aa8f4a4d53a56",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-memory",
