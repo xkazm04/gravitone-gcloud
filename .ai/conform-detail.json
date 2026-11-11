@@ -23402,6 +23402,47 @@
         }
       ],
       "registryProposal": "precision-limit-propagation could say outright that a size-encoded layout (a treemap or bubble) must not fill a missing magnitude with a placeholder such as the mean, because area is the claim even when the number label is withheld."
+    },
+    "862d474e-1da6-4513-a2c9-f7c8b54c7a29/generated-output-grading": {
+      "context": "style-trials-cull",
+      "subject": "generated-output-grading",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:55:46.826Z",
+      "techniques": [
+        {
+          "technique": "trial-matrix-design",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:9 One column per problem, with approved/rejected/undecided/earlier tallies (several renders per cell). The current block is held constant, so stale proofs never stand as the face. An unrendered cell is a labelled Ghost, not a default. LockGate needs lockProblems covered."
+        },
+        {
+          "technique": "vision-model-grading-schema",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/cull/MatrixCull.tsx:87 Covers only the provenance half: grades made by a grader series other than the one the calibration was measured on are flagged amber, so a grader swap reopens the threshold. The schema's own fields (veto first, booleans) are not in this context."
+        },
+        {
+          "technique": "two-grader-disagreement-rule",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/StyleFacts.tsx:75 No decision here is gated on a machine judgement: proven/locked count operator keeps only, and an agent's verdict is shown but not counted. BlindPair compares the machine's pick with the human's only after the human has judged blind."
+        },
+        {
+          "technique": "cross-provider-flip-analysis",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/TrialMatrix.tsx:1 The matrix's candidate axis is the style (one style per matrix), not the generator. Provider and model are shown per proof (ProofSheet.tsx:113), but no two-generator diff is made here."
+        },
+        {
+          "technique": "input-channel-parity",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/style/StyleSlots.tsx:3 Every arm is briefed through the same prose style block. No candidate takes a typed control channel that the others lack."
+        }
+      ],
+      "withdrawn": {
+        "worker": "16e7b678-0d13-4de2-970c-95b8be006ad9",
+        "state": "conformant",
+        "at": "2026-11-11T22:56:32.605999+00:00",
+        "reason": "reviewer (sonnet): The TrialMatrix claims hold (five problem columns, approved/rejected/undecided/earlier tallies, a labelled Ghost for unrendered cells, LockGate coverage), but the StyleFacts.tsx:75 technique cites BlindPair comparing the machine's pick with the human's only after a blind judgement. BlindPair lives i"
+      }
     }
   }
 }
