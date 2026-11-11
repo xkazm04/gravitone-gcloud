@@ -34,11 +34,19 @@ trailers come from the thirteen saved concepts in `foundry-out/scout/contest-sho
    again with the same `--out`). Open `foundry-out/parody-trailers/casting-1/verdict.html`: one pick per character,
    or "None work, re-roll" with a note. It autosaves in the browser; **Save verdicts.json** writes the file the next
    step reads. Rebuild the page after more images land (the page reads the folder, not a snapshot).
-2. **Voice casting.** Five voices per picked character. Reuse the casting stage of spark `concept-casting-stages`
+2. **Voice casting** (deferred until after the keyframes). Five voices per picked character. Reuse the casting stage of spark `concept-casting-stages`
    once it has had its first live run; the picked image is the voice brief's visual anchor.
-3. **Trailer keyframes.** `/trailer-clip` takes the picks as its cast sheet: the film's hero phrase is the picked
-   character, Board C concepts vary form and sound only. Each trailer holds three or four scenes of its film
-   (30-50 s); the saved concept is its first scene, the others are chosen with the operator.
+3. **Trailer keyframes** (before voices, operator 2026-11-11). `shots.json`: eight shots per trailer across three or
+   four scenes of the film, in the original film's own trailer look, composed so a 9:16 centre crop holds; each shot
+   is drawn in three variants with the picked casting images attached. `motion` is the H3 clip's line (speech,
+   `Sound: ...`, `No music.`) and is not drawn.
+
+   ```bash
+   npx tsx pipeline/parody/keys.mts build --casting foundry-out/parody-trailers/casting-1      --verdicts <casting-verdicts.json> --out foundry-out/parody-trailers/keys-1 [--pick terminator-assassin=c3]
+   npx tsx pipeline/scout-codex.mts --queue foundry-out/parody-trailers/keys-1/queue.json      --out foundry-out/parody-trailers/keys-1 --workers 3
+   ```
+
+   The picked variant of each shot becomes that trailer's `/trailer-clip` keyframe; voices follow.
 4. **Nightly composition.** Channel card `foundry-out/scout-channels/P2.json` (local, gitignored). Once the picks
    are in, set the channel look with `scout.mts channel-look P2 "<text>"` and import one episode per trailer.
 

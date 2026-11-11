@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{WORLD}} Casting</title>
+<title>{{TITLE}}</title>
 <style>
 :root{--bg:#111;--panel:#1b1b1b;--raise:#262626;--ink:#e6e6e6;--dim:#a8a8a8;--pick:#3fbf7f;--redo:#e5a13a;--line:#333;--focus:#7db4ff}
 *{box-sizing:border-box}
@@ -39,7 +39,7 @@ label.redo{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;borde
 #lb{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px}
 #lb.open{display:flex}#lb img{max-width:96vw;max-height:88vh}#lb span{color:var(--dim)}
 </style></head><body>
-<header><b>{{WORLD}} casting</b><span id="tally" aria-live="polite"></span><span class="gap"></span>
+<header><b>{{TITLE}}</b><span id="tally" aria-live="polite"></span><span class="gap"></span>
 <select id="filter" aria-label="Filter"><option value="all">All</option><option value="open">Undecided</option><option value="pick">Picked</option><option value="redo">Re-roll</option></select>
 <button id="save">Save verdicts.json</button><button id="reset">Reset</button><button id="load">Load</button><input id="file" type="file" accept="application/json" hidden></header>
 <nav class="films" id="nav" aria-label="Films"></nav>
@@ -48,7 +48,7 @@ label.redo{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;borde
 <script>
 const FILMS=/*FILMS*/[];
 const LENSES=/*LENSES*/[];
-const KEY="parody-casting-1-v2";
+const KEY="{{KEY}}";
 let V={};try{V=JSON.parse(localStorage.getItem(KEY)||"{}")}catch{}
 const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(V))}catch{}};
 const ALL=FILMS.flatMap(f=>f.characters);

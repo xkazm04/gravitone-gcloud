@@ -11,7 +11,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 type Lens = { readonly id: string; readonly name: string; readonly text: string };
-type Character = { readonly id: string; readonly role: string; readonly brief: string; readonly rule: string };
+// `human`: the one exception to the robots-only world (the Terminator pursuer, operator 2026-11-11: a human inside a robot shell).
+type Character = { readonly id: string; readonly role: string; readonly brief: string; readonly rule: string; readonly human?: boolean };
 type Film = { readonly id: string; readonly real: string; readonly trailer: string; readonly from: readonly string[]; readonly scene: string; readonly characters: readonly Character[] };
 type Roster = { readonly world: { readonly name: string; readonly rule: string; readonly look: string }; readonly lenses: readonly Lens[]; readonly films: readonly Film[] };
 
@@ -33,8 +34,9 @@ const films = roster.films.filter((f) => only === undefined || only.includes(f.i
 // The same slug scout-codex uses for an item directory.
 const slug = (id: string): string => id.replace(/[^A-Za-z0-9-]+/g, "_");
 
+const ROBOT_ONLY = "Robot only: no human skin, no human hair, no human face. ";
 const prompt = (film: Film, c: Character, lens: Lens): string =>
-  `${roster.world.look} Character: ${c.role}, in a parody of ${film.real} set in a robot world. ${c.brief} ${lens.text}`;
+  `${c.human === true ? roster.world.look.replace(ROBOT_ONLY, "") : roster.world.look} Character: ${c.role}, in a parody of ${film.real} set in a robot world. ${c.brief} ${lens.text}`;
 
 const items = films.flatMap((film, fi) => film.characters.map((c) => ({
   id: `${film.id}-${c.id}`,
@@ -54,6 +56,7 @@ const lenses = roster.lenses.map((l) => ({ id: l.id, name: l.name }));
 const page = fs.readFileSync(path.join(here, "verdict.template.html"), "utf8")
   .replace("/*FILMS*/[]", JSON.stringify(data).replace(/</g, "\\u003c"))
   .replace("/*LENSES*/[]", JSON.stringify(lenses))
-  .replace("{{WORLD}}", roster.world.name);
+  .replaceAll("{{TITLE}}", `${roster.world.name} casting`)
+  .replace("{{KEY}}", "parody-casting-1-v2");
 fs.writeFileSync(path.join(out, "verdict.html"), page);
 console.log(`${items.length} characters, ${items.length * roster.lenses.length} images -> ${out}`);
