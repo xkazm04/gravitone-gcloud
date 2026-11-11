@@ -14308,8 +14308,8 @@
           "revision": 3,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "arrived": true,
+          "state": "unknown"
         },
         {
           "subject": "stream-moment-capture",

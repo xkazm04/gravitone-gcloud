@@ -23541,6 +23541,37 @@
           "evidence": "lib/music-clip/sections.ts:66 The rate is written per section as cuts per bar from the map's energy, which conforms. But sections may run faster than one cut per bar (2, or beat units in the shot plan), and PlannedShot/Shot record no subject position. No check compares positions across consecutive shots or counts flashes per second before generation. The ≤3/s flash ceiling exists only as prompt prose in pipeline/music-clip/*.md, not as a computed count."
         }
       ]
+    },
+    "4801e7ab-d365-4c2d-8351-adcf188ba3c1/platform-format-adaptation": {
+      "context": "music-clip-engine",
+      "subject": "platform-format-adaptation",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T23:24:34.663Z",
+      "techniques": [
+        {
+          "technique": "format-as-measured-template",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/gpuShot.ts:176 The output container is a wide, full-length music video, so there is no short or vertical format template to codify."
+        },
+        {
+          "technique": "hook-shape-selection",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/lyricsParse.ts:44 The only 'hook' in this code is a song's chorus tag, not a spoken opening sentence of a short."
+        },
+        {
+          "technique": "sound-off-first-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/gpuShot.ts:177 This is a music-driven format whose audio is the content; the technique exempts that container by declaration."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c0cf3373-f485-4504-b385-0c8e88aa93fa",
+        "state": "not-applicable",
+        "at": "2026-11-11T23:26:30.954198+00:00",
+        "reason": "reviewer (sonnet): The cited code contradicts the claim: gpuShot.ts:176 is only `const fps = opts.fps ?? 30`, and the function is `renderSpan`, which renders a start-to-end span of the track rather than the whole master, with width and height as caller options (the 1920x1080 default is just a fallback), so the not-app"
+      }
     }
   }
 }
