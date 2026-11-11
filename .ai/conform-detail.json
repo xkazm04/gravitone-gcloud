@@ -23505,6 +23505,42 @@
           "evidence": "lib/producers/scoutReelKinds.ts:8 Reel steps author data reels in code. No speech script carries bracketed direction tags."
         }
       ]
+    },
+    "4801e7ab-d365-4c2d-8351-adcf188ba3c1/music-video-production": {
+      "context": "music-clip-engine",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T23:16:08.834Z",
+      "worker": "fcec03f2-e8d9-4482-ad81-7e59b45da9d7",
+      "techniques": [
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "conformant",
+          "evidence": "lib/music-clip/types.ts:10 TimelineV1 carries sections snapped to downbeats, a DP-tracked beat list refined to audio resolution (beats.ts refineBeatTimes), an intensity curve smoothed to the bar, and a voice map typed confirmed:false. Treatment beats are addressed as (section, bar, beat). Gaps: the map keeps no octave-sibling tempo candidates, the metrical level is resolved by a style-prompt prior rather than recorded as a listener's choice, and section boundaries carry no confirmed/unconfirmed flag."
+        },
+        {
+          "technique": "form-follows-what-the-track-gives",
+          "verdict": "conformant",
+          "evidence": "lib/music-clip/types.ts:167 The pipeline cannot hold lip sync, so the treatment schema puts the form on concept or narrative rungs with faceless characters. Each treatment's plot is one beat per timeline section, so the allocation is written per section."
+        },
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/music-clip/gpuShot.ts:18 Picture is rendered as a pure function of master time. No generated video segments exist in this context, so per the technique's own exemption there are no seams to place. Any AI video inserts are made by pipeline/music-clip/clips.mts, which is outside this context."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "conformant",
+          "evidence": "lib/music-clip/shotlist.ts:85 Cut points come from the timeline's beat list, downbeat-aligned for bar and half units, not from where a clip changed. Every (set, cam) setup is a view of the same render(t), so any setup is in sync at any cut by construction."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "deviation",
+          "evidence": "lib/music-clip/sections.ts:66 The rate is written per section as cuts per bar from the map's energy, which conforms. But sections may run faster than one cut per bar (2, or beat units in the shot plan), and PlannedShot/Shot record no subject position. No check compares positions across consecutive shots or counts flashes per second before generation. The ≤3/s flash ceiling exists only as prompt prose in pipeline/music-clip/*.md, not as a computed count."
+        }
+      ]
     }
   }
 }

@@ -14287,8 +14287,12 @@
           "revision": 2,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "deviation",
+          "arrived": true,
+          "evidence": "lib/music-clip/shotlist.ts:137 The shot-list gate checks the 3 s ceiling and gap-free coverage, but it never runs the screen-position check or the flash-per-second count that cut-rate-follows-the-section requires. Meanwhile the section map gives high-intensity sections 2 cuts per bar and the plan allows beat-unit cutting.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:2d32bc9195341316",
+          "evaluatedRevision": 2
         },
         {
           "subject": "platform-format-adaptation",
