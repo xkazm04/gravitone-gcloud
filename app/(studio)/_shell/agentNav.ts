@@ -13,6 +13,14 @@ import { SECTIONS, sectionOf, type Section } from "./nav.ts";
 
 export type NavToolName = "where_am_i" | "go_to" | "open";
 
+/** The page's app id for the bridge (`athena:app`, app/(studio)/layout.tsx). The bridge relays each tool as
+ *  `host.<app>.<name>`: that dotted spelling is athena-portable's (packages/athena-bridge/protocol.md), not this
+ *  repo's, and renaming it is a breaking change there. What this repo authors - the app id and every tool name -
+ *  stays inside the narrowest function-calling grammar, `[A-Za-z0-9_-]{1,64}` with room for the bridge's prefix
+ *  (registry technique mcp-tools/name-grammar-of-the-narrowest-hop), so an aliasing relay needs no rename here. */
+export const ATHENA_APP = "gravitone";
+export const NARROW_TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
+
 export type NavTool = {
   readonly name: NavToolName;
   readonly title: string;
