@@ -18825,7 +18825,11 @@
           "revision": 3,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/scout/piece.ts:2 The scout creative stages make only image and video stills, Suno music tracks (track.ts) and LTX clips cut with their own native audio; a case-insensitive whole-word search of lib/foundry/scout and packages/producers/src/scout-* for speech, voice, speaker, pronunciation, lexicon, tts, dialogue and narration found no hits, so no scripted multi-speaker speech is ever rendered here.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:7ea2b5e416115e6b",
+          "evaluatedRevision": 3
         },
         {
           "subject": "data-video-virality",
@@ -19468,7 +19472,11 @@
           "revision": 3,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/producers/scoutPieceActs.ts:30 The scout producers plan and run ingest, ideas, scenes, storyboards, reels, sheets, assets and piece cuts, and the only audio they touch is the native audio of video clips, resampled and concatenated by ffmpeg. A search of the listed scout producer files found no speech, voice, speaker, pronunciation or lexicon. Across all of lib/producers and packages/producers/src, speaker, pronunciation and lexicon have no hits; speech and voice appear only in the separate voice and production producers, which are outside this context.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:7ea2b5e416115e6b",
+          "evaluatedRevision": 3
         }
       ],
       "governance": "governed"

@@ -23463,6 +23463,48 @@
       "evaluatedTs": "2026-11-11T22:59:02.505Z",
       "worker": "1c00fc95-2448-477c-a4e0-c651febe70de",
       "techniques": []
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/multi-speaker-speech-production": {
+      "context": "scout-engine-creative",
+      "subject": "multi-speaker-speech-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T23:11:47.775Z",
+      "worker": "928dbf8d-d7b7-4d8f-b455-63fbd305cc37",
+      "techniques": [
+        {
+          "technique": "line-addressed-re-render",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/scout/piece.ts:2 There is no script of speaker lines. A piece's audio is the video clips' own audio."
+        },
+        {
+          "technique": "voice-asset-model-generation-binding",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/scout/track.ts:1 The only generated audio is Suno music. No cloned or designed voice is stored, and the cast (cast.ts) covers visual identity only."
+        }
+      ]
+    },
+    "ce5ef2e0-d944-4b79-a500-32f8a081923f/multi-speaker-speech-production": {
+      "context": "scout-producers",
+      "subject": "multi-speaker-speech-production",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T23:11:47.775Z",
+      "worker": "928dbf8d-d7b7-4d8f-b455-63fbd305cc37",
+      "techniques": [
+        {
+          "technique": "chunk-boundary-continuity",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/scoutPieceActs.ts:30 The joins are video-clip concatenations, not cuts of a script that exceeds a TTS character cap."
+        },
+        {
+          "technique": "inline-direction-dialect",
+          "verdict": "not-applicable",
+          "evidence": "lib/producers/scoutReelKinds.ts:8 Reel steps author data reels in code. No speech script carries bracketed direction tags."
+        }
+      ]
     }
   }
 }
