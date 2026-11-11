@@ -23572,6 +23572,27 @@
         "at": "2026-11-11T23:26:30.954198+00:00",
         "reason": "reviewer (sonnet): The cited code contradicts the claim: gpuShot.ts:176 is only `const fps = opts.fps ?? 30`, and the function is `renderSpan`, which renders a start-to-end span of the track rather than the whole master, with width and height as caller options (the 1920x1080 default is just a fallback), so the not-app"
       }
+    },
+    "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6/short-form-narrative-structure": {
+      "context": "trailer-structure-rules",
+      "subject": "short-form-narrative-structure",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T23:42:16.282Z",
+      "techniques": [
+        {
+          "technique": "but-therefore-beat-linking",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/connectors.ts:33 AND THEN is flagged as a violation, a null connector is reported as unmeasured (line 41), and the rule passes only when cleared > 0. A chain with no declared links therefore reports not-engaged, never a pass, as the technique requires."
+        }
+      ],
+      "withdrawn": {
+        "worker": "e4000412-4b7d-41b8-adf4-c728e736e621",
+        "state": "not-applicable",
+        "at": "2026-11-11T23:43:00.007606+00:00",
+        "reason": "reviewer (sonnet): withholding.ts:14 is just the checkWithholding signature, so it doesn't show the subject's precondition is absent. The evidence also concedes the connector rule carries over through causality (connectors.ts), which contradicts not-applicable, and the reframe/scqa/reversal/recap search terms are weak"
+      }
     }
   }
 }
