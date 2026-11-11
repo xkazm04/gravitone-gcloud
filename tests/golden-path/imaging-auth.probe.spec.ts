@@ -42,16 +42,16 @@ const SECRET = "probe-secret-value";
 
 /** A POST Request at one of our routes, with an optional bearer secret and a
  *  distinct forwarded IP so rate-limit buckets never bleed across cases. */
-function req(path: string, opts: { bearer?: string; ip: string; body?: unknown }): Request {
+function req(path: string, opts: { bearer?: string; ip: string; body?: unknown; method?: "GET" | "POST" }): Request {
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "x-forwarded-for": opts.ip,
   };
   if (opts.bearer) headers["authorization"] = `Bearer ${opts.bearer}`;
   return new Request(`http://localhost${path}`, {
-    method: "POST",
+    method: opts.method ?? "POST",
     headers,
-    body: JSON.stringify(opts.body ?? {}),
+    ...(opts.method === "GET" ? {} : { body: JSON.stringify(opts.body ?? {}) }),
   });
 }
 
@@ -713,7 +713,11 @@ test("token: a read token is 403 on a money route and admitted on a read route",
   const money = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
   expect(money?.status).toBe(403);
   expect(await bodyOf(money)).toMatchObject({ code: "refused", detail: "token-scope" });
-  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token }), "access")).toBeNull();
+  // /api/ledger is a GET: the read door. An access POST is a write and needs `act` (route.ts guardOf).
+  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token, method: "GET" }), "access")).toBeNull();
+  const write = await gate(req("/api/import", { ip: nextIp(), bearer: token }), "access");
+  expect(write?.status).toBe(403);
+  expect(await bodyOf(write)).toMatchObject({ code: "refused", detail: "token-scope" });
 });
 
 // The agent's scope (spark athena-control-mcp WP1): reads and non-spending writes, never a money door.
@@ -722,7 +726,8 @@ test("token: an act token is 403 on a money route and admitted on a read route",
   const money = await gate(req(MONEY_PATH, { ip: nextIp(), bearer: token }), "money");
   expect(money?.status).toBe(403);
   expect(await bodyOf(money)).toMatchObject({ code: "refused", detail: "token-scope" });
-  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token }), "access")).toBeNull();
+  expect(await gate(req("/api/ledger", { ip: nextIp(), bearer: token, method: "GET" }), "access")).toBeNull();
+  expect(await gate(req("/api/import", { ip: nextIp(), bearer: token }), "access")).toBeNull();
   const who = await resolvePrincipal(req("/api/ledger", { ip: nextIp(), bearer: token }), { use: "read" });
   expect(who).toMatchObject({ kind: "cli-token", name: "probe-act", scope: "act" });
 });
