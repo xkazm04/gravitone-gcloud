@@ -23443,6 +23443,26 @@
         "at": "2026-11-11T22:56:32.605999+00:00",
         "reason": "reviewer (sonnet): The TrialMatrix claims hold (five problem columns, approved/rejected/undecided/earlier tallies, a labelled Ghost for unrendered cells, LockGate coverage), but the StyleFacts.tsx:75 technique cites BlindPair comparing the machine's pick with the human's only after a blind judgement. BlindPair lives i"
       }
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/motion": {
+      "context": "scout-engine-creative",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:59:02.505Z",
+      "worker": "1c00fc95-2448-477c-a4e0-c651febe70de",
+      "techniques": []
+    },
+    "51e3f5c9-f984-40e7-9588-f8eab2b916f9/motion": {
+      "context": "score-and-ads",
+      "subject": "motion",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:59:02.505Z",
+      "worker": "1c00fc95-2448-477c-a4e0-c651febe70de",
+      "techniques": []
     }
   }
 }

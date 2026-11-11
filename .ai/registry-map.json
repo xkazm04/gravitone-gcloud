@@ -18531,7 +18531,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/motion/direction.ts:2 lib/motion/direction.ts is the motion-DIRECTION turn that proposes a generated video clip's motion prompt from a still (no React), and the rest of the context is score, ad and cinematography vocabulary; a search of lib/score, lib/ads, lib/studio, lib/motion, lib/vocab and lib/frames for prefers-reduced-motion, requestAnimationFrame, framer-motion, useReducedMotion and @keyframes found no hit, so the interface motion subject does not apply despite the lexical match on 'motion'.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         }
       ],
       "governance": "governed"
@@ -18986,7 +18990,11 @@
           "revision": 10,
           "changedAt": "2026-09-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/foundry/scout/scene.ts:4 The scout creative stages are server-side generation modules (prompts, doors, recipes, stores) with no rendered interface; their 'animate'/'keyframes' vocabulary means generated video clips, and a search of lib/foundry/scout for prefers-reduced-motion, requestAnimationFrame, framer-motion, useReducedMotion and @keyframes found no hit, so the UI motion-system subject has nothing here to govern.",
+          "evaluatedAt": "2026-11-11",
+          "evaluatedAgainst": "sha256-b2:8d9b3eabe2f3b534",
+          "evaluatedRevision": 10
         }
       ],
       "governance": "governed"
