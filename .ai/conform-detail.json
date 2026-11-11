@@ -23165,6 +23165,57 @@
           "evidence": "lib/imaging/video/leonardo.ts:25 The vendor offers no idempotency key, so the replay channel of the billable start is closed by making exactly one attempt. leonardo.ts for stills does the same."
         }
       ]
+    },
+    "d8928803-1de2-497f-882c-809d029b705b/measurement-honesty": {
+      "context": "publish-producers",
+      "subject": "measurement-honesty",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-11",
+      "evaluatedTs": "2026-11-11T22:09:24.025Z",
+      "worker": "791cd20f-ed8b-47e4-8eca-130c4f72efbb",
+      "techniques": [
+        {
+          "technique": "lower-bound-disclosure",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:31 The floor is admitted only in a doc comment. The value that travels (Standing) has no truncated or at-least field, so consumers render the count as a total."
+        },
+        {
+          "technique": "incomplete-not-verdict",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:57 The listing is capped by LIMIT, and nothing checks whether it was truncated before standingOf interprets it. A full window with no success turns into the verdict lastSuccessAt=null."
+        },
+        {
+          "technique": "unmeasurable-vs-zero",
+          "verdict": "conformant",
+          "evidence": "packages/producers/src/publish/metrics.ts:31 Metrics the platform does not report are null, not 0. A withheld or deleted video arrives as null (lib/publish/youtube.ts fetchStats maps missing ids to null), and the note names the mechanism at metrics.ts:77."
+        },
+        {
+          "technique": "renormalize-over-present",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/metrics.ts:18 This context only appends snapshots. Totals and group sums are computed in @gt/domain/publication, so no averaging happens here."
+        },
+        {
+          "technique": "minimum-sample-floors",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/metrics.ts:26 No rate or percentage is derived anywhere in the context. It reports raw counts and lifetime totals only."
+        },
+        {
+          "technique": "control-failure-is-not-a-datum-state",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/publish/metrics.ts:46 No comparison or control arm exists here. This line shows the related honest move: when metrics are not measured, a reason is reported instead of zeros."
+        }
+      ],
+      "registryProposal": "incomplete-not-verdict lists truncated listings as an ingestion-boundary case. A capped fold over an event log (a fixed SELECT … LIMIT window used to derive a \"since last success\" streak) is the same defect inside one query, and lower-bound-disclosure could name it as a typical floor: a streak counted inside a bounded window.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/standing.ts:30 The channel standing is folded over at most WINDOW=200 ledger rows. When no success falls inside that window, failuresSinceSuccess is a floor and lastSuccessAt=null cannot tell \"never succeeded\" from \"succeeded before the window\". Standing has no field marking the truncation, so consumers print the floor as a total (e.g. pipeline/publish.mts:167 prints \"N failure(s) since\").",
+          "evaluatedAt": "2026-10-26",
+          "worker": null,
+          "reason": "replaced by 791cd20f-ed8b-47e4-8eca-130c4f72efbb"
+        }
+      ]
     }
   }
 }
