@@ -46,6 +46,7 @@ export function codexProvider(o: { readonly draw?: typeof drawCodex } = {}): Ima
           durationMs: Date.now() - started,
           cleanup: "not-applicable",
           ...(neg === undefined || neg === "" ? {} : { negativePromptChannel: "prose" as const }),
+          ...(still.cliVersion === undefined ? {} : { cliVersion: still.cliVersion }),
         },
       };
     },

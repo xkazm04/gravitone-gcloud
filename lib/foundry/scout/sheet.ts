@@ -36,7 +36,7 @@ import { activeWing } from "./wingScope";
 
 /** The sheet's engine, injectable for tests: one still from a prompt and our own reference stills. */
 export type SheetEngines = {
-  readonly draw?: (prompt: string, o: { readonly refs: readonly Uint8Array[]; readonly late: number; readonly seed?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
+  readonly draw?: (prompt: string, o: { readonly refs: readonly Uint8Array[]; readonly late: number; readonly seed?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number; readonly cliVersion?: string }>;
 };
 
 export type SheetResult = {

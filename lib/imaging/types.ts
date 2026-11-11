@@ -187,6 +187,8 @@ export interface Provenance {
    * reads as "there was nothing to carry" and never as "unknown".
    */
   negativePromptChannel?: "native" | "prose";
+  /** The local CLI that drew it, as it named itself (`codex --version`), when the provider is a CLI and it answered. */
+  cliVersion?: string;
   /** Vendors eliminated before the one that served, most-preferred first.
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */
