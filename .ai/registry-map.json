@@ -18928,7 +18928,11 @@
           "revision": 10,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/seeds.ts:124 The seed door is a fail-first accept-or-reject gate whose reason is the caller's instruction for what to fix, yet nothing checks that reason against a model of the rules each input breaks; its tests break one rule per hand-written case, so a wrong rule reported when two are broken, or a precedence defect, cannot be seen.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:d5ab12a92aba67c4",
+          "evaluatedRevision": 10
         },
         {
           "subject": "character-voice-design",

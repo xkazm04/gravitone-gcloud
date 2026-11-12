@@ -23651,6 +23651,32 @@
           "evidence": "lib/cut/deriveTimeline.ts:271 Music cues are computed from picture.scenes (the header at lines 31-34 says 'A spot's span is DERIVED from the scenes it covers'). lib/score/spots.ts likewise places movements by beat 'at' timecodes because CueSection carries no durations. The technique says the cue must be the timeline's parent. The voice-track exemption covers explainers but not the trailer shots this file also lays out."
         }
       ]
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/test-input-generation": {
+      "context": "scout-engine-creative",
+      "subject": "test-input-generation",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:09:08.859Z",
+      "worker": "724d0d16-a724-49c7-9598-0092db6fbc7b",
+      "techniques": [
+        {
+          "technique": "model-based-oracle",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/museDoor.ts:122 The muse door also returns the first rule it hits. Its tests (scout-muse-idea.test.ts:155-187) pin one recorded reason per input that breaks one rule. The technique says that kind of suite can never see a wrong-rule or precedence defect. A model that predicts the set of broken rules, run over combinations, is missing."
+        },
+        {
+          "technique": "negative-space-generation",
+          "verdict": "conformant",
+          "evidence": "tests/next-server/scout-seeds.test.ts:95 Invalid inputs are valid briefs with one field pushed just past its limit (SEED_SENTENCE_MAX is 200, MAX_SEED_BATCH + 1, age 24 against a minimum of 25, 51 against a maximum of 50). Each test asserts the specific reason, and line 104 asserts nothing was written."
+        },
+        {
+          "technique": "generator-bounds-the-space",
+          "verdict": "not-applicable",
+          "evidence": "tests/next-server/scout-seeds.test.ts:93 Inputs are built by hand-written helpers like brief(). There is no randomized generator whose reach could be bounded; no fast-check, Math.random or fuzz turned up in lib/foundry/scout."
+        }
+      ]
     }
   }
 }
