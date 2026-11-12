@@ -23874,6 +23874,48 @@
         }
       ],
       "registryProposal": "unregistered-is-stronger-than-refused should say whether a deployment mode that removes a feature class for capability reasons (no GPU, no disk on a hosted plan) counts as an authorization dimension, or only modes motivated by permission. This code argues the matrix is 'not a security boundary', yet still leaves the operations addressable."
+    },
+    "dbc8253a-d568-4111-9b0b-a85e938e539c/batch-undo-commit-window": {
+      "context": "ui-board-state",
+      "subject": "batch-undo-commit-window",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:55:13.873Z",
+      "worker": "1324b070-5895-47a2-9cca-619853937090",
+      "techniques": [
+        {
+          "technique": "deferred-write-window",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/gate.ts:320 Undoing an unsent act removes it from the queue and restores the raw prior value locally, with no network call. The fired timer calls flush(), which reads the live pending/pendingFor, so it always acts on the current queue. The window is 400 ms (WRITE_WINDOW_MS) and the interface never states it. That is below the band, but here the window coalesces sends and is not the operator's only undo: after the send, undo is the kernel's compensating history (boardGate history.undo). That is a deliberate choice of compensation under the technique's decision rule."
+        },
+        {
+          "technique": "single-pending-batch-invariant",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/board/gate.ts:218 decide() runs no check against the pending state before applying. Each call pushes a new act onto a queue (prohibition 5: no queue of pending windows). Nothing refuses a repeated arm, or flushes before it, while a window is open or a commit is in flight. An act's id is the undo entry number, not a batch identity minted for the window."
+        },
+        {
+          "technique": "freeze-refresh-during-window",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/board/gate.ts:252 Whether verdicts are protected depends on a flag the caller passes, not on the gate's own pending state. A load(id,false) response that arrives while acts are still queued replaces the optimistic verdicts with the server's (prohibition 2: no refresh response applied while suspended). The app's live feed avoids this only from outside the context (app/(studio)/board/_board/live.ts reloads only once the packet is decided)."
+        },
+        {
+          "technique": "flush-on-teardown",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/board/gate.ts:206 Teardown does commit: useGate.ts:26 'void gate.flush();' is registered once per gate ([gate] deps) and reads the live closure state. pagehide goes through the keepalive/beacon door. But a flush that fails after unmount publishes only to a snapshot nobody subscribes to, and the retained pending dies with the gate (prohibition 5: no flush failure that goes nowhere). A failure for a previous id after select() publishes nothing at all."
+        },
+        {
+          "technique": "bounded-fanout-commit",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/board/boardGate.ts:122 Every act goes to a batch endpoint (one patch carrying all changed keys), and acts are sent serially on a promise chain (gate.ts:185). There is no per-row fan-out, so no unbounded dispatch."
+        },
+        {
+          "technique": "partial-failure-reselect",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/board/gate.ts:197 Unsent acts are kept for the next flush, but the optimistic verdicts of the failed keys are not reverted and the failures are not re-selected. The screen keeps showing verdicts that did not land, with only save:'error' plus a toast. Counts are re-derived, though: cull.ts:49 tallyOf counts from cells x verdicts and keeps no running total."
+        }
+      ],
+      "registryProposal": "The subject should name the hybrid this gate uses: a short send-coalescing window, where undoing an unsent act cancels it locally, composed with server-side compensating undo after the send. The golden path says the two never share a mechanism. In practice they share one undo stack (canUndoNow = pending.length > 0 || serverUndoable), and the interval floor of three seconds or more does not fit a window that is not the operator's only undo."
     }
   }
 }

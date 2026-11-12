@@ -22999,7 +22999,11 @@
           "revision": 5,
           "changedAt": "2026-10-22",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/board/gate.ts:218 In history mode the gate keeps a queue of pending acts behind one shared timer and has no handler-level guard. A second decide over the same keys inside the window adds another act and another kernel patch. This is the double-armed batch and the queue of windows that the single-pending invariant forbids. Failed writes and teardown failures also leave the optimistic overlay on screen, or are dropped.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:9b545924fd10cf36",
+          "evaluatedRevision": 5
         },
         {
           "subject": "test-harness",
