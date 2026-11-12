@@ -23677,6 +23677,42 @@
           "evidence": "tests/next-server/scout-seeds.test.ts:93 Inputs are built by hand-written helpers like brief(). There is no randomized generator whose reach could be bounded; no fast-check, Math.random or fuzz turned up in lib/foundry/scout."
         }
       ]
+    },
+    "928a52be-b8cd-42e6-bc4a-3d3149bd4609/generated-speech-acceptance": {
+      "context": "audio-local-score-and-listen",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:20:16.254Z",
+      "worker": "ef1a768d-e5f2-4b5c-8273-492e61ea92f5",
+      "techniques": [
+        {
+          "technique": "round-trip-intelligibility",
+          "verdict": "deviation",
+          "evidence": "lib/producers/voiceFx.ts:190 The only check against the line's text is an expected duration (expectedSecondsOf). There is no recognizer, no transcript compared to the input, and no natural-recording floor. In packages/domain/src/audio.accept.ts, judgeAcceptance reasons only about LUFS, peak, clipping, tail and length."
+        }
+      ]
+    },
+    "4801e7ab-d365-4c2d-8351-adcf188ba3c1/generated-speech-acceptance": {
+      "context": "music-clip-engine",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:20:16.254Z",
+      "worker": "ef1a768d-e5f2-4b5c-8273-492e61ea92f5",
+      "techniques": []
+    },
+    "ea68a117-e84a-4b1b-bff1-c49133e939a9/generated-speech-acceptance": {
+      "context": "domain-decision-board-core",
+      "subject": "generated-speech-acceptance",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:20:16.254Z",
+      "worker": "ef1a768d-e5f2-4b5c-8273-492e61ea92f5",
+      "techniques": []
     }
   }
 }

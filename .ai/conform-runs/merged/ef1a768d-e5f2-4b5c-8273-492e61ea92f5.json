@@ -1,0 +1,148 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ef1a768d-e5f2-4b5c-8273-492e61ea92f5",
+ "subject": "generated-speech-acceptance",
+ "evaluatedAt": "2026-11-12T22:20:16.254193+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-local-score-and-listen",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/producers/voiceFx.ts:190 A re-voiced ElevenLabs narration take (profile `voice-take`) is passed or failed only on loudness, true peak, clipping, silent tail and a length estimated from the text, so a take that drops or misreads words still records a pass, because no recognizer ever checks what was said.",
+   "techniques": [
+    {
+     "technique": "round-trip-intelligibility",
+     "verdict": "deviation",
+     "evidence": "lib/producers/voiceFx.ts:190 The only check against the line's text is an expected duration (expectedSecondsOf). There is no recognizer, no transcript compared to the input, and no natural-recording floor. In packages/domain/src/audio.accept.ts, judgeAcceptance reasons only about LUFS, peak, clipping, tail and length."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/board/_port/fixtureData.ts:250 The Board's audio takes are music (Suno) and sound effects (ElevenLabs door slams). Searching app/(studio)/board for speaker, intelligib, speech, recognizer and text-to-speech found zero hits. Voice takes are picked in the Part editor, not on the Board, so this desk never judges a synthesized speech clip against its text or voice.",
+   "techniques": [],
+   "absenceTerms": [
+    "speaker",
+    "intelligib",
+    "speech",
+    "recognizer",
+    "text-to-speech"
+   ]
+  },
+  {
+   "context": "music-clip-engine",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/music-clip/align.ts:139 The engine only reads a finished track's style prompt to label 'synthetic' voice spans for visual direction. It never generates or accepts speech: lyric alignment analyses an input track, which the subject places out of scope. Searching lib/music-clip for speaker, intelligib, recognizer and whisper found zero hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "speaker",
+    "intelligib",
+    "recognizer",
+    "whisper"
+   ]
+  },
+  {
+   "context": "domain-decision-board-core",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/domain/src/source.ts:110 The kernel's only voice vocabulary is a human reject reason on a whole finished film ('The dialogue is off: wrong voice, garbled, or out of sync.', line 222), not acceptance of a synthesized clip. Searching packages/domain/src for speaker, intelligib, speech, recognizer and text-to-speech found zero hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "speaker",
+    "intelligib",
+    "speech",
+    "recognizer",
+    "text-to-speech"
+   ]
+  },
+  {
+   "context": "kit-screen-specimens",
+   "subject": "generated-speech-acceptance",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/songLabKitData.ts:123 The Kit's only WER figures are fixture rows for the Song Lab's sung-lyric gate on generated songs, which the subject assigns to music acceptance. The 'whisper' hits are a track title and a Suno exclude phrase. Searching app/(studio)/kit for speaker, intelligib, speech, recognizer and text-to-speech found zero hits, and no voice-take specimen exists.",
+   "techniques": [],
+   "absenceTerms": [
+    "speaker",
+    "intelligib",
+    "speech",
+    "recognizer",
+    "text-to-speech"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-12T22:20:16.254193+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [
+    "round-trip-intelligibility"
+   ],
+   "deviations": 1,
+   "context": "audio-local-score-and-listen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:20:16.254193+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:20:16.254193+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "music-clip-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:20:16.254193+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "domain-decision-board-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:20:16.254193+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generated-speech-acceptance"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kit-screen-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

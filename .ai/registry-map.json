@@ -4773,9 +4773,13 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
+          "state": "deviation",
           "arrived": true,
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "evidence": "lib/producers/voiceFx.ts:190 A re-voiced ElevenLabs narration take (profile `voice-take`) is passed or failed only on loudness, true peak, clipping, silent tail and a length estimated from the text, so a take that drops or misreads words still records a pass, because no recognizer ever checks what was said.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "prompt-assembly",
@@ -7563,8 +7567,12 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "packages/domain/src/source.ts:110 The kernel's only voice vocabulary is a human reject reason on a whole finished film ('The dialogue is off: wrong voice, garbled, or out of sync.', line 222), not acceptance of a synthesized clip. Searching packages/domain/src for speaker, intelligib, speech, recognizer and text-to-speech found zero hits.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "agent-runtime-assembly",
@@ -14381,9 +14389,13 @@
           "revision": 2,
           "changedAt": "2026-09-30",
           "confidence": "probable",
-          "state": "unknown",
+          "state": "not-applicable",
           "arrived": true,
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "evidence": "lib/music-clip/align.ts:139 The engine only reads a finished track's style prompt to label 'synthetic' voice spans for visual direction. It never generates or accepts speech: lyric alignment analyses an input track, which the subject places out of scope. Searching lib/music-clip for speaker, intelligib, recognizer and whisper found zero hits.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:944f40c9b53212c0",
+          "evaluatedRevision": 2
         },
         {
           "subject": "evidence-bound-visuals",
