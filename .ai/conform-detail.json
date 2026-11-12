@@ -23734,6 +23734,16 @@
         "at": "2026-11-12T22:26:32.866815+00:00",
         "reason": "reviewer (sonnet): The technique anchor is contradicted by the code: lib/steps/readStep.ts:31 returns `r.value ?? seededFor(projectId, phase)`, so an absent key does substitute a seeded default (seededDefault.ts), not 'no record'. The settings-default precondition was therefore not shown to be absent, and the index.ts"
       }
+    },
+    "1f3a062b-ff35-4626-bdb1-d590720c665b/translation-pipeline-topology": {
+      "context": "landing-cosmos-shell",
+      "subject": "translation-pipeline-topology",
+      "bundle": "localization",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:29:27.433Z",
+      "worker": "12f64082-7843-4d85-b969-8da00ccf8f90",
+      "techniques": []
     }
   }
 }

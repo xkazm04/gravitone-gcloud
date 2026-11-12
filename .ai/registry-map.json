@@ -12440,8 +12440,12 @@
           "revision": 13,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 3
+          "state": "not-applicable",
+          "priorNotApplicable": 3,
+          "evidence": "app/_landing/cosmos/Cosmos.tsx:87 The landing shell puts its few strings in as literal English in JSX, with no catalog, locale switcher or derived translation store, and a grep of app/_landing for i18n, hreflang, useTranslations, pseudo-locale and targetLang found nothing (the only 'translat' hits are CSS transform: translate), so the topology has nothing to apply to.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:7a5b5afa04e7f7ad",
+          "evaluatedRevision": 13
         }
       ],
       "governance": "governed"
