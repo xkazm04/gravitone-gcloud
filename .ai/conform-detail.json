@@ -23744,6 +23744,32 @@
       "evaluatedTs": "2026-11-12T22:29:27.433Z",
       "worker": "12f64082-7843-4d85-b969-8da00ccf8f90",
       "techniques": []
+    },
+    "e57a0c6c-3d25-487e-9a03-4e6d4ec1d0bc/ad-concept-development": {
+      "context": "scout-engine-creative",
+      "subject": "ad-concept-development",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:34:03.482Z",
+      "worker": "d57d1f2a-a54f-4a80-aee8-8911eaeb8b68",
+      "techniques": [
+        {
+          "technique": "divergence-against-the-median",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/seeds.ts:115 Partly realized: the batch is large, earlier seeds are banned including thrown ones (seeds.ts:142 'done before'), thrown ideas come back as bans in taste.md (taste.ts:34), and the operator makes the pick. But the repeat check compares wording, which is the technique's 'fifty phrasings of five ideas' failure. There is no step that clusters ideas, counts clusters, lists the obvious ideas and bans them, or checks resemblance."
+        },
+        {
+          "technique": "llm-seat-assignment",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/storyboard.ts:318 An episode storyboard runs only from an outline the operator accepted (dueEpisode refuses anything not outline-kept), and the model writes panels from those beats (translator seat). The seed door is shut by default (seeds.ts:163 archivedDoor), so the night does not invent premises."
+        },
+        {
+          "technique": "creativity-template-mechanisms",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/scout/storyboard.ts:27 No code in this context generates premises now: the storyboard takes beats it is given. The S1 outline's 'mechanism' is chosen in session and stored in channels.ts, which is outside this context. The seed schema has no mechanism field."
+        }
+      ]
     }
   }
 }

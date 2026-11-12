@@ -18984,7 +18984,11 @@
           "revision": 3,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/scout/seeds.ts:115 The only guard on the model-written seed batch (about 100 one-sentence premises) treats two seeds as the same idea only when the wording matches after case and whitespace folding, so a paraphrase of the same premise counts as a new idea, and nothing in the context clusters by underlying idea, drops the median cluster or asks what existing work a premise resembles.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:58a150de2683c915",
+          "evaluatedRevision": 3
         },
         {
           "subject": "generated-music-acceptance",
