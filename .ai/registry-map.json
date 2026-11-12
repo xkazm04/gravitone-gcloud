@@ -7000,7 +7000,11 @@
           "revision": 3,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/cut/deriveTimeline.ts:271 The derived cut's music lane is attached after the picture: each cue's span is derived from the scenes it covers, and the clock comes from beat and shot timecodes. For trailer projects (the file states that a unit is 'an explainer beat or a trailer SHOT') this is the inverted dependency cue-first-assembly names, a tool where beats carry timings and music is attached afterwards.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:6a687c5a8080a492",
+          "evaluatedRevision": 3
         },
         {
           "subject": "voice-io",
@@ -22677,7 +22681,11 @@
           "revision": 3,
           "changedAt": "2026-09-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/script/trailer/rules/promises.ts:21 The rule files are written to the techniques' own 'in a tool' rules: every promise must name a payer, budget allowances are checked, rungs must declare one raised variable, resets are counted and placed on cue boundaries, and drops must follow the drop order, while anything that needs judgement is reported as unmeasured rather than passed.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:6a687c5a8080a492",
+          "evaluatedRevision": 3
         },
         {
           "subject": "supply-chain",

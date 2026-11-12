@@ -23593,6 +23593,64 @@
         "at": "2026-11-11T23:43:00.007606+00:00",
         "reason": "reviewer (sonnet): withholding.ts:14 is just the checkWithholding signature, so it doesn't show the subject's precondition is absent. The evidence also concedes the connector rule carries over through causality (connectors.ts), which contradicts not-applicable, and the reframe/scqa/reversal/recap search terms are weak"
       }
+    },
+    "033fc22c-e0c0-47fb-8668-5dbc8cb2ada6/trailer-structure": {
+      "context": "trailer-structure-rules",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:04:46.497Z",
+      "worker": "ed6b274e-382e-42aa-807c-aabf7c407a73",
+      "techniques": [
+        {
+          "technique": "promise-ledger",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/promises.ts:21 A promise with no payer, or graded unpaid, becomes a finding. A spend is reported as unmeasured. Extraction completeness and promises made by register are an explicit unmeasured row. 'promise' is in ADVISORY_RULES (params.json advisoryRules), so it is never a gate."
+        },
+        {
+          "technique": "withholding-budget",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/withholding.ts:38 Hold and imply-only assets that are spent are violations, and a spend with no recorded trade is a violation. A missing budget is reported as 'undecided', not clean. Campaign drift is honestly unmeasured because the rule sees one cut."
+        },
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/cue.ts:61 Rejects a cue with no breath before its peak and checks that movement and beat cue marks exist. types.ts makes the cue a field of the cut that movements point into. A cut with no cue is unmeasured, not a violation (cue.ts:19), which covers the unscored exemption."
+        },
+        {
+          "technique": "dynamic-reset",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/reset.ts:41 No reset is a violation and three or more is a violation. The reset must sit immediately before the single peak, hold one thing and land on a cue boundary. A mood-led cut and a declared drop are not engaged."
+        },
+        {
+          "technique": "escalation-without-mechanism",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/escalation.ts:49 The raised variable is an explicit field. Zero or more than one raised variable is a violation, and so is a variable repeated in consecutive rungs. A mood-led cut is not engaged. The last-rung-is-largest check lives in magnitude.ts behind an injected resolver."
+        },
+        {
+          "technique": "length-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/script/trailer/rules/ladder.ts:64 Dropped parts must be a prefix of DROP_ORDER, and a long cut with drops is a violation. Part counts per rung are deliberately unmeasured."
+        }
+      ],
+      "registryProposal": "concealment-and-its-tells has no 'in a tool' decision rule, unlike cue-first-assembly, escalation-without-mechanism and promise-ledger. Its own tell forbids a duration threshold, so a checker can only emit an unmeasured row. The technique should say which record a tool must keep (the declared concealment mode per segment, or a feel-of-use signal) so that an unmeasured stub can be told apart from a missing technique."
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/trailer-structure": {
+      "context": "cut-and-export",
+      "subject": "trailer-structure",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:04:46.497Z",
+      "worker": "ed6b274e-382e-42aa-807c-aabf7c407a73",
+      "techniques": [
+        {
+          "technique": "cue-first-assembly",
+          "verdict": "deviation",
+          "evidence": "lib/cut/deriveTimeline.ts:271 Music cues are computed from picture.scenes (the header at lines 31-34 says 'A spot's span is DERIVED from the scenes it covers'). lib/score/spots.ts likewise places movements by beat 'at' timecodes because CueSection carries no durations. The technique says the cue must be the timeline's parent. The voice-track exemption covers explainers but not the trailer shots this file also lays out."
+        }
+      ]
     }
   }
 }
