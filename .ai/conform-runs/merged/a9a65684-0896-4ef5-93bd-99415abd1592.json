@@ -1,0 +1,84 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a9a65684-0896-4ef5-93bd-99415abd1592",
+ "subject": "authorization",
+ "evaluatedAt": "2026-11-12T22:52:09.459611+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "resource-gates-and-gpu",
+   "subject": "authorization",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/produce/laneDoors.ts:298 The hosted and LOCAL_BINARIES=off postures are fixed for the life of the process, but every lane door is registered no matter which posture is on, so a class of work the posture says is absent stays addressable and is refused, if at all, by a runtime check inside the handler (laneDoors.ts:183 for sfx) instead of never being bound.",
+   "techniques": [
+    {
+     "technique": "unregistered-is-stronger-than-refused",
+     "verdict": "deviation",
+     "evidence": "lib/produce/laneDoors.ts:183 The hosted capability block is a process-constant mode that removes a feature class (capabilities.ts HOSTED_CAPS). It is checked at launch time and only on the live sfx path. The image, video and Suno doors in the same table carry no posture check, and LANE_DOORS is built unconditionally, so a degraded deployment keeps its mutating surface. The rule 'state the mode in a read-only surface' is met (ABSENCE_REASON, describePosture, nearestCell)."
+    },
+    {
+     "technique": "dispatch-chokepoint-gating",
+     "verdict": "not-applicable",
+     "evidence": "lib/capabilities.ts:30 This context holds no request gate. Enforcement is stated to live in lib/apiAuth.ts and the Board decision upstream of LANE_DOORS, both outside this context."
+    },
+    {
+     "technique": "privilege-tiers",
+     "verdict": "not-applicable",
+     "evidence": "lib/capabilities.ts:29 The capability matrix is declared not to be an authorization surface. No operation tiers are assigned here."
+    },
+    {
+     "technique": "failure-direction",
+     "verdict": "conformant",
+     "evidence": "lib/gpu/lease.ts:365 Recycling an engine is a holder-only act. A stale or absent lease folds to no lease and is refused, and a fence mismatch is refused on the next line. PENDING_FACTS (capabilities.ts:186) also shuts a control until its fact is known."
+    },
+    {
+     "technique": "one-accessor-per-fold-direction",
+     "verdict": "not-applicable",
+     "evidence": "lib/deployment.ts:104 LocalPosture has three values, all of them decided and none meaning 'unresolved', so collapsing it to one boolean folds no uncertain value."
+    },
+    {
+     "technique": "delegated-authority",
+     "verdict": "conformant",
+     "evidence": "lib/produce/laneDoors.ts:107 The originating Actor is carried as a typed value into the enqueued run (capture at enqueue). Whether the worker checks it at execute time is outside this context. Receipt reads use a synthetic operator actor but spend nothing."
+    },
+    {
+     "technique": "identity-bearing-keys",
+     "verdict": "not-applicable",
+     "evidence": "lib/gpu/lease.ts:92 There is one machine-wide resource slot with no tenant or owner dimension. Holder identity is a fencing token, not a tenancy key."
+    },
+    {
+     "technique": "machine-credential-consumption",
+     "verdict": "not-applicable",
+     "evidence": "lib/deploymentCells.ts:61 Cells name credentials and never issue or verify a machine secret. No issuer-side credential storage exists in this context."
+    }
+   ],
+   "registryProposal": "unregistered-is-stronger-than-refused should say whether a deployment mode that removes a feature class for capability reasons (no GPU, no disk on a hosted plan) counts as an authorization dimension, or only modes motivated by permission. This code argues the matrix is 'not a security boundary', yet still leaves the operations addressable."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-12T22:52:09.459611+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "authorization"
+   ],
+   "techniques": [
+    "delegated-authority",
+    "dispatch-chokepoint-gating",
+    "failure-direction",
+    "identity-bearing-keys",
+    "machine-credential-consumption",
+    "one-accessor-per-fold-direction",
+    "privilege-tiers",
+    "unregistered-is-stronger-than-refused"
+   ],
+   "deviations": 1,
+   "context": "resource-gates-and-gpu",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

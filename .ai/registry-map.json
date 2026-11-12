@@ -17500,7 +17500,11 @@
           "revision": 6,
           "changedAt": "2026-09-18",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/produce/laneDoors.ts:298 The hosted and LOCAL_BINARIES=off postures are fixed for the life of the process, but every lane door is registered no matter which posture is on, so a class of work the posture says is absent stays addressable and is refused, if at all, by a runtime check inside the handler (laneDoors.ts:183 for sfx) instead of never being bound.",
+          "evaluatedAt": "2026-11-12",
+          "evaluatedAgainst": "sha256-b2:57d60a438fa36d05",
+          "evaluatedRevision": 6
         },
         {
           "subject": "test-harness",
