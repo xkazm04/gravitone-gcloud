@@ -23770,6 +23770,58 @@
           "evidence": "lib/foundry/scout/storyboard.ts:27 No code in this context generates premises now: the storyboard takes beats it is given. The S1 outline's 'mechanism' is chosen in session and stored in channels.ts, which is outside this context. The seed schema has no mechanism field."
         }
       ]
+    },
+    "d74a16c1-aca7-4dee-9935-c890f5785336/admission-queue": {
+      "context": "resource-gates-and-gpu",
+      "subject": "admission-queue",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:38:28.740Z",
+      "techniques": [
+        {
+          "technique": "admission-vocabulary",
+          "verdict": "deviation",
+          "evidence": "lib/gpu/lease.ts:335 Designed refusal is thrown, not returned. LeaseTimeout extends LeaseError, which also carries store faults (lease.ts:328), and its reason is prose (busyMessage). The kernel gate's typed Admission/WaitResource result (resource.ts:114-116, 103) is the conformant half."
+        },
+        {
+          "technique": "zero-depth-admission",
+          "verdict": "conformant",
+          "evidence": "lib/gpu/lease.ts:123 Default acquire is one non-blocking claim (claimIn with wait:false). A refusal never waits behind the holder's work, and the holder is named in the refusal."
+        },
+        {
+          "technique": "queue-cardinality",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/resource.ts:80 Engines precommit to a kind of server, so each kind gets its own lane line (ENGINE_LANES: gpu.local, box.blender, box.render). A bake does not sit behind a render that cannot use its server."
+        },
+        {
+          "technique": "load-aware-admission",
+          "verdict": "conformant",
+          "evidence": "packages/domain/src/resource.ts:156 Hysteresis: memHigh .85 / memLow .75, with the tight flag carried between looks. Per-signal meaning: CPU defers at .90, memory refuses. An unread reading is not zero and refuses as `unread`, a fail-closed choice stated in the header. The probe is cached 2 s (probe.ts:30). Running work is never touched. Transitions are logged once per change (gate.ts job.waiting)."
+        },
+        {
+          "technique": "resource-denominated-bounds",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/resource.ts:157 Realized core: each job is charged its engine's measured profile in GB, the ceiling is read from the host (CIM commit limit), and the predicate travels in the reason. Missing: no refusal at the door for a job whose own cost exceeds memHigh*total. That job gets the same `memory` wait verdict and stays head forever (job-queue-core Waiting: 'asked again next look'), which is the unsatisfiable-arrival failure the technique names."
+        },
+        {
+          "technique": "remediation-derived-bounds",
+          "verdict": "deviation",
+          "evidence": "lib/resources/probe.ts:219 The mark is computed in code as a fraction of the commit limit, which is the OS's destructive threshold, and the fractions are clamped to at most 1 with memLow ≤ memHigh (probe.ts:202, 223). But the operator override replaces the measured limit instead of taking min(override, platform), so an override above the real commit limit puts the gate's mark past the point where allocations fail. That is the inversion reachable from the other knob."
+        },
+        {
+          "technique": "budget-includes-the-callers-own-cache",
+          "verdict": "deviation",
+          "evidence": "packages/domain/src/resource.ts:155 Projection = platform commit reading (which includes ComfyUI's resident but idle Flux/LTX models) plus the comfy job's full profiled peak. Nothing credits the reserve the job would reuse, and the reading is not labelled platform-level/pessimistic. starve.ts:8-12 records the named symptom: a 5-hour hold on an idle lane. The repair is a timed POST /free (comfyFree.ts) once per episode. The technique allows that as a shed lever, but only after the gate reads the corrected figure."
+        }
+      ],
+      "registryProposal": "budget-includes-the-callers-own-cache frames the pool as the caller's own allocator inside the gating process. Here the reserve is held by a separate, shared engine process (ComfyUI's resident models). A job reuses that reserve only when it needs the same models, and the engine exposes no reserved-but-unused commit figure. The technique could say how the correction applies when the pool is out-of-process and the reuse depends on what is resident: credit by a model-match, or treat it as uncorrectable and label the reading.",
+      "withdrawn": {
+        "worker": "c8972d9b-8b71-4adc-89f0-8fdfc3013f18",
+        "state": "deviation",
+        "at": "2026-11-12T22:39:05.567856+00:00",
+        "reason": "reviewer (sonnet): The lease.ts anchors hold (LeaseTimeout extends LeaseError, thrown at line 335, and acquire defaults to wait:false). But the 'reading omits ComfyUI's idle resident models' claim is contradicted: the commit-charge and nvidia-smi VRAM readings include idle models (comfyFree.ts header; starve.ts: 'a lo"
+      }
     }
   }
 }
