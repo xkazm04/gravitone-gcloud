@@ -23713,6 +23713,27 @@
       "evaluatedTs": "2026-11-12T22:20:16.254Z",
       "worker": "ef1a768d-e5f2-4b5c-8273-492e61ea92f5",
       "techniques": []
+    },
+    "868afe8a-01af-428e-9f7c-d561ee033d4c/settings": {
+      "context": "project-step-store",
+      "subject": "settings",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-12",
+      "evaluatedTs": "2026-11-12T22:26:06.668Z",
+      "techniques": [
+        {
+          "technique": "typed-accessors",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/readStep.ts:14 The read is honest about absent versus failed, but the absent case returns no record. It does not substitute a declared setting default."
+        }
+      ],
+      "withdrawn": {
+        "worker": "734490ac-70f1-47e5-8ddf-93a398ac9013",
+        "state": "not-applicable",
+        "at": "2026-11-12T22:26:32.866815+00:00",
+        "reason": "reviewer (sonnet): The technique anchor is contradicted by the code: lib/steps/readStep.ts:31 returns `r.value ?? seededFor(projectId, phase)`, so an absent key does substitute a seeded default (seededDefault.ts), not 'no record'. The settings-default precondition was therefore not shown to be absent, and the index.ts"
+      }
     }
   }
 }

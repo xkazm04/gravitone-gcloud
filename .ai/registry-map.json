@@ -16632,8 +16632,8 @@
           "revision": 13,
           "changedAt": "2026-09-05",
           "confidence": "strong",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "priorNotApplicable": 2,
+          "state": "unknown"
         },
         {
           "subject": "supply-chain",
