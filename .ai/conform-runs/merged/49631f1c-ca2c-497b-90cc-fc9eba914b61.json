@@ -1,0 +1,35 @@
+{
+  "schema": "conform-run/1",
+  "worker": "49631f1c-ca2c-497b-90cc-fc9eba914b61",
+  "subject": "character-voice-design",
+  "evaluatedAt": "2026-11-12T23:03:43.934277+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "character-voice-design",
+      "context": "audio-local-score-and-listen",
+      "reason": "withdrawn after review: reviewer (sonnet): The verdict is about lib/producers/voiceFx.ts and lib/sound/voiceFx/propose.ts, and neither is among the context's files (lib/audio/*, localScore*, scorePropose, audioPreview). The context files I searched never call voiceFx, so the claim that the voice-FX layer is this context's only character-voic"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-12T23:03:43.934277+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "character-voice-design"
+      ],
+      "techniques": [
+        "character-vocal-brief",
+        "design-to-read-parameter-lock",
+        "finishing-effect-layer",
+        "voice-description-composition"
+      ],
+      "deviations": 1,
+      "context": "audio-local-score-and-listen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
