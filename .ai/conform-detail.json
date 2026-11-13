@@ -23931,6 +23931,32 @@
         }
       ],
       "registryProposal": "The subject should name the hybrid this gate uses: a short send-coalescing window, where undoing an unsent act cancels it locally, composed with server-side compensating undo after the send. The golden path says the two never share a mechanism. In practice they share one undo stack (canUndoNow = pending.length > 0 || serverUndoable), and the interval floor of three seconds or more does not fit a window that is not the operator's only undo."
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/ci-execution-trust": {
+      "context": "job-queue-and-leases",
+      "subject": "ci-execution-trust",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-13",
+      "evaluatedTs": "2026-11-13T22:23:42.280Z",
+      "worker": "c1f747cd-ed12-4b76-b799-52f66b45d60d",
+      "techniques": [
+        {
+          "technique": "control-plane-execution-boundary",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:15 The decider is the queue's own pick over the local store, inside the same process family. No external CI orchestrator instructs these machines."
+        },
+        {
+          "technique": "job-instruction-signing",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:105 A job record names a producer that is bound in code. It carries no command text an external orchestrator could invent, so there are no job instructions to sign."
+        },
+        {
+          "technique": "untrusted-contribution-lanes",
+          "verdict": "not-applicable",
+          "evidence": "workers/worker.ts:226 Its lanes are resource lanes (gpu.local, seat.text) that carry bound producers, not trusted/untrusted contribution lanes. No outside change is executed here."
+        }
+      ]
     }
   }
 }
