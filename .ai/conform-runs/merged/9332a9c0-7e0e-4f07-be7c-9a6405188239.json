@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9332a9c0-7e0e-4f07-be7c-9a6405188239",
+ "subject": "copy-quality-gates",
+ "evaluatedAt": "2026-11-14T22:59:00.446391+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "copy-quality-gates",
+   "bundle": "localization",
+   "state": "deviation",
+   "evidence": "docs/i18n/copy-contract.json:14 The copy gate's only landing source is a one-segment glob. It matches app/_landing/parts.tsx but not app/_landing/cosmos/Cosmos.tsx or any cosmos/engine/*.ts module. A run I did (read-only) printed 'checked 22 strings ... in 31 files' and OK, while docs/i18n/style-en.md:37-38 still says the landing is gated: a green run over a coverage hole.",
+   "techniques": [
+    {
+     "technique": "rendered-string-extraction",
+     "verdict": "deviation",
+     "evidence": "docs/i18n/copy-contract.json:14 The extractor reads aria-label (PROSE_ATTRS), but the glob leaves out Cosmos.tsx ('Back', 'Path', 'Search', 'Depth', 'Results'). The report neither extracts the engine's code literals nor declares them out of scope, so the hole has a green light over it."
+    },
+    {
+     "technique": "format-aware-check-catalog",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/engine/nav.ts:161 This accessible name is built by concatenating fragments in code, which is an L1 deterministic class. Similar concatenations sit at stage.ts:94 and library.ts:92. No check sees them, because the engine .ts files are outside every gated source."
+    },
+    {
+     "technique": "copy-contract-before-drafting",
+     "verdict": "conformant",
+     "evidence": "docs/i18n/copy-contract.json:11 A contract declares variant, dash, case and terms, and its _notes record counts against the real strings. style-en.md:18 records the wordless-landing brief as a house ruling. No exemplars or fact sheet, which matters little for a wordless page."
+    },
+    {
+     "technique": "severity-as-declared-data",
+     "verdict": "conformant",
+     "evidence": "docs/i18n/copy-contract.json:26 Off/warn/error per rule is contract data, not code. style-en.md:51 requires the reason for any override to be recorded beside it."
+    },
+    {
+     "technique": "source-defects-from-cross-language-agreement",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/parts.tsx:89 The landing copy is hardcoded English JSX with no target locales. With fewer than two checked locales there is no agreement to read."
+    }
+   ],
+   "registryProposal": "rendered-string-extraction could name a 'source moved under its glob' incident shape. A gated surface was refactored into a subdirectory, the one-segment glob kept matching the one file left behind, the string count still printed, and the scope document kept claiming coverage. The fix would be a fixture or check that each declared-gated surface still contributes at least N strings."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-14T22:59:00.446391+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "copy-quality-gates"
+   ],
+   "techniques": [
+    "copy-contract-before-drafting",
+    "format-aware-check-catalog",
+    "rendered-string-extraction",
+    "severity-as-declared-data",
+    "source-defects-from-cross-language-agreement"
+   ],
+   "deviations": 1,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

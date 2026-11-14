@@ -12385,7 +12385,11 @@
           "revision": 10,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "docs/i18n/copy-contract.json:14 The copy gate's only landing source is a one-segment glob. It matches app/_landing/parts.tsx but not app/_landing/cosmos/Cosmos.tsx or any cosmos/engine/*.ts module. A run I did (read-only) printed 'checked 22 strings ... in 31 files' and OK, while docs/i18n/style-en.md:37-38 still says the landing is gated: a green run over a coverage hole.",
+          "evaluatedAt": "2026-11-14",
+          "evaluatedAgainst": "sha256-b2:f00a2dbd4e8fdce1",
+          "evaluatedRevision": 10
         },
         {
           "subject": "native-shell-integration",
