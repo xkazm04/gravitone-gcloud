@@ -1,0 +1,58 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a863a726-96ef-4956-9ee2-4c3775f9c930",
+ "subject": "codebase-scanning",
+ "evaluatedAt": "2026-11-14T22:23:24.713472+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "job-queue-and-leases",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/job-worker.ts:15 This context runs and leases vendor jobs. It never scans a codebase or emits findings. Searching packages/kernel/src and workers/ found no hits for 'codebase', 'scanner', 'sensor' or 'dead-code'. Its 'sweep' is orphan-job crash recovery (job-run.ts:370) and its dedupe key is a vendor idempotency key (job-core.ts:90), so none of the subject's 14 techniques has its precondition here.",
+   "techniques": [
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-run.ts:370 This 'sweep' marks running jobs whose holder is gone as interrupted. It is job recovery with no gather/emit stages over a target tree."
+    },
+    {
+     "technique": "finding-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-core.ts:90 This dedupe key is a per-job idempotency key for vendors, not a key for scanner findings."
+    },
+    {
+     "technique": "rule-precision-discipline",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/job-queue-core.ts:8 These 'rules' are queue admission decisions (held lane, full lane), not detection rules with match populations."
+    }
+   ],
+   "absenceTerms": [
+    "codebase",
+    "scanner",
+    "sensor"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-14T22:23:24.713472+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "finding-lifecycle",
+    "rule-precision-discipline",
+    "sensor-pipeline"
+   ],
+   "deviations": 0,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

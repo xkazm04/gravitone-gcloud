@@ -10764,7 +10764,11 @@
           "revision": 13,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/kernel/src/job-worker.ts:15 This context runs and leases vendor jobs. It never scans a codebase or emits findings. Searching packages/kernel/src and workers/ found no hits for 'codebase', 'scanner', 'sensor' or 'dead-code'. Its 'sweep' is orphan-job crash recovery (job-run.ts:370) and its dedupe key is a vendor idempotency key (job-core.ts:90), so none of the subject's 14 techniques has its precondition here.",
+          "evaluatedAt": "2026-11-14",
+          "evaluatedAgainst": "sha256-b2:06416fce13bc2342",
+          "evaluatedRevision": 12
         },
         {
           "subject": "mcp-tools",

@@ -24024,6 +24024,32 @@
         "at": "2026-11-14T22:17:11.026126+00:00",
         "reason": "reviewer (sonnet): The deviation rests on lib/useRemembered.ts and lib/identityEviction.ts, and neither is among this context's files (the context lists app/*, app/_dev-inspector/*, lib/announcer.tsx, lib/jobs.tsx and lib/pollFreshness.ts). None of those files imports or calls either one. lib/jobs.tsx only mentions id"
       }
+    },
+    "0735052e-7b05-4df7-b581-eaa0bc632249/codebase-scanning": {
+      "context": "job-queue-and-leases",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-14",
+      "evaluatedTs": "2026-11-14T22:23:24.713Z",
+      "worker": "a863a726-96ef-4956-9ee2-4c3775f9c930",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-run.ts:370 This 'sweep' marks running jobs whose holder is gone as interrupted. It is job recovery with no gather/emit stages over a target tree."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-core.ts:90 This dedupe key is a per-job idempotency key for vendors, not a key for scanner findings."
+        },
+        {
+          "technique": "rule-precision-discipline",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/job-queue-core.ts:8 These 'rules' are queue admission decisions (held lane, full lane), not detection rules with match populations."
+        }
+      ]
     }
   }
 }
