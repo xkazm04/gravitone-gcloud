@@ -24474,7 +24474,11 @@
           "revision": 4,
           "changedAt": "2026-09-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/catalog/src/partOptions.ts:3 The catalog in this context holds creative content (presets, recipes, styles, projects, deck art, library areas) plus PART_OPTIONS, a code-constant table of model options by work kind. None of it is a registry of external integration types: there is no auth schema, no credential form, no probe recipe, no operator-writable store and no foreign-name resolver. A search of packages/catalog and packages/ui for authSchema, auth_schema, apiKey, api_key and connectorId found 0 files. The only 'connector' and 'credential' hits in packages/ui/src are a bracket line connector and an identity-refresh comment.",
+          "evaluatedAt": "2026-11-14",
+          "evaluatedAgainst": "sha256-b2:d78c2c6c19304554",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
