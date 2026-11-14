@@ -23957,6 +23957,73 @@
           "evidence": "workers/worker.ts:226 Its lanes are resource lanes (gpu.local, seat.text) that carry bound producers, not trusted/untrusted contribution lanes. No outside change is executed here."
         }
       ]
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/client-state": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "client-state",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-14",
+      "evaluatedTs": "2026-11-14T22:15:41.708Z",
+      "techniques": [
+        {
+          "technique": "identity-scoped-eviction",
+          "verdict": "conformant",
+          "evidence": "lib/identityEviction.ts:269 One owner wipes every user-scoped store. The triggers are enumerated with reasons, and token refresh is excluded on purpose. The localStorage keys are listed, not matched by prefix, with an identity-independent exception list. The wipe never rejects, so the local wipe does not depend on the network. IDB is cleared in one transaction, and in-memory remembered state is cleared too."
+        },
+        {
+          "technique": "persistence-and-migration",
+          "verdict": "deviation",
+          "evidence": "lib/useRemembered.ts:29 The version is in the key, not the payload. There is no migration chain and no handling for a payload from a newer build. parse() only checks that the value is an object, then casts it with `as Bag`. Write failures fall back to memory, which is good write-path hygiene."
+        },
+        {
+          "technique": "status-fsms",
+          "verdict": "deviation",
+          "evidence": "lib/pollFreshness.ts:32 When okAt is null and failAt is set (the first attempt failed and nothing is held), the result is 'fresh' instead of failed. degraded/lapsed carry only ageMs, not the cause of the last failure. Good part: the edge state is derived from two timestamps (data presence and last outcome), not from booleans."
+        },
+        {
+          "technique": "rehydration-narrowing",
+          "verdict": "conformant",
+          "evidence": "lib/useRemembered.ts:124 A stored value is checked at runtime against the caller's own vocabulary, key by key, and falls back on its own when it fails. Caveat: if no `allowed` is passed, nothing is checked."
+        },
+        {
+          "technique": "singleton-lifecycle",
+          "verdict": "conformant",
+          "evidence": "lib/useRemembered.ts:92 The module-scoped memory has a reset hatch. Each window storage listener belongs to its subscription and is removed when that subscriber unsubscribes, so there is no one-way latch."
+        },
+        {
+          "technique": "invalidation-strategy",
+          "verdict": "conformant",
+          "evidence": "lib/useRemembered.ts:80 A write or clear in another tab, eviction included, wakes the readers, which re-read the snapshot, so invalidation reaches readers and not just the stored entry."
+        },
+        {
+          "technique": "observed-read-subscription",
+          "verdict": "conformant",
+          "evidence": "lib/useRemembered.ts:121 Each consumer declares a one-key projection. useSyncExternalStore compares the string snapshot by value, so writes to other keys do not re-render it."
+        },
+        {
+          "technique": "effect-identity-and-latched-callbacks",
+          "verdict": "conformant",
+          "evidence": "lib/announcer.tsx:229 The queue lives in a ref and is read when announce is called. The callback is stable and the teardown effect has empty deps. error.tsx deps are [error, announce]: the error is the address. One soft spot: the DevInspector keydown effect lists [mode], which only re-binds a stateless listener."
+        },
+        {
+          "technique": "async-race-guards",
+          "verdict": "not-applicable",
+          "evidence": "lib/jobs.tsx:17 The context's files make no server reads in the browser. The jobs fetching moved server-side, and what is left is types plus a pure count."
+        },
+        {
+          "technique": "optimistic-write-path",
+          "verdict": "not-applicable",
+          "evidence": "lib/useRemembered.ts:60 The only write in the context is client-born state with no authority to reconcile with, so there is no optimistic mutation."
+        }
+      ],
+      "registryProposal": "persistence-and-migration could say what to do with a flat bag of convenience UI choices whose loss costs one re-opened fold. Should it still need an in-payload version and a chain, or is a per-value runtime membership check (rehydration-narrowing) enough? In this case the absence of an in-payload version matters because the eviction owner has to keep listing every orphaned key-versioned name forever.",
+      "withdrawn": {
+        "worker": "0ae4bd2d-242b-4c10-a2e9-0d51d8da97a4",
+        "state": "deviation",
+        "at": "2026-11-14T22:17:11.026126+00:00",
+        "reason": "reviewer (sonnet): The deviation rests on lib/useRemembered.ts and lib/identityEviction.ts, and neither is among this context's files (the context lists app/*, app/_dev-inspector/*, lib/announcer.tsx, lib/jobs.tsx and lib/pollFreshness.ts). None of those files imports or calls either one. lib/jobs.tsx only mentions id"
+      }
     }
   }
 }
