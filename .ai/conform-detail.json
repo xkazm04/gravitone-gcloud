@@ -24227,6 +24227,32 @@
         "at": "2026-11-15T04:11:01.285504+00:00",
         "reason": "reviewer (sonnet): The claim that the AbortController timeout is the context's only execution bound is contradicted by lib/imaging/providers/agy.ts, which spawns an agentic CLI with --sandbox, a fresh workspace, a timeout and a process-tree kill (and lib/imaging/local/codex.ts spawns a CLI too), and the anchor http.ts"
       }
+    },
+    "6402b757-37fa-43bd-99f3-b8bc1fb303cd/issuance-policy-ladder": {
+      "context": "ui-studio-desk-and-suno",
+      "subject": "issuance-policy-ladder",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:01:13.348Z",
+      "worker": "9e1121e8-024d-4e90-aac3-50bfe742748b",
+      "techniques": [
+        {
+          "technique": "require-one-constraint",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/studio-desk/RoleMark.tsx:8 StudioRole is a musical stem role, not an issuance policy with constraints to count"
+        },
+        {
+          "technique": "bounds-as-modes",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/suno/suno.ts:2 SUNO_LIMITS are prompt field lengths, not validity bounds on a minted artifact"
+        },
+        {
+          "technique": "stamped-instants-name-their-clock",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/studio-desk/desk.ts:1 pure UI arithmetic; no not-before/not-after instant is written into any artifact"
+        }
+      ]
     }
   }
 }

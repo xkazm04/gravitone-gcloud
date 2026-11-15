@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9e1121e8-024d-4e90-aac3-50bfe742748b",
+ "subject": "issuance-policy-ladder",
+ "evaluatedAt": "2026-11-15T22:01:13.348499+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-studio-desk-and-suno",
+   "subject": "issuance-policy-ladder",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/studio-desk/RoleMark.tsx:8 In this context a \"role\" is a stem's musical part (drums, bass, lead) mapped to a hue, and the rest is presentational Suno/desk arithmetic; a grep of packages/ui/src/components/{studio-desk,suno} for issuer|issuance|certificate|allow_any|not_after|max_ttl|signing|signed found nothing, so no issuer mints any certificate, signed key or login from a role here and the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "require-one-constraint",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/studio-desk/RoleMark.tsx:8 StudioRole is a musical stem role, not an issuance policy with constraints to count"
+    },
+    {
+     "technique": "bounds-as-modes",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/suno/suno.ts:2 SUNO_LIMITS are prompt field lengths, not validity bounds on a minted artifact"
+    },
+    {
+     "technique": "stamped-instants-name-their-clock",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/studio-desk/desk.ts:1 pure UI arithmetic; no not-before/not-after instant is written into any artifact"
+    }
+   ],
+   "absenceTerms": [
+    "issuer",
+    "certificate",
+    "not_after",
+    "signing"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T22:01:13.348499+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "issuance-policy-ladder"
+   ],
+   "techniques": [
+    "bounds-as-modes",
+    "require-one-constraint",
+    "stamped-instants-name-their-clock"
+   ],
+   "deviations": 0,
+   "context": "ui-studio-desk-and-suno",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

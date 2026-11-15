@@ -24289,8 +24289,12 @@
           "revision": 3,
           "changedAt": "2026-09-17",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "packages/ui/src/components/studio-desk/RoleMark.tsx:8 In this context a \"role\" is a stem's musical part (drums, bass, lead) mapped to a hue, and the rest is presentational Suno/desk arithmetic; a grep of packages/ui/src/components/{studio-desk,suno} for issuer|issuance|certificate|allow_any|not_after|max_ttl|signing|signed found nothing, so no issuer mints any certificate, signed key or login from a role here and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:fc31943d5d78e4d2",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-memory",
