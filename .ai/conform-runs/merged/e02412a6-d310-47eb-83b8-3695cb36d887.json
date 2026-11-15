@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e02412a6-d310-47eb-83b8-3695cb36d887",
+ "subject": "embedded-db",
+ "evaluatedAt": "2026-11-15T01:35:36.922970+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-keymap-layers-storage",
+   "subject": "embedded-db",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/storage/trouble.ts:11 The context's only persistence is a key-value adapter over a localStorage-like `StorageLike` (getItem/setItem/removeItem), so there is no embedded engine whose pool, journal, maintenance, extensions or file the code operates; a search of keymap/, layers/, storage/, window/ and freshness/ for sqlite, pragma, vacuum, journal_mode and wal_checkpoint found nothing, and the one IndexedDB mention (trouble.ts:10) is a comment recording that IndexedDB was dropped.",
+   "techniques": [
+    {
+     "technique": "connection-pooling",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/storage/store.ts:39 The backing is a synchronous Web Storage object with no connections, so there is nothing to pool."
+    },
+    {
+     "technique": "corruption-class-response",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/storage/store.ts:27 Here corruption means a key whose JSON fails its schema, not a malformed database file, so the engine-level corruption classes have nothing to apply to."
+    },
+    {
+     "technique": "journal-and-durability-modes",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/storage/trouble.ts:16 The only failure classes are browser quota, unavailability and refusal. No journal or sync mode can be configured."
+    }
+   ],
+   "absenceTerms": [
+    "sqlite",
+    "pragma",
+    "vacuum",
+    "journal_mode",
+    "wal_checkpoint"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T01:35:36.922970+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "embedded-db"
+   ],
+   "techniques": [
+    "connection-pooling",
+    "corruption-class-response",
+    "journal-and-durability-modes"
+   ],
+   "deviations": 0,
+   "context": "ui-keymap-layers-storage",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

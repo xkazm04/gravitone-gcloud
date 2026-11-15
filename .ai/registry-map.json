@@ -23291,7 +23291,11 @@
           "revision": 15,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/ui/src/storage/trouble.ts:11 The context's only persistence is a key-value adapter over a localStorage-like `StorageLike` (getItem/setItem/removeItem), so there is no embedded engine whose pool, journal, maintenance, extensions or file the code operates; a search of keymap/, layers/, storage/, window/ and freshness/ for sqlite, pragma, vacuum, journal_mode and wal_checkpoint found nothing, and the one IndexedDB mention (trouble.ts:10) is a comment recording that IndexedDB was dropped.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:0722fec97cff5b66",
+          "evaluatedRevision": 15
         },
         {
           "subject": "native-shell-integration",

@@ -24160,6 +24160,32 @@
         }
       ],
       "registryProposal": "The subject assumes the confirm sends commands straight to a remote. Here a confirm-time digest (receipt token) binds an enqueue into the tool's own store, and a worker later sends the vendor or channel call under a lease claim. The standard could say how plan-twice and the unknown-outcome rule carry across that queue hop, where the claim row plays the part of the per-command record."
+    },
+    "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/embedded-db": {
+      "context": "ui-keymap-layers-storage",
+      "subject": "embedded-db",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T01:35:36.922Z",
+      "worker": "e02412a6-d310-47eb-83b8-3695cb36d887",
+      "techniques": [
+        {
+          "technique": "connection-pooling",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/storage/store.ts:39 The backing is a synchronous Web Storage object with no connections, so there is nothing to pool."
+        },
+        {
+          "technique": "corruption-class-response",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/storage/store.ts:27 Here corruption means a key whose JSON fails its schema, not a malformed database file, so the engine-level corruption classes have nothing to apply to."
+        },
+        {
+          "technique": "journal-and-durability-modes",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/storage/trouble.ts:16 The only failure classes are browser quota, unavailability and refusal. No journal or sync mode can be configured."
+        }
+      ]
     }
   }
 }
