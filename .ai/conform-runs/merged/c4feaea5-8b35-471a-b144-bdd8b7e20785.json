@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c4feaea5-8b35-471a-b144-bdd8b7e20785",
+ "subject": "error-handling",
+ "evaluatedAt": "2026-11-15T02:47:22.750490+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-port",
+   "subject": "error-handling",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/real.ts:205 The exporter's FoundryError is turned into an AppError with only its message and no `cause`, and any status missing from FOUNDRY_CODE falls into `internal`. publicError then logs that defect with `e.cause ?? \"\"`, so the stack is gone, and a status nobody mapped gets reported as a bug instead of as an unrecognised failure.",
+   "techniques": [
+    {
+     "technique": "structured-propagation",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/real.ts:205 The category is picked from the structured status at birth, which is right, but the original error is replaced, not wrapped: no `{ cause: e }` is passed, though ErrorOptions2 supports it."
+    },
+    {
+     "technique": "taxonomy-design",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/real.ts:134 It maps onto the closed AppErrorCode set, but unmapped statuses (500, 422, 429...) fall into `internal`, which the domain defines as 'a bug or unclassified failure'. The standard keeps the catch-all and the internal class apart, and this merges them."
+    },
+    {
+     "technique": "swallowed-error-prevention",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/handoff.ts:16 When the kernel store fails to open, the code returns a fallback value and reaches no door. On the next line, any readStyle failure, not just not-found, is read as 'try the next candidate'. Downstream code may surface the failure again, but this site does not."
+    },
+    {
+     "technique": "error-doors",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/actions.ts:44 Every Library verb goes through the one action core. Its Result is sent to the user as an envelope, and `internal` is logged under a ref."
+    },
+    {
+     "technique": "user-facing-mapping",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/real.ts:183 Refusal copy is written at each call site, and the same sentence is spelled again in fixture.ts:226. No registry holds it and no suggestion (e.g. refetch) is attached, so a wording fix needs two edits."
+    },
+    {
+     "technique": "consumer-decides-error-shape",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/contract.ts:63 The serialised boundary to the client gives the client a closed `code` it can branch on, not prose."
+    },
+    {
+     "technique": "parse-failure-keeps-identity",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/fixture.ts:196 The only per-item decode here runs over the fixture's own generated corpus, which is not externally owned. Even so, the failure label carries the item id."
+    },
+    {
+     "technique": "reclassification-is-not-repair",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/real.ts:206 In this taxonomy `internal` is the default fall-through: unknown throws are rethrown to runAction and classified as internal. The technique says not to apply it in that case."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T02:47:22.750490+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "error-handling"
+   ],
+   "techniques": [
+    "consumer-decides-error-shape",
+    "error-doors",
+    "parse-failure-keeps-identity",
+    "reclassification-is-not-repair",
+    "structured-propagation",
+    "swallowed-error-prevention",
+    "taxonomy-design",
+    "user-facing-mapping"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
