@@ -24253,6 +24253,57 @@
           "evidence": "packages/ui/src/components/studio-desk/desk.ts:1 pure UI arithmetic; no not-before/not-after instant is written into any artifact"
         }
       ]
+    },
+    "333e954c-3d86-400f-a6c8-48777a94ccba/job-coordination": {
+      "context": "foundry-extract-engine",
+      "subject": "job-coordination",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:16:02.703Z",
+      "worker": "1dc6d74b-fbf8-4d28-b643-8fffce5f17a1",
+      "techniques": [
+        {
+          "technique": "job-state-machines",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/breaker.ts:75 ExtractStatus (types.ts:196) is closed, but there is no transition door. Direct `m.status =` writes sit in breaker.ts:30, spend.ts:55, performFinish, setStage, store.ts:450 and here. Terminal exits are not empty (done/failed go back to a live stage), and no actor or reason token is written with a transition."
+        },
+        {
+          "technique": "no-unrestorable-state-at-a-suspension-point",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/performReplica.ts:71 A replica round makes a paid generate, writes the file, then suspends on a second vendor call. The manifest is saved only after the whole unit (perform.ts:59). A destruction during the critique leaves the paid pixels on disk but missing from the record, and the m.spend booking is lost, so a re-run pays again. One save after round.file is set would make that state durable."
+        },
+        {
+          "technique": "lease-renewal",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/extract/lease.ts:18 The legacy manifest lease that the ledger still reads for pre-L29 runs has a TTL sized to the longest unit's duration (generate plus recognise), was renewed per unit rather than on a timer, and is not fenced. The live fenced slot lease is in the kernel, outside this context."
+        },
+        {
+          "technique": "liveness-proof-reclaim",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:14 The executor holds a renewable, fenced kernel slot lease, and units are bounded. None of the technique's preconditions (no spare slot, foreign holder, unbounded duration) holds, and nothing in the context probes a pid."
+        },
+        {
+          "technique": "step-position-and-resumability",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/units.ts:21 Position is derived from the manifest, a total-state record rewritten after every unit, keyed by stable source, style and round ids. Image files are written before the manifest save, so a crash re-runs at most one unit. Resume needs nothing but the manifest. The re-run cost of a paid generate is not declared per step in this context."
+        },
+        {
+          "technique": "no-wall-clock-in-the-advance-contract",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/perform.ts:23 The advance call takes no deadline or budget and returns the unit performed (or null when settled or stopped) with the durable status. Time limits sit on the vendor calls."
+        },
+        {
+          "technique": "terminal-state-recovery",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/store.ts:450 The commit's side effect (one style-store transaction, idempotent on retry per the comment at store.ts:443-444) runs before the terminal `committed` write, so nothing irreversible happens after the verdict. passDeath (performCommon.ts:36) also keeps a process death from being recorded as a vendor failure. Boot sweeps belong to the kernel and were not judged here."
+        },
+        {
+          "technique": "terms-travel-permission-does-not",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/extract/performRead.ts:26 Run terms (rounds, target, seed, grouping, generator) are clamped and frozen into the manifest at creation (helpers.ts:58-70). The generator is read back from the run's own record at the call (store.ts:290). Every readback and critique is stamped with the vocabulary version it was produced under."
+        }
+      ]
     }
   }
 }

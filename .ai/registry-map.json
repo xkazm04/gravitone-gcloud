@@ -9011,7 +9011,11 @@
           "revision": 17,
           "changedAt": "2026-10-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/foundry/extract/breaker.ts:75 The run status is a closed union, but it is assigned directly at about six sites in the context, and the retry door moves the terminal states `done` and `failed` back to a live stage, so verdicts are not final and no single transition door checks or records why the status moved.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:68f09609d1498e88",
+          "evaluatedRevision": 17
         },
         {
           "subject": "guest-execution-bounding",
