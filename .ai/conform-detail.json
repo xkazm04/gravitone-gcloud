@@ -24366,6 +24366,43 @@
           "evidence": "app/(studio)/library/_library/CharacterDetail.tsx:45 The personality is shown as a static card line. No host speaks or declines viewers."
         }
       ]
+    },
+    "79439a23-e379-41e6-92c6-ea1bbd2516d7/metric-gates": {
+      "context": "foundry-mesh-gates",
+      "subject": "metric-gates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:39:02.295Z",
+      "worker": "ee7f0b0f-4fe4-4cdc-8d1a-782754e490f5",
+      "techniques": [
+        {
+          "technique": "ratchet-design",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:57 Absolute per-mesh thresholds, not a committed baseline gated on direction; nothing here is a legacy count being driven down."
+        },
+        {
+          "technique": "counted-set-snapshot",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/polycount.ts:58 Budgets are authored per asset class, not a regression snapshot of totals, so there is no count-only baseline to worry about substitution in."
+        },
+        {
+          "technique": "operation-assertion-gates",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:123 The gate compares a deterministic triangle count of a delivered artifact; it is not a timing gate on code, so there is no cost standard to restate as a source-text operation."
+        },
+        {
+          "technique": "deterministic-proxy-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/face-budget.ts:42 No noisy instrument is swapped for a work count here; the 10% band covers decimator landing error on an asset, not a counter's repeat variance in a CI lane."
+        },
+        {
+          "technique": "proxy-metric-counts-its-own-satisfiers",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/mesh/gates/mesh-score.ts:231 There is no published coverage or parity metric whose population can be moved toward it; the closest analogue (the geometry-only scorer listing in GATE_ONLY_CODES what it cannot see, and face-budget returning 'unmeasured' instead of passing) matches the technique's honesty rules in spirit, but it is a tier split inside a per-asset grader."
+        }
+      ],
+      "registryProposal": "Per-asset acceptance graders for generated media (polycount and budget-honoured checks, unmeasured-not-pass) keep landing next to metric-gates in the lexical map. Their governing subject is generated-output-grading (media-generation). metric-gates could say in its scope section that a threshold on a generated artifact's measured property is not a metric gate unless it is compared against a recorded earlier reading."
     }
   }
 }
