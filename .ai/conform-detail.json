@@ -24445,6 +24445,57 @@
         }
       ],
       "registryProposal": "idempotent-steps asks every step to assert its own post-condition, but this runner deliberately allows SQL-text-only steps so that a step's digest stays stable across transpilers. The technique could say how post-conditions are expressed in that case, for example a declared expected-schema or count check the runner evaluates after each step. data-migrations could also say whether clearing re-derivable projection rows that a shape change invalidates counts as a fused data rewrite or as part of the shape change."
+    },
+    "43edf8cd-29be-430d-898d-70c96d2d537c/model-call-outcome-integrity": {
+      "context": "vendor-routing-and-calibration",
+      "subject": "model-call-outcome-integrity",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:48:09.014Z",
+      "worker": "495524b4-d4c0-4a30-9aae-63fc9944ae2c",
+      "techniques": [
+        {
+          "technique": "elimination-reasons-are-a-closed-vocabulary",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/router/types.ts:181 Most of this is realized: the `Why` union is closed, the trail rides on both Routed and Refused, and routed/refused events persist the same trail values. But the `over-budget` refusal cause is a special-cased string in reserve.ts:125 instead of a member of this set, which is the failure the rule names ('never a special-cased string at a call site')."
+        },
+        {
+          "technique": "declared-call-site-identity",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/router/route.ts:153 Calls are keyed by capability/turn class from the closed TURN_CLASSES list (tables.ts:149), and an unclassified call is refused, never defaulted. routeAndReserve also requires `subject` in its input (reserve.ts:87). Caveat: `class` is optional in RouteRequest, so the check runs when the request is routed, not at compile time."
+        },
+        {
+          "technique": "credential-posture-at-the-call-door",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/router/reserve.ts:138 The precondition holds: the text local plan has the claude-cli seat and metered google serving the same turns (tables.ts:224). Posture comes from a configured env map, and a malformed value fails (posture.ts). The lane that paid (seat.text vs cloud.google) is written on every routed event. Building the child-process environment and stripping credentials happen in the driver, outside this context, and were not judged."
+        },
+        {
+          "technique": "unattempted-is-not-failed",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/router/types.ts:91 Timeout, cancelled and refused are kept apart from bad-response. Never-reached outcomes are Refused values (absent/exhausted), separate from `stopped` after a real attempt. A missing pace is `seconds: null`, not zero. Calibration returns `insufficient` with no AUC rather than a number (core.ts:83)."
+        },
+        {
+          "technique": "the-measurement-runs-the-served-configuration",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/calibration/series.ts:28 The calibration series is keyed by the served grader's model and schema/prompt digest, so scores from two configurations never pool. Registering the same key with a different value is a conflict (series.ts:76). Only operator verdicts count as labels. Weak spot: series.ts:68 checks only that the series string is non-empty; nothing checks that it carries the digest."
+        },
+        {
+          "technique": "spend-precedes-the-error",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/router/reserve.ts:15 This context reserves before any call and never sees a response, so there is no failed-after-spend path whose ledger/raise order it could get wrong. Settlement happens in the driver."
+        },
+        {
+          "technique": "enforcement-demotion-on-translation-loss",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/router/route.ts:29 The router is pure and translates no structured-output contract into a vendor dialect."
+        },
+        {
+          "technique": "one-deadline-across-attempts",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/router/route.ts:48 The retry/reroute ladder and its deadline live in the driver. The router only refuses to walk past a timeout and holds no clock or deadline."
+        }
+      ]
     }
   }
 }

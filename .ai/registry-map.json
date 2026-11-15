@@ -24849,7 +24849,11 @@
           "revision": 4,
           "changedAt": "2026-10-10",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/router/reserve.ts:125 The persisted `router.refused` event's `reason` field normally carries a `RefusalReason` member (reserve.ts:109), but here a literal \"over-budget\" is written at the call site even though the one owning union (types.ts:181) does not contain it, so anything that groups or alerts on refusal reasons meets a value the vocabulary does not declare.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:7f5a9031da3d28ce",
+          "evaluatedRevision": 4
         },
         {
           "subject": "prompt-assembly",
