@@ -3310,7 +3310,11 @@
           "revision": 10,
           "changedAt": "2026-09-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/library/schema.ts:218 Library v3 puts a shape change (ADD COLUMN mesh) and a data rewrite (deleting the glb fact rows) in one step, and v2 (measures.ts MEASURES_DDL) does the same with CREATE TABLE plus DELETE of audio facts, which breaks the data-migrations rule that a step is a shape change or a data rewrite, never both. Neither the rewrites nor the ventures v2 table rebuild checks a count or a post-condition.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:b7d5afcb859dfff9",
+          "evaluatedRevision": 10
         },
         {
           "subject": "browser-credential-boundary",

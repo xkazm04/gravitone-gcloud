@@ -24403,6 +24403,48 @@
         }
       ],
       "registryProposal": "Per-asset acceptance graders for generated media (polycount and budget-honoured checks, unmeasured-not-pass) keep landing next to metric-gates in the lexical map. Their governing subject is generated-output-grading (media-generation). metric-gates could say in its scope section that a threshold on a generated artifact's measured property is not a metric gate unless it is compared against a recorded earlier reading."
+    },
+    "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5/migrations": {
+      "context": "asset-library-store",
+      "subject": "migrations",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:42:34.579Z",
+      "worker": "be6503da-d27d-4bfc-a45c-735c57c8610d",
+      "techniques": [
+        {
+          "technique": "data-migrations",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/library/schema.ts:218 A shape change and a data rewrite share one step (v2 does the same at measures.ts:35), and no step verifies its rewrite by counting rows. The cleared rows are a re-derivable projection (schema.ts:8-11), so this is not a lossy-escrow problem, but the separation rule is still not met."
+        },
+        {
+          "technique": "transactional-ddl",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ventures/schema.ts:94 The table rebuild uses deferred FKs inside the step's transaction instead of toggling foreign_keys, which would be a no-op inside a transaction. This keeps the rebuild and its ledger row in one atomic unit (the runner commits the row last, migrate.ts:229-230)."
+        },
+        {
+          "technique": "schema-drift-detection",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/library/schema.ts:214 There is one authority: a fresh store replays v1..v6 from zero, and there is no separate create-at-current-shape DDL, so Class 1 drift cannot arise from this module."
+        },
+        {
+          "technique": "expand-deploy-contract",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/ventures/schema.ts:103 Every change in the context is expand-only: nullable columns (v4 loudness, ventures channel_id) and new tables. No column that live code names is renamed or dropped, so older code's explicit-column INSERTs still fit."
+        },
+        {
+          "technique": "dynamic-table-set-migrations",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/schema.ts:69 The table set is fixed, with names in code. No operator defines tables at runtime."
+        },
+        {
+          "technique": "migrate-from-data-shape",
+          "verdict": "not-applicable",
+          "evidence": "packages/kernel/src/library/schema.ts:209 The store holds a version ledger written atomically with the data (_migrations), so shape derivation's precondition (no atomic home for a marker) does not hold."
+        }
+      ],
+      "registryProposal": "idempotent-steps asks every step to assert its own post-condition, but this runner deliberately allows SQL-text-only steps so that a step's digest stays stable across transpilers. The technique could say how post-conditions are expressed in that case, for example a declared expected-schema or count check the runner evaluates after each step. data-migrations could also say whether clearing re-derivable projection rows that a shape change invalidates counts as a fused data rewrite or as part of the shape change."
     }
   }
 }
