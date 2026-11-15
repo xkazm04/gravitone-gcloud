@@ -1,0 +1,61 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f6a5672f-85c8-485c-8b37-acd513328e0c",
+ "subject": "generated-workflow-candidates",
+ "evaluatedAt": "2026-11-15T03:42:19.904299+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-hunt",
+   "subject": "generated-workflow-candidates",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/audio/_hunt/Hunt.tsx:4 The Hunt turns an operator's idea into prompt leaves that a vendor (ElevenLabs, or Suno by hand) renders into audio takes, and a person picks the winner with a crown. Nothing here measures a dataset, fills a training template, trains a model or runs a hyperparameter search. A grep of _hunt/ and hunt-return/ for dataset, hyperparam, training, ensemble, statistics and template found nothing, so the subject's precondition (dataset in, trained model candidates out) does not hold.",
+   "techniques": [
+    {
+     "technique": "candidates-as-ordinary-artifacts",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_hunt/leafReturn.ts:57 A candidate is an audio take that a vendor rendered from a prompt. It is not a generated training package."
+    },
+    {
+     "technique": "score-keyed-candidate-selection",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_hunt/acts.ts:69 The winner is whichever take a person crowns after listening. No trained candidates are ranked by a metric."
+    },
+    {
+     "technique": "search-as-candidate-mutation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_hunt/acts.ts:50 A text engine drafts the map of axes and leaves. There is no hyperparameter search backend."
+    }
+   ],
+   "absenceTerms": [
+    "dataset",
+    "hyperparam",
+    "training",
+    "ensemble",
+    "statistics"
+   ],
+   "registryProposal": "The Hunt has the same shape as this subject but for generative media rather than trained models: generate candidates (prompt leaves), render them, have a person select a winner, and record a lesson with an n and a keep rate. The subject's precondition is limited to datasets and training, so this match is only lexical (the word 'candidate'). A separate media-generation subject on candidate provenance and selection would govern this context better."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T03:42:19.904299+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "generated-workflow-candidates"
+   ],
+   "techniques": [
+    "candidates-as-ordinary-artifacts",
+    "score-keyed-candidate-selection",
+    "search-as-candidate-mutation"
+   ],
+   "deviations": 0,
+   "context": "audio-hunt",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
