@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7ed00924-fd18-4595-8da1-cbf4cbcda7dd",
+ "subject": "drag-drop",
+ "evaluatedAt": "2026-11-15T01:05:20.329351+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-arrange-desk",
+   "subject": "drag-drop",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_audio/Arrange.tsx:281 A card's stage/row move is reachable only by the pointer drag or the \u21e7arrow keymap; moveCard has no other caller in app/lib/packages, so a user who can point and click but cannot hold a drag has no single-pointer path (the golden path's 'both a keyboard and a single pointer' rule, WCAG 2.5.7).",
+   "techniques": [
+    {
+     "technique": "ownership-boundaries",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:153 Request posture: the move is drawn provisional (dashed, aria-busy) until the store answers. ANSWER_MS times out to refused-with-words, a rejection shows the store's sentence, and lib/sound/arrange.ts admitMove re-checks against current state ('moved since it was picked up')."
+    },
+    {
+     "technique": "payload-and-identity",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:154 A drop is an identity statement (take id, from cell, to cell as stage+group, idempotent opId), never an index. The stack is resolved at drop time, a second write per card is refused while one is in flight, and the server re-resolves the head."
+    },
+    {
+     "technique": "drag-lifecycle",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:262 Mostly realized in useCardDrag.ts: SLOP_PX threshold, Escape and pointercancel go to cancel (not commit), a release off any cell cancels, there is one reaper end(), and only one drag runs at a time. But a drop whose card no longer resolves is a silent no-op, not cancel-with-explanation, and the hook has no unmount, blur or lostpointercapture teardown, so a document keydown listener and drag state can outlive the surface."
+    },
+    {
+     "technique": "drop-affordances",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:326 The only drag state the board gets is the cell under the pointer. Valid targets are not announced when the drag starts, there is no visible refusal before the drop (refusals arrive only after release, via ErrorLine), and nothing auto-scrolls at the edge inside the overflow:auto .arrange/.board. Present: the cursor:grab card, the lit .over cell, and the dashed pending settle."
+    },
+    {
+     "technique": "keyboard-alternatives",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:230 \u21e7arrow (bindings.ts audio.arrange 'move card') goes through the same move()/door as the drop. Focus rides with the card (lines 122-125) and results are announced through the role=status toast. But there is no click/tap alternative for the move, which the technique requires ('at least one alternative must be a clickable control')."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T01:05:20.329351+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "drag-drop"
+   ],
+   "techniques": [
+    "drag-lifecycle",
+    "drop-affordances",
+    "keyboard-alternatives",
+    "ownership-boundaries",
+    "payload-and-identity"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
