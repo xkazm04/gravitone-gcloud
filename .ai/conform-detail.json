@@ -24304,6 +24304,37 @@
           "evidence": "lib/foundry/extract/performRead.ts:26 Run terms (rounds, target, seed, grouping, generator) are clamped and frozen into the manifest at creation (helpers.ts:58-70). The generator is read back from the run's own record at the call (store.ts:290). Every readback and critique is stamped with the vocabulary version it was produced under."
         }
       ]
+    },
+    "57aecc2d-d579-4f82-8772-3dc68bf0d2b5/keyboard-shortcuts": {
+      "context": "ui-keymap-layers-storage",
+      "subject": "keyboard-shortcuts",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:20:41.685Z",
+      "worker": "0d41ad0c-a10c-42b0-8b85-7b39561694d4",
+      "techniques": [
+        {
+          "technique": "declared-keymap-authority",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:60 Every binding is a row in one table (bindings.ts), and handlers bind by verb, never by key. help.ts renders the key sheet from the same rows through keyTable. keymap.test runs conflicts() and problems() over the real KEYMAP. Gap: I found no inventory test that every declared verb has a registered handler. An unbound verb is skipped silently at dispatch.ts:61."
+        },
+        {
+          "technique": "layered-key-dispatch",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/layers/stack.ts:163 A single window listener asks a pure route() function, and the stack decides between layers rather than mount order. A claiming layer with no mode blocks the page, and a lens such as the zoom passes keys through. Escape goes to the top live layer (route.ts:77). The global layer is heard last and only when globalReachable allows it. A handler returning false is not preventDefaulted, and handlers are read through refs."
+        },
+        {
+          "technique": "shortcut-collision-rules",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/keymap/bindings.ts:302 The typing-target guard (keymap.ts:85) and the rule that a focused control owns Enter and Space (keymap.ts:112) are both realized, and the global rows use the ⌘ modifier (bindings.ts:337). But the screen modes bind bare letters and digits (N, P, A, L, U, 1-4) that are live whenever the page has the mode, not only while one component has focus. There is no off switch or remap, which the character-key criterion requires. target.ts also treats only an open combobox as type-ahead, so a focused listbox or tree does not take printable keys."
+        },
+        {
+          "technique": "repeat-composition-and-odd-events",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/keymap/chord.ts:96 Realized: repeats are refused by default with an opt-in `repeat` (keymap.ts:110), AltGr is detected (chord.ts:99), and Shift is not asked for punctuation. Missing: an isComposing skip, a check that key is a string (an autofill keydown with no key throws here), and a defaultPrevented check for keys other than Escape (route.ts:78 checks Escape only)."
+        }
+      ]
     }
   }
 }

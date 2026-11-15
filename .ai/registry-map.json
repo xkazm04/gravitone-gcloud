@@ -23262,7 +23262,11 @@
           "revision": 3,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:47 The one keydown door copies key, modifiers, repeat and defaultPrevented into the press, but it never reads isComposing and never checks that e.key is a string. A composing keystroke, or the Enter that commits it, can therefore reach a field row (Jump's ⏎ go, the `*` field Esc). A keydown with no key, as some browsers fire on autofill, throws in chordsOf.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:0b8a02a351fac8a0",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-runtime-assembly",
