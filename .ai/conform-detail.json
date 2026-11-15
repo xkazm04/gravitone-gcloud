@@ -24186,6 +24186,32 @@
           "evidence": "packages/ui/src/storage/trouble.ts:16 The only failure classes are browser quota, unavailability and refusal. No journal or sync mode can be configured."
         }
       ]
+    },
+    "83b32ed7-9fa1-4a2a-b1ec-2cdd1b5926d3/embedded-preview": {
+      "context": "app-root-and-dev-inspector",
+      "subject": "embedded-preview",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T01:56:03.232Z",
+      "worker": "3a80ec9b-3262-48b8-9c3c-38cfa02bf745",
+      "techniques": [
+        {
+          "technique": "origin-validation",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:167 Listens to DOM events on the host's own document. No message events cross a frame, so there is no origin to validate."
+        },
+        {
+          "technique": "injected-instrumentation-with-fallback",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/devInspectorUi.tsx:169 This works like the technique (build-time data-loc stamping, plus a degraded state that says so when stamping is off), but the instrumented code is the host itself, not a guest app, so the precondition does not hold."
+        },
+        {
+          "technique": "cross-frame-protocol",
+          "verdict": "not-applicable",
+          "evidence": "app/_dev-inspector/DevInspector.tsx:205 The overlay draws through a React portal into the same document. There is no frame channel and no request/reply to correlate."
+        }
+      ]
     }
   }
 }

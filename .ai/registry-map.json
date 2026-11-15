@@ -1964,7 +1964,11 @@
           "revision": 2,
           "changedAt": "2026-09-15",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "app/layout.tsx:70 The only preview-adjacent tool in this context, the DevInspector, mounts inside the host's own React tree and inspects the host's own document, so there is no framed guest app, no guest server and no cross-frame bridge. That makes this the golden path's 'same-origin, first-party' exclusion; a search of app/ and lib/ for targetOrigin and event.origin found nothing, and none of the context's 14 files contains iframe, postMessage or contentWindow.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:a6e12ae70d42efcc",
+          "evaluatedRevision": 2
         },
         {
           "subject": "client-state",
