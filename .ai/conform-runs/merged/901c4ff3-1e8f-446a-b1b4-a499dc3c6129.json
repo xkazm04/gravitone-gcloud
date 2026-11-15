@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "901c4ff3-1e8f-446a-b1b4-a499dc3c6129",
+ "subject": "long-form-reading-surface",
+ "evaluatedAt": "2026-11-15T22:35:20.153312+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "long-form-reading-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:76 The editors show a written article as section cards: a heading, a word count and the section's lead, inside a scrolling workspace region. None of the subject's terms (IntersectionObserver, scroll-margin, slugify, location.hash, href=\"#) appear under app/(studio)/projects/[id]/[part]/, so there is no contents panel, no heading anchor, no fixed-chrome offset and no scroll-spy for the subject to govern.",
+   "techniques": [
+    {
+     "technique": "anchor-id-single-assigner",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:77 Headings have no id and nothing links to them. Sections are found by data-section through keyboard selection, which is the technique's own 'nothing ever links to them, skip ids' case."
+    },
+    {
+     "technique": "fixed-chrome-offset-budget",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Editors.module.css:4 Nothing pinned waits on an anchor jump. The only sticky rule in the context is a horizontal lane label in Cut.module.css (left:0), so there is no top budget to own."
+    },
+    {
+     "technique": "scroll-spy-reading-band",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Article.tsx:30 The highlight (data-on) is an operator selection walked by keys and scrolled into view. It is not a current-section indicator measured from scroll position. No IntersectionObserver or progress bar exists."
+    },
+    {
+     "technique": "focus-transfer-on-in-place-navigation",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:142 Picking a candidate in the rail swaps the beat document in place, but it is a list-detail comparison walked by item keys, not navigation between articles. The technique's own exclusion says moving focus to a heading there would be a jolt."
+    },
+    {
+     "technique": "server-parsed-once-reused",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:33 The section list arrives prepared in the server-loaded view and the client never parses it. With no contents panel and no id-placing renderer, there is no second consumer for the structure to be shared with."
+    }
+   ],
+   "absenceTerms": [
+    "IntersectionObserver",
+    "scroll-margin",
+    "slugify",
+    "location.hash",
+    "href=\"#"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T22:35:20.153312+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "long-form-reading-surface"
+   ],
+   "techniques": [
+    "anchor-id-single-assigner",
+    "fixed-chrome-offset-budget",
+    "focus-transfer-on-in-place-navigation",
+    "scroll-spy-reading-band",
+    "server-parsed-once-reused"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
