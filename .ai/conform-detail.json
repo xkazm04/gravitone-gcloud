@@ -24212,6 +24212,21 @@
           "evidence": "app/_dev-inspector/DevInspector.tsx:205 The overlay draws through a React portal into the same document. There is no frame channel and no request/reply to correlate."
         }
       ]
+    },
+    "f666874c-d32c-49e2-a1bc-70363f3ca4f2/guest-execution-bounding": {
+      "context": "imaging-gateway-and-spend",
+      "subject": "guest-execution-bounding",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T04:06:56.851Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "5f64b93c-5861-448c-8986-53510d0ab330",
+        "state": "not-applicable",
+        "at": "2026-11-15T04:11:01.285504+00:00",
+        "reason": "reviewer (sonnet): The claim that the AbortController timeout is the context's only execution bound is contradicted by lib/imaging/providers/agy.ts, which spawns an agentic CLI with --sandbox, a fresh workspace, a timeout and a process-tree kill (and lib/imaging/local/codex.ts spawns a CLI too), and the anchor http.ts"
+      }
     }
   }
 }
