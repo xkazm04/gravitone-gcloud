@@ -1,0 +1,89 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7ccefb4e-9d8b-41be-862d-c1ae280934e0",
+ "subject": "invariant-placement",
+ "evaluatedAt": "2026-11-15T22:08:07.897615+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-port",
+   "subject": "invariant-placement",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_port/present.ts:53 The one emission door (present.ts cardOf/faceOf/detailOf) leaves out absent optional parts everywhere else. Here, though, a take with no peaks gets an invented empty waveform, so the tile can't tell a missing measurement from a measured silence; completeness-at-emission says an absent optional part is omitted, never defaulted.",
+   "techniques": [
+    {
+     "technique": "completeness-at-emission",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_port/present.ts:53 Face 'wave' requires peaks (Face.tsx:32). The emitter fills the missing part with [] when the decision rule says the part should be required or the consumer should apply the fallback. Elsewhere detailOf omits optional parts with conditional spreads (schedule, atelier, model)."
+    },
+    {
+     "technique": "placement-precedes-gate",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/fixture.ts:117 The query rule sits at the door altitude: the fixture goes through the kernel index's own querySchema, so both sides refuse the same input. The actions also have a zod door at the action core."
+    },
+    {
+     "technique": "derived-properties-cannot-be-forged",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:129 pinned is computed from the acts the index offers, not declared next to them. 'locked' is likewise derived from kind+state in cardOf."
+    },
+    {
+     "technique": "a-new-field-must-choose",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/fixture.ts:128 A Record over the owned kind union makes a new LibraryKind stop the build here. faceOf (present.ts:59) does end in a designed-face default arm, but Face.tsx states that as the rule for every kind with no cover."
+    },
+    {
+     "technique": "initialization-proof-tokens",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/real.ts:127 Opening the store can fail, so no token is minted. Each verb asks again and gets a typed reason when the store is absent. Exception: handoff.ts:297 discards the kernel's reason and passes the id through."
+    },
+    {
+     "technique": "repairing-check-erases-its-evidence",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/real.ts:183 The kernel answers a repeated pin with 'nothing changed'. The port refuses it instead of quietly agreeing, so a stale toggle leaves a signal. Small label coercions (title falling back to id) are display labels, not guards."
+    },
+    {
+     "technique": "shape-with-a-not-applicable-member",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/present.ts:42 'Cannot serve this blob' is carried by the wrapper (null), not by a pseudo-kind added to the set. No none-of-these member was found in the kinds or faces this port produces."
+    },
+    {
+     "technique": "constraint-deletion-is-silent",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-fixture-parity.test.ts:156 The raised door has negative artifacts: refused queries (unknown group, offset past bound, empty facet value, fractional limit) are asserted as refusals by code and words on both sides."
+    },
+    {
+     "technique": "consumption-bounds-at-most-once",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_port/fixture.ts:245 This is idempotent mark-writing (delivery semantics), not a single-use value or one-shot authorisation, so the technique's precondition does not hold."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T22:08:07.897615+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "invariant-placement"
+   ],
+   "techniques": [
+    "a-new-field-must-choose",
+    "completeness-at-emission",
+    "constraint-deletion-is-silent",
+    "consumption-bounds-at-most-once",
+    "derived-properties-cannot-be-forged",
+    "initialization-proof-tokens",
+    "placement-precedes-gate",
+    "repairing-check-erases-its-evidence",
+    "shape-with-a-not-applicable-member"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
