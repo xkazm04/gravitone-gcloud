@@ -24335,6 +24335,37 @@
           "evidence": "packages/ui/src/keymap/chord.ts:96 Realized: repeats are refused by default with an opt-in `repeat` (keymap.ts:110), AltGr is detected (chord.ts:99), and Shift is not asked for punctuation. Missing: an isComposing skip, a check that key is a string (an autofill keydown with no key throws here), and a defaultPrevented check for keys other than Escape (route.ts:78 checks Escape only)."
         }
       ]
+    },
+    "993f34a7-f7ba-42ea-ba8a-7de795b2032d/live-chat-moderation-and-anti-bait": {
+      "context": "library-characters-models",
+      "subject": "live-chat-moderation-and-anti-bait",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-15",
+      "evaluatedTs": "2026-11-15T22:26:32.284Z",
+      "worker": "b6ae72ad-3394-4fc8-a391-fee9559ca737",
+      "techniques": [
+        {
+          "technique": "authority-from-metadata-only",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/libraryCharacter.ts:45 A card holds name/age/look/personality for image generation. There are no viewers, ranks or chat authors whose authority could be claimed."
+        },
+        {
+          "technique": "injection-as-tag-not-payload",
+          "verdict": "not-applicable",
+          "evidence": "packages/domain/src/libraryCharacter.ts:46 The prompt is an image prompt built from the operator's own card, not a host prompt holding viewer chat text."
+        },
+        {
+          "technique": "path-independent-output-gate",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/feeds/character.ts:150 The feed indexes kept stills into Library items. No path here produces spoken or broadcast text that would need an output gate."
+        },
+        {
+          "technique": "in-character-refusal-substitution",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/library/_library/CharacterDetail.tsx:45 The personality is shown as a static card line. No host speaks or declines viewers."
+        }
+      ]
     }
   }
 }

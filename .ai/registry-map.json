@@ -13422,7 +13422,11 @@
           "revision": 2,
           "changedAt": "2026-10-21",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/libraryCharacter.ts:43 In this context a 'character' is a Library catalogue item: a still-image card, the core image prompt that draws it, and its kept stills. No generated host reads a live chat here. I searched all 18 code files and the context's directories (app/(studio)/library, packages/ui/src/components/library, packages/ui/src/components/model, lib/library/feeds, packages/domain/src) for moderation, injection, bait, livestream, 'live chat' and 'output gate' and found no hits, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-15",
+          "evaluatedAgainst": "sha256-b2:86ca3bd8344844c1",
+          "evaluatedRevision": 2
         },
         {
           "subject": "mcp-tools",
