@@ -24128,6 +24128,38 @@
         }
       ],
       "registryProposal": "rendered-string-extraction could name a 'source moved under its glob' incident shape. A gated surface was refactored into a subdirectory, the one-segment glob kept matching the one file left behind, the string count still printed, and the scope document kept claiming coverage. The fix would be a fixture or check that each declared-gated surface still contributes at least N strings."
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/digest-bound-operator-writes": {
+      "context": "run-records-and-slots",
+      "subject": "digest-bound-operator-writes",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-14",
+      "evaluatedTs": "2026-11-14T23:59:40.348Z",
+      "worker": "84021ae7-ee8b-4428-8f7c-becae4996d7d",
+      "techniques": [
+        {
+          "technique": "unretried-write-unknown-outcome",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/slots/sweep.ts:129 Cut claim = unknown remote outcome, labelled failed; domain slot.ts says interruption is 'never a state of its own' and failed is SLOT_MOVABLE -> resend door. Nothing auto-refires, and the publisher reusing a resumable session keyed by the slot may soften this, but the status still launders unknown into failed."
+        },
+        {
+          "technique": "plan-twice-run-if-unchanged",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/launch.ts:295 launchRun re-reads the receipt inside the write tx (line 294). It compares the fresh token with the one the operator confirmed and refuses with the fresh receipt on mismatch (line 88). The token is a canonical sha256 over inputs, quotes and queue digest, without the clock (receipt.ts tokenOf)."
+        },
+        {
+          "technique": "record-before-each-command",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/sweep.ts:152 The slot claim (holder, instant, fence, slot.claim event) is committed before anything is uploaded. The outcome is finished later by the fenced claimant (outcome.ts). It is one row per slot (one upload), not per argument vector."
+        },
+        {
+          "technique": "precondition-token-on-every-write",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/records/write.ts:114 Project edits carry baseRev and are refused stale. A slot outcome is fenced (outcome.ts:33 assertFence) so a stale claimant cannot overwrite the sweep's verdict. These tokens guard the kernel's own shared store, not a remote."
+        }
+      ],
+      "registryProposal": "The subject assumes the confirm sends commands straight to a remote. Here a confirm-time digest (receipt token) binds an enqueue into the tool's own store, and a worker later sends the vendor or channel call under a lease claim. The standard could say how plan-twice and the unknown-outcome rule carry across that queue hop, where the claim row plays the part of the per-command record."
     }
   }
 }

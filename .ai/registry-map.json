@@ -18063,7 +18063,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/sweep.ts:129 When a publishing claimant dies mid-upload, the sweep records the slot as `failed` and not as a distinct unknown outcome. `failed -> scheduled` is allowed and a failed slot no longer holds its item, so the upload is reopened for resend even though it may already be live on the channel.",
+          "evaluatedAt": "2026-11-14",
+          "evaluatedAgainst": "sha256-b2:6da64121343a1af5",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
