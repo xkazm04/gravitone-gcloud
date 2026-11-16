@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NAV_TOOLS, arrived, hereOf, sectionHref, studioPath } from "../../app/(studio)/_shell/agentNav.ts";
+import { ATHENA_APP, NARROW_TOOL_NAME, NAV_TOOLS, arrived, hereOf, sectionHref, studioPath } from "../../app/(studio)/_shell/agentNav.ts";
 import { SECTIONS, sectionOf } from "../../app/(studio)/_shell/nav.ts";
 
 describe("the studio's in-page navigation tools (athena page bridge)", () => {
@@ -8,6 +8,12 @@ describe("the studio's in-page navigation tools (athena page bridge)", () => {
     expect(NAV_TOOLS.map((t) => t.name)).toEqual(["where_am_i", "go_to", "open"]);
     for (const t of NAV_TOOLS) expect(t.athena).toEqual({ reversible: true, side_effects: "none" });
     expect(NAV_TOOLS.find((t) => t.name === "where_am_i")?.annotations.readOnlyHint).toBe(true);
+  });
+
+  it("spells the app id and every tool name in the narrowest hop's grammar, with room for the relay's prefix", () => {
+    // The bridge relays `host.<app>.<name>`; an aliasing relay spells it `host_<app>_<name>`, which must still fit.
+    for (const n of [ATHENA_APP, ...NAV_TOOLS.map((t) => t.name)]) expect(n, n).toMatch(NARROW_TOOL_NAME);
+    for (const t of NAV_TOOLS) expect(`host_${ATHENA_APP}_${t.name}`).toMatch(NARROW_TOOL_NAME);
   });
 
   it("go_to names exactly the built sections, and each resolves to its address", () => {

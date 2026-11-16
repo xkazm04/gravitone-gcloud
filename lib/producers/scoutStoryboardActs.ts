@@ -43,7 +43,7 @@ import { standIdea } from "./scoutIdeaActs.ts";
 // Every night write is fenced against the job's slot first (the scene and ideas acts' `fence`).
 
 /** The frame engine a storyboard draws with: production's is lib/imaging/local/codex.ts; a test hands a fake. */
-export type StoryboardDraw = (prompt: string, o: { readonly aspect: CodexAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number }>;
+export type StoryboardDraw = (prompt: string, o: { readonly aspect: CodexAspect; readonly seed?: number; readonly refs?: readonly Uint8Array[]; readonly late?: number }) => Promise<{ readonly png: Uint8Array; readonly seed: number; readonly cliVersion?: string }>;
 /** A trial's clip engine: one LTX clip of a panel still (PNG bytes); production's is lib/imaging/video/comfyLtx.ts. */
 export type StoryboardClip = (still: Uint8Array, prompt: string, o: { readonly aspect: CodexAspect; readonly seed: number }) => Promise<{ readonly bytes: Uint8Array; readonly durationS: number }>;
 export type StoryboardActEngines = { readonly draw: StoryboardDraw; readonly clip?: StoryboardClip };
@@ -117,7 +117,7 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
   if (typeof held === "string") return madePaid(data({ panel: k, file: held, held: true }), ctx);
 
   const of = req.panels.length;
-  let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string };
+  let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string; readonly cliVersion?: string };
   try {
     // The cast's kept sheets, through the guard: none for a plain storyboard or a cast with no kept sheet.
     const cast = await castRefs(c.cast ?? []);
@@ -127,7 +127,7 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
     got =
       ctx.job.mode.kind === "live"
         ? { ...(await draw()), model: CODEX_MODEL }
-        : await meteredCall<{ png: Uint8Array; seed: number; model: string }>(ctx, {
+        : await meteredCall<{ png: Uint8Array; seed: number; model: string; cliVersion?: string }>(ctx, {
             provider: "codex",
             model: CODEX_MODEL,
             payload: { prompt: ask.prompt, aspect: req.aspect, seed: ask.seed, ...(cast.value.from.length === 0 ? {} : { refs: cast.value.from, late: CAST_LATE }) },
@@ -147,7 +147,7 @@ async function panelAct(e: StoryboardActEngines, req: StoryboardRequest, k: numb
   await mkdir(path.dirname(abs), { recursive: true });
   await writeFile(abs, got.png);
   await writeBoard(req, ctx.job.id, (b) => withPanel(b, of, k, rel, got.seed));
-  return madePaid(data({ panel: k, file: rel, seed: got.seed, provider: "codex", model: got.model, dry: got.model === "dry stand-in", costUsd: 0 }), ctx);
+  return madePaid(data({ panel: k, file: rel, seed: got.seed, provider: "codex", model: got.model, ...(got.cliVersion === undefined ? {} : { cliVersion: got.cliVersion }), dry: got.model === "dry stand-in", costUsd: 0 }), ctx);
 }
 
 /* ── clip (a trial's) ─────────────────────────────────────────────────────── */

@@ -63,6 +63,9 @@ export type RouteOptions<S extends z.ZodType | undefined> = {
   readonly maxDuration?: number;
   /** The JSON body (POST/PUT/PATCH) or, for other methods, the query string. */
   readonly input?: S;
+  /** The handler judges each op's write scope itself, so an access write is guarded as a read
+   *  (guardOf). Only /api/mcp, whose door admits nothing but a CLI token. */
+  readonly perOpScope?: true;
 };
 
 export type RouteContext<I> = {
@@ -90,9 +93,15 @@ function refusalError(r: Refusal): { error: AppError; headers: HeadersInit } {
   return { error: new AppError("unauthenticated", r.detail, { detail: r.code }), headers: {} };
 }
 
-/** Who may call: the request's own credential, else the session cookie. */
-export async function guardOf(req: Request, guard: Exclude<Guard, "public">): Promise<{ who: Principal } | { refusal: Response }> {
-  const use: KeyUse = guard === "money" ? "money" : "read";
+/** Who may call: the request's own credential, else the session cookie.
+ *
+ *  AN ACCESS WRITE IS AN `act`. A POST/PUT/PATCH/DELETE behind "access" (a cover upload, a take
+ *  save, /api/import, a Suno disconnect) needs a token whose scope admits `act`, and a sign-in
+ *  verified against a confirmed key set: the stale-JWKS grace is a read's alone. `perOpScope` is
+ *  for a door whose handler judges each op's scope itself (/api/mcp, app/_server/mcp/principal.ts):
+ *  its POST carries reads too, so the door stays a read door and the op refuses in-band. */
+export async function guardOf(req: Request, guard: Exclude<Guard, "public">, perOpScope = false): Promise<{ who: Principal } | { refusal: Response }> {
+  const use: KeyUse = guard === "money" ? "money" : SAFE.has(req.method) || perOpScope ? "read" : "act";
   let who: Resolution = await resolvePrincipal(req, { use });
   let viaCookie = false;
   if (isRefusal(who) && presentedSecret(req) === undefined && presentedIdToken(req) === undefined) {
@@ -163,7 +172,7 @@ export function route<S extends z.ZodType | undefined = undefined, T = unknown>(
     try {
       let who: Principal | null = null;
       if (opts.guard !== "public") {
-        const g = await guardOf(req, opts.guard);
+        const g = await guardOf(req, opts.guard, opts.perOpScope === true);
         if ("refusal" in g) return g.refusal;
         who = g.who;
       }
