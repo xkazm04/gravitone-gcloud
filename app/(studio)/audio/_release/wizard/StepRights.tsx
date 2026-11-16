@@ -15,6 +15,7 @@ import { rightsWarnings } from "@gt/domain/release.problems";
 import { orNull } from "./fmt.ts";
 import { Problems } from "./Problems.tsx";
 import { problemsOnTrack, type StepProps } from "./steps.ts";
+import { Suggest } from "./Suggest.tsx";
 import { TrackStrip } from "./TrackStrip.tsx";
 import s from "./step.module.css";
 
@@ -31,7 +32,7 @@ const RECORD_FIELDS: readonly { readonly key: Exclude<keyof RightsRecord, "licen
 ];
 
 export function StepRights(props: StepProps) {
-  const { release: r, problems, dispatch, track, setTrack } = props;
+  const { release: r, problems, dispatch, track, setTrack, session } = props;
   const t = r.tracks[track];
   if (t === undefined) return <Chip label="no tracks" ghost />;
   const patchAi = (f: Partial<AiCredits>) => dispatch({ type: "patchTrack", id: r.id, index: track, fields: { ai: { ...t.ai, ...f } } });
@@ -42,13 +43,14 @@ export function StepRights(props: StepProps) {
   return (
     <div className={s.stack}>
       <div className={s.toolbar}>
-        <TrackStrip tracks={r.tracks} problems={problems} step="rights" current={track} onPick={setTrack} />
+        <TrackStrip tracks={r.tracks} problems={problems} pending={session.pending} step="rights" current={track} onPick={setTrack} />
         {r.tracks.length > 1 && <Button label={`Copy to all ${r.tracks.length} tracks`} size="sm" onPress={copyToAll} />}
       </div>
       <Problems problems={problemsOnTrack(problems, "rights", track).filter((p) => p.code === "persona-unstated")} label="AI credit problems" />
       <div className={s.twoCol}>
         <section className={s.section} aria-label="AI credits">
           <CapsHeading text="AI credits" variant="section" />
+          <Suggest path={`track:${track + 1}.ai`} session={session} />
           <div className={s.choiceRows}>
             <div className={s.choice}>
               <span className={s.k}>lyrics</span>
@@ -81,6 +83,7 @@ export function StepRights(props: StepProps) {
         </section>
         <section className={s.section} aria-label="rights record">
           <CapsHeading text="Rights record" variant="section" />
+          <Suggest path={`track:${track + 1}.rights`} session={session} />
           {warnings.length > 0 && <Problems problems={problemsOnTrack(problems, "rights", track).filter((p) => p.code !== "persona-unstated")} label="rights warnings" />}
           <div className={s.form} data-cols="2">
             {RECORD_FIELDS.map((f) => (

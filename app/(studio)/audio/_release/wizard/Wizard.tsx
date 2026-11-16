@@ -15,10 +15,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { releaseKind, type Release } from "@gt/domain/release";
 import { releaseProblems } from "@gt/domain/release.problems";
 
+import { pendingIn } from "../pending.ts";
 import type { WizardProps } from "./props.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { Picker } from "./Picker.tsx";
@@ -50,7 +52,7 @@ interface Walk {
   readonly track: number;
 }
 
-function Identity({ r, onLeave }: { readonly r: Release; readonly onLeave: () => void }) {
+function Identity({ r, saving, onLeave }: { readonly r: Release; readonly saving: boolean; readonly onLeave: () => void }) {
   const total = r.tracks.reduce((a, t) => a + t.durationS, 0);
   return (
     <header className={s.identity}>
@@ -62,6 +64,7 @@ function Identity({ r, onLeave }: { readonly r: Release; readonly onLeave: () =>
           {r.releaseDate === null ? "" : ` · ${day(r.releaseDate)}`}
         </span>
       </div>
+      {saving && <Chip label="saving" tone="cyan" dot />}
       <EntryPill entry={STATUS_ENTRY[r.status]} />
       <Button label="All releases" size="sm" onPress={onLeave} />
     </header>
@@ -120,14 +123,20 @@ export function Wizard({ read, session, newId, startStep }: WizardProps) {
   const prev = STEPS[at - 1];
   const next = STEPS[at + 1];
   const here = severityOf(problemsOf(problems, step));
+  const suggested = pendingIn(session.pending, step);
   const Body = BODY[step];
   const props: StepProps = { release, read, problems, dispatch, track, setTrack: (i) => setWalk((w) => ({ ...w, track: i })), go, session };
 
   return (
     <div data-variant-body="wizard" className={s.wizard}>
-      <Identity r={release} onLeave={() => dispatch({ type: "open", id: null })} />
+      <Identity r={release} saving={session.saving} onLeave={() => dispatch({ type: "open", id: null })} />
+      {session.notice !== null && (
+        <div className={s.notice}>
+          <ErrorLine message={session.notice} live />
+        </div>
+      )}
       <div className={s.flow}>
-        <Rail problems={problems} current={step} seen={seen} onGo={(x) => go(x)} />
+        <Rail problems={problems} pending={session.pending} current={step} seen={seen} onGo={(x) => go(x)} />
         <section className={s.main} aria-labelledby="wizard-step-heading">
           <div className={s.stepHead}>
             <span className={s.stepNo} aria-hidden="true">
@@ -138,6 +147,11 @@ export function Wizard({ read, session, newId, startStep }: WizardProps) {
             </h2>
             {step !== "review" && here.block > 0 && <Chip label="block" value={here.block} tone="rose" />}
             {step !== "review" && here.warn > 0 && <Chip label="warn" value={here.warn} tone="amber" />}
+            {suggested.length > 0 && (
+              <span className={s.acceptAll}>
+                <Button label="Accept all" size="sm" tone="emerald" tally={{ value: suggested.length }} onPress={() => session.accept(suggested.map((p) => p.id))} />
+              </span>
+            )}
           </div>
           <p className={s.sr} aria-live="polite">
             {`Step ${at + 1} of ${STEPS.length}, ${STEP_LABEL[step]}`}

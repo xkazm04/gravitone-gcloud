@@ -1,17 +1,19 @@
 "use client";
 
-// THE RELEASE SESSION (spark studio-to-release): the draft reducer over the stored records, handed to its children
-// as one ReleaseSessionApi. WP0 STUB: edits and proposal answers are reduced on the page only (enough for the
-// fixture and for the layouts to build against). WP4 makes it persist: each edit applied optimistically, sent to
-// `acts.apply` with the record's version, the stored record taken back (re-based when `stale`); accept applies the
-// proposal's value on the page before the store confirms it.
-import { useReducer, useState, type ReactNode } from "react";
-
-import type { ReleaseProposal, ReleaseRecord } from "@gt/domain/release.record";
+// THE RELEASE SESSION (spark studio-to-release): the stored records and the operator's acts on them, handed to the
+// children as one ReleaseSessionApi. With the store's doors (`acts`), every edit is shown at once and sent to
+// `acts.apply` with the record's version, one release's acts strictly in order, each carrying the version the answer
+// before it returned; the answer's record replaces the page's copy and the acts still queued are replayed on it.
+// A stale answer shows the stored record and its notice; a refusal rolls back to the last stored record with the
+// store's own sentence. Accept sets the proposal's value on the page at once (./applyLocal.ts, zod-free) - the store
+// re-checks it through the release door. The model is pure (./sessionModel.ts); this component only sends.
+// On the fixture (`acts === null`) nothing leaves the page.
+import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 
 import type { ReleaseRead } from "./_port/port.ts";
-import type { ReleaseActs } from "./act.ts";
-import { initialDraft, reduceDraft } from "./draft.ts";
+import type { ReleaseAct, ReleaseActs } from "./act.ts";
+import { isReleaseEdit, type DraftEvent } from "./draft.ts";
+import { createIn, initialSession, pendingOf, pump, reduceSession, savingOf, viewOf } from "./sessionModel.ts";
 import type { ReleaseSessionApi } from "./session.ts";
 
 export interface ReleaseSessionProps {
@@ -23,25 +25,48 @@ export interface ReleaseSessionProps {
   readonly children: (session: ReleaseSessionApi) => ReactNode;
 }
 
-export function ReleaseSession({ read, openId, children }: ReleaseSessionProps) {
-  const [state, dispatch] = useReducer(reduceDraft, initialDraft(read.records.map((r) => r.release), openId));
-  const [pending, setPending] = useState<Readonly<Record<string, readonly ReleaseProposal[]>>>(() => Object.fromEntries(read.records.map((r) => [r.release.id, r.pending])));
-  const drop = (ids: readonly string[]) => {
-    if (state.openId === null) return;
-    const id = state.openId;
-    setPending((p) => ({ ...p, [id]: (p[id] ?? []).filter((x) => !ids.includes(x.id)) }));
-  };
-  const records: ReleaseRecord[] = read.records.map((r) => ({ ...r, release: state.releases.find((x) => x.id === r.release.id) ?? r.release, pending: pending[r.release.id] ?? [] }));
-  const open = records.find((r) => r.release.id === state.openId) ?? null;
+export function ReleaseSession({ read, openId, acts, children }: ReleaseSessionProps) {
+  const [model, send] = useReducer(reduceSession, undefined, () => initialSession(read.records, openId));
+  /** `<id>:<seq>` already handed to the store - a re-run effect (Strict Mode, a re-render) never sends twice. */
+  const leaving = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (acts !== null) pump(model, acts, send, leaving.current);
+  }, [model, acts]);
+
+  const act = useCallback((id: string, a: ReleaseAct) => send(acts === null ? { type: "local", id, act: a } : { type: "enqueue", id, act: a }), [acts]);
+
+  const dispatch = useCallback(
+    (e: DraftEvent) => {
+      if (e.type === "open") return send({ type: "open", id: e.id });
+      if (isReleaseEdit(e)) return act(e.id, { kind: "edit", edit: e });
+      send({ type: "create", id: e.id, artist: e.artist, takes: e.takes, at: new Date().toISOString(), stored: acts === null });
+      if (acts !== null) createIn(acts, e.id, e.takes, send);
+    },
+    [act, acts],
+  );
+
+  const opened = model.openId;
+  const answerOpen = useCallback(
+    (kind: "accept" | "dismiss", proposalIds: readonly string[]) => {
+      if (opened !== null && proposalIds.length > 0) act(opened, { kind, proposalIds });
+    },
+    [act, opened],
+  );
+  const accept = useCallback((ids: readonly string[]) => answerOpen("accept", ids), [answerOpen]);
+  const dismiss = useCallback((ids: readonly string[]) => answerOpen("dismiss", ids), [answerOpen]);
+
+  const records = useMemo(() => viewOf(model), [model]);
+  const state = useMemo(() => ({ releases: records.map((r) => r.release), openId: model.openId }), [records, model.openId]);
   return children({
     state,
     dispatch,
     records,
-    open,
-    pending: open?.pending ?? [],
-    accept: drop,
-    dismiss: drop,
-    saving: false,
-    notice: null,
+    open: records.find((r) => r.release.id === model.openId) ?? null,
+    pending: pendingOf(records, model.openId),
+    accept,
+    dismiss,
+    saving: savingOf(model),
+    notice: model.notice,
   });
 }

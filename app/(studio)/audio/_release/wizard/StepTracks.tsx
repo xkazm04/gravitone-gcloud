@@ -14,11 +14,12 @@ import type { TrackFields } from "../draft.ts";
 import { clock, db, orNull } from "./fmt.ts";
 import { Problems } from "./Problems.tsx";
 import { Shelf } from "./Shelf.tsx";
+import { Suggest } from "./Suggest.tsx";
 import { problemsOf, problemsOnTrack, type StepProps } from "./steps.ts";
 import s from "./step.module.css";
 
 function TrackRow({ t, i, n, props }: { readonly t: ReleaseTrack; readonly i: number; readonly n: number; readonly props: StepProps }) {
-  const { release, read, problems, dispatch } = props;
+  const { release, read, problems, dispatch, session } = props;
   const patch = (fields: TrackFields) => dispatch({ type: "patchTrack", id: release.id, index: i, fields });
   const take = read.shelf.find((x) => x.takeId === t.takeId);
   const name = t.title.trim() === "" ? `track ${i + 1}` : t.title;
@@ -40,18 +41,22 @@ function TrackRow({ t, i, n, props }: { readonly t: ReleaseTrack; readonly i: nu
           <label className={s.cell} data-w="wide">
             <span className={s.k}>title</span>
             <Field label={`track ${i + 1} title`} value={t.title} onChange={(v) => patch({ title: v })} />
+            <Suggest path={`track:${i + 1}.title`} session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>version</span>
             <Field label={`track ${i + 1} version`} value={t.version ?? ""} onChange={(v) => patch({ version: orNull(v) })} />
+            <Suggest path={`track:${i + 1}.version`} session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>ISRC</span>
             <Field label={`track ${i + 1} ISRC`} value={t.isrc ?? ""} placeholder="CC-XXX-YY-NNNNN" maxLength={15} onChange={(v) => patch({ isrc: orNull(v) })} />
+            <Suggest path={`track:${i + 1}.isrc`} session={session} />
           </label>
           <span className={s.cell} data-w="tight">
             <span className={s.k}>explicit</span>
             <Toggle label={t.explicit ? "explicit" : "clean"} on={t.explicit} onToggle={(v) => patch({ explicit: v })} name={`track ${i + 1} explicit`} />
+            <Suggest path={`track:${i + 1}.explicit`} session={session} />
           </span>
         </div>
         <div className={s.trackFacts}>

@@ -1,16 +1,20 @@
 "use client";
 
 // The track picker inside a per-track step (details' people, AI & rights): one door per
-// track, numbered in release order, carrying the count of THIS step's problems on that track.
+// track, numbered in release order, carrying the count of THIS step's problems on that track and of the agent's
+// pending proposals for this step's fields on it.
 import type { ReleaseProblem } from "@gt/domain/release.problems";
 import type { ReleaseTrack } from "@gt/domain/release";
+import { parseProposalPath, type ReleaseProposal } from "@gt/domain/release.record";
 
+import { pendingIn } from "../pending.ts";
 import { problemsOnTrack, severityOf, type StepId } from "./steps.ts";
 import s from "./step.module.css";
 
-export function TrackStrip({ tracks, problems, step, current, onPick }: {
+export function TrackStrip({ tracks, problems, pending = [], step, current, onPick }: {
   readonly tracks: readonly ReleaseTrack[];
   readonly problems: readonly ReleaseProblem[];
+  readonly pending?: readonly ReleaseProposal[];
   readonly step: StepId;
   readonly current: number;
   readonly onPick: (index: number) => void;
@@ -19,7 +23,8 @@ export function TrackStrip({ tracks, problems, step, current, onPick }: {
     <div className={s.strip} role="group" aria-label="track">
       {tracks.map((t, i) => {
         const sev = severityOf(problemsOnTrack(problems, step, i));
-        const spoken = [sev.block > 0 ? `${sev.block} block` : "", sev.warn > 0 ? `${sev.warn} warn` : ""].filter((x) => x !== "").join(", ");
+        const suggested = pendingIn(pending, step).filter((p) => parseProposalPath(p.path)?.track === i + 1).length;
+        const spoken = [sev.block > 0 ? `${sev.block} block` : "", sev.warn > 0 ? `${sev.warn} warn` : "", suggested > 0 ? `${suggested} suggested` : ""].filter((x) => x !== "").join(", ");
         return (
           <button
             key={t.takeId}
@@ -43,6 +48,11 @@ export function TrackStrip({ tracks, problems, step, current, onPick }: {
             {sev.warn > 0 && (
               <b className={s.markWarn} aria-hidden="true">
                 {sev.warn}
+              </b>
+            )}
+            {suggested > 0 && (
+              <b className={s.markPending} aria-hidden="true">
+                {suggested}
               </b>
             )}
           </button>

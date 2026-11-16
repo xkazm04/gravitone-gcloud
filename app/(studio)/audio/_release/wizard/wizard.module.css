@@ -37,10 +37,15 @@
 .railStep[aria-current="step"] .railDot{box-shadow:0 0 0 var(--ring-halo) var(--focus-line)}
 .railLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .railCounts{display:flex;gap:var(--sp-1)}
-.countBlock,.countWarn,.countReady{display:inline-grid;place-items:center;min-width:var(--h-tag);height:var(--h-tag);padding:0 var(--sp-tight);border-radius:var(--r-chip);font:700 var(--fs-micro)/1 var(--mono)}
+.countBlock,.countWarn,.countReady,.countPending{display:inline-grid;place-items:center;min-width:var(--h-tag);height:var(--h-tag);padding:0 var(--sp-tight);border-radius:var(--r-chip);font:700 var(--fs-micro)/1 var(--mono)}
 .countBlock{color:var(--rose);background:var(--rose-a);border:1px solid color-mix(in srgb,var(--rose) 45%,transparent)}
 .countWarn{color:var(--amber);background:var(--amber-a);border:1px solid color-mix(in srgb,var(--amber) 45%,transparent)}
 .countReady{color:var(--emerald);background:var(--emerald-a);border:1px solid color-mix(in srgb,var(--emerald) 45%,transparent);text-transform:uppercase;letter-spacing:.03em}
+.countPending{color:var(--actor-agent);background:var(--violet-a);border:1px solid color-mix(in srgb,var(--actor-agent) 45%,transparent)}
+
+/* the session: the store's last refusal or conflict, a step's accept-all */
+.notice{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) var(--sp-5);border:1px solid color-mix(in srgb,var(--rose) 40%,transparent);border-radius:var(--r-control);background:var(--rose-a)}
+.acceptAll{margin-left:auto;align-self:center}
 
 /* picker */
 .picker{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--sp-7);align-items:start}

@@ -8,16 +8,18 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { CREDIT_ROLES, GENRES, type CreditRole, type Genre, type ReleaseTrack } from "@gt/domain/release";
 
 import type { ReleaseFields, TrackFields } from "../draft.ts";
+import type { ReleaseSessionApi } from "../session.ts";
 import { orNull } from "./fmt.ts";
 import { Problems } from "./Problems.tsx";
 import { problemsOf, problemsOnTrack, type StepProps } from "./steps.ts";
+import { Suggest } from "./Suggest.tsx";
 import { TrackStrip } from "./TrackStrip.tsx";
 import s from "./step.module.css";
 
 const GENRE_OPTIONS: readonly { readonly value: Genre | ""; readonly label: string }[] = [{ value: "", label: "—" }, ...GENRES.map((g) => ({ value: g, label: g }))];
 const ROLE_OPTIONS = CREDIT_ROLES.map((r) => ({ value: r, label: r }));
 
-function People({ t, i, patch }: { readonly t: ReleaseTrack; readonly i: number; readonly patch: (f: TrackFields) => void }) {
+function People({ t, i, patch, session }: { readonly t: ReleaseTrack; readonly i: number; readonly patch: (f: TrackFields) => void; readonly session: ReleaseSessionApi }) {
   const writers = t.songwriters;
   const setWriter = (k: number, v: string) => patch({ songwriters: writers.map((w, j) => (j === k ? v : w)) });
   const setCredit = (k: number, f: Partial<{ name: string; role: CreditRole }>) => patch({ credits: t.credits.map((c, j) => (j === k ? { ...c, ...f } : c)) });
@@ -25,6 +27,7 @@ function People({ t, i, patch }: { readonly t: ReleaseTrack; readonly i: number;
     <div className={s.people}>
       <section className={s.section} aria-label={`track ${i + 1} songwriters`}>
         <CapsHeading text="Songwriters" tally={{ value: writers.filter((w) => w.trim() !== "").length }} variant="section" />
+        <Suggest path={`track:${i + 1}.songwriters`} session={session} />
         <ul className={s.list}>
           {writers.map((w, k) => (
             <li key={k} className={s.listRow}>
@@ -39,6 +42,7 @@ function People({ t, i, patch }: { readonly t: ReleaseTrack; readonly i: number;
       </section>
       <section className={s.section} aria-label={`track ${i + 1} credits`}>
         <CapsHeading text="Credits" tally={{ value: t.credits.length }} variant="section" />
+        <Suggest path={`track:${i + 1}.credits`} session={session} />
         <ul className={s.list}>
           {t.credits.map((c, k) => (
             <li key={k} className={s.listRow}>
@@ -54,6 +58,7 @@ function People({ t, i, patch }: { readonly t: ReleaseTrack; readonly i: number;
       </section>
       <section className={s.section} data-w="full" aria-label={`track ${i + 1} lyrics`}>
         <CapsHeading text="Lyrics" variant="section" />
+        <Suggest path={`track:${i + 1}.lyrics`} session={session} />
         <TextArea label={`track ${i + 1} lyrics`} value={t.lyrics ?? ""} rows={8} onChange={(v) => patch({ lyrics: orNull(v) })} />
       </section>
     </div>
@@ -61,7 +66,7 @@ function People({ t, i, patch }: { readonly t: ReleaseTrack; readonly i: number;
 }
 
 export function StepDetails(props: StepProps) {
-  const { release: r, problems, dispatch, track, setTrack } = props;
+  const { release: r, problems, dispatch, track, setTrack, session } = props;
   const set = (fields: ReleaseFields) => dispatch({ type: "patch", id: r.id, fields });
   const t = r.tracks[track];
   return (
@@ -72,38 +77,47 @@ export function StepDetails(props: StepProps) {
           <label className={s.cell} data-w="wide">
             <span className={s.k}>title</span>
             <Field label="release title" value={r.title} onChange={(v) => set({ title: v })} />
+            <Suggest path="title" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>version</span>
             <Field label="release version" value={r.version ?? ""} onChange={(v) => set({ version: orNull(v) })} />
+            <Suggest path="version" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>artist</span>
             <Field label="artist" value={r.artist} onChange={(v) => set({ artist: v })} />
+            <Suggest path="artist" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>label</span>
             <Field label="record label" value={r.label ?? ""} onChange={(v) => set({ label: orNull(v) })} />
+            <Suggest path="label" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>release date</span>
             <Field label="release date" value={r.releaseDate ?? ""} placeholder="YYYY-MM-DD" maxLength={10} onChange={(v) => set({ releaseDate: orNull(v) })} />
+            <Suggest path="releaseDate" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>language</span>
             <Field label="language" value={r.language} placeholder="en" maxLength={35} onChange={(v) => set({ language: v })} />
+            <Suggest path="language" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>primary genre</span>
             <Select label="primary genre" options={GENRE_OPTIONS} value={r.genre.primary ?? ""} onChange={(v) => set({ genre: { ...r.genre, primary: v === "" ? null : v } })} />
+            <Suggest path="genre.primary" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>secondary genre</span>
             <Select label="secondary genre" options={GENRE_OPTIONS} value={r.genre.secondary ?? ""} onChange={(v) => set({ genre: { ...r.genre, secondary: v === "" ? null : v } })} />
+            <Suggest path="genre.secondary" session={session} />
           </label>
           <label className={s.cell}>
             <span className={s.k}>UPC</span>
             <Field label="UPC" value={r.upc ?? ""} maxLength={13} onChange={(v) => set({ upc: orNull(v) })} />
+            <Suggest path="upc" session={session} />
           </label>
         </div>
         <Problems problems={problemsOf(problems, "details").filter((p) => p.at === "release")} label="release problems" />
@@ -111,9 +125,9 @@ export function StepDetails(props: StepProps) {
       {t !== undefined && (
         <section className={s.section} aria-label="people on each track">
           <CapsHeading text="People" variant="section" />
-          <TrackStrip tracks={r.tracks} problems={problems} step="details" current={track} onPick={setTrack} />
+          <TrackStrip tracks={r.tracks} problems={problems} pending={session.pending} step="details" current={track} onPick={setTrack} />
           <Problems problems={problemsOnTrack(problems, "details", track)} label={`track ${track + 1} problems`} />
-          <People t={t} i={track} patch={(fields) => dispatch({ type: "patchTrack", id: r.id, index: track, fields })} />
+          <People t={t} i={track} session={session} patch={(fields) => dispatch({ type: "patchTrack", id: r.id, index: track, fields })} />
         </section>
       )}
     </div>

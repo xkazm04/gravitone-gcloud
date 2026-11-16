@@ -12,6 +12,10 @@
 .group[data-tone="rose"] .dot{background:var(--rose)}
 .group[data-tone="amber"] .dot{background:var(--amber)}
 .text{min-width:0}
+.pendingRow{display:flex;flex-direction:column;gap:var(--sp-2)}
+.pendingWhere{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);padding:0;border:0;background:none;color:var(--ink-bright);font:600 var(--fs-ui)/1.3 var(--sans);text-align:left;cursor:pointer}
+.pendingWhere:hover .where{color:var(--text)}
+.pendingWhere:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
 .where{font:500 var(--fs-meta)/1.2 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(var(--w-rail) * 1.6)}
 .side{display:flex;flex-direction:column;gap:var(--sp-6);padding:var(--sp-6);border:1px solid var(--hair-2);border-radius:var(--r-lg);background:var(--panel-ground);position:sticky;top:var(--sp-5)}
 .side section{display:flex;flex-direction:column;gap:var(--sp-4)}

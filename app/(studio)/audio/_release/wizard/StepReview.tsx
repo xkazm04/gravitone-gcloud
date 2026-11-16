@@ -12,11 +12,14 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { CHANNEL_NAMES, releaseKind } from "@gt/domain/release";
 import { PROBLEM_TEXT, releaseReady, type ReleaseProblem } from "@gt/domain/release.problems";
+import { parseProposalPath } from "@gt/domain/release.record";
 
 import { plannedSlots } from "../draft.ts";
+import { fieldLabel, stepOfPath } from "../pending.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { CHANNEL_ENTRY, STATUS_ENTRY } from "./status.ts";
 import { STEP_LABEL, stepOf, trackIndexOf, type StepProps } from "./steps.ts";
+import { Suggest } from "./Suggest.tsx";
 import s from "./review.module.css";
 
 function Group({ title, tone, problems, props }: { readonly title: string; readonly tone: "rose" | "amber"; readonly problems: readonly ReleaseProblem[]; readonly props: StepProps }) {
@@ -47,6 +50,35 @@ function Group({ title, tone, problems, props }: { readonly title: string; reado
   );
 }
 
+/** The agent's proposals still waiting on the operator, one row per field, each answerable here or at its step. */
+function Pending({ props }: { readonly props: StepProps }) {
+  const { session, go } = props;
+  const paths = [...new Set(session.pending.map((p) => p.path))];
+  if (paths.length === 0) return null;
+  return (
+    <section className={s.group} data-tone="agent" aria-label="pending">
+      <CapsHeading text="Pending" tally={{ value: session.pending.length }} variant="section" />
+      <ul className={s.list}>
+        {paths.map((path) => {
+          const step = stepOfPath(path);
+          const n = parseProposalPath(path)?.track ?? null;
+          return (
+            <li key={path} className={s.pendingRow}>
+              <button type="button" className={s.pendingWhere} onClick={() => go(step, n === null ? undefined : n - 1)} aria-label={`${fieldLabel(path)}, open ${STEP_LABEL[step]}`}>
+                <span>{fieldLabel(path)}</span>
+                <span className={s.where} aria-hidden="true">
+                  {STEP_LABEL[step]} ›
+                </span>
+              </button>
+              <Suggest path={path} session={session} />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function StepReview(props: StepProps) {
   const { release: r, read, problems, dispatch } = props;
   const blocks = problems.filter((p) => p.severity === "block");
@@ -61,6 +93,7 @@ export function StepReview(props: StepProps) {
         {problems.length === 0 && <Chip label="nothing to fix" tone="emerald" dot />}
         <Group title="Blocks" tone="rose" problems={blocks} props={props} />
         <Group title="Warnings" tone="amber" problems={warns} props={props} />
+        <Pending props={props} />
       </div>
       <aside className={s.side} aria-label="what Schedule commits">
         <div className={s.summary}>
