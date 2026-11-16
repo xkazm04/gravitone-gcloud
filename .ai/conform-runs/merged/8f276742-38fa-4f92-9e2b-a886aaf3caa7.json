@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "8f276742-38fa-4f92-9e2b-a886aaf3caa7",
+ "subject": "model-composed-workspace",
+ "evaluatedAt": "2026-11-16T22:03:42.783783+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-studio-view",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/studio/_view/Card.tsx:68 While the outside agent works on an ask, the pending card shows a generic 'working on this' line over a breathing skeleton instead of the real steps. The turn protocol only has say/turn events (packages/domain/src/audio.studio.events.ts), so there are no steps to narrate, and the person cannot see what the agent is reading or building before the answer lands.",
+   "techniques": [
+    {
+     "technique": "conductor-turn-flow",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/studio/_view/Card.tsx:68 The ask is acknowledged at once: the pending card echoes it with its number. The narration is the 'thinking only' form the decision rule names, and no step events exist to replace it."
+    },
+    {
+     "technique": "composition-region",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/studio/_view/registry.tsx:24 Model nodes land in declared card places, not coordinates. The rail and next-steps chrome is fixed. Each kind has its own Absent state (line 30) and a contained error state (line 59). Not verified: whether the figures in track/measures nodes (bpm, key, measure values) come from a tool or are typed by the model."
+    },
+    {
+     "technique": "reversible-screen-ops",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/studio/_view/Card.tsx:218 What the door dropped is disclosed on the answer. Model changes only append a card and never move earlier ones. Agent-bound actions are proposals, and Side.tsx:126 says what pressing each one does. Stop/restore of an in-flight turn is not in this view, but turns arrive whole."
+    },
+    {
+     "technique": "composition-motion",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/studio/_view/Track.tsx:63 Model content carries a worded provenance tag rather than an icon, shown only when the node supplies a source. The scroll to a new card respects reduced motion (View.tsx:34). Reveal and reserve do not apply because turns render whole."
+    }
+   ],
+   "registryProposal": "conductor-turn-flow assumes the surface sees the model's steps. When the composer is an outside agent reached over an inbox/MCP (out-of-process, turn-granular protocol), the technique should say whether the deviation lives in the protocol (no step events) or the view, and whether 'acknowledgement only' is then the conformant form."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-16T22:03:42.783783+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-motion",
+    "composition-region",
+    "conductor-turn-flow",
+    "reversible-screen-ops"
+   ],
+   "deviations": 1,
+   "context": "audio-studio-view",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
