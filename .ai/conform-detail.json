@@ -24496,6 +24496,42 @@
           "evidence": "packages/kernel/src/router/route.ts:48 The retry/reroute ladder and its deadline live in the driver. The router only refuses to walk past a timeout and holds no clock or deadline."
         }
       ]
+    },
+    "bba6c91f-7e8c-40e9-acee-8929eb245a8c/music-video-production": {
+      "context": "cut-and-export",
+      "subject": "music-video-production",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-16",
+      "evaluatedTs": "2026-11-16T22:05:07.376Z",
+      "techniques": [
+        {
+          "technique": "track-map-before-treatment",
+          "verdict": "conformant",
+          "evidence": "lib/musicVideoExport.ts:191 The technique says a frame-reactive visualizer needs only the energy layer. That layer (low/mid/high bands per frame on the track's clock) is analysed once, and every frame reads it."
+        },
+        {
+          "technique": "cut-rate-follows-the-section",
+          "verdict": "conformant",
+          "evidence": "lib/musicVideoExport.ts:296 There are no cuts. The decision rule that does apply (keep beat-pulsed brightness at or under three flashes per second) is enforced: limitFlashRate defaults to flashMaxPerWindow 3 over a one-second window (compositor.ts:198)."
+        },
+        {
+          "technique": "segment-on-the-master-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/musicVideoExport.ts:508 The technique exempts a visualizer rendered per frame from the audio. Frames are indexed straight off the envelope's frameCount, so timing is exact by construction and there are no segments."
+        },
+        {
+          "technique": "coverage-across-the-phrase",
+          "verdict": "not-applicable",
+          "evidence": "lib/musicVideoExport.ts:501 The picture is a single poster. The technique says a visualizer has no setups."
+        }
+      ],
+      "withdrawn": {
+        "worker": "153b642c-ab4f-46d6-95a2-bc1410031bba",
+        "state": "conformant",
+        "at": "2026-11-16T22:05:31.291557+00:00",
+        "reason": "reviewer (sonnet): Every anchor is in lib/musicVideoExport.ts, which is not among the context's files (lib/cut/*, cutExport.ts, adExports.ts, adRender.ts and so on) and which none of them import (adRender.ts mentions it only in comments), so the verdict describes a different context."
+      }
     }
   }
 }
