@@ -94,14 +94,14 @@ async function drawAct(e: SheetActEngines, req: SheetRequest, ctx: StepContext):
   if (!portrait.ok) return failed(portrait.error.message);
   if (portrait.value.which !== "portrait") return failed(`${req.portrait} is her sheet, not her portrait; a sheet is drawn from her kept portrait`);
   const draw = e.draw;
-  let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string };
+  let got: { readonly png: Uint8Array; readonly seed: number; readonly model: string; readonly cliVersion?: string };
   try {
     if (draw === undefined) throw new AppError("unavailable", "no sheet engine is bound");
     const render = async () => ({ ...(await draw(req.prompt, { refs: [portrait.value.bytes], late: req.late, seed: req.seed })), model: CODEX_MODEL });
     got =
       ctx.job.mode.kind === "live"
         ? await render()
-        : await meteredCall<{ png: Uint8Array; seed: number; model: string }>(ctx, {
+        : await meteredCall<{ png: Uint8Array; seed: number; model: string; cliVersion?: string }>(ctx, {
             provider: "codex",
             model: CODEX_MODEL,
             payload: { prompt: req.prompt, aspect: "1:1", seed: req.seed, refs: [portrait.value.ref], late: req.late },
@@ -125,7 +125,7 @@ async function drawAct(e: SheetActEngines, req: SheetRequest, ctx: StepContext):
     const { error: _e, ...base } = s;
     return { ...base, image: rel, seed: got.seed };
   });
-  return madePaid(data({ sheet: c.id, file: rel, seed: got.seed, from: portrait.value.ref, late: req.late, provider: "codex", model: got.model, dry: got.model === "dry stand-in", costUsd: 0, ...(read.ok ? { judge: read.value } : {}) }), ctx);
+  return madePaid(data({ sheet: c.id, file: rel, seed: got.seed, from: portrait.value.ref, late: req.late, provider: "codex", model: got.model, ...(got.cliVersion === undefined ? {} : { cliVersion: got.cliVersion }), dry: got.model === "dry stand-in", costUsd: 0, ...(read.ok ? { judge: read.value } : {}) }), ctx);
 }
 
 /* ── The ending ───────────────────────────────────────────────────────────── */

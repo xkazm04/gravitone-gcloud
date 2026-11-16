@@ -68,6 +68,13 @@ describe("drawCodex", () => {
     expect(seen[0]?.args.some((a) => a.includes("ref-2.png"))).toBe(true);
   });
 
+  it("names the CLI that drew it when the version answers, and asks nothing of a fake", async () => {
+    const r = await drawCodex({ prompt: "x" }, { spawn: fake([]), version: async () => "codex-cli 0.58.0" });
+    expect(r.cliVersion).toBe("codex-cli 0.58.0");
+    expect(await drawCodex({ prompt: "x" }, { spawn: fake([]), version: async () => undefined })).not.toHaveProperty("cliVersion");
+    expect(await drawCodex({ prompt: "x" }, { spawn: fake([]) })).not.toHaveProperty("cliVersion");
+  });
+
   it("refuses an empty prompt and too many references before spawning anything", async () => {
     const seen: Seen[] = [];
     await expect(drawCodex({ prompt: "  " }, { spawn: fake(seen) })).rejects.toThrow(/needs a prompt/);
@@ -109,6 +116,9 @@ describe("codexProvider", () => {
     const out = await p.generate?.({ prompt: "a door", negativePrompt: "text", aspect: "16:9", count: 1, seed: 3 } as never);
     expect(calls).toEqual([{ prompt: "a door Avoid: text.", aspect: "16:9", seed: 3 }]);
     expect(out?.provenance).toMatchObject({ provider: "codex", model: CODEX_MODEL, costUsd: 0, negativePromptChannel: "prose" });
+    expect(out?.provenance).not.toHaveProperty("cliVersion");
+    const versioned = await codexProvider({ draw: async () => ({ ...stillOf, cliVersion: "codex-cli 0.58.0" }) }).generate?.({ prompt: "a door", aspect: "16:9", count: 1 });
+    expect(versioned?.provenance.cliVersion).toBe("codex-cli 0.58.0");
     expect(out?.images[0]).toMatchObject({ mime: "image/png", width: 1672, height: 941 });
   });
 
@@ -123,5 +133,22 @@ describe("codexProvider", () => {
     await p.generate?.({ prompt: "x", aspect: "4:5", count: 1 } as never);
     expect(calls[0]?.aspect).toBe("9:16");
     await expect(p.generate?.({ prompt: "x", aspect: "16:9", count: 2 } as never)).rejects.toThrow(/one image per request/);
+  });
+
+  it("declares references and hands them to the draw, at most CODEX_REFS_MAX", async () => {
+    const calls: Array<{ refs?: readonly Uint8Array[] }> = [];
+    const p = codexProvider({
+      draw: async (r) => {
+        calls.push(r);
+        return stillOf;
+      },
+    });
+    expect(p.supportsReferences).toBe(true);
+    const ref = (b: number) => ({ base64: Buffer.from([b]).toString("base64"), mime: "image/png" as const });
+    await p.generate?.({ prompt: "her again", aspect: "1:1", count: 1, references: [ref(1), ref(2), ref(3), ref(4)] });
+    expect(calls[0]?.refs?.map((r) => [...r])).toEqual([[1], [2], [3]]);
+    expect(CODEX_REFS_MAX).toBe(3);
+    await p.generate?.({ prompt: "x", aspect: "1:1", count: 1 });
+    expect(calls[1]).not.toHaveProperty("refs");
   });
 });

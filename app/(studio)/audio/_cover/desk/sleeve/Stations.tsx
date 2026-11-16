@@ -8,12 +8,14 @@
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
-import { COVER_TAKE_COUNT, type CoverCard } from "@gt/domain/cover";
+import { COVER_TAKE_COUNT, type CoverCard, type CoverRecord } from "@gt/domain/cover";
+import { sunoSendInFlight } from "@gt/domain/cover.suno";
 
 import { ChainPart, RemixPart, WinnerPart } from "../After.tsx";
 import { BRIEF_TONE } from "../brief/brief.ts";
 import { BriefHypothesis, BriefPart } from "../brief/Brief.tsx";
 import { ScorePart, SectionPart } from "../Score.tsx";
+import { SunoStation } from "../suno/SunoStation.tsx";
 import { SourceFacts } from "../Source.tsx";
 import { useAB, type AB } from "../useAB.ts";
 import { useCover, type CoverFlow } from "../useCover.ts";
@@ -28,6 +30,14 @@ import { usePair, type Pair } from "./usePair.ts";
 import { WinnerCard } from "./WinnerCard.tsx";
 import s from "./sleeve.module.css";
 
+/** The suno station's badge: running while a send is, the kept take once one is filed, else how many sends went. */
+function sunoFact(r: CoverRecord): Partial<Record<Station, StationFacts>> {
+  const sends = r.suno?.sends ?? [];
+  if (sunoSendInFlight(r.suno)) return { suno: { badge: { label: "sending", tone: "cyan" } } };
+  if (r.suno?.filed !== undefined) return { suno: { badge: { label: `send ${r.suno.filed.send} · take ${r.suno.filed.take}`, tone: "emerald" } } };
+  return sends.length === 0 ? {} : { suno: { tally: { value: sends.length, label: "sent" } } };
+}
+
 function factsOf(flow: CoverFlow): Partial<Record<Station, StationFacts>> {
   const r = flow.card.record;
   const winner = r.takes.find((t) => t.seed === r.winnerSeed);
@@ -37,11 +47,12 @@ function factsOf(flow: CoverFlow): Partial<Record<Station, StationFacts>> {
     ...(flow.editable && flow.style.trim() === "" ? { score: { badge: { label: "no style", tone: "amber" } } } : {}),
     ...(r.state === "draft" ? {} : { takes: { tally: { value: doneCount(r.takes), of: COVER_TAKE_COUNT, label: "done" } } }),
     ...(winner === undefined ? {} : { winner: { badge: { label: `take ${winner.n}`, tone: "emerald" } } }),
+    ...sunoFact(r),
     ...(r.remix === undefined ? {} : { remix: { badge: { label: "chain", tone: "emerald" } } }),
   };
 }
 
-function Panel({ at, flow, ab, pair, quiet }: { readonly at: Station; readonly flow: CoverFlow; readonly ab: AB; readonly pair: Pair; readonly quiet: () => void }) {
+function Panel({ at, flow, desk, ab, pair, quiet }: { readonly at: Station; readonly flow: CoverFlow; readonly desk: Desk; readonly ab: AB; readonly pair: Pair; readonly quiet: () => void }) {
   const r = flow.card.record;
   const reduce = useReducedMotion() === true;
   switch (at) {
@@ -71,6 +82,8 @@ function Panel({ at, flow, ab, pair, quiet }: { readonly at: Station; readonly f
           <WinnerPart flow={flow} />
         </div>
       );
+    case "suno":
+      return <SunoStation flow={flow} desk={desk} />;
     case "remix":
       return (
         <div className={s.remix}>
@@ -180,7 +193,7 @@ export function Stations({ card, desk }: { readonly card: CoverCard; readonly de
               exit={reduce ? { opacity: 0, transition: { duration: 0 } } : "exit"}
               transition={{ duration: reduce ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              <Panel at={shown} flow={flow} ab={ab} pair={pair} quiet={quiet} />
+              <Panel at={shown} flow={flow} desk={desk} ab={ab} pair={pair} quiet={quiet} />
             </motion.section>
           </AnimatePresence>
         </div>

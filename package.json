@@ -34,6 +34,7 @@
     "medium:browser": "node pipeline/medium-browser.mjs",
     "dojo:status": "npx tsx pipeline/dojo-status.mts",
     "suno:import": "npx tsx pipeline/suno-import.mts",
+    "suno:api": "npx tsx pipeline/suno-api.mts",
     "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
     "check:gate": "npx tsx pipeline/gate-regression.mts",

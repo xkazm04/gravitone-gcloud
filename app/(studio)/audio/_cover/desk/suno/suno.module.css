@@ -1,0 +1,49 @@
+/* The suno station's three compositions (spark suno-covers): the same pieces, placed three ways. Tokens only. */
+.row{display:flex;align-items:center;gap:var(--sp-2) var(--sp-3);flex-wrap:wrap;min-width:0}
+.label{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.time{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--w-tile-audio),1fr));gap:var(--sp-3)}
+
+/* the form's pieces */
+.field{display:grid;gap:var(--sp-1);min-width:0;align-content:start}
+.head{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;min-height:var(--h-chip)}
+.controls{display:grid;gap:var(--sp-2);min-width:0}
+.control{display:grid;gap:var(--sp-1);min-width:0;align-content:start}
+
+/* the receipt and its consequence */
+.receipt{display:grid;gap:var(--sp-3);min-width:0}
+.consequence{display:grid;gap:var(--sp-3);padding:var(--sp-4);border-radius:var(--r-control);border:1px solid var(--amber);background:var(--amber-a)}
+.consequence p{margin:0;font:500 var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright)}
+
+/* a send: its steps and its takes */
+.steps{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.sendBlock{display:grid;gap:var(--sp-3);min-width:0;align-content:start}
+.stack{display:grid;gap:var(--sp-3);min-width:0}
+.earlier{list-style:none;margin:0;padding:var(--sp-3) 0 0;display:grid;gap:var(--sp-4);border-top:1px solid var(--hair-2);min-width:0}
+
+.take{display:grid;gap:var(--sp-2);padding:var(--sp-3);border-radius:var(--r-control);border:1px solid var(--hair-2);background:var(--ink-1);min-width:0;align-content:start}
+.take[data-state="pending"]{border-style:dashed}
+.take[data-state="streaming"]{border-color:var(--cyan)}
+.take[data-state="failed"]{border-color:var(--rose)}
+.take[data-filed]{border-color:var(--emerald);background:var(--ink-2)}
+.takeN{font:700 var(--fs-h3)/1 var(--mono);color:var(--ink-bright);font-variant-numeric:tabular-nums}
+.takeTitle{font:600 var(--fs-ui)/1.25 var(--sans);color:var(--ink-bright);min-width:0;overflow-wrap:anywhere}
+.out{display:inline-flex;align-items:center;height:var(--h-chip);padding:0 var(--sp-3);border-radius:var(--r-control);border:1px solid var(--hair-3);color:var(--cyan);font:600 var(--fs-meta)/1 var(--mono);text-decoration:none}
+.out:hover{background:var(--wash-hi)}
+.out:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
+.read{display:grid;gap:var(--sp-2);min-width:0}
+.chips{display:flex;align-items:center;gap:var(--sp-1) var(--sp-2);flex-wrap:wrap;min-width:0}
+.quote{margin:0;padding-left:var(--sp-3);border-left:var(--stroke-mark) solid var(--hair-3);font:500 var(--fs-meta)/1.45 var(--mono);color:var(--text);overflow-wrap:anywhere}
+.keep{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;min-width:0}
+.spend{display:inline-flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+
+/* A: the form leads, left; Suno's answer beside it; the receipt across the foot */
+.a{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--sp-5);align-items:start;min-width:0}
+.aForm{display:grid;gap:var(--sp-3);min-width:0;align-content:start}
+.aOut{display:grid;gap:var(--sp-4);min-width:0;align-content:start}
+.aReceipt{grid-column:1 / -1;min-width:0}
+.aReceipt:empty{display:none}
+
+@media (max-width:1100px){
+  .a{grid-template-columns:minmax(0,1fr)}
+}

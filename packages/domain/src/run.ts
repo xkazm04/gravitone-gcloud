@@ -74,6 +74,9 @@ export const PRODUCERS = [
   // A cover's brief (spark track-mirror-studio, follow-up): the song measured, listened to three times through Gemini,
   // its title, styles and section written by a Claude Code turn, then its cover launched (lib/producers/coverBrief.ts).
   "cover-brief",
+  // A cover's Suno send (spark suno-covers): the winner uploaded once, covered twice through Suno's official API and each cover read for free,
+  // one job per send on cloud.suno (lib/producers/coverSuno.ts).
+  "cover-suno",
   // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Codex still on the operator's seat, her
   // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
   "scout-sheet",

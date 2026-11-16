@@ -16,7 +16,7 @@
 //
 // A timeout, because a seat slot is only as free as the turn holding it: the whole process tree is killed at the cap.
 
-import { spawn as realSpawn } from "node:child_process";
+import { execFile, spawn as realSpawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -62,6 +62,8 @@ export type CodexDeps = {
   /** Spawns `codex`; a test hands a fake that writes the output file (it receives the workspace as `cwd`). */
   readonly spawn?: (cmd: string, args: readonly string[], opts: { readonly cwd: string }) => Spawned;
   readonly timeoutMs?: number;
+  /** The CLI's version for the receipt. Absent: `codexCliVersion()` when the real CLI is spawned, none for a fake. */
+  readonly version?: () => Promise<string | undefined>;
 };
 
 export type CodexRequest = {
@@ -78,6 +80,9 @@ export type CodexStill = {
   readonly width: number;
   readonly height: number;
   readonly wallMs: number;
+  /** `codex --version` as the CLI printed it (`codex-cli 0.58.0`), when it answered: the same prompt on another CLI
+   *  is another engine, so every receipt of a Codex image names the one that drew it. */
+  readonly cliVersion?: string;
 };
 
 const unavailable = (m: string): AppError => new AppError("unavailable", m);
@@ -89,6 +94,23 @@ export function pngSize(b: Uint8Array): { readonly width: number; readonly heigh
   if (b.length < 24 || PNG_MAGIC.some((v, i) => b[i] !== v)) return null;
   const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
   return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+let versionOnce: Promise<string | undefined> | undefined;
+
+/** `codex --version`, asked once per process (a failure is not kept, so the next draw asks again). Never throws. */
+export function codexCliVersion(): Promise<string | undefined> {
+  versionOnce ??= new Promise<string | undefined>((resolve) => {
+    // shell: the npm shim is a .cmd on Windows (liveSpawn below). No argument reaches the command line but the flag.
+    execFile("codex", ["--version"], { shell: true, timeout: 15_000, windowsHide: true }, (e, stdout) => {
+      const line = String(stdout).trim().split(/\r?\n/)[0]?.trim() ?? "";
+      resolve(e === null && line !== "" ? line.slice(0, 80) : undefined);
+    });
+  }).then((v) => {
+    if (v === undefined) versionOnce = undefined;
+    return v;
+  });
+  return versionOnce;
 }
 
 const liveSpawn: NonNullable<CodexDeps["spawn"]> = (cmd, args, opts) =>
@@ -154,7 +176,8 @@ export async function drawCodex(req: CodexRequest, deps: CodexDeps = {}): Promis
     }
     const size = pngSize(png);
     if (size === null) throw unavailable(`codex wrote a ${OUT} that is not a PNG`);
-    return { png, seed: req.seed ?? 0, model: CODEX_MODEL, width: size.width, height: size.height, wallMs: Date.now() - started };
+    const cliVersion = await (deps.version ?? (deps.spawn === undefined ? codexCliVersion : async () => undefined))();
+    return { png, seed: req.seed ?? 0, model: CODEX_MODEL, width: size.width, height: size.height, wallMs: Date.now() - started, ...(cliVersion === undefined ? {} : { cliVersion }) };
   } finally {
     await rm(ws, { recursive: true, force: true }).catch(() => undefined);
   }

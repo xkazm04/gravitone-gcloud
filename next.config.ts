@@ -18,7 +18,18 @@ const nextConfig: NextConfig = {
   // builds: they run under Node 24 native type stripping for CLIs and workers,
   // and Next transpiles them here. docs/next/migration-plan.md §9.
   transpilePackages: ["@gt/catalog", "@gt/domain", "@gt/kernel", "@gt/ui"],
+  // Page tools belong to the studio alone (app/(studio)/_shell/AgentNav.tsx registers them): every other response -
+  // the landing, the API, the file doors - says `tools=()`, so a page served there cannot register a tool.
+  async headers() {
+    return [{ source: NOT_STUDIO_SOURCE, headers: [{ key: "Permissions-Policy", value: "tools=()" }] }];
+  },
 };
+
+/** The studio's top-level routes: the directories of app/(studio) that are addresses (not `_private`, not `@slot`).
+ *  tests/next-server/permissions-policy.test.ts holds this list to the directory. */
+export const STUDIO_ROUTES = ["articles", "audio", "board", "calendar", "floor", "foundry", "kit", "ledger", "library", "local-draws", "playground", "projects", "scout", "studio"] as const;
+/** Every path but the studio's: `/floor` and `/floor/...` are excluded, `/floorplan` is not. */
+export const NOT_STUDIO_SOURCE = `/:path((?!(?:${STUDIO_ROUTES.join("|")})(?:/|$)).*)`;
 
 // ── package.json `sideEffects` — why a barrel re-export stops shipping its neighbours ──
 //

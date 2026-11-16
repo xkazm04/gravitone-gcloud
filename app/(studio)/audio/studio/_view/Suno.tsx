@@ -63,13 +63,14 @@ export function Taste({ placed, ctx }: { readonly placed: Placed<"taste">; reado
   );
 }
 
-/** Under a track that is the person's uploaded Suno take: what was measured and, after a Listen, heard. */
+/** Under a track that is the person's Suno take: what was measured, what Suno read (a pulled take) and,
+ *  after a Listen, what Gemini heard. */
 export function TakeRow({ node, ctx }: { readonly node: StudioNodeOf<"track">; readonly ctx: CardCtx }) {
   const facts = takeFactsOf(node, ctx.v.suno.takes);
   if (facts === null) return null;
   return (
     <div className={x.take}>
-      <TakeFacts facts={facts} onListen={ctx.v.suno.listen} />
+      <TakeFacts facts={facts} onListen={ctx.v.suno.listen} onRead={ctx.v.suno.read} />
     </div>
   );
 }

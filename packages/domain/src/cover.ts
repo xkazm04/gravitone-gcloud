@@ -11,6 +11,7 @@
 // Absent-value convention: an optional field is OMITTED, never null.
 
 import type { Receipt } from "./produce.ts";
+import type { CoverSuno } from "./cover.suno.ts";
 
 /** The owner's declaration at upload. There is no default: an upload without one is refused. */
 export const COVER_RIGHTS = ["own", "licensed", "third-party-uncleared"] as const;
@@ -91,9 +92,12 @@ export type CoverRecord = {
   readonly winnerSeed?: number;
   /** Relative: winner.mp3, once picked. */
   readonly exportFile?: string;
-  readonly remix?: { readonly file: string; readonly mime: string; readonly name: string; readonly style: string };
+  /** `sunoClipId`: the Suno song it was bought back from (spark suno-covers); absent for a remix uploaded by hand. */
+  readonly remix?: { readonly file: string; readonly mime: string; readonly name: string; readonly style: string; readonly sunoClipId?: string };
   readonly jobId?: string;
   readonly brief?: CoverBrief;
+  /** The winner's Suno round trip (./cover.suno.ts). */
+  readonly suno?: CoverSuno;
 };
 
 /** The screen's copy of a cover: the record plus the addresses its audio plays from. */

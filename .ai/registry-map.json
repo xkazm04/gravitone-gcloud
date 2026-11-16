@@ -1757,12 +1757,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format, --model, --effort, --allowed-tools \"\", --max-turns 1) has no --safe-mode, and its spawn at lib/claudeCli.ts:383 passes no cwd. So every frames, research and recalibrate turn (lib/turns/runner.ts -> reason -> runClaude) starts in the server's own directory, the repo root, and is briefed by the developer CLAUDE.md, which was written about a different job. The writer and reviewer seams in the same context, and the sibling claudeCliRetrieve door, all close that path with --safe-mode.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/claudeCli.ts:279 The reasoning door's argv (-p, --output-format json, --model, --effort high, --allowed-tools \"\", --max-turns 1) has no --safe-mode or --restricted, and its spawn passes no cwd. Every frames, research and recalibrate turn (runner -> reason -> lib/text/providers/claudeCli.ts:111 runClaude) therefore starts in the server's own directory and is briefed by the repo's developer CLAUDE.md, which was written for a different job. The writer and reviewer seams in this same context (agentArgs.ts:37) and the sibling claudeCliRetrieve door both close that path with --safe-mode.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
+          "revisionsBehind": 2
         },
         {
           "subject": "eval-harness",
@@ -1823,12 +1822,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/claudeCli.ts:388 Every nested `claude` run (reasoning door and agent seam alike) inherits this process's whole environment minus four metered-auth variables, so the parent runtime's ambient CLAUDE* identifiers reach the child unscrubbed, and the reasoning door also runs without --safe-mode, so user-wide hooks fire from it as if it were the parent session.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/claudeCli.ts:161 Both spawn doors (the reasoning door's spawnTurn and the agent seam's runAgent, which import seatOnlyEnv) build the child's environment by copying process.env and deleting four ANTHROPIC_* names. No CLAUDE*-family identifier is scrubbed by prefix, so a nested headless `claude` inherits whatever session identifiers the parent runtime put in the environment, which is the per-site enumeration the nested-run technique names as the failure.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
+          "revisionsBehind": 1
         },
         {
           "subject": "module-design",
@@ -1883,12 +1881,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs under an allow-everything profile and is contained only by workspace isolation, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts; one engine of the seam is therefore open rather than fail-closed.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/agent/reviewerCommand.ts:37 The headless agy reviewer runs with permissions skipped (an open profile) and is contained only by a throwaway workspace, while the claude writer and reviewer run a closed allowlist with dontAsk and no prompts, so one engine on the seam is open rather than fail-closed.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -1947,7 +1944,11 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/error.tsx:61 Both last-resort boundaries (error.tsx, and global-error.tsx:149) send a render crash only to the browser console, and a search of app/ and lib/ found no instrumentation file and no unhandledrejection or error listener, so client crashes are never sanitized, persisted or shipped to the operator.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18
         },
         {
           "subject": "embedded-preview",
@@ -2231,14 +2232,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/critiqueWriter.ts:97 The critique's 'research' follow-up records only how many sources were added. Existing sources are pinned by number (assertSourcesStable), and claims.json is rewritten whole with no typed kill, downgrade or unanswered effect, so the channel can only grow or silently drop evidence, never retract it on the record.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "lib/articles/critiqueWriter.ts:97 The critique's research follow-up records only how many sources it added. claims.json is overwritten whole (line 96) with claims that are just {text, source}, and assertSourcesStable forbids dropping a source, so a claim can disappear silently but can never be killed or downgraded on the record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "0572228c-bd2e-42a3-a146-6a91d10fa08f",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "test-harness",
@@ -2410,12 +2410,11 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/articles/humanActs.ts:36 The approval record holds only a timestamp and patch ids: there is no decider and no fingerprint of the post that was shown. landing.ts then re-reads post/ from disk at land time, so nothing checks that what lands is what the human approved.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/articles/humanActs.ts:36 The approval record is only a timestamp and patch ids, with no decider and no fingerprint of the post or patches shown, so the landing that runs later cannot prove it pushes what the human approved.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -2449,14 +2448,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It authors, injects and launches no instruction file. Searching lib/articles for CLAUDE.md, AGENTS.md and SKILL.md found 0 hits.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
+          "evidence": "lib/articles/registryWrite.ts:3 The gate and landing code is deterministic: it records human acts and notes, builds diffs and the Medium package, and opens the registry PR. It launches no agent session and writes no instruction file. A search of lib/ (lib/articles included) for AGENTS.md, GEMINI.md, cursorrules and copilot-instructions found 0 hits.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
           "source": "renamed",
           "renamedFrom": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "translation-pipeline-topology",
@@ -2496,14 +2494,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/articles/humanActs.ts:25 The gate records human acts, diffs files and lands an approved post through git/gh (registryWrite.ts execFile with a cwd-bound git env). runAgent, cliSeam, plugin, mcp and registerHook appear in none of its eight files, so this context makes no model call and has no hook chain; the agent turns live in the sibling engine files of lib/articles.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/articles/registryWrite.ts:80 The gate's only child processes are deterministic git/gh calls (registryWrite.ts:80) and a diff (diffFiles.ts:31). A grep of the eight files for spawn, runAgent and claude finds no agent run, and a grep of all of lib/articles for registerHook, plugin, checkpoint, safe-mode and registerTool finds nothing, so no runtime is assembled, extended or checkpointed here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "test-harness",
@@ -2667,14 +2664,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/drive.ts:143 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt and carries only the cost a finished attempt reported, so the interrupted metered turn is never closed as indeterminate in run.json and its spend never reaches the step's cost (the kernel job's `interrupted` state, outside this context, is the only honest closure).",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/articles/drive.ts:137 When a dead driver left a step `running`, the next walk overwrites that record with a fresh `running` record and a new startedAt, carrying only costUsd that a finished attempt reported. The interrupted, side-effecting agent turn is therefore never closed with an indeterminate result in run.json, and its spend never reaches the step's cost.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-cli-transport",
@@ -2770,14 +2766,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/agentSteps.ts:83 Each turn's record holds outcome, turns, duration, exit code, cost and errors, but not the instruction files the session loaded. Isolation is shown only by where the workspace sits (os.tmpdir, agentSteps.ts:36) and what it holds (assertIsolatedWorkspace). If an ancestor or user-level brief ever loads, for example after a CLI change to `--safe-mode`, posts and trial critiques would change and nothing in the run record would show why.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
+          "evidence": "lib/articles/agentSteps.ts:83 The workspace is positioned correctly: it sits in os.tmpdir(), outside the repo's span, and the seam adds --safe-mode and assertIsolatedWorkspace. But each turn's record holds only outcome, turns, duration, exit code, cost, errors and the final message. Nothing captures or asserts which instruction files the session actually loaded, so isolation is claimed from the layout and flags rather than verified against what loaded, and a CLI change to --safe-mode would contaminate posts and trial critiques with no trace in the run record.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
           "source": "renamed",
           "renamedFrom": "14632859-df56-4340-9e16-c420ff681ee3",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "hitl-approval",
@@ -2794,12 +2789,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/articles/types.ts:103 The approval record holds only a timestamp and patch ids, with no decider identity and no fingerprint of the draft that was shown, so an approval cannot be proven to cover the post that later lands.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/articles/types.ts:103 ArticleApproval holds only `at` and patch ids, with no decider and no fingerprint of the draft shown, so an approval cannot be proven to cover the post that later lands or is re-landed on resume.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "voice-io",
@@ -2898,7 +2892,11 @@
           "revision": 6,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/articles/trial/store.ts:707 A measured trial exec is refused until the prereg is sealed and still matches its sha256, so the costly measurement phase never runs against a protocol that is still moving.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6
         },
         {
           "subject": "quality-gates",
@@ -3734,15 +3732,11 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "deviation",
-          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
-          "evaluatedRevision": 1,
           "source": "renamed",
           "renamedFrom": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/audio/batch.ts:87 A music batch brief (10 to 300 s, so full pieces) is one free-text prompt, and the composer's Seed has no section unit either. There is no ordered list of sections, each with its own duration, style and lyric or instrumental marking, so a take can only be accepted or regenerated whole, never edited by section.",
+          "evaluatedAt": "2026-10-25"
         },
         {
           "subject": "character-identity-continuity",
@@ -5578,14 +5572,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/decision/v1/sources/article.ts:43 After human review, the operator's typed per-section edit plan is flattened into one prose note and answered by reworkRun with a whole new draft plus a full critique and check. The reviewed post's approval capital is spent instead of edited.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "lib/decision/v1/sources/article.ts:343 The operator's typed per-section edit plan for a human-reviewed article becomes one note for reworkRun. reworkRun archives the critique and check and re-does draft, critique and check (lib/articles/rework.ts), so the post's approval capital is spent on a full redraft rather than an edit.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "8c854c7a-5467-4ddc-80ed-76f19b1f5094",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "hitl-approval",
@@ -5601,13 +5594,12 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "state": "deviation",
+          "evidence": "lib/decision/v1/sources/article.ts:381 The article adapter runs approveRun, which pushes a branch and opens a PR, on any keep without checking the decision's `by`. The proof and spend adapters refuse an agent's keep, so an agent-authored commit can land an article.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -6022,12 +6014,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again (bounded only by a ceiling re-priced at apply time), so what runs can differ from what the operator was shown.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/decision/v1/sources/spend.ts:193 When a live launch comes back stale after the operator's K, the apply swaps in the fresh receipt and launches it without asking again, bounded only by the ceiling the card showed, so lines, provider or model that run can differ from what the operator approved.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "eval-harness",
@@ -7092,14 +7083,13 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "packages/kernel/src/decision/commit.ts:79 The commit transition checks only the packet's state, never whether the author is the operator, so a caller whose `by` is 'agent' can commit a packet, and gates.ts then reads it as a ratified gate part that releases held jobs.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
+          "evidence": "packages/kernel/src/decision/commit.ts:79 Commit checks only the packet's state and never whether the author is the operator, so a commit with by='agent' succeeds and gates.ts reads it as a ratified gate that releases held jobs.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
           "source": "renamed",
           "renamedFrom": "431b1607-266c-4fcb-93e8-b7f91e5a0ebc",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "module-design",
@@ -7461,7 +7451,11 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/domain/src/source.ts:93 The decision record's 'why' is optional for most sources and cannot be stored at all for suno, mv and trials (no reasons, no note). decision-records requires a reason on every rejection, so these rejects carry no telemetry for tuning what the producer is asked to make.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "structured-output",
@@ -7527,14 +7521,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/domain/src/door.ts:52 The schema door keeps only the first zod issue and writes its field path into the message string. `detail` holds the door name, not the field. The forms that errors.ts says 'show field-level detail' can only get the failing field by parsing prose, and all other issues are lost.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
-          "evaluatedRevision": 17,
+          "evidence": "packages/domain/src/door.ts:68 The schema door keeps only the first zod issue and writes its field path into the message string while `detail` holds the door name, so the forms that errors.ts says show field-level detail can only get the field by parsing prose, and every other issue is lost.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "3610b8be-4772-464f-b2f8-dd3a38fef27f",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "generated-speech-acceptance",
@@ -7888,12 +7881,11 @@
           "changedAt": "2026-11-06",
           "confidence": "strong",
           "state": "conformant",
-          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a durable pending gate whose only exits are ratified, blocked or sent back, and the receipt/live-arm/stale-confirm records around it bind consent to what was shown; who may drive the gate transition lives in the kernel/Board, not here.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "packages/domain/src/run.machine.ts:29 The run machine models a pending gate whose only exits are ratified, blocked or sent back, and the records around it (receipt token, stale confirm, live arm, frozen ceiling) bind consent and spend to what was shown; who may drive the transition is enforced in the kernel and Board, outside this context.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "structured-output",
@@ -7974,7 +7966,11 @@
           "revision": 33,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "packages/domain/src/steps/registry.ts:13 This context is pure domain model code (state machines, step record registry, zod schemas). A grep of packages/domain/src for CLAUDE.md, AGENTS.md and cursorrules found nothing ('instruction' appears only in a board.ts comment about rework, outside this context's files), so there is no instruction file to govern.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "module-design",
@@ -8886,12 +8882,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider/model/cost/basis from the router's provenance and drops `reroutedFrom` (lib/imaging/types.ts:193; grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor (e.g. after an unhonoured `prefer` steer) leaves no record on the manifest of why the first choice dropped out.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider, model, cost and basis from the router's provenance and drops reroutedFrom (a grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor leaves no record on the manifest of why the first choice dropped out.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "generated-output-grading",
@@ -8965,12 +8960,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks that the preview token still matches only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks the preview token only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "job-coordination",
@@ -9119,14 +9113,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. plugin, mcp, checkpoint and registerHook do not appear in lib/foundry and runAgent and cliSeam appear in none of the context's own files (only in lib/foundry/strips, another context), so no agent runtime is assembled here.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
+          "evidence": "lib/foundry/store.ts:3 This context is the disk layer over runs the Python forge writes, plus the verdict log, commit planning and calibration. A grep of lib/foundry finds no registerHook, plugin, checkpoint or safe-mode, and none of the context's ten files spawns or calls runAgent or claude, so no agent runtime is assembled here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "concurrent-vcs",
@@ -9187,12 +9180,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
-          "evaluatedAt": "2026-11-05",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that names no decider is logged as a human's: a PUT, a PATCH without `by`, and the commit's own auto-rejects (commitPlan.ts:80 mints `{verdict:\"reject\"}` with no `by`, then replaceVerdictMapHeld passes `undefined`). humanKeep then counts any keep without `by:\"model\"` as a vote toward `proven`, the state adoptionDraft/adoptInStore admit, so admission is still reachable through an unmarked default and not only through an authenticated human decision.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "trust-base",
@@ -9230,14 +9222,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/runStore.ts:89 writeJsonAtomic in runStore omits durable flushing (fsync), abandons temporary files upon rename failures, returns raw platform errors instead of exhaustion reports, and is paired with an anti-pattern reader retry loop.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "evidence": "lib/foundry/runStore.ts:90 writeJsonAtomic renames an unflushed temp, leaves it behind when the retry exhausts (no cleanup path), rethrows the raw platform error, and never flushes the directory, so the run store's publish door falls short of atomic-file-publish.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "data-access",
@@ -9632,12 +9623,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit verifies that its preview token still matches only when a caller supplies one, so binding the commit to what the operator saw depends on the caller (triage.ts:35 promises it unconditionally), and the Dojo's commitCycle takes no binding at all.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/foundry/strips/store.ts:432 The destructive strips commit (it deletes rejected media) verifies its preview token only when a caller supplies one, so binding the commit to what the operator saw depends on the caller even though triage.ts:35 promises it unconditionally. The Dojo's commitCycle takes no binding at all.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-memory",
@@ -9907,12 +9897,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/frames/picture/unit.ts:78 Picture units carry their place on the film as startS/holdS seconds, and startS is null (never a guessed 0) when a beat cannot be placed. The Frames phase speaks the shared clock and shows absence on it; around that, human layers are kept, plate renders survive a reload, and the shot gate cannot fake a pass.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
@@ -10001,14 +9990,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/frames/frames.ts:1 The context models composed pictures (plate, vector elements, texts) and briefs image plates only; a case-insensitive search of lib/frames/ (including picture/) for music, suno, bpm, lyric, tempo, instrumental and melody found zero hits, so no music brief is written here and the subject's precondition does not hold.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:2d8975c2a51e5157",
-          "evaluatedRevision": 1,
+          "evidence": "lib/frames/shotPrompt.ts:1 The prompts this context writes are image prompts for shots and plates. A case-insensitive search of all of lib/frames (picture/ included) for music, suno, bpm, lyric, tempo, instrumental, melody, song and elevenlabs found nothing; the only nearby hits are 'Score' step references that read frames and do not brief a music generator, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2,
           "source": "renamed",
           "renamedFrom": "158d061e-feaa-4660-a1d3-6e8774b1f152",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -10047,14 +10035,13 @@
           "changedAt": "2026-11-08",
           "confidence": "strong",
           "state": "deviation",
-          "evidence": "lib/imaging/router.ts:90 The dev generate plan puts agy, which is unpriced and was only checked to work live, ahead of Google, the measured cost-per-usable winner, so for unreferenced requests the plan order is a belief and not a measurement, even though the router mechanics (steer, trail, refusal walk, pre-call gate, plan-top reachability) all follow the standard.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "lib/imaging/router.ts:93 The dev generate plan puts agy first even though agy is unpriced and was only checked to work live, ahead of Google, which won the measured cost-per-usable grid, so for unreferenced requests the plan order is a belief and not a measurement.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "8c6c65cc-6679-4c2c-8951-670d77b8ad7c",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "multi-provider-gateway-plane",
@@ -11107,14 +11094,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/kernel/py/lease.py:277 The Python kernel protocol validates the lease fence inside the SQLite write transaction, ensuring stale holders are refused before mutating shared state.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "evidence": "packages/kernel/py/lease.py:277 Every fenced Python write checks the lease row's fence and expiry inside its BEGIN IMMEDIATE transaction, so a stale holder is refused at the write.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "3eb496e8-52aa-446d-bf75-07dc7c891b16",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "trust-base",
@@ -11244,15 +11230,14 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "packages/kernel/src/store.ts:234 Every kernel write transaction takes an exclusive database write lock under BEGIN IMMEDIATE before its first read, preventing cross-process read-modify-write interleavings.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "state": "deviation",
+          "evidence": "packages/kernel/src/blob.ts:104 When the bounded rename retry runs out, the blob writer reports a generic 'cannot write' carrying the raw platform error instead of a distinct exhaustion failure naming the held destination, attempts and elapsed time.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "e5b296e2-cccf-47a5-b8bd-ce730d40ace8",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "usage-event-ingestion",
@@ -14248,8 +14233,12 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "arrived": true
+          "state": "not-applicable",
+          "arrived": true,
+          "evidence": "lib/music-clip/tempo.ts:4 This context takes a finished Suno track with its lyrics and style prompt as input and only analyses them (the BPM in the style text is a prior for detection). It never writes a music brief: searching lib/music-clip for SunoFields, composeMusic, generateMusic, musicPrompt and music_v1 found zero hits, so the brief-side subject does not govern it.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2
         },
         {
           "subject": "music-video-production",
@@ -14578,7 +14567,11 @@
           "revision": 2,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/music/plan.ts:227 cueToPlan locks every section to its scene length and the whole cue to the summed picture at a hand-typed bpm. When a section is not a whole number of bars it says so in the brief rather than re-deriving the tempo (barsFit's doc says 'the caller then adjusts bpm', and the caller never does), and the tail is never floated, which is the over-determination the technique names.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:b7764e7001478e12",
+          "evaluatedRevision": 2
         },
         {
           "subject": "release-pipeline",
@@ -15065,14 +15058,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it builds from message text with regexes (`ruleOf`), even though graph findings had a typed `GraphIssueKind` when they were created. Rewording any rule therefore changes approved verdicts, and one cause can split across several wordings.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:d811928687fd4faf",
-          "evaluatedRevision": 17,
+          "evidence": "lib/notebook/corpus.ts:102 The corpus gate groups and snapshots refusals by rule keys it rebuilds from the finding sentences with regexes, because graph.ts writes the typed GraphIssue kind into the `rule` prose and NotebookFinding has no kind field; rewording a rule changes approved verdicts, and one cause can split across several wordings.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:ae75ce6faf93e512",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-runtime-assembly",
@@ -16369,7 +16361,11 @@
           "revision": 13,
           "changedAt": "2026-11-08",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "packages/ui/src/components/produce/produce.ts:56 The receipt shows the provider and model the router chose, prices N units as N, never draws an unpriced figure as a dollar amount, and tags every figure with its source, so a receipt and an estimate cannot be confused.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12
         },
         {
           "subject": "cost-metering",
@@ -16691,11 +16687,7 @@
           "confidence": "probable",
           "state": "not-applicable",
           "evidence": "lib/steps/index.ts:2 A recursive search of lib/steps for approv, consent, pending, awaiting and hitl found no hits: the module is IndexedDB persistence of the creator's own step content (scope picks, adopted script pointer, cut edit log), with no machine-initiated pause, decision surface or continuation for this subject to govern.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-11-04"
         },
         {
           "subject": "mcp-tools",
@@ -16989,15 +16981,14 @@
           "revision": 18,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "conformant",
-          "evidence": "packages/producers/src/publish/publish.ts:170 Publishing producers fence outcome persistence with the claim fence inside the store transaction so interrupted uploads cannot overwrite newer state.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:ccc991958e998a93",
-          "evaluatedRevision": 16,
+          "state": "deviation",
+          "evidence": "packages/producers/src/publish/publish.ts:158 The irreversible platform upload starts after the awaited adapter.plan with no re-read of the claim/fence as its last statement (the first heartbeat fires only after a chunk is accepted), so the guard verdict from the sweep and the prior-publication read at line 108 ages across the preparation window.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:27a9237dc933e4e4",
+          "evaluatedRevision": 18,
           "source": "renamed",
           "renamedFrom": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "fleet-orchestration",
@@ -17193,14 +17184,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes 'kills' and 'downgrades', with an overall verdict that can be inconclusive, and it passes an allowlist door before it can revise the notebook. Review can therefore retract evidence, not only add it.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes kills and downgrades, with an overall verdict that can be inconclusive. It passes an allowlist door before any revision, so review can retract evidence and not only add it.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "5195e631-ab0c-4f12-930b-8c0da09fcd3d",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "short-form-narrative-structure",
@@ -17261,14 +17251,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at claim time inside the confirm's transaction, so a double click is one purchase and a reload loses nothing.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
+          "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at enqueue time inside the confirm's transaction. A double click is one purchase, a reload loses nothing, and interrupted stays a live state the operator sees.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
           "source": "renamed",
           "renamedFrom": "5195e631-ab0c-4f12-930b-8c0da09fcd3d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "agent-instruction-files",
@@ -17612,14 +17601,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/ui/src/components/review/PacketReview.tsx:117 On a packet-review source with no schedule channel (the dojo review, which has sections and accepts notes), Approve discards every attached edit note without trace. Where a schedule exists, line 119 truncates the notes to noteMax with no notice, so notes vanish silently.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
+          "evidence": "packages/ui/src/components/review/PacketReview.tsx:63 On Approve, attached edit notes are dropped without trace where the source takes no note (dojo, noteMax 0) and cut to noteMax otherwise. The domain's own over-length refusal (packages/domain/src/source.ts:321) therefore never fires, and the reviewer is never told that notes vanished.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
           "source": "renamed",
           "renamedFrom": "571eae96-e297-40c6-a556-3a3bf8f48e3f",
-          "revisionsBehind": 4,
-          "stale": true
+          "revisionsBehind": 4
         },
         {
           "subject": "eval-harness",
@@ -17682,11 +17670,7 @@
           "confidence": "probable",
           "state": "not-applicable",
           "evidence": "packages/ui/src/components/runs/thread.ts:1 These are pure presentation models and components for Board review and the runs day line. A search of packages/ui/src/components/review and runs for conversation, registerTool, plugin, subagent and checkpoint found nothing; the only 'agent' hit is an icon name in RunsDayline.tsx:310. No agent loop, hook chain, extension loading or durable conversation state exists here.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
-          "evaluatedRevision": 28,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-11-06"
         },
         {
           "subject": "hitl-approval",
@@ -18761,12 +18745,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor per artboard but lets kind \"free\" pass with an empty ref. That admits the unanchored candidate the slate technique names as its failure: it converges on the model's modal answer.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor ref for watch and gap kinds but lets kind 'free' through with an empty ref. That admits exactly the unanchored candidate the slate technique says should be dropped, because it converges on the model's modal answer.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "multi-speaker-speech-production",
@@ -19772,14 +19755,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/script/versions.ts:136 The receipt for accepting a version over a blocking gate records when, which violations and how much of the gate was enforced, but not who overrode it, so the record cannot attribute the decision.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
+          "evidence": "lib/script/versions.ts:136 Accepting a script version over a blocking gate leaves a receipt frozen on the version that records when, which renders and how much of the gate was enforced, but not who overrode it, so the decision cannot be attributed.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
           "source": "renamed",
           "renamedFrom": "f8036604-75f5-4f7d-898c-734511ac5e86",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "review-iteration-loops",
@@ -19796,12 +19778,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract has refusals and a summary but no `unchanged` field, and the schema sets additionalProperties:false, even though pipeline/RECALIBRATE-PROMPT.md:71 asks the engine for `unchanged[]`; so a render that was considered and left alone looks the same as one that was forgotten, which the refusal technique counts as a verdict that must be kept.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/script/editPlan.ts:98 The edit-plan contract the engine must satisfy has edits, refusals and a summary but no unchanged list (and additionalProperties:false would reject one), while pipeline/RECALIBRATE-PROMPT.md:71 asks for `unchanged[]`; Version (versions.ts) carries no such field either, so a render the engine considered and left alone cannot be told apart from one it forgot.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "video-assembly",
@@ -19950,12 +19931,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "app/_server/http.ts:8 The server seam is route/action/session/auth code that spawns no agent and loads no instruction file. Searching its files for AGENTS.md, GEMINI.md, .cursorrules and copilot-instructions found nothing. The only instruction-file mention is a code comment at app/_server/http.ts:20 that cites CLAUDE.md as the source of the verbatim-error rule; it reads no file.",
-          "evaluatedAt": "2026-11-04",
-          "evaluatedAgainst": "sha256-b2:25b61236a62604b0",
-          "evaluatedRevision": 31,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "app/_server/http.ts:8 The server seam is route, action, session, SSE and auth code: it spawns no agent and authors, injects or loads no instruction file. A search of its files for AGENTS.md, GEMINI.md, cursorrules and copilot-instructions found nothing. The one CLAUDE.md mention is a comment at http.ts:20 that cites the project's verbatim-error rule; it reads no file.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32,
+          "revisionsBehind": 2
         },
         {
           "subject": "voice-io",
@@ -20162,12 +20142,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and one chokepoint asks the desk's engine registry whether that engine may make it, so no surface picks the engine; the refusals, unpriced figures and receipts around it also hold.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "test-harness",
@@ -20200,12 +20179,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan treats every generation chunk the same way whatever its position, so regenerating the opening section, which sets the track's genre and tone, is priced and filed as a local section edit rather than flagged as a global restyle with its review clock restarted.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:a3bbc2c5b531b8d5",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 4,
-          "stale": true
+          "evidence": "lib/sound/editPlan.ts:55 buildEditPlan handles every generation chunk the same way whatever its position, and the section edit is filed as a child take with editModes and no anchor or global flag, so regenerating the opening section, which sets the track's genre and tone, cannot be told apart from a local section edit.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d68050ef6c5ded29",
+          "evaluatedRevision": 15,
+          "revisionsBehind": 4
         },
         {
           "subject": "generated-music-acceptance",
@@ -20360,14 +20338,13 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/sound/insights.ts:102 Cell aggregation renormalizes mean scores over only scored takes but discards the count of scored takes, preventing downstream consumers from verifying sample floors on the present set or disclosing the observed fraction.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:b702c58e785c6c51",
-          "evaluatedRevision": 11,
+          "evidence": "lib/sound/insights.ts:102 The cell's meanScore is averaged over only the takes that carried a score, but `scored` is dropped from the returned cell (InsightCell has n, kept, rejected, meanScore and no scored count), so every reader gates and labels the mean by n, the take count, and a mean over 1 scored take of 5 passes the n>=3 floor and is printed as MEASURED n=5.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:2bbddc303856550d",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "3f11be96-c51f-4098-8472-341c42362e6d",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "sound-effect-generation",
@@ -20504,14 +20481,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and the remaining amount, with no floor or band, so the rebuilt spend authority looks only upward; v1's floorOf/underFloor (lib/spend, outside this context) was not carried into it.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "packages/kernel/src/spend/core.ts:44 The kernel's SpendClass and SpendStats carry only a ceiling and a remaining amount, with no floor or band (a grep of packages/kernel/src finds floor only in calibration), so the rebuilt spend authority looks only upward and cannot report a thrifty run.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "5e00d05c-885e-4eac-ad26-f937df9d612f",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "module-design",
@@ -20783,12 +20759,11 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
-          "evaluatedAt": "2026-11-07",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "lib/spend/meter.ts:249 A settled call with no figure books no row and only bumps counters.unpriced. Its hold is deleted in the same settle, so the next `spent + held + amount > ceiling` check treats the unpriced call as free, breaking the 'unreported cost still counts against the next ceiling check' rule.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
+          "revisionsBehind": 2
         },
         {
           "subject": "data-access",
@@ -21842,12 +21817,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "conformant",
-          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate → proven → locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:f1762f69eb77b8d3",
-          "evaluatedRevision": 5,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style moves from candidate to proven to locked only through operator keeps and an explicit lock that the server admits only when the trial-coverage gate holds, so the shared style contract graduates by a human act against a checked gate.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:dec058ddd3d55a4c",
+          "evaluatedRevision": 6,
+          "revisionsBehind": 1
         },
         {
           "subject": "image-prompt-composition",
@@ -22356,14 +22330,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "lib/text/spend.ts:5 Text spend is count-only with no pre-call ceiling, so the metered Google fallback can spend without any gate, which the standard calls a report, not a control; the routing, trail, refusal and pricing rules otherwise conform.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "lib/text/spend.ts:5 Text spend is count-only by the operator's 2026-10-07 ruling, so the metered Google fallback can spend with no pre-call ceiling, which the standard calls a report, not a control.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
@@ -22670,12 +22643,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
-          "evaluatedAt": "2026-11-06",
-          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
-          "evaluatedRevision": 22,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "lib/script/trailer/rules/spine.ts:1 These rules are pure checkers that return findings: they hold no pending state, decision surface or continuation, and they say they are not gates (spine.ts:1, promises.ts 'report the rows and let a human read them'). A case-insensitive search of lib/script/trailer/rules found 0 hits for consent, hitl, awaiting, approve and grant; 'gate', 'human' and 'pending' appear only in comments and finding text.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23,
+          "revisionsBehind": 1
         },
         {
           "subject": "short-form-narrative-structure",
@@ -22887,7 +22859,11 @@
           "revision": 23,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "packages/ui/src/board/boardGate.ts:110 Every revised write (patch, undo, pick, return) answers the kernel's stale-base conflict by re-reading and sending the same act again on the new revision, without the human seeing what moved. A same-key verdict another tab or agent made in between is overwritten, and because the kernel's planUndo (packages/kernel/src/decision/core.ts:125) takes back the newest act whoever made it, a stale undo can reverse someone else's decision.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "batch-undo-commit-window",
@@ -24675,14 +24651,13 @@
           "changedAt": "2026-11-08",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "packages/kernel/src/router/tables.ts:126 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, while its comment cites the Google/Leonardo grid as the reason for the order; meanwhile route.ts realizes the steer, constraint and refusal-walk rules as a pure function.",
-          "evaluatedAt": "2026-10-24",
-          "evaluatedAgainst": "sha256-b2:5f893ef4493c954f",
-          "evaluatedRevision": 11,
+          "evidence": "packages/kernel/src/router/tables.ts:142 The kernel table copied v1's plan faithfully, including agy at the top of dev generate with no usable-output measurement, so the rebuilt router acts on an unmeasured plan order.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9ca2c31dc87ce079",
+          "evaluatedRevision": 12,
           "source": "renamed",
           "renamedFrom": "311e06b8-6aea-4a5b-867f-c93a256bc44d",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         },
         {
           "subject": "model-call-outcome-integrity",

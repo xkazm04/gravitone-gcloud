@@ -79,7 +79,7 @@ describe("the lane-to-resource map", () => {
     expect(bandResourcesOf(["seat.text"])).toEqual(["cpu", "ram"]);
     expect(bandResourcesOf(["box.chrome"])).toEqual(["cpu", "ram"]);
     expect(bandResourcesOf(["box.render"])).toEqual(["cpu", "ram"]);
-    for (const l of ["cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen"] as const) expect(bandResourcesOf([l])).toEqual([]);
+    for (const l of ["cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen", "cloud.suno"] as const) expect(bandResourcesOf([l])).toEqual([]);
     // An item on two lanes is judged on the union.
     expect(bandResourcesOf(["seat.text", "gpu.local"])).toEqual(["cpu", "ram", "gpu"]);
   });

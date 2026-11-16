@@ -190,7 +190,7 @@ export async function launchSheet(store: Store, target: SheetTarget, k: KeptChar
 /** Production's draw: Codex at 1:1 with the guarded references attached. */
 export const LIVE_SHEET_DRAW: NonNullable<SheetActEngines["draw"]> = async (prompt, o) => {
   const r = await drawCodex({ prompt, aspect: "1:1", refs: o.refs, ...(o.seed === undefined ? {} : { seed: o.seed }) });
-  return { png: r.png, seed: r.seed };
+  return { png: r.png, seed: r.seed, ...(r.cliVersion === undefined ? {} : { cliVersion: r.cliVersion }) };
 };
 
 /** The request a sheet job carries: the event its launch wrote beside the enqueue. */

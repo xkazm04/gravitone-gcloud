@@ -1,0 +1,219 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2be466ab-0a57-474f-b70b-12e395e62b15",
+ "subject": "review-iteration-loops",
+ "evaluatedAt": "2026-11-09T23:16:47.289880+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-check-and-critique",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/articles/critiqueWriter.ts:97 The critique's research follow-up records only how many sources it added. claims.json is overwritten whole (line 96) with claims that are just {text, source}, and assertSourcesStable forbids dropping a source, so a claim can disappear silently but can never be killed or downgraded on the record.",
+   "techniques": [
+    {
+     "technique": "follow-up-that-can-kill-a-fact",
+     "verdict": "deviation",
+     "evidence": "lib/articles/critiqueWriter.ts:96 The research turn replaces claims.json whole. It has no confirms/downgrades/kills/unanswered effect and no overall verdict, so a dropped claim leaves no tombstone and the channel can only grow or silently lose evidence."
+    },
+    {
+     "technique": "critique-carries-its-fix",
+     "verdict": "conformant",
+     "evidence": "lib/articles/critique.ts:195 Every finding must name a location (precision) and carry a suggestion (constructiveness) before the machine writer acts on it. The severities are blocker/major/minor with no 'investigation' hatch, so a reviewer that has no fix must either invent one or drop the finding."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "lib/articles/critique.ts:240 The writer must give every finding exactly one disposition (accepted/rejected/deferred) with a non-empty reason, so no finding can vanish silently."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "lib/articles/checkLoop.ts:105 The fix turn edits the post in place and carries every unflagged paragraph over byte for byte. The rewrite turn regenerates, but only machine review has happened at that point, which the technique allows. The check re-runs after every revision (critiqueStep.ts:84)."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-adapters",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/decision/v1/sources/article.ts:343 The operator's typed per-section edit plan for a human-reviewed article becomes one note for reworkRun. reworkRun archives the critique and check and re-does draft, critique and check (lib/articles/rework.ts), so the post's approval capital is spent on a full redraft rather than an edit.",
+   "techniques": [
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/sources/article.ts:343 A return after human review answers the notes with a whole new draft plus a full critique and check, not with operations over the reviewed post."
+    },
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/sources/article.ts:253 The closed vocabulary arrives intact (more_weight/less_weight/remove/reposition/free_text, lines 236-242), but it is rendered here as prose for a redraft, so no note kind ever reaches its minimal operation."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:254 An over-long plan is refused before the kernel records the return, not truncated, and apply refuses rather than overwrites when v1 already holds a different outcome."
+    },
+    {
+     "technique": "gate-record-outlives-the-media",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/dojo.ts:335 In the dojo commit, each approval keeps one thumbnail in git, and decided pair media is deleted in the same commit while already-deleted files are skipped (line 315). Approvals enter a reflected:false queue (line 352), which acts as the discharge marker."
+    }
+   ]
+  },
+  {
+   "context": "review-and-runs-history",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/review/PacketReview.tsx:63 On Approve, attached edit notes are dropped without trace where the source takes no note (dojo, noteMax 0) and cut to noteMax otherwise. The domain's own over-length refusal (packages/domain/src/source.ts:321) therefore never fires, and the reviewer is never told that notes vanished.",
+   "techniques": [
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:63 Notes are silently discarded or truncated rather than refused or surfaced: the silent-loser and vanishing-note failure. The scheduled branch (line 64) truncates the same way."
+    },
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/review/PacketReview.tsx:110 Each note binds a section to one of five closed directives (EDIT_DIRECTIVES in @gt/domain/board), and the plan is sent structured, not as free text."
+    }
+   ]
+  },
+  {
+   "context": "scout-engine-creative",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor ref for watch and gap kinds but lets kind 'free' through with an empty ref. That admits exactly the unanchored candidate the slate technique says should be dropped, because it converges on the model's modal answer.",
+   "techniques": [
+    {
+     "technique": "anchored-variation-slate",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/idea.ts:129 IDEA_ANCHORS is [watch, gap, free]. A 'free' brief fills a slate slot with nothing to differ toward. Directions do terminate on kept cells (direction.ts:18), which matches the ratchet half of the technique."
+    }
+   ]
+  },
+  {
+   "context": "research-producers",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/producers/src/research/followUp.ts:22 A follow-up answer is a typed set of effects that includes kills and downgrades, with an overall verdict that can be inconclusive. It passes an allowlist door before any revision, so review can retract evidence and not only add it.",
+   "techniques": [
+    {
+     "technique": "follow-up-that-can-kill-a-fact",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:22 Subtractive verbs are first-class. adds-fact carries its own confidence and source, and the prompt marks a confirm-only answer as suspicious (line 35). Kills are applied as tombstones in lib/research/revisions.ts, outside this context."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:69 Refusal comes before apply and covers the whole answer, never a partial apply. Duplicate adds and double downgrades are refused as a set (lines 62-68)."
+    },
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:25 The revision is a list of operations over named notebook ids, not a regenerated notebook. Anything not named keeps its standing."
+    },
+    {
+     "technique": "partial-regeneration-seams",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/research/followUp.ts:17 The material is discrete text facts by id, so there is no continuous medium and no seam."
+    },
+    {
+     "technique": "note-taxonomy-focus-scope-order",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/research/followUp.ts:31 This is the evidence-interrogation channel, which the taxonomy explicitly excludes. Creator focus, scope and order notes do not enter here."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:16:47.289880+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "critique-carries-its-fix",
+    "edit-plan-over-regeneration",
+    "follow-up-that-can-kill-a-fact",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 1,
+   "context": "article-check-and-critique",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:16:47.289880+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "edit-plan-over-regeneration",
+    "gate-record-outlives-the-media",
+    "note-taxonomy-focus-scope-order",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 1,
+   "context": "board-decision-adapters",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:16:47.289880+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "note-taxonomy-focus-scope-order",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 1,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:16:47.289880+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "anchored-variation-slate"
+   ],
+   "deviations": 1,
+   "context": "scout-engine-creative",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:16:47.289880+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "edit-plan-over-regeneration",
+    "follow-up-that-can-kill-a-fact",
+    "note-taxonomy-focus-scope-order",
+    "partial-regeneration-seams",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 0,
+   "context": "research-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

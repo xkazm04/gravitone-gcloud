@@ -9,8 +9,9 @@
 // there: the file, its name, its length, and `measured` (tempo, key, LUFS, true peak) - so every
 // other reader of the sound store (the Library, Triage) sees the same numbers. What it has no field
 // for - the prompt card and clip the take answers, the conversation it came in through, the tempo's
-// octave neighbours, the key's strength, the loudness range and the listener's read - lives in ONE
-// json beside the takes, keyed by take id:
+// octave neighbours, the key's strength, the loudness range, the listener's read and (spark suno-api)
+// the Suno song a pulled take came from with Suno's own free read of it - lives in ONE json beside
+// the takes, keyed by take id:
 //
 //   <root>/suno-facts.json   { version: 1, facts: { [takeId]: SunoFactRecord } }
 //
@@ -27,8 +28,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import type { StudioListen, StudioMeasured, StudioTakeFacts, StudioTasteLine } from "@gt/domain/audio.suno";
-import { foldTaste, parseStudioListen, parseTasteEvent, studioListenSchema, TASTE_EVENT, type TasteEventData } from "@gt/domain/audio.suno.schema";
+import type { StudioListen, StudioMeasured, StudioTakeFacts, StudioTasteLine, SunoRead } from "@gt/domain/audio.suno";
+import { foldTaste, parseStudioListen, parseSunoRead, parseTasteEvent, studioListenSchema, sunoReadSchema, TASTE_EVENT, type TasteEventData } from "@gt/domain/audio.suno.schema";
 import { studioSessionSchema } from "@gt/domain/audio.studio.events";
 import { err, ok, type Result } from "@gt/domain/errors";
 import { queryEvents } from "@gt/kernel/events-query";
@@ -60,6 +61,9 @@ const recordSchema = z.strictObject({
   measured: measuredSchema,
   analyzedAt: z.string().min(10).max(40),
   listened: studioListenSchema.optional(),
+  /** Spark suno-api: the Suno song a pulled take came from, and Suno's own free reads of it. */
+  sunoClipId: z.string().min(1).max(120).optional(),
+  suno: sunoReadSchema.optional(),
 });
 export type SunoFactRecord = z.output<typeof recordSchema>;
 
@@ -112,11 +116,14 @@ function factsFrom(take: SoundTake, rec: SunoFactRecord): StudioTakeFacts {
     measured: rec.measured,
     ...(rec.listened === undefined ? {} : { listened: rec.listened as StudioListen }),
     ...(usd === undefined ? {} : { listenUsd: usd }),
+    ...(rec.sunoClipId === undefined ? {} : { sunoClipId: rec.sunoClipId }),
+    ...(rec.suno === undefined ? {} : { suno: rec.suno as SunoRead }),
   };
 }
 
-/** Where an uploaded take came from: its conversation, and the prompt card and clip it answers. */
-export type TakeFrom = { readonly session: string; readonly promptId?: string; readonly clip?: "a" | "b" };
+/** Where an uploaded take came from: its conversation, the prompt card and clip it answers, and the
+ *  Suno song it was pulled from (spark suno-api; absent for a file uploaded by hand). */
+export type TakeFrom = { readonly session: string; readonly promptId?: string; readonly clip?: "a" | "b"; readonly sunoClipId?: string };
 
 /** File an uploaded Suno take with its analysis: the take and its facts record under ONE store lock. */
 export async function fileSunoTake(file: IncomingFile, from: TakeFrom, analysis: AudioAnalysis, now = new Date()): Promise<Result<StudioTakeFacts>> {
@@ -199,6 +206,44 @@ export async function saveListened(takeId: string, listen: StudioListen): Promis
       await writeJsonAtomic(sunoFactsPath(), held);
       return ok(factsFrom(take, next));
     });
+  } catch (e) {
+    return soundFailure(e);
+  }
+}
+
+/** Keep Suno's free read on a pulled take (lib/sound/suno/sunoRead.ts calls this; a newer read replaces the older). */
+export async function saveSunoRead(takeId: string, read: SunoRead): Promise<Result<StudioTakeFacts>> {
+  if (!ID_RE.test(takeId)) return err("invalid", `not a take id: ${JSON.stringify(takeId).slice(0, 90)}`);
+  const checked = parseSunoRead(read);
+  if (!checked.ok) return checked;
+  try {
+    return await withStore(async (tx) => {
+      const held = await readFactsFile();
+      const rec = recordSchema.safeParse(held.facts[takeId]);
+      const take = (await tx.get("takes")).takes.find((t) => t.id === takeId);
+      if (take === undefined || !rec.success) return err<StudioTakeFacts>("not-found", `take ${takeId} has no studio facts to keep a suno read on`);
+      if (rec.data.sunoClipId === undefined) return err<StudioTakeFacts>("invalid", `take ${takeId} was not pulled from suno`);
+      const next: SunoFactRecord = { ...rec.data, suno: checked.value as SunoFactRecord["suno"] };
+      held.facts[takeId] = next;
+      await writeJsonAtomic(sunoFactsPath(), held);
+      return ok(factsFrom(take, next));
+    });
+  } catch (e) {
+    return soundFailure(e);
+  }
+}
+
+/** The take already pulled from this Suno song, when this server holds one: a second pull answers it. */
+export async function factsOfSunoClip(clipId: string): Promise<Result<StudioTakeFacts | null>> {
+  try {
+    const [takes, held] = await Promise.all([readTakes(), readFactsFile()]);
+    for (const [id, raw] of Object.entries(held.facts)) {
+      const rec = recordSchema.safeParse(raw);
+      if (!rec.success || rec.data.sunoClipId !== clipId) continue;
+      const take = takes.takes.find((t) => t.id === id);
+      if (take !== undefined) return ok(factsFrom(take, rec.data));
+    }
+    return ok(null);
   } catch (e) {
     return soundFailure(e);
   }

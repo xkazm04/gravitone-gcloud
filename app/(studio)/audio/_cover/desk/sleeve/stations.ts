@@ -4,10 +4,11 @@
 // and the style (../useCover.ts resets both fields on `brief.state === "done"`; ../fixture.ts briefDone sets the
 // section to the whole song), so a section set before the brief is a section the brief overwrites.
 import type { CoverRecord } from "@gt/domain/cover";
+import { sunoSendInFlight } from "@gt/domain/cover.suno";
 
 import { briefOffered } from "../brief/brief.ts";
 
-export const STATIONS = ["brief", "section", "score", "takes", "winner", "remix"] as const;
+export const STATIONS = ["brief", "section", "score", "takes", "winner", "suno", "remix"] as const;
 export type Station = (typeof STATIONS)[number];
 
 /** The stations whose panel is sized to what it holds: a control or two, not a width's worth of work. */
@@ -23,13 +24,18 @@ export function reachedOf(r: CoverRecord): Readonly<Record<Station, boolean>> {
     score: true,
     takes: launched,
     winner: picked,
+    suno: picked,
     remix: picked,
   };
 }
 
 /** The station the work stands at: where the desk opens a cover, and where it moves when the record moves. */
 export function frontier(r: CoverRecord): Station {
-  if (r.state === "picked") return r.remix === undefined ? "winner" : "remix";
+  // A cover sent to Suno stays there until a remix from elsewhere stands: the filed take is the station's to show.
+  if (r.state === "picked") {
+    if ((r.suno?.sends.length ?? 0) > 0 && (r.remix === undefined || r.remix.sunoClipId !== undefined || sunoSendInFlight(r.suno))) return "suno";
+    return r.remix === undefined ? "winner" : "remix";
+  }
   if (r.state !== "draft") return "takes";
   if (r.brief === undefined || r.brief.state !== "done") return "brief";
   return "score";

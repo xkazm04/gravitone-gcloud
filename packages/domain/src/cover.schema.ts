@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { coverSunoSchema } from "./cover.suno.schema.ts";
 import { parseAt, type Parsed } from "./door.ts";
 import type { Result } from "./errors.ts";
 import { COVER_BRIEF_STATES, COVER_LYRICS_MAX, COVER_NOTE_MAX, COVER_RIGHTS, COVER_STATES, COVER_STYLE_MAX, COVER_TAKE_COUNT, COVER_TAKE_STATES, COVER_TITLE_MAX } from "./cover.ts";
@@ -38,7 +39,7 @@ export const coverRecordSchema = z.strictObject({
   takes: z.array(coverTakeSchema).max(COVER_TAKE_COUNT),
   winnerSeed: seed.optional(),
   exportFile: rel.optional(),
-  remix: z.strictObject({ file: rel, mime: z.string().min(1).max(100), name: z.string().min(1).max(255), style: z.string().max(COVER_STYLE_MAX) }).optional(),
+  remix: z.strictObject({ file: rel, mime: z.string().min(1).max(100), name: z.string().min(1).max(255), style: z.string().max(COVER_STYLE_MAX), sunoClipId: z.string().regex(/^[A-Za-z0-9_-]{1,120}$/).optional() }).optional(),
   jobId: z.string().min(1).max(200).optional(),
   brief: z
     .strictObject({
@@ -50,6 +51,7 @@ export const coverRecordSchema = z.strictObject({
       agreed: z.number().int().min(0).max(3).optional(),
     })
     .optional(),
+  suno: coverSunoSchema.optional(),
 });
 
 export const parseCoverRecord = (raw: unknown): Result<Parsed<z.output<typeof coverRecordSchema>>> => parseAt("cover", coverRecordSchema, raw);

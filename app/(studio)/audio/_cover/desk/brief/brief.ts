@@ -2,6 +2,7 @@
 // state wears, how long since the state last moved, and whether the desk has anything in flight to re-read for.
 // Pure. The record is the only source: no brief on it means none was ever started.
 import type { CoverBrief, CoverBriefState, CoverRecord } from "@gt/domain/cover";
+import { sunoSendInFlight } from "@gt/domain/cover.suno";
 import type { Tone } from "@gt/ui/components/chip/tone.ts";
 
 export type BriefShown = CoverBriefState | "none";
@@ -19,10 +20,10 @@ export function briefOffered(r: CoverRecord): boolean {
 
 export const briefInFlight = (b: CoverBrief | undefined): boolean => b?.state === "queued" || b?.state === "running";
 
-/** Whether the desk re-reads its view: a brief queued or running, or the cover's own job queued or rendering. */
+/** Whether the desk re-reads its view: a brief queued or running, the cover's own job queued or rendering, or a Suno send queued or running. */
 export function inFlight(r: CoverRecord | undefined): boolean {
   if (r === undefined) return false;
-  return briefInFlight(r.brief) || r.state === "queued" || r.state === "rendering";
+  return briefInFlight(r.brief) || r.state === "queued" || r.state === "rendering" || sunoSendInFlight(r.suno);
 }
 
 /** "<n> of 3 listens agreed": the brief's genre held as the hypothesis it is. */

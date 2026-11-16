@@ -48,7 +48,7 @@ const data = (x: unknown): EventData => JSON.parse(JSON.stringify(x)) as EventDa
 
 export type CastEngines = {
   readonly seat?: (input: RunAgentInput) => Promise<AgentResult>;
-  readonly draw?: (req: CodexRequest) => Promise<{ readonly png: Uint8Array }>;
+  readonly draw?: (req: CodexRequest) => Promise<{ readonly png: Uint8Array; readonly cliVersion?: string }>;
   readonly recognize?: (req: RecognizeRequest) => Promise<Recognition>;
 };
 
@@ -251,14 +251,18 @@ async function drawAct(e: CastEngines, store: Store, root: string, req: CastRoun
   if (card.age === undefined || card.age < MUSE_MIN_AGE) return failed("refused", `cast: a design is a fictional adult of at least ${MUSE_MIN_AGE}`);
   let png: Uint8Array;
   let model: string;
+  let cliVersion: string | undefined;
   try {
     const prompt = await promptSection("portrait", { AGE: String(card.age), NAME: card.name, LOOK: card.look, PERSONALITY: card.personality });
     const refs = await refBytes(root, req.refs);
-    const render = async () => ({ png: (await (e.draw ?? drawCodex)({ prompt, aspect: "1:1", refs })).png, model: CODEX_MODEL });
+    const render = async () => {
+      const still = await (e.draw ?? drawCodex)({ prompt, aspect: "1:1", refs });
+      return { png: still.png, model: CODEX_MODEL, ...(still.cliVersion === undefined ? {} : { cliVersion: still.cliVersion }) };
+    };
     const got =
       ctx.job.mode.kind === "live"
         ? await render()
-        : await meteredCall<{ png: Uint8Array; model: string }>(ctx, {
+        : await meteredCall<{ png: Uint8Array; model: string; cliVersion?: string }>(ctx, {
             provider: "codex",
             model: CODEX_MODEL,
             payload: { prompt, aspect: "1:1", refs: req.refs.map((r) => r.sha256), slot },
@@ -268,6 +272,7 @@ async function drawAct(e: CastEngines, store: Store, root: string, req: CastRoun
           });
     png = got.png;
     model = got.model;
+    cliVersion = got.cliVersion;
   } catch (x) {
     if (conflict(x)) throw x;
     return failed("failed", errorMessage(x));
@@ -283,7 +288,7 @@ async function drawAct(e: CastEngines, store: Store, root: string, req: CastRoun
   const ref = blob.value;
   const landed = ctx.fx.tx("cast.candidate", (t) => landCandidateIn(t, req.productionId, req.roundId, slot, { state: "ready", images: [served(ref)], blobs: [ref] }));
   if (!landed.ok) throw landed.error;
-  return madePaid(data({ slot, state: "ready", blob: ref, model, judge: judged.value }), ctx);
+  return madePaid(data({ slot, state: "ready", blob: ref, model, ...(cliVersion === undefined ? {} : { cliVersion }), judge: judged.value }), ctx);
 }
 
 /* ── the ending ───────────────────────────────────────────────────────────── */

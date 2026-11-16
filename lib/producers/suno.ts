@@ -70,6 +70,20 @@ async function patchRecord(job: Job, fn: (x: SunoJob, f: SunoFile) => void, ctx:
   });
 }
 
+const creditsLeft = async (driver: SunoDriver): Promise<number | null> => (driver.credits === undefined ? null : driver.credits().catch(() => null));
+
+/**
+ * A create's receipt entry. The credits it spent (`before - after`, both read from the account) go in
+ * the entry's REASON, never its `amount`: the entry settles on JOB_USD, whose unit is dollars
+ * (spend/ledger.ts bookIn books a usd class's `amount` as its dollars), and Suno bills credits, not
+ * dollars (decision 7). An absent or negative difference leaves the reason as it was.
+ */
+export function sunoCreditsEntry(model: string, before: number | null, after: number | null): SettleEntry {
+  const spent = before !== null && after !== null ? before - after : null;
+  const reason = spent !== null && spent >= 0 ? `${SUNO_CREDITS}; this create spent ${spent} credits (${before} -> ${after} left)` : SUNO_CREDITS;
+  return { amount: undefined, outcome: "served", basis: "credits", axes: { producer: SUNO_PRODUCER, model }, reason };
+}
+
 export function sunoProducer(binding: { readonly driver: SunoDriver }): Producer {
   const driver = binding.driver;
   return defineSuno({
@@ -123,10 +137,16 @@ export function sunoProducer(binding: { readonly driver: SunoDriver }): Producer
         subject: { kind: "job", id: job.id },
         stand: () => standClipRefs(rec.fields, model),
       };
-      const credits: SettleEntry = { amount: undefined, outcome: "served", basis: "credits", axes: { producer: SUNO_PRODUCER, model }, reason: SUNO_CREDITS };
       let refs: SunoClipRef[];
       try {
-        const r = await ctx.meter.paid(JOB_USD, 0, intent, async () => ({ value: await driver.create(rec.fields, model, onPhase), entries: [credits] }));
+        const r = await ctx.meter.paid(JOB_USD, 0, intent, async () => {
+          // A driver that reads the account (the API driver) is asked before and after; the browser
+          // driver has no `credits` and its entry is the plain unpriced one.
+          const before = await creditsLeft(driver);
+          const value = await driver.create(rec.fields, model, onPhase, { key: ctx.key });
+          const after = before === null ? null : await creditsLeft(driver);
+          return { value, entries: [sunoCreditsEntry(model, before, after)] };
+        });
         refs = must(r);
       } finally {
         await writes;

@@ -1,0 +1,210 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eb53b302-2743-4ffb-b2c2-c5e3aaf5e72b",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-10T01:07:06.516417+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "style-trials-cull",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style moves from candidate to proven to locked only through operator keeps and an explicit lock that the server admits only when the trial-coverage gate holds, so the shared style contract graduates by a human act against a checked gate.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/LockGate.tsx:4 The ratchet is one-way and the lock is an explicit act gated on the server. Graduation is a human act and is not inferred from completion."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/ProofSheet.tsx:6 A rejection carries a required note, so it has been decided about and crosses into the asset side. The reference window counts approved proofs only, and stale approvals stop vouching."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/style.ts:2 Single writer: status, coverage and blocker are computed once by the server ratchet and never re-derived by a view. proofLook draws a stale approval as idle, not done."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 Cut-review notes are addressed by the beat's start second on the export's own clock, so a note has a time address."
+    }
+   ],
+   "registryProposal": "approval-reads-forward assumes a shared asset's downstream beats exist when it is approved. A library-level style contract is locked before any project that will use it has beats, and here its forward read is a fixed battery of generic trial problems. The technique does not name that proxy. Read literally, the rule 'the forward list cannot be written, so the asset is not ready to graduate' would forbid locking any library style. The technique should say whether a stress battery satisfies the forward read for assets shared across projects."
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 The score and the cut draw one clock whose blocks carry start/duration in seconds and first-class ok/missing/drift states, so a hole or a drift has an address on the shared timeline.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 There is one CutClock for score and cut (line 3). Blocks have startS/durS, and missing and drift are per-block states with a reason title."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:7 Finish checks gate the expensive render: clips and the CTA block it, and an unmeasured check is reported as unmeasured, not as pass or fail."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:203 Shot review reports violations and unmeasured counts and lists what was not checked, so 'unchecked' is never folded into pass."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:7 The render is a kernel job behind a receipt, and its progress is the view's running job, not an elapsed clock over one blocking request."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx:11 A re-voice is a new take beside the chosen one and never replaces it, so only the operator's 'use' choice makes a take active."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 Project state is derived from part states by the domain's one precedence rule, where stuck outranks waiting and waiting outranks running, and is never stored, so one blocked part makes the project read blocked.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 projectStateOf in @gt/domain/project ranks stuck above everything. fixture.ts:28 says part and project state are derived, never stored."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/real.ts:86 Gate parts read as passed only once a human's Board packet is committed, and dependent jobs wait through gates (contract.ts:57)."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixture.ts:29 Interrupted is honest and never resumes on its own. A launch is a receipt with a queue-state token, so a stale confirm launches nothing."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:1 The schedule is wall-clock job placement on lanes, which the technique keeps out of the product's runtime clock."
+    }
+   ]
+  },
+  {
+   "context": "article-trials-and-medium",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/articles/trial/store.ts:707 A measured trial exec is refused until the prereg is sealed and still matches its sha256, so the costly measurement phase never runs against a protocol that is still moving.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "lib/articles/trial/store.ts:707 The order open, framed, sealed, exec, closed is declared once (line 14), and the expensive exec is gated on the seal."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "lib/articles/trial/store.ts:695 A pilot is a capped, cheap probe that never counts. The Medium draft is a disposable preview, and post.md stays the one source (mediumDraft.ts:6)."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "lib/articles/mediumDraft.ts:44 A synchronous in-memory guard serialises the mutation of one run's draft into a refusal the caller can see. Execs are serialised per trial by a disk lock (store.ts:203)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "lib/articles/trial/verdict.ts:4 The gate refuses to report a verdict it could not measure (void). A Medium failure is recorded as 'unavailable' with a reason (mediumDraft.ts:11), never buried."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T01:07:06.516417+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "style-trials-cull",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:07:06.516417+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:07:06.516417+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T01:07:06.516417+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "article-trials-and-medium",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

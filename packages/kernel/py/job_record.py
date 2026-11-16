@@ -28,9 +28,11 @@ ms, process_holder, read_row, release_in = _lease.ms, _lease.process_holder, _le
 
 # @gt/domain/lane LANE_CAPACITY and LANE_PAYS (seat.text is free: only Gemini is real money); these tables and lease.py's are compared whole by test/job.python.test.ts.
 LANE_CAPACITY = {"gpu.local": 1, "box.render": 1, "box.blender": 1, "box.chrome": 1, "seat.text": 4,
-                 "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1}
+                 "cloud.google": 3, "cloud.elevenlabs": 2, "cloud.leonardo": 2, "cloud.qwen": 1,
+                 "cloud.suno": 1}
 LANE_PAYS = {"gpu.local": False, "box.render": False, "box.blender": False, "box.chrome": True, "seat.text": False,
-             "cloud.google": True, "cloud.elevenlabs": True, "cloud.leonardo": True, "cloud.qwen": True}
+             "cloud.google": True, "cloud.elevenlabs": True, "cloud.leonardo": True, "cloud.qwen": True,
+             "cloud.suno": True}
 # @gt/domain/job.machine.ts
 MACHINE = {"planned": ("queued", "cancelled"), "queued": ("running", "paused", "cancelled"),
            "running": ("done", "failed", "interrupted", "paused", "cancelled"), "paused": ("queued", "cancelled"),

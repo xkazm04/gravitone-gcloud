@@ -109,6 +109,7 @@ const PUBLIC: Record<string, string> = {
   "GET app/api/session/route.ts": "answers whether this browser holds a session: the question a signed-out page asks",
   "PUT app/api/session/route.ts": "enters locally (lib/localEntry.ts): the door to the local owner, granted only on a loopback Host, unmanaged, legacy mode",
   "DELETE app/api/session/route.ts": "signs out: clears the cookie, which needs no credential to forget",
+  "GET app/api/suno/callback/route.ts": "Suno's OAuth redirect lands here carrying no studio credential; the single-use state minted behind the access guard is the binding",
 };
 
 // THE FLOOR. A walk that derives the gated set from the declared guard has
@@ -134,6 +135,8 @@ const FLOOR: readonly string[] = [
   "GET app/api/sound/mv/jobs/[id]/file/route.ts",
   "GET app/api/sound/ab/[pairId]/[arm]/route.ts",
   "GET app/api/sound/takes/[id]/file/route.ts",
+  "GET app/api/suno/connect/route.ts",
+  "DELETE app/api/suno/connect/route.ts",
 ];
 
 const found = discover();

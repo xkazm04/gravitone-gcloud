@@ -8,7 +8,8 @@ import { fixturePort } from "./_port/fixture.ts";
 import { ledgerPort } from "./_port/ledger.ts";
 import type { StudioPort } from "./_port/port.ts";
 import { newSessionAct, sayAct } from "./_live/acts.ts";
-import { dropTasteAct, keepTasteAct, listenAct } from "./_live/sunoActs.ts";
+import { dropTasteAct, keepTasteAct, listenAct, pullSunoTakeAct, readSunoTakeAct, sunoLibraryAct } from "./_live/sunoActs.ts";
+import { sunoApiStatus } from "../../../../lib/suno/api/client.ts";
 import { readPresence } from "./_live/presence.ts";
 import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
@@ -16,6 +17,9 @@ import type { StudioUrl } from "./url.ts";
 export async function StudioSection({ url, port }: { readonly url: StudioUrl; readonly port?: StudioPort }) {
   const read = await (port ?? (url.source === "fixture" ? fixturePort : ledgerPort)).read();
   const presence = read.source === "live" ? readPresence() : "listening";
+  // Spark suno-api: the token file only, no network; the reason is the client's own sentence.
+  const grant = await sunoApiStatus();
+  const connection = grant.connected ? ({ connected: true } as const) : ({ connected: false, reason: grant.reason } as const);
   return (
     <StudioHost
       url={url}
@@ -24,9 +28,10 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
       note={read.note ?? null}
       head={read.head ?? 0}
       presence={presence}
-      acts={{ say: sayAct, newSession: newSessionAct, listen: listenAct, keepTaste: keepTasteAct, dropTaste: dropTasteAct }}
+      acts={{ say: sayAct, newSession: newSessionAct, listen: listenAct, keepTaste: keepTasteAct, dropTaste: dropTasteAct, pullSunoTake: pullSunoTakeAct, readSunoTake: readSunoTakeAct, sunoLibrary: sunoLibraryAct }}
       takes={read.takes ?? {}}
       taste={read.taste ?? []}
+      connection={connection}
     />
   );
 }
