@@ -120,6 +120,72 @@ true peak is above -1 dBTP, a final gain sets it to -1.1 dBTP (the 0.1 dB is roo
 16-bit write); `gainDb` is that gain, 0 when none was needed, and `truePeakDb` is measured on the
 file as written. A lowpass above Nyquist is set just under it and `notes` says so.
 
+### master
+
+```bash
+python pipeline/audio/sidecar.py master --in song.wav --out song.uni-1.wav --recipe uni-1 --json
+```
+
+```json
+{"ok": true, "recipe": "uni-1", "input": "...\\Brisk Gallop.wav", "output": "...\\Brisk Gallop.uni-1.wav",
+ "before": {"lufs": -14.96, "truePeakDb": -2.99, "lra": 3.24}, "after": {"lufs": -14.0, "truePeakDb": -1.38, "lra": 2.34},
+ "ms": 6704, "limitDb": 0.0, "passes": 1}
+```
+
+The universal master (spark audio-distribution): one recipe applied to every track, no
+parameters - the owner's "one click" ruling. The request names a recipe and nothing else; the
+recipe's numbers are one row of `RECIPES` in `pipeline/audio/master.py`, and a row a master was
+made with is never edited: a changed sound is `uni-2`, a new row, and a new id in
+`MASTER_RECIPES` (`packages/domain/src/release.ts`). Node: `masterFile(input, output, recipe)` in
+`lib/audio/sidecarMaster.ts` (split from `sidecar.ts` at the 400-line cap), the answer parsed by
+`masterAnswerSchema` (`packages/domain/src/audio.master.ts`); 300 s timeout.
+
+`uni-1`, in signal order:
+
+| Step | Numbers | Why |
+| --- | --- | --- |
+| resample | to 48 kHz when the source differs (`resample_poly`, exact ratio) | the delivery rate |
+| reference gain | to -18 LUFS integrated | puts the compressor's fixed threshold at the same place on every track |
+| high-pass | 30 Hz | rumble only; a kick's fundamental sits above it |
+| tilt | low shelf +0.5 dB at 100 Hz, high shelf +0.75 dB at 10 kHz, Q 0.707 | a small broad lift at both ends, nothing a listener hears as EQ |
+| glue compressor | -20 dBFS threshold, 2:1, 30 ms attack, 250 ms release | lowers integrated loudness by about 1.6 dB at the -18 LUFS reference (measured on two MiSu tracks, 2026-11-16): glue, not a squash; the slow attack lets transients through |
+| loudness | static gain to -14 LUFS integrated | the target |
+| true-peak limiter | aims at -1.3 dBTP, 50 ms lookahead + release window | the ceiling is -1.0 dBTP; the limiter aims under it |
+| write | 24-bit PCM WAV, 48 kHz, channels kept | what distributors ask for |
+
+Steps 6-7 are iterated (at most 8 passes): limiting lowers loudness, so the gain is corrected and
+the limiter's aim lowered until integrated loudness is within 0.1 LU of -14 AND the true peak is at
+or under -1.0 dBTP. `limitDb` is the limiter's deepest gain reduction (0 when no frame reached the
+ceiling) and `passes` how many passes it took. `before` and `after` are `measure`'s own meter
+(`loudness.py`), `after` read from the file as written. A source with no integrated loudness or no
+loudness range (silent, under 3 s), an unknown recipe, or an `--out` equal to `--in` is refused.
+
+The limiter is not pedalboard's: JUCE's `dsp::Limiter` runs a fixed 4:1 first stage from -10 dBFS
+and has no lookahead, so it would colour every peak of a -14 LUFS master and still overshoot
+between samples. `master.py`'s limiter reads the 4x-oversampled peak envelope (the oversampling
+`truePeakDb` measures with, so the two agree), takes each frame's needed gain, runs a centred
+minimum filter over the window and two box filters of half its width over that: the gain is never
+above what any frame needs, starts moving half a window before a peak and recovers over the other
+half, in O(n) with no recursion.
+
+**Why -14 LUFS and -1 dBTP.** -14 LUFS integrated is Spotify's published normalisation level (the
+other streaming stores sit near it), so a master there is played at the level it was made at, not
+turned down or up by the store; -1 dBTP is the true-peak ceiling below which a lossy encode does
+not clip on decoding (registry: media-generation `generated-music-acceptance` /
+`loudness-and-peak-acceptance`, which also notes -2 dBTP as the more cautious ceiling for a
+destination that transcodes). Both are `MASTER_TARGET` in `release.ts`.
+
+**The trial.** `npx tsx pipeline/master-trial.mts --dir <folder> --out <dir> [--limit N] [--adopt]`
+masters every `.wav` one at a time into `<out>/<stem>.uni-1.wav`, re-measures each written file with
+`measure` (acceptance is that reading: -14 +/- 0.5 LUFS, <= -1 dBTP, 0 clipped samples), and writes
+`<out>/trial.json` and `<out>/listen.html` - a page that opens from disk and plays original (A) and
+master (B) at matched loudness: the louder side's media-element volume is lowered by the LUFS
+difference, so the switch compares tone, not level. (A WebAudio gain would be silent from disk:
+Chrome feeds a `MediaElementSource` zeroes for a `file://` source.) `--adopt` files each passing
+master as a kept `remaster` child take of the take whose stored file, upload name or title equals
+the source's stem (`lib/sound/takes.ts` `createTake`); a take is capped at 60 MB, which a 24-bit
+48 kHz stereo master passes at about 3 min 38 s.
+
 ### triage
 
 ```bash

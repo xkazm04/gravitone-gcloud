@@ -7,6 +7,8 @@
           "key":{name,strength,correlation,runnerUp:{name,correlation},method}|null,"measure":{...measure's}}}
     python pipeline/audio/sidecar.py fx --in <wav> --chain <chain.json | inline JSON> --out <wav> --json
       -> {"ok":true,"durationS":n,"gainDb":g,"truePeakDb":tp,"rate":r,"channels":c,"notes":[...]}
+    python pipeline/audio/sidecar.py master --in <wav|mp3|...> --out <wav> --recipe uni-1 --json   (master.py: one recipe, no knobs)
+      -> {"ok":true,"recipe":...,"input":...,"output":...,"before":{lufs,truePeakDb,lra},"after":{...},"ms":n,"limitDb":l,"passes":p}
     python pipeline/audio/sidecar.py triage --in <file> --context <context.json> --json
       -> {"ok":true,"triage":{"version":1,"findings":[{check,defect?,verdict,value,threshold,unit,atS?,note?}],"flagged":n}}
     python pipeline/audio/sidecar.py render-score --spec <spec.json> --out-dir <dir> [--cache-dir <dir>] [--verify-determinism] [--allow-fallback] --json
@@ -199,6 +201,12 @@ def cmd_fx(a):
     })
 
 
+def cmd_master(a):
+    from master import cmd_master as run
+
+    run(a, emit, Failure, read_audio)
+
+
 def cmd_triage(a):
     import triage
 
@@ -340,6 +348,11 @@ def main(argv):
     f.add_argument("--chain", required=True)
     f.add_argument("--out", required=True)
     f.add_argument("--json", action="store_true")
+    ms = sub.add_parser("master")
+    ms.add_argument("--in", dest="input", required=True)
+    ms.add_argument("--out", required=True)
+    ms.add_argument("--recipe", required=True)
+    ms.add_argument("--json", action="store_true")
     t = sub.add_parser("triage")
     t.add_argument("--in", dest="input", required=True)
     t.add_argument("--context", required=True)
@@ -389,6 +402,7 @@ def main(argv):
         "measure": cmd_measure,
         "analyze": cmd_analyze,
         "fx": cmd_fx,
+        "master": cmd_master,
         "triage": cmd_triage,
         "render-score": cmd_render_score,
         "audition-instrument": cmd_audition_instrument,
