@@ -13,7 +13,7 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { CHANNEL_NAMES, releaseKind } from "@gt/domain/release";
 import { PROBLEM_TEXT, releaseReady, type ReleaseProblem } from "@gt/domain/release.problems";
 
-import { plannedSlots } from "../../draft.ts";
+import { plannedSlots } from "../draft.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { CHANNEL_ENTRY, STATUS_ENTRY } from "./status.ts";
 import { STEP_LABEL, stepOf, trackIndexOf, type StepProps } from "./steps.ts";

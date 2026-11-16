@@ -6,10 +6,11 @@ and the channels it goes to. Research behind it: [distrokid-research.md](distrok
 
 ## Where it is (S1, 2026-11-16)
 
-- **The tab:** `/audio?s=release` (`app/(studio)/audio/_release/`). Three competing layouts sit behind
-  `?v=desk|wizard|board`, all over one draft reducer (`draft.ts`), so switching layout keeps the draft.
-  `?source=real` reads the kept takes and the publish readiness; the fixture (the default in S1) is the
-  owner's MiSu record as three releases.
+- **The tab:** `/audio?s=release` (`app/(studio)/audio/_release/`) is a wizard: a release picker, then
+  tracks -> details -> AI & rights -> sleeve -> master -> channels -> extras -> review, over one draft reducer
+  (`draft.ts`). The owner picked it on 2026-11-16 over a one-page desk (8ca8443b) and a sleeve catalog
+  (147d8965), both retired. `?source=real` reads the kept takes and the publish readiness; the fixture (the
+  default until releases persist) is the owner's MiSu record as three releases.
 - **Contract:** `@gt/domain/release` (types), `release.problems` (`releaseProblems`: the one validator
   every review draws), `release.schema` (the door).
 - **Master:** the sidecar verb `master`, recipe `uni-1` (`pipeline/audio/master.py`, `docs/audio-sidecar.md`).
@@ -28,7 +29,8 @@ and the channels it goes to. Research behind it: [distrokid-research.md](distrok
 | direct channels | YouTube (art track via the MV path), SoundCloud, Audius, Mixcloud, Internet Archive |
 | mastering | **one click, one universal recipe, no parameters** |
 | publish | one Calendar slot per channel at the release date (slot item kind `release:<id>`, S2) |
-| smart-link hosting | undecided; designed in the layouts only |
+| smart-link hosting | undecided; designed in the wizard only |
+| layout | the wizard (2026-11-16), over a one-page desk and a sleeve catalog |
 
 ## The first master trial
 

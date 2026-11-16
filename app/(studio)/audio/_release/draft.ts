@@ -1,6 +1,6 @@
-// THE RELEASE DRAFT (spark audio-distribution, S1): one owned model for every layout (registry
-// wizard-flows: "one model owns every step"). The tab holds it in a reducer; the three variants
-// render from it and dispatch into it, so switching layout keeps the draft. Pure: ids and clocks
+// THE RELEASE DRAFT (spark audio-distribution): one owned model for the whole wizard (registry
+// wizard-flows: "one model owns every step"). The tab holds it in a reducer; the steps render from it
+// and dispatch into it, so Back, a jump and a reload of a step lose nothing. Pure: ids and clocks
 // come in on the event, never from inside.
 import type { ChannelRow, MasterRef, Release, ReleaseChannelId, ReleaseTrack, ShelfTake, Sleeve, Split } from "@gt/domain/release";
 import { MASTER_TARGET } from "@gt/domain/release";

@@ -15,7 +15,7 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import type { StatusEntry } from "@gt/ui/components/status/status.ts";
 import { MASTER_TARGET, type MasterState, type Release, type ReleaseTrack, type ShelfTake } from "@gt/domain/release";
 
-import { plannedMaster } from "../../draft.ts";
+import { plannedMaster } from "../draft.ts";
 import { AbPlayer } from "./AbPlayer.tsx";
 import { clock, db } from "./fmt.ts";
 import { Meter } from "./Meter.tsx";

@@ -10,7 +10,7 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import type { ReleaseTrack } from "@gt/domain/release";
 
-import type { TrackFields } from "../../draft.ts";
+import type { TrackFields } from "../draft.ts";
 import { clock, db, orNull } from "./fmt.ts";
 import { Problems } from "./Problems.tsx";
 import { Shelf } from "./Shelf.tsx";

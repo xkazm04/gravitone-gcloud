@@ -12,7 +12,7 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { releaseKind, type Release, type ShelfTake } from "@gt/domain/release";
 import { releaseProblems } from "@gt/domain/release.problems";
 
-import type { ReleaseRead } from "../../_port/port.ts";
+import type { ReleaseRead } from "../_port/port.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { Shelf } from "./Shelf.tsx";
 import { severityOf } from "./steps.ts";

@@ -26,27 +26,10 @@
     "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
   ],
   "audio-release": [
-    "mark div.desk-module__D6EqgG__cols > aside.desk-module__D6EqgG__col > footer.rail-module__EYEHba__foot > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__violet[aria-disabled=true]",
-    "mark div.desk-module__D6EqgG__cols > section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__shelfActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__cyan[aria-disabled=true]",
-    "mark div.desk-module__D6EqgG__cols > section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__shelfActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "mark div.sheet-module__OrVI1W__part > div.sheet-module__OrVI1W__ab > div.Transport-module__EWfAaG__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "mark section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__colBody > div.sheet-module__OrVI1W__tracksHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__cyan[aria-disabled=true]",
-    "mark section.rail-module__EYEHba__block > div.rail-module__EYEHba__stack > div.rail-module__EYEHba__rowWrap > button.Button-module__jSUhYG__btn[aria-disabled=true]",
-    "text aside.desk-module__D6EqgG__col > footer.rail-module__EYEHba__foot > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__violet[aria-disabled=true] > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__rose",
-    "text div.desk-module__D6EqgG__cols > aside.desk-module__D6EqgG__col > footer.rail-module__EYEHba__foot > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__violet[aria-disabled=true]",
-    "text div.desk-module__D6EqgG__cols > section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__shelfActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__cyan[aria-disabled=true]",
-    "text div.desk-module__D6EqgG__cols > section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__shelfActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text div.rail-module__EYEHba__stack > div.rail-module__EYEHba__rowWrap > button.Button-module__jSUhYG__btn[aria-disabled=true] > span.Chip-module__v4DkZW__chip",
-    "text div.sheet-module__OrVI1W__part > div.sheet-module__OrVI1W__ab > div.Transport-module__EWfAaG__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text footer.rail-module__EYEHba__foot > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__violet[aria-disabled=true] > span.Chip-module__v4DkZW__chip.Chip-module__v4DkZW__rose > b.Chip-module__v4DkZW__value",
-    "text section.desk-module__D6EqgG__col > div.desk-module__D6EqgG__colBody > div.sheet-module__OrVI1W__tracksHead > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__cyan[aria-disabled=true]",
-    "text section.rail-module__EYEHba__block > div.rail-module__EYEHba__stack > div.rail-module__EYEHba__rowWrap > button.Button-module__jSUhYG__btn[aria-disabled=true]"
+    "mark div.wizard-module__-odU2G__picker > section.wizard-module__-odU2G__pickerCol > div.wizard-module__-odU2G__startBar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__emerald[aria-disabled=true]",
+    "text div.wizard-module__-odU2G__picker > section.wizard-module__-odU2G__pickerCol > div.wizard-module__-odU2G__startBar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__emerald[aria-disabled=true]"
   ],
-  "audio-release-board": [],
-  "audio-release-wizard": [
-    "mark div.wizard-module__2vDACG__picker > section.wizard-module__2vDACG__pickerCol > div.wizard-module__2vDACG__startBar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__emerald[aria-disabled=true]",
-    "text div.wizard-module__2vDACG__picker > section.wizard-module__2vDACG__pickerCol > div.wizard-module__2vDACG__startBar > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__emerald[aria-disabled=true]"
-  ],
+  "audio-release-open": [],
   "kit": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",

@@ -8,7 +8,7 @@ import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import type { Release, Split } from "@gt/domain/release";
 import type { ReleaseProblem } from "@gt/domain/release.problems";
 
-import type { DraftEvent } from "../../draft.ts";
+import type { DraftEvent } from "../draft.ts";
 import { Problems } from "./Problems.tsx";
 import { problemsOf } from "./steps.ts";
 import s from "./extras.module.css";

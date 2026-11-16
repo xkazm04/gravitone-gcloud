@@ -1,6 +1,6 @@
 "use client";
 
-// LAYOUT VARIANT "wizard" (spark audio-distribution, S1): DistroKid's upload flow, made calm. First
+// THE RELEASE WIZARD (spark audio-distribution; picked 2026-11-16): DistroKid's upload flow, made calm. First
 // which release (one in the draft, or a new one from the shelf); then eight steps - tracks, details,
 // AI & rights, sleeve, master, channels, extras, review - with a rail that shows every step and its
 // live problems and lets any step be jumped to. Each step gets the room for its one job.
@@ -19,7 +19,7 @@ import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { releaseKind, type Release } from "@gt/domain/release";
 import { releaseProblems } from "@gt/domain/release.problems";
 
-import type { VariantProps } from "../props.ts";
+import type { WizardProps } from "./props.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { Picker } from "./Picker.tsx";
 import { Rail } from "./Rail.tsx";
@@ -70,7 +70,7 @@ function Identity({ r, onLeave }: { readonly r: Release; readonly onLeave: () =>
   );
 }
 
-export function Wizard({ read, state, dispatch, newId }: VariantProps) {
+export function Wizard({ read, state, dispatch, newId }: WizardProps) {
   const release = state.releases.find((r) => r.id === state.openId) ?? null;
   const problems = useMemo(() => (release === null ? [] : releaseProblems(release)), [release]);
   const [fresh, setFresh] = useState<string | null>(null);

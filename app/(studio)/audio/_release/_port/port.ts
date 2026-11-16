@@ -5,12 +5,9 @@
 import type { ChannelRow, Release, ShelfTake } from "@gt/domain/release";
 
 export type ReleaseSource = "fixture" | "real";
-export const RELEASE_VARIANTS = ["desk", "wizard", "board"] as const;
-export type ReleaseVariant = (typeof RELEASE_VARIANTS)[number];
 
 export interface ReleaseUrl {
   readonly source: ReleaseSource;
-  readonly variant: ReleaseVariant;
   /** The release open on first paint, when the URL names one. */
   readonly release: string | null;
 }

@@ -7,7 +7,7 @@ import { Field, Select, TextArea } from "@gt/ui/components/field/Field.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { CREDIT_ROLES, GENRES, type CreditRole, type Genre, type ReleaseTrack } from "@gt/domain/release";
 
-import type { ReleaseFields, TrackFields } from "../../draft.ts";
+import type { ReleaseFields, TrackFields } from "../draft.ts";
 import { orNull } from "./fmt.ts";
 import { Problems } from "./Problems.tsx";
 import { problemsOf, problemsOnTrack, type StepProps } from "./steps.ts";

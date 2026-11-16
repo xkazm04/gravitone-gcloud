@@ -8,8 +8,8 @@ import type { Dispatch } from "react";
 import type { Release } from "@gt/domain/release";
 import type { ProblemCode, ReleaseProblem } from "@gt/domain/release.problems";
 
-import type { ReleaseRead } from "../../_port/port.ts";
-import type { DraftEvent } from "../../draft.ts";
+import type { ReleaseRead } from "../_port/port.ts";
+import type { DraftEvent } from "../draft.ts";
 
 export const STEPS = ["tracks", "details", "rights", "sleeve", "master", "channels", "extras", "review"] as const;
 export type StepId = (typeof STEPS)[number];
