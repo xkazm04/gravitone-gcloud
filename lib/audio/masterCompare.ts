@@ -119,26 +119,34 @@ ${body}
 </tbody></table></div>
 <script>
 (function(){
-  var cur=null,mode='matched',rows=document.querySelectorAll('tbody tr').length,focus=0;
+  // Every version of the playing song runs at once, in sync; a switch only changes which one is audible
+  // (the others play at volume 0). No pause, no seek into a cold file, no gap - an A/B box, not a jukebox.
+  var cur=null,mode='matched',rows=document.querySelectorAll('tbody tr').length,focus=0,token=0;
   function el(r,k){return document.getElementById('s'+r+'-'+k);}
+  function row(r){return Array.prototype.slice.call(document.querySelectorAll('tr[data-row="'+r+'"] audio'));}
   function vol(a){return mode==='matched'?Number(a.dataset.matched):1;}
+  function heard(){return cur?el(cur.r,cur.k):null;}
+  function apply(){if(!cur)return;row(cur.r).forEach(function(a){a.volume=a===heard()?vol(a):0;});}
   function mark(){document.querySelectorAll('button[data-k]').forEach(function(b){b.classList.toggle('on',!!cur&&b.dataset.row===cur.r&&b.dataset.k===cur.k);});
     document.querySelectorAll('tbody tr').forEach(function(t){t.classList.toggle('cur',t.dataset.row===String(focus));});}
-  function stop(){document.querySelectorAll('audio').forEach(function(a){a.pause();});cur=null;mark();}
-  function play(r,k){var next=el(r,k);if(!next)return;var t=cur&&cur.r===r?cur.a.currentTime:0;
-    document.querySelectorAll('audio').forEach(function(a){a.pause();});next.volume=vol(next);
-    var go=function(){try{next.currentTime=Math.min(t,next.duration||t);}catch(_){}next.play();};
-    if(next.readyState>=1)go();else{next.preload='auto';next.addEventListener('loadedmetadata',go,{once:true});next.load();}
-    cur={r:r,k:k,a:next};focus=Number(r);mark();}
+  function stop(){token++;document.querySelectorAll('audio').forEach(function(a){a.pause();});cur=null;mark();}
+  function ready(a){return new Promise(function(res){if(a.readyState>=3)return res();a.addEventListener('canplay',function(){res();},{once:true});a.addEventListener('error',function(){res();},{once:true});a.preload='auto';a.load();});}
+  function start(r,k){stop();var my=++token,as=row(r);focus=Number(r);cur={r:r,k:k};mark();
+    Promise.all(as.map(ready)).then(function(){if(my!==token)return;as.forEach(function(a){a.volume=0;try{a.currentTime=0;}catch(_){}});apply();as.forEach(function(a){if(!a.error)a.play();});});}
+  function play(r,k){if(!cur||cur.r!==r)return start(r,k);var from=heard(),to=el(r,k);
+    if(from&&to&&Math.abs(to.currentTime-from.currentTime)>0.04)to.currentTime=from.currentTime;cur.k=k;apply();mark();}
   document.addEventListener('click',function(e){var b=e.target.closest('button[data-k]');if(b)play(b.dataset.row,b.dataset.k);});
-  document.addEventListener('change',function(e){if(e.target.name!=='mode')return;mode=e.target.value;if(cur)cur.a.volume=vol(cur.a);});
+  document.addEventListener('change',function(e){if(e.target.name!=='mode')return;mode=e.target.value;apply();});
   document.addEventListener('keydown',function(e){
     if(e.key===' '){e.preventDefault();stop();return;}
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();focus=Math.max(0,Math.min(rows-1,focus+(e.key==='ArrowDown'?1:-1)));if(cur)stop();else mark();return;}
     var k=Number(e.key)-1;if(k>=0&&k<=${c.recipes.length})play(String(focus),String(k));
   });
-  setInterval(function(){if(!cur||!cur.a.duration)return;var s=document.querySelector('input[data-seek="'+cur.r+'"]');if(s)s.value=String(Math.round(cur.a.currentTime/cur.a.duration*1000));},250);
-  document.addEventListener('input',function(e){var s=e.target.closest('input[data-seek]');if(!s||!cur||cur.r!==s.dataset.seek||!cur.a.duration)return;cur.a.currentTime=Number(s.value)/1000*cur.a.duration;});
+  // The progress bar follows the audible version; a silent one that drifted is pulled back to it.
+  setInterval(function(){var a=heard();if(!a||!a.duration)return;var s=document.querySelector('input[data-seek="'+cur.r+'"]');if(s)s.value=String(Math.round(a.currentTime/a.duration*1000));
+    row(cur.r).forEach(function(b){if(b!==a&&!b.paused&&Math.abs(b.currentTime-a.currentTime)>0.05)b.currentTime=a.currentTime;});},500);
+  document.addEventListener('input',function(e){var s=e.target.closest('input[data-seek]');var a=heard();if(!s||!cur||cur.r!==s.dataset.seek||!a||!a.duration)return;
+    var t=Number(s.value)/1000*a.duration;row(cur.r).forEach(function(b){try{b.currentTime=t;}catch(_){}});});
   mark();
 })();
 </script>

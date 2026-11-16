@@ -202,7 +202,11 @@ destination that transcodes). Both are `MASTER_TARGET` in `release.ts`.
 recipe) into `<out>/<stem>.<recipe>.wav`, re-measures each written file with `measure` (acceptance is
 that reading: -14 +/- 0.5 LUFS, <= -1 dBTP, 0 clipped samples), and writes `<out>/compare.json` and
 `<out>/listen.html` (`lib/audio/masterCompare.ts`) - a page that opens from disk with one row per
-song: the original and every recipe side by side, a switch keeping the position, keys 1-N to switch.
+song: the original and every recipe side by side, keys 1-N to switch. Every version of the playing
+song runs at once, in sync, and a switch only changes which one is audible - no pause and no seek
+into a cold file, so a switch has no gap. `npx tsx pipeline/master-bundle.mts --trial <out> --to
+<originals' folder>` copies the masters into `<recipe>/` subfolders beside the originals and writes a
+`listen.html` there with relative paths only: the folder alone plays on another machine.
 MATCHED LOUDNESS (default) lowers every version's media-element volume to the quietest one's
 integrated loudness, so a switch compares tone and image, not level; AS DELIVERED plays each at its
 own level. (A WebAudio gain would be silent from disk: Chrome feeds a `MediaElementSource` zeroes for
