@@ -7,16 +7,16 @@ import { DatabaseSync } from "node:sqlite";
 import { timerResource } from "@gt/producers/publish/timers";
 
 import { probeGoogle, type KeyFetch, type KeyProbe } from "../../imaging/keyProbe";
-import { missingFluxModels } from "../../imaging/local/flux2";
 import { leonardoStudioHealth } from "../../imaging/providers/leonardoStudio";
 import { probeLeonardoApiPool, studioBalanceCheck } from "../../imaging/studio/balance";
 import type { StudioRecon } from "../../imaging/studio/driver";
 import type { StudioHealth } from "../../imaging/studio/types";
 import { comfyBase, comfyStats, missingModels, type ComfyFetch } from "../../imaging/video/comfyLtx";
+import type { SunoDriverKind } from "../../sound/suno/drivers";
 import { SUNO_CDP_PORT, type SunoDriverHealth } from "../../suno/types";
 import type { OllamaFetch } from "../../text/providers/ollama";
 import { ollamaCheck } from "./doctorOllama";
-import { binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
+import { BIN_REMEDY, binsFrom, lastLines, realSpawn, type Bins, type Spawn } from "./ingest";
 import { REGISTRY_REMEDY, resolveRegistry, techniqueCount } from "./registry";
 import { WING_STORE_ENV } from "./store";
 
@@ -47,9 +47,7 @@ import { WING_STORE_ENV } from "./store";
 // ONE NIGHT TYPE (spark scout-vision S3): the muse wing folded into the scout loop, so there is no stills-only preflight -
 // a night's character ideas are drawn on the studio line above, like every other idea.
 // (This preflight has no TRELLIS or Blender line: a game asset's mesh job meets those on
-// the worker, lib/foundry/mesh.) The STORYBOARDS' Flux files (spark scout-storyboards) are read off the same
-// ComfyUI once it answers, as a note: a missing file fails those storyboards' frames with ComfyUI's own
-// sentence, and the night goes on. The local Ollama model (spark scout-vision S6) is a note too
+// the worker, lib/foundry/mesh.) The local Ollama model (spark scout-vision S6) is a note too
 // (./doctorOllama.ts): without it a draft is the CLI's and the eye is Gemini's - money, not a step.
 
 export type Check = {
@@ -66,11 +64,6 @@ export type Check = {
 /** The keys a live night's launches reach: extract's pixels and eyes, the scene's still and clip. */
 export const NIGHT_KEYS = ["GOOGLE_AI_API_KEY", "LEONARDO_API_KEY"] as const;
 
-const BIN_REMEDY: Readonly<Record<keyof Bins, string>> = {
-  ytdlp: "install yt-dlp (https://github.com/yt-dlp/yt-dlp/releases) onto PATH, or set YTDLP to its full path",
-  ffmpeg: "install ffmpeg (https://www.gyan.dev/ffmpeg/builds/) onto PATH, or set FFMPEG to its full path",
-  ffprobe: "ffprobe ships with ffmpeg: put it on PATH, or set FFPROBE to its full path",
-};
 const BIN_NAME: Readonly<Record<keyof Bins, string>> = { ytdlp: "yt-dlp", ffmpeg: "ffmpeg", ffprobe: "ffprobe" };
 
 async function binary(spawn: Spawn, bins: Bins, k: keyof Bins): Promise<Check> {
@@ -114,8 +107,10 @@ export type DoctorInput = {
   readonly worker?: () => Promise<number | undefined>;
   /** The doctor's clock (default Date.now). */
   readonly now?: () => number;
-  /** The Suno browser's health (default lib/suno/driver.ts `probeSunoOn(SUNO_CDP_PORT)`); a test hands a fake. */
+  /** The selected Suno driver's health (default its own `probe()`, lib/sound/suno/drivers.ts `selectedSunoDriver`); a test hands a fake. */
   readonly suno?: () => Promise<SunoDriverHealth>;
+  /** Which Suno driver is selected (default `selectedSunoDriver`'s kind; "browser" when `suno` is handed in alone). */
+  readonly sunoKind?: () => Promise<SunoDriverKind>;
   /** The night's track cap (`--tracks`): a live night with tracks to make needs Suno. Absent: the Suno line is a note. */
   readonly tracks?: number;
   /** The Ollama daemon's HTTP API at OLLAMA_HOST (default the global fetch); a test hands a fake. */
@@ -158,19 +153,7 @@ async function comfyChecks(input: DoctorInput): Promise<Check[]> {
   } catch (e) {
     out.push({ name: "ltx weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed });
   }
-  out.push(await fluxCheck(deps, start));
   return out;
-}
-
-/** The storyboards' Flux 2 files listed by ComfyUI (lib/imaging/local/flux2.ts FLUX_FILES): always a note. */
-async function fluxCheck(deps: { readonly base: string; readonly fetch?: ComfyFetch }, start: string): Promise<Check> {
-  try {
-    const w = await missingFluxModels(deps);
-    if (w.missing.length === 0) return { name: "flux weights", ok: true, found: `${w.present} model files present`, needed: false };
-    return { name: "flux weights", ok: false, found: `missing: ${w.missing.join(", ")}`, remedy: "put the missing files under ComfyUI's models folder; without them a storyboard draws no frame", needed: false };
-  } catch (e) {
-    return { name: "flux weights", ok: false, found: (e as Error).message, remedy: `ComfyUI answered /system_stats but not /object_info; restart it with ${start}`, needed: false };
-  }
 }
 
 /** Where the night's registry digest reads from - a note, never a failure. */
@@ -180,31 +163,56 @@ async function registryCheck(input: DoctorInput): Promise<Check> {
   return { name: "registry", ok: true, found: `found at ${r.dir} with ${techniqueCount(r.index)} techniques`, needed: false };
 }
 
-/** Is the studio the night's ideas are drawn in ready - a note, never a failure. */
+/** Is the Leonardo studio ready, for a night that names it - a note, never a failure. */
 async function studioCheck(input: DoctorInput): Promise<Check> {
   const h = await (input.studio ?? leonardoStudioHealth)().catch((e: unknown): StudioHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
   if (h.ok) return { name: "studio", ok: true, found: "leonardo studio signed in, with credits", needed: false };
-  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "the night's stills are drawn there by default (SCOUT_REPLICA_GENERATOR): set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
+  return { name: "studio", ok: false, found: h.reason ?? "leonardo studio is not ready", remedy: "replicas with SCOUT_REPLICA_GENERATOR=leonardo-studio are drawn there: set LEONARDO_STUDIO_CDP and sign its Chrome profile in once (.claude/skills/music-video/SKILL.md)", needed: false };
 }
 
 /** The Suno browser on its own port: attached read-only (its sign-in cookie), never launched. */
-async function sunoHealth(): Promise<SunoDriverHealth> {
+async function sunoBrowserHealth(): Promise<SunoDriverHealth> {
   const { probeSunoOn } = await import("../../suno/driver");
   return probeSunoOn(SUNO_CDP_PORT);
 }
 
+/** The selected driver, auto resolved - loaded lazily: a doctor that asks nothing of Suno loads none of it. */
+async function selectedSuno(): Promise<{ readonly kind: SunoDriverKind; readonly probe: () => Promise<SunoDriverHealth> }> {
+  const { selectedSunoDriver } = await import("../../sound/suno/drivers");
+  const s = await selectedSunoDriver();
+  return { kind: s.kind, probe: () => s.driver.probe() };
+}
+
+const asHealth = (e: unknown): SunoDriverHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) });
+
+const BROWSER_REMEDY = `start the Suno Chrome profile (~/.suno-chrome, remote debugging on ${SUNO_CDP_PORT}) and sign in to suno.com once`;
+
 /**
- * Is the Suno browser the night's tracks are made in running and signed in: a failure only on a live night that
- * makes tracks (`tracks` > 0), a note otherwise - a dry night's tracks are stand-ins and ask no browser.
+ * Is the Suno driver the night's tracks are made with ready: a failure only on a live night that makes tracks
+ * (`tracks` > 0), a note otherwise - a dry night's tracks are stand-ins and ask nothing. On the API driver a
+ * second line, `suno bytes`, is a standing note, never a blocker: the API hands out no audio (the profile's
+ * file is encoded, docs/suno-driver.md), so its songs land with no audio file, and a song's file is one
+ * download credit pulled in the studio.
  */
-async function sunoCheck(input: DoctorInput): Promise<Check> {
+async function sunoChecks(input: DoctorInput): Promise<Check[]> {
   const needed = !input.dry && (input.tracks ?? 0) > 0;
   // Asked only when it can block, or when a probe is handed in: a dry night's tracks are stand-ins, and a doctor
   // that names no track cap attaches to no browser.
-  if (!needed && input.suno === undefined) return { name: "suno", ok: false, found: input.dry ? "not asked: a dry night's tracks are stand-ins" : "not asked: no track cap named (doctor --tracks N)", needed };
-  const h = await (input.suno ?? sunoHealth)().catch((e: unknown): SunoDriverHealth => ({ ok: false, reason: e instanceof Error ? e.message : String(e) }));
-  if (h.ok) return { name: "suno", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed };
-  return { name: "suno", ok: false, found: h.reason, remedy: `the night's tracks are made there: start the Suno Chrome profile (~/.suno-chrome, remote debugging on ${SUNO_CDP_PORT}) and sign in to suno.com once`, needed };
+  if (!needed && input.suno === undefined) return [{ name: "suno", ok: false, found: input.dry ? "not asked: a dry night's tracks are stand-ins" : "not asked: no track cap named (doctor --tracks N)", needed }];
+  const handed = input.suno;
+  const sel = handed === undefined ? await selectedSuno().catch((e: unknown) => ({ kind: "browser" as const, probe: async () => asHealth(e) })) : null;
+  const kind: SunoDriverKind = input.sunoKind !== undefined ? await input.sunoKind() : (sel?.kind ?? "browser");
+  const probe = handed ?? sel?.probe ?? sunoBrowserHealth;
+  const h = await probe().catch(asHealth);
+  const out: Check[] = [];
+  if (kind === "api") {
+    out.push(h.ok ? { name: "suno", ok: true, found: "suno api, connected", needed } : { name: "suno", ok: false, found: h.reason, remedy: "the night's tracks are created through Suno's API: connect it in the app (GET /api/suno/connect), or set SUNO_DRIVER=browser", needed });
+    out.push({ name: "suno bytes", ok: false, found: "the songs land with no audio file", remedy: "pull a song in the studio: one suno download credit", needed: false });
+    return out;
+  }
+  if (kind === "fake") return [{ name: "suno", ok: h.ok, found: h.ok ? "SUNO_DRIVER=fake: stand-in clips" : h.reason, needed, ...(h.ok ? {} : { remedy: "unset SUNO_DRIVER for a live night" }) }];
+  if (h.ok) return [{ name: "suno", ok: true, found: `suno browser on ${SUNO_CDP_PORT}, signed in`, needed }];
+  return [{ name: "suno", ok: false, found: h.reason, remedy: `the night's tracks are made there: ${BROWSER_REMEDY}`, needed }];
 }
 
 /** The browser `chromium.launch` in pipeline/strips/render.mts starts: its executable, without launching it. */
@@ -305,7 +313,7 @@ export async function doctor(input: DoctorInput): Promise<Check[]> {
   out.push(await registryCheck(input));
   out.push(await studioCheck(input));
   out.push(await studioBalanceCheck({ env: input.env, dry: input.dry, ...(input.studioRecon === undefined ? {} : { recon: input.studioRecon }) }));
-  out.push(await sunoCheck(input));
+  out.push(...(await sunoChecks(input)));
   out.push(await chromiumCheck(input));
   out.push(await ollamaCheck(input.env, input.ollamaFetch));
   return out;

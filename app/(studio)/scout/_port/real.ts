@@ -14,6 +14,7 @@ import "server-only";
 
 import { err, errorMessage, ok, type Result } from "@gt/domain/errors";
 import type { Store } from "@gt/kernel/store";
+import { isNightVenture } from "@gt/domain/genre";
 import { listVentures } from "@gt/kernel/ventures/store";
 
 import { kernel } from "../../../../lib/kernelStore.ts";
@@ -40,7 +41,8 @@ async function backlog(): Promise<ScoutBacklog | undefined> {
 /** The live ventures, for the filter (spark scout-vision S2); a read that fails leaves the filter out, never guesses. */
 function ventures(store: Store): readonly ScoutVenture[] {
   const r = store.read((x) => listVentures(x));
-  return r.ok ? r.value.filter((v) => v.retiredAt === undefined).map((v) => ({ id: v.id, name: v.name })) : [];
+  // A venture with no night work (imported from a channel, born from a proven video) has nothing on this graph to filter.
+  return r.ok ? r.value.filter((v) => v.retiredAt === undefined && isNightVenture(v)).map((v) => ({ id: v.id, name: v.name })) : [];
 }
 
 async function view(): Promise<Result<ScoutView>> {

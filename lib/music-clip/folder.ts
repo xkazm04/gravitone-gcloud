@@ -9,6 +9,10 @@
 // explicit spend decision, and writes the timeline and the first state. The
 // analyser is a parameter so a test hands in a stand-in and nothing reaches the
 // network; the CLI hands in `analyzeTrack`.
+//
+// A folder may name the Suno song it is (`--suno <id|url>`, else a `suno.txt`
+// beside the lyrics holding the id or the song URL; the flag wins). The Suno
+// calls are free: they need no receipt, but `--dry` still makes none.
 
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -16,12 +20,14 @@ import path from "node:path";
 
 import type { AnalyzeInput, StateV1, TimelineV1 } from "./types";
 import { ClipError, parseState, stageAfterAnalyze } from "./state";
+import { parseSunoId } from "./suno";
 
 export { ClipError };
 
 export const CLIP_DIR = "music-clip";
 export const LYRICS_NAMES = ["lyrics.txt", "lyrics.md"] as const;
 export const STYLE_NAMES = ["style.txt", "style.md", "prompt.md", "prompt.txt"] as const;
+export const SUNO_NAMES = ["suno.txt"] as const;
 
 export const clipRoot = (dir: string) => path.join(path.resolve(dir), CLIP_DIR);
 
@@ -78,6 +84,8 @@ export interface ClipFolder {
   lyricsText: string;
   stylePath: string;
   styleText: string;
+  /** The Suno song id `suno.txt` names, when the folder holds one. */
+  sunoId?: string;
 }
 
 /** Reads the folder, naming EVERY missing input in one refusal rather than the first. */
@@ -105,6 +113,13 @@ export function readFolder(dir: string, audio?: string): ClipFolder {
   const actual = (want: string) => names.find((n) => n.toLowerCase() === want) as string;
   const lyricsPath = path.join(root, actual(lyricsName));
   const stylePath = path.join(root, actual(styleName));
+  const sunoName = find(SUNO_NAMES);
+  let sunoId: string | undefined;
+  if (sunoName) {
+    const sunoPath = path.join(root, actual(sunoName));
+    sunoId = parseSunoId(fs.readFileSync(sunoPath, "utf8"));
+    if (!sunoId) throw new ClipError(`${sunoPath} holds neither a Suno song id nor a https://suno.com/song/<id> link`, "invalid");
+  }
   return {
     dir: root,
     audioPath,
@@ -112,10 +127,17 @@ export function readFolder(dir: string, audio?: string): ClipFolder {
     lyricsText: fs.readFileSync(lyricsPath, "utf8"),
     stylePath,
     styleText: fs.readFileSync(stylePath, "utf8"),
+    ...(sunoId ? { sunoId } : {}),
   };
 }
 
-export const analyzeInput = (f: ClipFolder, dry: boolean): AnalyzeInput => ({ audioPath: f.audioPath, lyricsText: f.lyricsText, styleText: f.styleText, dry });
+export const analyzeInput = (f: ClipFolder, dry: boolean, sunoId?: string): AnalyzeInput => ({
+  audioPath: f.audioPath,
+  lyricsText: f.lyricsText,
+  styleText: f.styleText,
+  dry,
+  ...(sunoId ? { suno: { id: sunoId } } : {}),
+});
 
 export function readTimeline(dir: string): TimelineV1 {
   const t = readJsonFile(clipPath(dir, "timeline.json"), "timeline.json (run analyze first)") as TimelineV1;
@@ -146,6 +168,8 @@ export interface AnalyzeFlags {
   yes?: boolean;
   dry?: boolean;
   audio?: string;
+  /** `--suno <id | https://suno.com/song/<id>>`; wins over the folder's suno.txt. */
+  suno?: string;
 }
 
 export type AnalyzeOutcome =
@@ -159,7 +183,13 @@ export type AnalyzeOutcome =
  */
 export async function runAnalyze(dir: string, flags: AnalyzeFlags, analyser: Analyser, now = () => new Date().toISOString()): Promise<AnalyzeOutcome> {
   if (flags.yes && flags.dry) throw new ClipError("give --yes or --dry, not both", "usage");
+  let flagId: string | undefined;
+  if (flags.suno !== undefined) {
+    flagId = parseSunoId(flags.suno);
+    if (!flagId) throw new ClipError(`--suno needs a Suno song id or a https://suno.com/song/<id> link, got ${flags.suno || "nothing"}`, "usage");
+  }
   const folder = readFolder(dir, flags.audio);
+  const sunoId = flagId ?? folder.sunoId;
   if (!flags.yes && !flags.dry) {
     const mb = (fs.statSync(folder.audioPath).size / 1e6).toFixed(1);
     return {
@@ -168,14 +198,19 @@ export async function runAnalyze(dir: string, flags: AnalyzeFlags, analyser: Ana
         `audio  ${folder.audioPath} (${mb} MB)`,
         `lyrics ${folder.lyricsPath}`,
         `style  ${folder.stylePath}`,
-        "live: local beat/section analysis + one Gemini call for lyric line times",
+        ...(sunoId
+          ? [
+              `suno   ${sunoId} (${flagId ? "--suno" : "suno.txt"}): analysis + lyrics alignment, free`,
+              "live: Suno's grid + local bands/intensity; one Gemini call for line times only if Suno aligns no words",
+            ]
+          : ["live: local beat/section analysis + one Gemini call for lyric line times"]),
         "dry:  local analysis only; lyric times section-only",
         "pass --yes to spend one Gemini call, --dry for none",
       ],
     };
   }
   const dry = !flags.yes;
-  const timeline = await analyser(analyzeInput(folder, dry));
+  const timeline = await analyser(analyzeInput(folder, dry, sunoId));
   const timelinePath = writeClipJson(dir, "timeline.json", timeline);
   const { state, reset } = stageAfterAnalyze(readState(dir), timeline.track.sha1, now());
   writeState(dir, state);

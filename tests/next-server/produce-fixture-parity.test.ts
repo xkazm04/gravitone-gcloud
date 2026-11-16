@@ -173,16 +173,19 @@ describe("a move passes the neighbour in the queue's order, not the schedule's",
     const realMoved = await real.moveJob({ jobId: first.research, dir: "later" }, op);
     if (!realMoved.ok) throw realMoved.error;
     expect(realMoved.value.note).toMatch(/^behind /);
-    // Fixture: three cuts wait on box.render in the order why-bitcoin, the-quiet-tariff, provider-routing,
-    // but the schedule starts them in the reverse order (each waits on a different upstream).
+    // Fixture: four cuts wait on box.render in the order why-bitcoin, the-quiet-tariff, provider-routing,
+    // glass-harbor-cinematic, but the schedule starts them in another order (each waits on a different upstream).
     const line = [...universe().jobs.values()].filter((j) => j.option.lane === "box.render" && (j.state === "queued" || j.state === "planned")).sort((a, b) => a.order - b.order);
-    expect(line.map((j) => j.id)).toEqual(["job:part:why-bitcoin:cut", "job:part:the-quiet-tariff:cut", "job:part:provider-routing-explainer:cut"]);
+    expect(line.map((j) => j.id)).toEqual(["job:part:why-bitcoin:cut", "job:part:the-quiet-tariff:cut", "job:part:provider-routing-explainer:cut", "job:part:glass-harbor-cinematic:cut"]);
     const moved = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
     if (!moved.ok) throw moved.error;
     expect(moved.value.note).toBe(`behind ${line[1]!.title}`);
     const end = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
     if (!end.ok) throw end.error;
     expect(end.value.note).toBe(`behind ${line[2]!.title}`);
+    const last = await fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op);
+    if (!last.ok) throw last.error;
+    expect(last.value.note).toBe(`behind ${line[3]!.title}`);
     expect(await said(fixture.moveJob({ jobId: line[0]!.id, dir: "later" }, op))).toBe("refused: end of the lane queue");
   });
 });
@@ -315,6 +318,10 @@ describe("a re-route confirm on a job its lane holds for names the hold before t
     await expect(runJob(fx, crash, research, { holder: dead, alive: () => true, heartbeatMs: 60_000 })).rejects.toBe("crash");
     const swept = recover(fx, { holder: { bootId: "boot-sweep", pid: 1, host }, alive: () => false });
     expect(swept.ok && swept.value.map((j) => j.id)).toEqual([research]);
+    // The seat is free, so the sweep wrote no hold; this is one an earlier session left on it (a hold
+    // stays until an operator acknowledges it, whatever the table says since).
+    const stale = store.tx((t) => t.run("INSERT INTO lane_holds (lane, job_id, stage, at) VALUES (?, ?, ?, ?)", "seat.text", research, "a", t.at));
+    expect(stale.ok).toBe(true);
     const realSaid = await said(real.reroute({ jobId: research, option: "research/google/gemini-3.1-pro-preview", token: "moved-queue-token" }, op), research);
     expect(realSaid).toBe("refused: seat.text is on hold for this job: acknowledge the hold first");
     // The fixture's seeded Suno crash holds box.chrome on job:run:run-seed-suno.

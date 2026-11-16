@@ -4,7 +4,7 @@
 
 Reads the cycle's gen-spec.json and dispatches on two declared fields:
 
-    stack:  "local"  — pixels on this machine (Flux 2 stills via dojo_pairs,
+    stack:  "local"  — pixels on this machine (image pairs refused since Flux 2's removal,
                         Wan/H3 video via dojo_video), eyes = ollama. $0, and
                         NOTHING in the cycle may bill Google.
             "google" — pixels Nano Banana, eyes Gemini, both through

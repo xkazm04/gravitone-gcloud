@@ -14,17 +14,21 @@ import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { Field } from "@gt/ui/components/field/Field.tsx";
 import { FloorGlyph } from "@gt/ui/components/floor/FloorGlyph.tsx";
+import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Glyph } from "@gt/ui/components/glyph/Glyph.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
 import { PipRow } from "@gt/ui/components/piprow/PipRow.tsx";
 import { costWords, when } from "@gt/ui/components/produce/produce.ts";
 import { STATUS } from "@gt/ui/components/status/status.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
+import { tokens } from "@gt/ui/tokens";
 
 import s from "./Plan.module.css";
 import { GROUPS, matches, posterSrc, runtimeWords } from "./shelf.ts";
 
 export { GROUPS, ordered } from "./shelf.ts";
+
+const THUMB = Number.parseInt(tokens["h-chip"], 10);
 
 /** The recipe's mark by its family (projects.js RECIPE_ICON: film video, album audio, explainer article). */
 export function recipeMark(recipe: string): "video" | "audio" | "article" | "image" {
@@ -43,8 +47,8 @@ function Row({ p, current, nowMs, href }: { readonly p: ProjectSummary; readonly
         {p.poster === null ? (
           <FloorGlyph name={recipeMark(p.recipe)} />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- a kernel blob through /api/blob; nothing for next/image to optimise
-          <img className={s.thumb} src={posterSrc(p.poster)} alt="" />
+          // A kernel blob through /api/blob, at its smallest variant: the row's mark is a chip's height.
+          <Plate className={s.thumb} src={posterSrc(p.poster)} alt="" lazy width={THUMB} />
         )}
       </span>
       <span className={s.pt}>

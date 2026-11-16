@@ -1,0 +1,215 @@
+{
+ "schema": "conform-run/1",
+ "worker": "990124d0-c425-415e-b2b4-353efecb6327",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-08T23:09:59.611834+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "board-decision-desk",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/[packet]/keepalive/route.ts:24 The pagehide door's wiring (guard, body cap, ctx handed to flushKeepalive) is executed by no lane: searches for keepalive, pagehide and sendBeacon across tests/live and tests/golden-path, and for keepalive in tests/next-server, tests/next-gates and packages/ui/test, found only board-keepalive.test.ts, which calls the lifted unit with a hand-supplied principal.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/board-keepalive.test.ts:3 The file claims the route guard's principal, but it passes `who: bob` straight to flushKeepalive; the unit was lifted and its adoption by the route is pinned nowhere."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/port.ts:35 The Board does not read GRAVITONE_PRODUCE_SIDE, so even the fixture lane's server answers from the real kernel; the in-memory fixture port is not a fork any lane runs."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/decided-desk.test.ts:49 The needle is an expression shape prose would not spell, matched on text with comments stripped (line 37), and pins adoption beside the rendered behaviour."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/live/board-exit.live.spec.ts:17 The destructive lane builds a temp universe and its own server instead of inheriting the operator's stores."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:5037 A seeded defect names the board-keepalive test as the guard that must go red; the registry entry was read, the mutant was not run."
+    }
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/parts-fixture-parity.test.ts:182 This case drives only the fixture's undoPart and compares it to a literal, so a change to the kernel's wording in planUndo leaves the hand-restated string at fixture.ts:338 and this parity test green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/parts-fixture-parity.test.ts:27 The header's claim is false for the undo-conflict case at line 182, whose name also claims the kernel's words; packages/kernel/test/parts.test.ts:148 pins a separate literal, so the crossing is compared by neither file."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/parts-fixture-parity.test.ts:87 Where a case is truly two-sided it runs the same input through the fixture and the real port and compares the outcome code, which is the technique's step 3."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/parts-fixture-parity.test.ts:39 The fixture side's process-wide state has a defined reset before every test."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:4101 Fixture modules carry seeded defects with a named guard test; the entry was read, the mutant was not run."
+    }
+   ]
+  },
+  {
+   "context": "decision-and-gates",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/test/parts.gates.test.ts:21 The gate-fact tests seed packets by raw INSERT with body '{}' and committed or returned rows at rev 0, bypassing openPacket and commit with no invariant check afterwards, so gatePacketFact is certified against rows the product's door would not write.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/test/parts.gates.test.ts:21 Build-once-copy is right here (templateStores, also decision.test.ts:10); the seeded-data honesty rule is what fails."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/test/parts.test.ts:22 Narrow: the neutral helper film() opens :memory:, which skips the WAL requirement at store.ts:135, and neither its name nor a comment says so; the file makes no locking claim, so the exposure is future tests."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/decision.crash.test.ts:119 The crash enumeration asserts the effects it actually crossed beside the zero-violation verdict, so an empty scenario cannot pass."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/parts.gates.test.ts:64 The index-seek claim is settled by asking SQLite for its plan on the statements actually issued, not by reading the SQL text."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:403 A seeded recovery defect names decision.crash.test.ts as its guard; the entry was read, the mutant was not run."
+    }
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/live-feed.test.ts:1 The test claims the wire sse.ts writes, yet its FakeSource hand-spells the frames and imports nothing from sse.ts, while sse.test.ts never feeds openFeed and no file under tests/live, tests/golden-path or tests/next-gates names openFeed or liveFeed, so the string-typed `rotate` crossing is pinned by neither side.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/live-feed.test.ts:1 Two suites each pin their own half of a marshalled event name, and the handing-over belongs to neither, which is the case the technique names."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/shell-handoff.test.ts:4 A deliberately cheaper React stand-in that states what it keeps."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/live-feed.test.ts:76 Coalescing is proved under fake timers with a refresh count, not an elapsed-time bound."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:8056 A seeded defect names shell-session-post.test.ts as its guard; the entry was read, the mutant was not run."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "domain-run-job-steps",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T23:09:59.611834+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "isolation-lanes",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:09:59.611834+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "isolation-lanes",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:09:59.611834+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-through-the-reader",
+    "fixture-economics",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "decision-and-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:09:59.611834+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

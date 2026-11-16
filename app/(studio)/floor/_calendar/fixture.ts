@@ -25,14 +25,14 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { parseAt } from "@gt/domain/door";
 import { channelSchema, exportIdOf, slotMachine, slotSchema, type Slot, type SlotState } from "@gt/domain/slot";
 import type { RailSlot } from "@gt/ui/components/floor/calendar.ts";
-import { canSchedule, holds, type ChannelReady, type ScheduleDraft, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
+import { canSchedule, holds, type ChannelReady, type ScheduleItem } from "@gt/ui/components/floor/schedule.ts";
 import { canCancel, canPublishNow, moveProblem } from "@gt/ui/components/floor/slot.ts";
 import type { SlotView } from "@gt/ui/components/floor/SlotDetail.tsx";
 
 import { ledgerFor } from "../../_shell/links.ts";
 import { ARTICLE_CLI, PUBLISH_CLI } from "./readiness.ts";
-import { exportOnly, notPublishedText, railOfSlot, staleText } from "./real.ts";
-import type { CalendarFacts } from "./contract.ts";
+import { exportOnly, notPublishedText, notSlotPart, railOfSlot, staleText } from "./real.ts";
+import type { CalendarFacts, ScheduleInput } from "./contract.ts";
 import { CHANNEL_SEED, ITEMS, PROJECTS, SLOTS, type FixtureMetric, type FixtureSlot } from "./fixtureData.ts";
 
 const MIN_MS = 60_000;
@@ -75,7 +75,7 @@ function walk(from: SlotState, path: readonly SlotState[]): Result<SlotState> {
   return ok(at);
 }
 
-const door = (s: Omit<Slot, "id" | "libraryItemId"> & { readonly id: string; readonly libraryItemId: string }): Result<Slot> => parseAt(`fixture slot ${s.id}`, slotSchema, s);
+const door = (s: Omit<Slot, "id" | "libraryItemId" | "partId"> & { readonly id: string; readonly libraryItemId: string; readonly partId?: string }): Result<Slot> => parseAt(`fixture slot ${s.id}`, slotSchema, s);
 
 /** The record without the fields a waiting slot does not carry. */
 function waiting(s: Slot): Omit<Slot, "error" | "missedAt" | "claim" | "publicationId"> {
@@ -114,10 +114,21 @@ export function applyPublishNow(row: FixtureRow, nowMs: number): Result<FixtureR
 
 /* ── the table ──────────────────────────────────────────────────────────── */
 
-let table: Map<string, FixtureRow> | null = null;
+// On globalThis, like the produce fixture: the Plan reads this table (`fixtureSlotOfPart`) from
+// another server bundle than the calendar's actions write it from, and a module-local table would
+// answer each of them its own calendar.
+declare global {
+  var __gtCalendarFixture: Map<string, FixtureRow> | undefined;
+}
+
+/** Start the calendar over (a test's reset, beside `resetProduce` and `resetParts`). */
+export function resetCalendar(): void {
+  globalThis.__gtCalendarFixture = undefined;
+}
 
 function rows(nowMs: number): Result<Map<string, FixtureRow>> {
-  if (table !== null) return ok(table);
+  const table = globalThis.__gtCalendarFixture;
+  if (table !== undefined) return ok(table);
   const anchor = Math.floor(nowMs / (60 * MIN_MS)) * 60 * MIN_MS;
   const out = new Map<string, FixtureRow>();
   for (const f of SLOTS) {
@@ -125,8 +136,24 @@ function rows(nowMs: number): Result<Map<string, FixtureRow>> {
     if (!r.ok) return r;
     out.set(f.id, r.value);
   }
-  table = out;
+  globalThis.__gtCalendarFixture = out;
   return ok(out);
+}
+
+const HOLDING: ReadonlySet<SlotState> = new Set<SlotState>(["scheduled", "publishing", "published"]);
+const REOPENS: ReadonlySet<SlotState> = new Set<SlotState>(["missed", "failed"]);
+
+/**
+ * A plan's slot part on this calendar, as the kernel answers it (@gt/kernel/slots/read.ts
+ * `slottedIn` and `slotOfPartIn`): `placed` while a slot for the part HOLDS its item (scheduled,
+ * publishing, published); the door is that slot, else the newest missed or failed one (its record
+ * reschedules); a cancelled slot is history. Undefined when the calendar holds none for the part.
+ * Read only from slots already on the table: the Plan never seeds the calendar.
+ */
+export function fixtureSlotOfPart(partId: string): { readonly slotId: string; readonly placed: boolean } | undefined {
+  const mine = [...(globalThis.__gtCalendarFixture?.values() ?? [])].filter((r) => r.slot.partId === partId && (HOLDING.has(r.slot.state) || REOPENS.has(r.slot.state)));
+  const best = mine.sort((a, b) => Number(HOLDING.has(b.slot.state)) - Number(HOLDING.has(a.slot.state)) || b.slot.at.localeCompare(a.slot.at) || b.slot.id.localeCompare(a.slot.id))[0];
+  return best === undefined ? undefined : { slotId: best.slot.id, placed: HOLDING.has(best.slot.state) };
 }
 
 /** The real side's rail mapping, over the fixture row: a dry publish-now is marked, as the slot
@@ -198,10 +225,14 @@ export function fixtureAct(verb: string, id: string, nowMs: number, act: (row: F
 
 /* ── putting something on the calendar ─────────────────────────────────── */
 
-let minted = 0;
+/** The next minted id: one past the table's own (`sl-new-<n>`), so two bundles never mint one twice. */
+const nextMinted = (t: ReadonlyMap<string, FixtureRow>): number => 1 + Math.max(0, ...[...t.keys()].map((id) => Number(/^sl-new-(\d+)$/.exec(id)?.[1] ?? 0)));
+
+/** `<project><sep>slot`: the real side's `/`, the produce fixture's `:`. */
+const SLOT_PART = /^[^\s/:]+[/:]slot$/;
 
 /** A new slot, as the engine would take it (@gt/kernel/slots/write createSlot's refusals). */
-export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotView> {
+export function fixtureSchedule(d: ScheduleInput, nowMs: number): Result<SlotView> {
   const t = rows(nowMs);
   if (!t.ok) return t;
   const channel = channelSchema.safeParse(d.channel);
@@ -211,10 +242,15 @@ export function fixtureSchedule(d: ScheduleDraft, nowMs: number): Result<SlotVie
   if (exportIdOf(d.item) === undefined) return err("refused", exportOnly(d.item, d.channel));
   if (!canSchedule(ch)) return err("conflict", `${d.channel} is not wired`, { detail: "channel_not_wired" });
   if (ITEMS[d.item] === undefined) return err("conflict", `unknown item ${d.item}`, { detail: "export_missing" });
+  // The real side refuses a part that is not a plan's slot part (./real.ts). This side cannot read
+  // the fixture projects without reaching into the produce fixture, so it holds the SHAPE: every
+  // recipe's slot part has the key `slot` (@gt/catalog recipes `slot()`), after the project id and
+  // its separator. A work part or a gate is refused in the real side's words; an unknown project's
+  // `…/slot` is not caught here.
+  if (d.partId !== undefined && !SLOT_PART.test(d.partId)) return err("refused", notSlotPart(d.partId));
   const held = [...t.value.values()].find((r) => r.slot.libraryItemId === d.item && r.slot.channel === d.channel && holds(railOfRow(r)));
   if (held !== undefined) return err("conflict", `${d.item} is already on ${d.channel} (slot ${held.slot.id}, ${held.slot.state} for ${held.slot.at})`);
-  minted += 1;
-  const slot = door({ id: `sl-new-${minted}`, libraryItemId: d.item, channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
+  const slot = door({ id: `sl-new-${nextMinted(t.value)}`, libraryItemId: d.item, ...(d.partId === undefined ? {} : { partId: d.partId }), channel: channel.data, at: d.at, state: "scheduled", title: d.title, description: d.description, tags: [...d.tags] });
   if (!slot.ok) return slot;
   const row: FixtureRow = { slot: slot.value, rev: 1, extra: {} };
   t.value.set(slot.value.id, row);

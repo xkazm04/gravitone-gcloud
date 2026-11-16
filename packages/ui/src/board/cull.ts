@@ -193,3 +193,75 @@ export function keepingNote(prev: BoardVerdict | undefined, next: BoardVerdict |
   if (next === null || next.note !== undefined || prev?.note === undefined) return next;
   return { ...next, note: prev.note };
 }
+
+/**
+ * A NOTE BELONGS TO THE RUN, and a run is noted where it was judged (spark perfect, note-on-judged-run): after a
+ * verdict key the cursor has moved on, so E would land on the next undecided run and refuse. The run the keys just
+ * judged (`judged`, kept until the cursor is deliberately moved) takes the note while the cursor's own run holds
+ * no verdict of its own; a cursor run that has one is the one noted. Returns an index into `runs`.
+ */
+export function noteRunOf(runs: readonly { readonly members: readonly number[] }[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, at: number, judged: number | null): number {
+  if (judged === null || judged === at || runs[judged] === undefined) return at;
+  const own = runs[at]?.members.some((m) => verdicts[cells[m]?.id ?? ""] !== undefined) === true;
+  return own ? at : judged;
+}
+
+/** The cell a run's note is written on: its first, so the note travels the existing decision path (notes[cell]). */
+export const noteCellOf = (run: { readonly members: readonly number[] }): number => run.members[0] ?? 0;
+
+/** The note a run holds: its first cell's, else the first any other member carries (an older, per-variant one). */
+export function noteOfRun(members: readonly number[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>): string | undefined {
+  for (const m of members) {
+    const note = verdicts[cells[m]?.id ?? ""]?.note;
+    if (note !== undefined) return note;
+  }
+  return undefined;
+}
+
+/* ── one pass over every tab ───────────────────────────────────────────────── */
+
+/** A tab and its runs in the order the desk walks them (indices into the packet's runs). */
+export type Lane = { readonly tab: string; readonly order: readonly number[] };
+
+type RunOf = { readonly members: readonly number[] };
+const laneOf = (lanes: readonly Lane[], at: number): number => lanes.findIndex((l) => l.order.includes(at));
+
+/**
+ * The walk at the end of a tab (spark perfect, one-pass-both-tabs): the first run still open in the NEXT tab that
+ * has one, in tab order and wrapping round, else null (the walk then clamps where it is, as it always did).
+ */
+export function carryTo(lanes: readonly Lane[], at: number, runs: readonly RunOf[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, required: boolean): number | null {
+  const here = laneOf(lanes, at);
+  if (here < 0) return null;
+  for (let k = 1; k < lanes.length; k++) {
+    const lane = lanes[(here + k) % lanes.length];
+    const hit = lane?.order.find((i) => runs[i]?.members.some((m) => stillOpen(verdicts[cells[m]?.id ?? ""], required)) === true);
+    if (hit !== undefined) return hit;
+  }
+  return null;
+}
+
+/** The key that switches tabs: the first run of the next tab (wrapping), or null where there is only one tab. */
+export function nextLane(lanes: readonly Lane[], at: number): number | null {
+  const here = laneOf(lanes, at);
+  if (here < 0 || lanes.length < 2) return null;
+  return lanes[(here + 1) % lanes.length]?.order[0] ?? null;
+}
+
+/** What a commit would leave behind in the OTHER tabs: undecided runs the cursor never stood on, per tab. */
+export type HeldBack = { readonly tab: string; readonly runs: number };
+
+export function heldBackOf(lanes: readonly Lane[], at: number, runs: readonly RunOf[], cells: readonly Cell[], verdicts: Readonly<Record<string, BoardVerdict>>, visited: ReadonlySet<number>): HeldBack[] {
+  const here = laneOf(lanes, at);
+  return lanes.flatMap((lane, k) => {
+    if (k === here) return [];
+    const n = lane.order.filter((i) => !visited.has(i) && runs[i]?.members.some((m) => verdicts[cells[m]?.id ?? ""] === undefined) === true).length;
+    return n > 0 ? [{ tab: lane.tab, runs: n }] : [];
+  });
+}
+
+/** The statement of consequence the commit asks with: each tab's count of runs never opened, and where they go. */
+export function heldBackWords(held: readonly HeldBack[]): string[] {
+  if (held.length === 0) return [];
+  return [...held.map((h) => `${h.tab} · ${h.runs} run${h.runs === 1 ? "" : "s"} never opened, undecided`), "undecided runs go on to the remainder packet"];
+}

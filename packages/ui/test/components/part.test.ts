@@ -11,7 +11,7 @@ import { PartTabs } from "../../src/components/part/PartTabs.tsx";
 import { PartWorkspace, type PartWorkspaceProps } from "../../src/components/part/PartWorkspace.tsx";
 import { RailList } from "../../src/components/part/RailList.tsx";
 import { VerdictChip } from "../../src/components/part/VerdictChip.tsx";
-import { clock, secs, stepTab, tabMark, verdictLook, walk } from "../../src/components/part/part.ts";
+import { clock, mayAdopt, nextTab, secs, stepTab, tabMark, verdictLook, walk } from "../../src/components/part/part.ts";
 import { KEYMAP } from "../../src/keymap/bindings.ts";
 import { chordsOf } from "../../src/keymap/chord.ts";
 import { conflicts, keyTable, problems, resolve } from "../../src/keymap/keymap.ts";
@@ -34,6 +34,24 @@ describe("verdicts and tabs", () => {
     expect(TABS.map((t) => tabMark(t).spoken)).toEqual(["ready", "working", "no editor yet", "gate", "slot"]);
     expect(tabMark(tab("x", "research", "blocked")).glyph).toBe("▲");
     expect(new Set(TABS.map((t) => tabMark(t).glyph)).size).toBe(TABS.length);
+  });
+
+  test("next is the row after a READY part in recipe order, gate and slot included; nothing while not ready or at the end", () => {
+    expect(nextTab(TABS, "research", true)?.key).toBe("script");
+    expect(nextTab(TABS, "frames", true)?.key).toBe("gate:frames");
+    expect(nextTab(TABS, "gate:frames", true)?.key).toBe("slot");
+    expect(nextTab(TABS, "research", false)).toBeNull();
+    expect(nextTab(TABS, "slot", true)).toBeNull();
+    expect(nextTab(TABS, "nowhere", true)).toBeNull();
+  });
+
+  test("a re-read replaces the copy only with no write in flight, no field being typed in, and no older rev", () => {
+    const at = { inflight: false, editing: false, shownRev: 4, freshRev: 4 };
+    expect(mayAdopt(at)).toBe(true);
+    expect(mayAdopt({ ...at, freshRev: 5 })).toBe(true);
+    expect(mayAdopt({ ...at, inflight: true })).toBe(false);
+    expect(mayAdopt({ ...at, editing: true })).toBe(false);
+    expect(mayAdopt({ ...at, freshRev: 3 })).toBe(false);
   });
 
   test("[ and ] step only between parts that have an editor, and stop at the ends", () => {
@@ -143,6 +161,29 @@ describe("markup", () => {
   test("undo names the op it would revert; with nothing to undo there is no control to press", () => {
     expect(renderToStaticMarkup(h(PartWorkspace, frame({ undo: { last: "descope f-ath", busy: false, onUndo: noop } })))).toContain("undo descope f-ath");
     expect(renderToStaticMarkup(h(PartWorkspace, frame()))).not.toMatch(/<button[^>]*>[^<]*undo/);
+  });
+
+  test("a job in flight is drawn in a live region - what runs, its stage, since when; none running, the region is empty", () => {
+    const html = renderToStaticMarkup(h(PartWorkspace, frame({ running: [{ id: "job:1", label: "render 9:16", since: "14:02", stage: "turn 2 of 2" }] })));
+    expect(html).toMatch(/role="status" aria-label="running">.*render 9:16.*turn 2 of 2 · since 14:02/);
+    const idle = renderToStaticMarkup(h(PartWorkspace, frame({ running: [] })));
+    expect(idle).toContain('role="status" aria-label="running"></div>');
+    expect(renderToStaticMarkup(h(PartWorkspace, frame()))).toContain('aria-label="running"></div>');
+  });
+
+  test("a failed job is drawn with the store's sentence whole and a door to it on Runs; none, nothing", () => {
+    const error = "upload: 403 quotaExceeded - The request cannot be completed because you have exceeded your quota.";
+    const html = renderToStaticMarkup(h(PartWorkspace, frame({ failed: { jobId: "job:part:p/frames", state: "failed", error, href: "/projects/runs?job=kernel%3Ajob%3Apart%3Ap%2Fframes" } })));
+    expect(html).toContain(error);
+    expect(html).toContain('data-job="job:part:p/frames"');
+    expect(html).toMatch(/<a[^>]*href="\/projects\/runs\?job=kernel%3Ajob%3Apart%3Ap%2Fframes"/);
+    expect(renderToStaticMarkup(h(PartWorkspace, frame({ failed: { jobId: "j", state: "interrupted", href: "/x" } })))).toContain("interrupted");
+    for (const failed of [undefined, null]) expect(renderToStaticMarkup(h(PartWorkspace, frame(failed === undefined ? {} : { failed })))).not.toContain("data-job=");
+  });
+
+  test("the next door is one link with the next row's name; none given, none drawn", () => {
+    expect(renderToStaticMarkup(h(PartWorkspace, frame({ next: { label: "◆ frames", href: "/board/pkt%3Astep%3Ap%2Fgate%3Aframes" } })))).toMatch(/<a[^>]*href="\/board\/pkt%3Astep%3Ap%2Fgate%3Aframes"[^>]*>.*next · ◆ frames/);
+    expect(renderToStaticMarkup(h(PartWorkspace, frame({ next: null })))).not.toContain("next ·");
   });
 
   test("a rail of 500 rows holds a window of them, not 500", () => {

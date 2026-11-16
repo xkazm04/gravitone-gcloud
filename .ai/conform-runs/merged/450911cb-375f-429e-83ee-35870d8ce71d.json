@@ -1,0 +1,124 @@
+{
+ "schema": "conform-run/1",
+ "worker": "450911cb-375f-429e-83ee-35870d8ce71d",
+ "subject": "concurrency-guards",
+ "evaluatedAt": "2026-11-08T05:12:48.510675+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/page.tsx:52 The route's only I/O is one synchronous read of a committed token file, and every specimen is wired to `inert` handlers over literal data (ContractHooks.tsx:33). A case-insensitive search of app/(studio)/kit for mutex, inflight/in-flight, idempot and semaphore found nothing, so there is no operation here that two callers could run at once and nothing to guard. 'lock'/'lease' do appear, but only as specimen labels (LockGate, 'Leases with a fence').",
+   "techniques": [
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/ContractHooks.tsx:33 Specimen handlers do nothing, so there is no operation a second caller could join or be refused from."
+    },
+    {
+     "technique": "cache-value-not-handle",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/KitNav.tsx:14 The only effect is an IntersectionObserver for the nav highlight. Nothing is fetched or shared in flight."
+    }
+   ],
+   "absenceTerms": [
+    "mutex",
+    "inflight",
+    "idempot",
+    "semaphore"
+   ]
+  },
+  {
+   "context": "ledger-v1-sources",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "lib/ledger/v1/sources/mv.ts:118 These sources are read-only projections. Their concurrency duty is to make re-syncs and restarted attempts converge, and they do it with natural event keys: each fact is keyed on purpose by record, fact and attempt. A replayed sync appends nothing, and a late or overwritten attempt stays its own event instead of merging into the next one.",
+   "techniques": [
+    {
+     "technique": "guard-key-design",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/articles.ts:28 The key's axes are chosen and written down: name plus startedAt, because a rework re-runs the same steps and a key on name alone would wrongly treat the second draft as a duplicate of the first."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/gpu.ts:27 The replay channel (every sync re-reads from the top) is covered by stable natural keys deduplicated at the store; gpu.ts:33 adds the occurrence index for identical lines."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/mv.ts:118 Retry and Regenerate restamp the job's clocks, so end and verdict events are keyed by the attempt they belong to and an earlier attempt's end survives as its own event."
+    },
+    {
+     "technique": "preparation-is-the-staleness-window",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/mv.ts:18 It deliberately uses the reader with no side effects (not the snapshot that kicks the worker and spends), so no irreversible effect sits at the end of a prepared read."
+    },
+    {
+     "technique": "cross-process-exclusion",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/mv.ts:146 It reads another process's lease to label a dead holder 'interrupted' but holds no exclusion of its own. Caveat: liveness is a pid probe alone and the lease's `at` is unused, so a reused pid would read as alive."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/articles.ts:98 It only probes the `.driver` holder and never acquires a guard, so there is no exit path that owes a release."
+    },
+    {
+     "technique": "atomic-file-publish",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/spend.ts:24 The sources publish no file. On the reader side, gpu.ts skips a torn final line left by a writer mid-append."
+    },
+    {
+     "technique": "fence-inside-write-transaction",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/gpu.ts:22 The GPU lease is the kernel's. This source only projects its frozen log and reads status, with no write behind a lock that a fence would need to protect."
+    }
+   ],
+   "registryProposal": "Most of the techniques assume the code being judged acquires or writes. For read-only projections over other processes' stores, what applies is idempotent re-ingest and attempt-keyed facts. A short note on the reader's role (natural keys on replay; no staleness bound in a dead-holder probe that is display-only) would make verdicts on such contexts less forced."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:12:48.510675+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "cache-value-not-handle",
+    "single-flight-primitives"
+   ],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:12:48.510675+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "atomic-file-publish",
+    "attempt-attribution",
+    "cross-process-exclusion",
+    "fence-inside-write-transaction",
+    "guard-key-design",
+    "idempotency-by-design",
+    "preparation-is-the-staleness-window",
+    "release-guarantees"
+   ],
+   "deviations": 0,
+   "context": "ledger-v1-sources",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -11,11 +11,14 @@
 export const SECTIONS = [
   { id: "compose", label: "compose" },
   { id: "arrange", label: "arrange" },
+  { id: "cover", label: "cover" },
   { id: "hunt", label: "hunt" },
   { id: "lessons", label: "lessons" },
   { id: "strengths", label: "strengths" },
   { id: "rubric", label: "rubric" },
   { id: "batch", label: "batch" },
+  // spark yue2-song-lab S2: the knockout (../_songlab/) - the agent seeds a bracket, the owner's ear judges it.
+  { id: "songlab", label: "song lab" },
 ] as const;
 export type Section = (typeof SECTIONS)[number]["id"];
 

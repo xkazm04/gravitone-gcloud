@@ -1,0 +1,122 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e284f2a8-000e-42a8-87a3-5899a831731a",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T05:14:42.772745+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-screen",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/scout/_port/fixture.ts:60 The fixture side retypes steer.ts's pause and resume writers and omits archivedDoor, so on a baselined scout root the real side refuses with ARCHIVED_DOOR (pinned at tests/next-server/scout-baseline.test.ts:165) while the fixture accepts, despite its header's claim of the same refusals, and no fixture-versus-real comparison exists for this port.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/scout/_port/fixture.ts:60 Restates the door instead of sharing it (rule 1) and has no parity check (rule 3); library, produce and parts have *-fixture-parity tests, scout has none. No test imports realScout, serverScout or the actions."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/floor.live.spec.ts:98 Narrow: a browser reaches /scout and checks the header's next link, on the lane's side; I found no live journey for the graph, the split editor or the acts."
+    }
+   ]
+  },
+  {
+   "context": "publish-producers",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/producers/src/publish/mode.ts:12 Publishing's whole claim is an effect on a platform it does not own, yet the live path is exercised only with stub adapters and a fake wire, and my search found no lane that reads back from the platform that an upload landed, so a green suite cannot witness delivery.",
+   "techniques": [
+    {
+     "technique": "far-side-oracle",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/publish-youtube.test.ts:25 Near-side only. Searches for armLive, PUBLISH_MODE, videos.list and googleapis in tests found stubs and dry holds, no credential-gated lane that skips when unset."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/publish-timers.test.ts:115 Waits on observed tick counts; the 10 s limit is only a hang guard."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/publish-tick.test.ts:23 The worker-level tests use the same binding workers/runner.mts loads; the cheaper stub world in publish.test.ts says what it leaves out in its header."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/publish-tick.test.ts:24 Drives the roster production builds at workers/worker.ts:210, not a composition of the test's own."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "packages/producers/test/publish.test.ts:125 Counts on the stub prove the live act was never entered, beside a refused and counted fetch."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "packages/producers/test/publish.test.ts:41 Temp directory with a named reaper, and each world opens its own store file."
+    }
+   ],
+   "registryProposal": "far-side-oracle describes a deployed agent on a host the lane controls. For a third-party API, the only available oracle is a read under a separate credential, so the technique could say what the oracle is when nothing can be deployed on the far side."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "domain-decision-board-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "style-atelier",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "library-browser-screen",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:14:42.772745+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "live-app-harness"
+   ],
+   "deviations": 1,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:14:42.772745+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "far-side-oracle",
+    "isolation-lanes",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

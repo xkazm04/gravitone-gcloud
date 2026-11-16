@@ -1,0 +1,138 @@
+{
+ "schema": "conform-run/1",
+ "worker": "92572ae8-8c25-47c5-9080-0f23757c7c11",
+ "subject": "live-system-demo-film",
+ "evaluatedAt": "2026-11-04T04:55:12.515265+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "script-composition-and-validation",
+   "subject": "live-system-demo-film",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/script/types.ts:1 lib/script composes and gates narration for generated factual films from notebook cards (beats hook/question/verdict, compose prompt in compose.ts). Nothing here drives or records a running software system, and a search of lib/script for screencast, recordVideo, playwright and 'demo film' found nothing, so the subject's precondition (a demo film of a live system) does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "screencast",
+    "recordVideo",
+    "playwright"
+   ]
+  },
+  {
+   "context": "audio-hunt-arrange",
+   "subject": "live-system-demo-film",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/hunt.ts:1 These are pure models and boards for drafting, auditioning and arranging generated audio takes. No software demo is captured or narrated, and a search of packages/ui/src/components/audio for screencast, recordVideo, playwright and 'demo film' found nothing (the only 'demo' hit is a 'product demo' music-genre cue in lexicon.rows.ts).",
+   "techniques": [],
+   "absenceTerms": [
+    "screencast",
+    "recordVideo",
+    "playwright"
+   ]
+  },
+  {
+   "context": "audio-lessons-measures",
+   "subject": "live-system-demo-film",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/rubric.ts:1 This context scores generated audio takes and records lessons from them; it produces no demo film of a running system, and a search of packages/ui/src/components/audio for screencast, recordVideo, playwright and 'demo film' found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "screencast",
+    "recordVideo",
+    "playwright"
+   ]
+  },
+  {
+   "context": "part-workspace-desk",
+   "subject": "live-system-demo-film",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/part/part.ts:1 These are the workspace and Board-desk UI rules (verdict looks, tab marks, clocks, keyboard walk) for a film part. Nothing drives or records the system as a demo, and a search of packages/ui/src/components/part and packages/ui/src/components/desk for screencast, recordVideo, playwright and 'demo film' found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "screencast",
+    "recordVideo",
+    "playwright"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "live-system-demo-film",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx:3 These editors let an operator steer generated explainer and ad parts (voice takes, score beds, the cut's lanes and finish checks). The picture is generated, not captured by driving a live software system, and a search of the _edit directory for screencast, recordVideo, playwright, 'demo film', demo and recorder found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "screencast",
+    "recordVideo",
+    "playwright"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-04T04:55:12.515265+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-system-demo-film"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "script-composition-and-validation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T04:55:12.515265+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-system-demo-film"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-hunt-arrange",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T04:55:12.515265+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-system-demo-film"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-lessons-measures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T04:55:12.515265+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-system-demo-film"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-workspace-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T04:55:12.515265+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-system-demo-film"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

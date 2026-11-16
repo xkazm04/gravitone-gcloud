@@ -7,6 +7,8 @@
 // here lights its chains as Runs does; the selection is the specimen's only state. Beside them the
 // LoadBand over two literal nights (spark night-load-band): a balanced one, and one whose CPU queued
 // itself while the GPU idled, with a gap where the worker restarted and a RAM the probe never read.
+// And the worker chip (spark fable-ten B) in each state it draws: queued with a last beat, queued
+// with none ever recorded, and a read that failed; quiet and alive draw nothing.
 
 import { useState } from "react";
 
@@ -18,6 +20,7 @@ import { RunsDayline, type DaylineBar, type DaylineRow } from "@gt/ui/components
 import { HOUR_MS } from "@gt/ui/components/runs/dayline.ts";
 import { light, type Dep } from "@gt/ui/components/runs/thread.ts";
 
+import { WorkerChip } from "../projects/_plan/WorkerChip.tsx";
 import { Section, Spec } from "./Spec.tsx";
 import k from "./kit.module.css";
 
@@ -25,7 +28,7 @@ const NOW = Date.UTC(2026, 9, 15, 9, 12);
 const at = (h: number): number => NOW + h * HOUR_MS;
 
 const ROWS: readonly DaylineRow[] = [
-  { id: "gpu.local", label: "GPU box", engines: "Flux 2 dev fp8 · Wan 2.2", cap: 1, kind: "local", held: { share: 1, name: "GPU box: 1 of 1 running" } },
+  { id: "gpu.local", label: "GPU box", engines: "LTX 2.5 · Wan 2.2", cap: 1, kind: "local", held: { share: 1, name: "GPU box: 1 of 1 running" } },
   { id: "seat.text", label: "Text seat", engines: "article turns · scripts", cap: 4, kind: "seat", held: { share: 0.25, name: "Text seat: 1 of 4 running" } },
   { id: "cloud.google", label: "Google", engines: "Nano Banana · Gemini", cap: 3, kind: "cloud", held: { share: 0, name: "Google: 0 of 3 running" } },
   { id: "weir", label: "Weir · operator", engines: "verdicts", cap: 1, kind: "weir" },
@@ -140,6 +143,13 @@ export function RunsSection() {
           <LoadBand load={BALANCED} />
           <span className={k.lab}>cpu over · gpu idle · restart gap · ram unread</span>
           <LoadBand load={IDLE_GPU} />
+        </div>
+      </Spec>
+      <Spec names={["WorkerChip"]} source="projects/_plan/WorkerChip.tsx · @gt/kernel/worker-pulse-core">
+        <div className={k.col}>
+          <WorkerChip read={{ verdict: { kind: "none", queued: 3, queuedSince: new Date(at(-1)).toISOString(), lastBeat: new Date(at(-3)).toISOString() } }} now={NOW} />
+          <WorkerChip read={{ verdict: { kind: "none", queued: 1, queuedSince: new Date(at(-2)).toISOString(), lastBeat: null } }} now={NOW} />
+          <WorkerChip read={{ problem: "kernel: SQLITE_BUSY: database is locked" }} now={NOW} />
         </div>
       </Spec>
       <Spec names={["ResourceSummary"]} source="runs/ResourceSummary.tsx">

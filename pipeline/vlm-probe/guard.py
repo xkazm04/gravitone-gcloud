@@ -49,6 +49,11 @@ COMFY = "http://127.0.0.1:8188"
 COMFY_DIR = os.environ.get("COMFY_DIR", os.path.join(os.path.expanduser("~"), "ComfyUI"))
 
 
+def refuse_flux2(door):
+    """Flux 2 was removed (operator, 2026-11-08): name the door and stop, never a fallback."""
+    raise SystemExit(f"{door}: Flux 2 was removed on 2026-11-08 (outdated output quality); this door has no Codex replacement yet")
+
+
 def _post(url, payload, timeout=120):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")

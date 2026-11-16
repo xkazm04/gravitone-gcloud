@@ -35,7 +35,7 @@ export const LIBRARY_SOURCES = ["real", "fixture", "derived"] as const;
 export type LibrarySource = (typeof LIBRARY_SOURCES)[number];
 
 /** Which mill or door an item came through. */
-export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent", "scout", "mesh"] as const;
+export const LIBRARY_ORIGINS = ["forge", "extract", "dojo", "strips", "suno", "elevenlabs", "studio", "registry", "import", "agent", "scout", "mesh", "cover"] as const;
 export type LibraryOrigin = (typeof LIBRARY_ORIGINS)[number];
 
 /** Why an item cannot lead: its media is gone, or it is there and does not decode
@@ -304,8 +304,10 @@ export type LibraryPage = {
 export type LineageNode = {
   /** The work's word for the step: source, run, style, lesson, project, bundle, derived from. */
   readonly role: string;
-  readonly ref: { readonly kind: "self" | "library-item" | "run" | "job" | "candidate" | "style" | "project"; readonly id: string };
+  readonly ref: { readonly kind: "self" | "library-item" | "run" | "job" | "candidate" | "style" | "project" | "production"; readonly id: string };
   readonly label: string;
+  /** A page outside the Library this node opens (a production): a plain link, not a filter. */
+  readonly href?: string;
   /** The library item this node opens, when the index holds one; absent is a broken link or a non-item. */
   readonly itemId?: string;
   /** Clicking it filters by this facet instead (a lesson, a bundle, a project). */

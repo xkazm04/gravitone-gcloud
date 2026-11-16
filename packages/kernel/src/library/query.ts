@@ -141,3 +141,13 @@ export function explainLibrary(store: Store, input: LibraryQuery): Result<string
     return r.all(`EXPLAIN QUERY PLAN ${ROW_SELECT}${all.where} ORDER BY ${ORDER[q.sort ?? "newest"]} LIMIT 60`, ...all.params).map((row) => String(row["detail"]));
   });
 }
+
+/**
+ * How many items carry one facet value - "what job X (or run X) made", counted before another
+ * screen draws a door to it, so a job that made nothing gets no door rather than a link that
+ * lands on an empty Library. A range of library_facets' primary key (grp, value, item_seq): the
+ * rows counted are the items, never a scan.
+ */
+export function countMadeBy(store: Store, group: "job" | "run", value: string): Result<number> {
+  return store.read((r) => num(r.get("SELECT count(*) AS n FROM library_facets WHERE grp = ? AND value = ?", group, value)?.["n"]));
+}

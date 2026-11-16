@@ -12,11 +12,12 @@ import { useState } from "react";
 import type { MotionBoard, MotionUnitView, PartView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { FrameCanvas } from "@gt/ui/components/part/FrameCanvas.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
-import { RailList } from "@gt/ui/components/part/RailList.tsx";
+import { RAIL_ART, RailList } from "@gt/ui/components/part/RailList.tsx";
 import { walk } from "@gt/ui/components/part/part.ts";
 import { Provenance } from "@gt/ui/components/provenance/Provenance.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
@@ -38,24 +39,28 @@ export function MotionEditor(p: EditorProps<V>) {
 
 const MARK: Readonly<Record<MotionUnitView["state"], string>> = { moving: "➜", proposed: "◇", declined: "✗", none: "·" };
 
+/** The plate the motion is written for, at grid size, beside the unit's title, clock and marks. */
 function UnitRow({ u }: { readonly u: MotionUnitView }) {
   return (
-    <div className={s.row} data-unit={u.id} data-motion={u.state}>
-      <span className={s.tc}>{u.at}</span>
-      <span className={s.kind}>{u.state}</span>
-      <span className={s.title}>{u.title}</span>
-      <span className={s.marks}>
-        <span className={cx(s.m, u.plate.state === "ready" ? s.ready : s.owed)} aria-label={u.plate.state === "ready" ? "plate" : "no plate"}>
-          {u.plate.state === "ready" ? "■" : "□"}
-        </span>
-        <span className={cx(s.m, u.state === "moving" && s.moving, u.state === "declined" && s.bad)} aria-hidden="true">
-          {MARK[u.state]}
-        </span>
-        {u.clip.url !== null && (
-          <span className={cx(s.m, s.ready)} aria-label="clip">
-            ▶
+    <div className={s.unit} data-unit={u.id} data-motion={u.state}>
+      {u.plate.url === null ? <PlateMissing className={s.unitArt} /> : <Plate className={s.unitArt} src={u.plate.url} alt="" lazy width={RAIL_ART} />}
+      <span className={s.unitTitle}>{u.title}</span>
+      <span className={s.unitFacts}>
+        <span className={s.tc}>{u.at}</span>
+        <span className={s.kind}>{u.state}</span>
+        <span className={s.marks}>
+          <span className={cx(s.m, u.plate.state === "ready" ? s.ready : s.owed)} aria-label={u.plate.state === "ready" ? "plate" : "no plate"}>
+            {u.plate.state === "ready" ? "■" : "□"}
           </span>
-        )}
+          <span className={cx(s.m, u.state === "moving" && s.moving, u.state === "declined" && s.bad)} aria-hidden="true">
+            {MARK[u.state]}
+          </span>
+          {u.clip.url !== null && (
+            <span className={cx(s.m, s.ready)} aria-label="clip">
+              ▶
+            </span>
+          )}
+        </span>
       </span>
     </div>
   );

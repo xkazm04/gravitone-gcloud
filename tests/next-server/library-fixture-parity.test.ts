@@ -12,6 +12,8 @@ import { libraryDetail } from "@gt/kernel/library/detail";
 import { queryLibrary } from "@gt/kernel/library/query";
 import { putMediaFacts, upsertItems, type MarkAct } from "@gt/kernel/library/write";
 
+import { runsJobFor } from "../../app/(studio)/_shell/links.ts";
+import { universe as produceUniverse } from "../../app/(studio)/projects/_port/fixture.ts";
 import { fixtureAct, fixtureActs, fixtureDetail, fixtureQuery, resetLibraryFixture } from "../../app/(studio)/library/_port/fixture.ts";
 import { buildCorpus } from "../../app/(studio)/library/_port/fixtureCorpus.ts";
 import { fixtureUrl, PROJECTS, STYLES } from "../../app/(studio)/library/_port/fixtureData.ts";
@@ -50,6 +52,8 @@ function kernelOf(records: typeof corpus): Kernel {
   if (!f.ok) throw f.error;
   const p = store.tx((t) => {
     for (const pr of PROJECTS) t.run("INSERT INTO projects (id, rev, listed, updated_at, record) VALUES (?, 1, 1, ?, ?)", pr.id, "2026-10-15T00:00:00.000Z", JSON.stringify({ id: pr.id, title: pr.title }));
+    // The jobs the fixture's Runs draws (the produce fixture): a cut's job door is a link on both sides or on neither.
+    for (const id of produceUniverse().jobs.keys()) t.run("INSERT INTO jobs (id, lane, state, record) VALUES (?, 'cpu', 'done', '{}')", id);
   });
   if (!p.ok) throw p.error;
   return opened.value;
@@ -257,7 +261,7 @@ describe("a detail's lineage is what the kernel resolves", () => {
     it(kind, () => {
       const ids = corpus.filter((x) => x.raw.kind === kind).slice(0, 40).map((x) => x.raw.id);
       const shown = (id: string, side: "fixture" | "real") => {
-        const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id);
+        const d = side === "fixture" ? fixtureDetail(id) : libraryDetail(k.store, id, { job: (j) => runsJobFor(j) });
         if (!d.ok) throw d.error;
         return { id, lineage: d.value.lineage };
       };

@@ -236,9 +236,10 @@ describe("workLoop", () => {
     await until(() => must(get(w.store, jobId("next"))).job.state === "done", 2_000).catch(() => undefined);
     stop.abort();
     const summary = must(await loop);
+    // `gpu` is no audited producer (job-resume.ts RESUMABLE_PRODUCERS): the job stays interrupted for the operator.
     expect(must(get(w.store, jobId("dead"))).job.state).toBe("interrupted");
     expect(must(get(w.store, jobId("next"))).job.state).toBe("done");
-    expect(summary.recovered).toBe(1);
+    expect(summary).toMatchObject({ recovered: 1, resumed: 0 });
     w.store.close();
   }, 20_000);
 

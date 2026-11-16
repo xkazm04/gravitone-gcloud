@@ -13,3 +13,12 @@
 .cyan{border-color:color-mix(in srgb,var(--cyan) 50%,transparent);background:var(--cyan-a)}
 .glyph{width:var(--size-glyph-sm);height:var(--size-glyph-sm)}
 .after{width:var(--size-glyph-xs);height:var(--size-glyph-xs);margin-left:calc(-1 * var(--sp-1))}
+/* In flight (`pending`, Button.tsx): full strength, a solid cyan rim and the running halo (the
+   halo StatusPill's `running` dot pulses), held still - motion is an entrance here, not a loop.
+   It enters after --dur-fast, so an act that lands sooner never shows it; under reduced motion
+   (and world.css's blanket rule) it is simply there, the same still look. Disabled stays dimmed and dashed, so the two never read alike.
+   Receipt's confirm composes this class: one act in flight, one look. */
+.pending{border-color:color-mix(in srgb,var(--cyan) 70%,transparent);box-shadow:0 0 0 var(--sp-1) color-mix(in srgb,var(--cyan) 18%,transparent);cursor:progress;animation:inflight var(--dur) var(--ease) var(--dur-fast) backwards}
+.pending:active{transform:none}
+@keyframes inflight{from{border-color:var(--hair-2);box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.pending{animation:none}}

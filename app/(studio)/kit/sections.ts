@@ -26,6 +26,7 @@ export const SECTIONS = [
   { id: "ear", group: "Composition", title: "Steer by ear", sub: "ear button" },
   { id: "studio", group: "Composition", title: "Audio studio", sub: "dock · verdict row · transport row · fader" },
   { id: "suno", group: "Composition", title: "Suno advisor", sub: "prompt card · lineage · verdict row · taste · take facts" },
+  { id: "songlab", group: "Composition", title: "Song lab", sub: "bracket · blind match · director's band · draw tabs · queue · field" },
   { id: "graph", group: "Composition", title: "Scout graph", sub: "stage graph · column head · node · share meter" },
   { id: "library", group: "Composition", title: "Library", sub: "rail · tile · row · detail · lineage · summary" },
   { id: "style", group: "Composition", title: "Style atelier", sub: "proof sheet · trial matrix · ratchet · slots · palette · evidence · plates" },

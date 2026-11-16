@@ -2,7 +2,7 @@
    .mday-h, .mslot, .mrow, .merr, .mmore, .m-side, .side-h. The month docks over its container
    (the Floor): the caller positions the container, this fills it. The prototype's ground
    #0a0c13 is --ink-1 (#0b0e15); recorded in INVENTORY.md. */
-.month{position:absolute;inset:0;z-index:var(--z-docked);display:flex;flex-direction:column;background:linear-gradient(180deg,color-mix(in srgb,var(--violet) 6%,transparent),color-mix(in srgb,var(--violet) 1.5%,transparent)),var(--ink-1);box-shadow:calc(-1 * var(--sp-7)) 0 calc(var(--sp-7) * 2.5) var(--shadow);animation:monthIn .42s var(--ease) both}
+.month{position:absolute;inset:0;z-index:var(--z-docked);display:flex;flex-direction:column;background:linear-gradient(180deg,color-mix(in srgb,var(--violet) 6%,transparent),color-mix(in srgb,var(--violet) 1.5%,transparent)),var(--ink-1);box-shadow:calc(-1 * var(--sp-7)) 0 calc(var(--sp-7) * 2.5) var(--shadow);animation:monthIn var(--dur) var(--ease) both}
 .month:focus{outline:none}
 @keyframes monthIn{from{clip-path:inset(0 0 0 70%)}to{clip-path:inset(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){.month{animation:none}}
@@ -24,7 +24,7 @@
 .dow span{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding-left:var(--sp-2)}
 .weeks{--weeks:5;flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(var(--weeks),minmax(0,1fr));gap:var(--sp-1)}
 
-.day{position:relative;min-height:0;min-width:0;display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-2) var(--sp-2) var(--sp-1);border-radius:var(--r-control);border:1px solid var(--hair);background:color-mix(in srgb,var(--wash) 37.5%,transparent);overflow:hidden;cursor:pointer;transition:border-color .15s,background .15s}
+.day{position:relative;min-height:0;min-width:0;display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-2) var(--sp-2) var(--sp-1);border-radius:var(--r-control);border:1px solid var(--hair);background:color-mix(in srgb,var(--wash) 37.5%,transparent);overflow:hidden;cursor:pointer;transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
 .day:hover{border-color:var(--hair-3)}
 .day:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
 .out{opacity:.42}

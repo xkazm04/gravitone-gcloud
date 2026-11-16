@@ -1,0 +1,80 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fcd2f7c6-10ab-437c-a1dd-9a0b234c5f00",
+ "subject": "module-design",
+ "evaluatedAt": "2026-11-06T03:56:48.229345+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "board-decision-desk",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/_port/fixture.ts:19 The ServerBoard seam keeps a second adapter (fixture.ts, 374 lines, plus fixtureData.ts) that re-implements the kernel's decision rules but that no route, test or contract suite runs, so it can drift from the real side with nothing noticing; seams-and-adapters says to check every double against the shared contract or stop paying for it.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/port.ts:35 The enabling point is a hard-coded constant, so the fixture adapter is never substituted at run time, and per port.ts:9-11 no test imports it. The seam itself does hold: real.ts:64 takes a test adapter and board-keepalive.test.ts drives a stand-in board. The defect is the unchecked, unreached double."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/Board.tsx:9 The island hands optimistic state, debouncing and the history to the gate kernel and the port. The desk learns a small interface and gets the whole decision lifecycle."
+    },
+    {
+     "technique": "mirror-type-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/keepalive.ts:17 The flush logic takes a plain context (who, input, params) rather than a Next request. The route at [packet]/keepalive/route.ts:24 is a one-line shim, so a test drives the body over a stand-in board."
+    },
+    {
+     "technique": "locality-and-leverage",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/load.ts:4 First paint and every later write go through one serverBoard() port, so a change to how packets are read lands in one place."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "plan-and-import",
+   "reason": "evidence leans on audio/_hunt/settled.ts, which is not a tracked file"
+  },
+  {
+   "subject": "module-design",
+   "context": "kit-screen-specimens",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "module-design",
+   "context": "suno-driver-queue",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "module-design",
+   "context": "app-root-and-dev-inspector",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T03:56:48.229345+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "locality-and-leverage",
+    "mirror-type-at-the-edge",
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

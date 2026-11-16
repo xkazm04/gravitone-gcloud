@@ -5,14 +5,14 @@
 //   after   the step ran to its end and died before the job booked it - the case the
 //           record honestly cannot tell from "ran halfway".
 // After each death the next process sweeps (`recover`), the operator resumes (v1's
-// `resume`, now `resumeArticle`: acknowledge the held lane, retry the job), and the job is
+// `resume`, now `resumeArticle`: retry the job; the seat holds no lane), and the job is
 // driven again.
 //
 // INVARIANT - v1's never-re-spend rule, stated for the article: a step whose run.json
 // record says `done` is never performed again, whoever asks; so a run killed anywhere ends
 // at the gate having started EXACTLY as many agent turns as a run never killed, every turn
 // booked once, and the job's spend equal to its meter. The record names the step that was
-// in flight, and the lane holds until an operator looked.
+// in flight, and the seat is free, so nothing waits on a look.
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -108,7 +108,7 @@ describe("an article job killed at every step boundary", () => {
 
   for (const step of ["create", "research", "outline", "draft", "critique", "check"]) {
     for (const when of ["before", "after"] as const) {
-      it(`dies ${when} ${step}: interrupted naming ${step}, the lane held; resumed, it reaches the gate with no turn re-spent`, { timeout: 120_000 }, async () => {
+      it(`dies ${when} ${step}: interrupted naming ${step}, the seat lane free; resumed, it reaches the gate with no turn re-spent`, { timeout: 120_000 }, async () => {
         writeFileSync(turnLog, "");
         const { runId, jobId } = await launched(`the ${step} ${when} tax`);
         const b = binding();
@@ -120,10 +120,11 @@ describe("an article job killed at every step boundary", () => {
         expect(swept.map((j) => j.id)).toEqual([jobId]);
         const job = must(get(b.kernel!.store, jobId as never)).job;
         expect(job).toMatchObject({ state: "interrupted", interruption: { stage: step } });
-        expect(must(b.kernel!.store.read((r) => laneHold(r, "seat.text")))).toMatchObject({ jobId, stage: step });
+        // The seat is free (lane.ts LANE_PAYS): an orphaned turn costs no money, so no lane holds for it.
+        expect(must(b.kernel!.store.read((r) => laneHold(r, "seat.text")))).toBeUndefined();
         must(b.kernel!.store.read((r) => assertReconciled(r, jobId)));
 
-        // Nothing drives on a held lane until the operator looked.
+        // Nothing drives an interrupted job until the operator retries it.
         expect(must(await runJob(b.kernel!.fx, articleProducer(b), jobId, { ...RUN, holder: RESTARTED })).outcome).toBe("not-queued");
         const resumed = must(await resumeArticle(runId, { actor: OP, mode: "live", binding: b, env: {} }));
         expect(resumed.jobId).toBe(jobId);

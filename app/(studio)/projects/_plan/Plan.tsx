@@ -11,13 +11,13 @@
 // race (`conflict`) re-reads the page rather than guessing. Units are typed freely and sent
 // coalesced: one write in flight per page, the newest units waiting behind it.
 //
-// Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself.
+// Launch is a receipt and a confirm (../_plan/receipt.tsx), never the press itself. A launch only
+// enqueues: beside the totals, ./WorkerChip.tsx says when jobs are queued and no worker beats.
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import type { PartPatch, PlanView, ProjectList } from "@gt/domain/produce";
-import { isEditorKind } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
@@ -27,6 +27,7 @@ import { costWords, fmtDur, fmtUsd, isWork, when } from "@gt/ui/components/produ
 import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
 import { StatusPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
+import { usePollBackstop } from "@gt/ui/freshness/useFreshness";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 import { FIELD_ATTR } from "@gt/ui/keymap/target";
 
@@ -35,10 +36,12 @@ import { useShell } from "../../_shell/Providers.tsx";
 import type { ComposeChoices, ProducePort } from "../_port/contract.ts";
 import { CompositionList, ordered } from "./CompositionList.tsx";
 import { useCompose } from "./compose.tsx";
+import { planRowHref } from "./doors.ts";
 import { PlanSummary } from "./PlanSummary.tsx";
 import { clock } from "./shelf.ts";
 import { titleGate } from "./title.ts";
 import { outcomeOf, useReceipt } from "./receipt.tsx";
+import { WorkerChip, type WorkerDoor, type WorkerRead } from "./WorkerChip.tsx";
 import s from "./Plan.module.css";
 
 export type PlanProps = {
@@ -52,9 +55,14 @@ export type PlanProps = {
   readonly composed: boolean;
   /** Arrived asking to compose (`/projects?compose=1`): the dialog opens over the plan. */
   readonly composing?: boolean;
+  /** The worker read and its re-read (./workerRead.ts, ./workerAction.ts), from the page; absent, no chip. */
+  readonly worker?: WorkerDoor;
 };
 
-export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false }: PlanProps) {
+/** How often the Plan asks whether a worker beats: a timer's lease outlives two minutes of silence. */
+const WORKER_MS = 30_000;
+
+export function Plan({ view: first, list, choices, port, nowMs, floorRuns, composed, composing = false, worker: door }: PlanProps) {
   const router = useRouter();
   const { toast } = useShell();
   const [view, setView] = useState(first);
@@ -73,6 +81,9 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
   const titleRef = useRef<HTMLInputElement | null>(null);
   const p = view.project;
   const draft = !p.launched;
+  // The worker as the page read it, then re-read on the backstop; a re-read that failed is drawn as one.
+  const [worker, setWorker] = useState<WorkerRead | null>(door?.read ?? null);
+  usePollBackstop(() => (door === undefined ? undefined : settled(door.reread()).then((r) => setWorker(r.ok ? r.value : { problem: r.error.error }))), WORKER_MS, door !== undefined);
 
   // Only on arrival from Compose: a later render must not steal the caret back.
   useEffect(() => {
@@ -162,14 +173,14 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
 
   const rows = ordered(list);
   const work = view.parts.filter(isWork);
-  // THE PLAN ROW LINK (Phase 4 wave C, L38): a part with an editor links to it from its title in
-  // the plan (PlanTable `hrefOf`), and the selected row opens it on E.
-  const editorHref = (partId: string): string | null => {
+  // THE PLAN ROW LINK (Phase 4 wave C, L38; gates and the slot since fable-ten A): a row links from
+  // its title to its door (./doors.ts - an editor, a Board packet, the calendar or its schedule
+  // sheet; PlanTable `hrefOf`), and the selected row opens it on E.
+  const rowHref = (partId: string): string | null => {
     const part = view.parts.find((x) => x.id === partId);
-    if (part === undefined || !isEditorKind(part.kind)) return null;
-    return `/projects/${encodeURIComponent(p.id)}/${encodeURIComponent(part.id.slice(p.id.length + 1))}`;
+    return part === undefined ? null : planRowHref(p.id, part);
   };
-  const selHref = sel === null ? null : editorHref(sel);
+  const selHref = sel === null ? null : rowHref(sel);
   const walk = (dir: 1 | -1): void => {
     const ids = work.map((x) => x.id);
     const i = sel === null ? (dir === 1 ? -1 : ids.length) : ids.indexOf(sel);
@@ -248,6 +259,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
               <Chip label="est" value={t.usdRange !== undefined ? costWords(t) : fmtUsd(t.usd)} />
               <SourceTag kind={t.src} />
               <Chip label="eta" value={t.etaAt === null ? "—" : when(t.etaAt, nowMs)} tone={p.launched ? "cyan" : "neutral"} />
+              <WorkerChip read={worker} now={nowMs} />
               <LedgerLink href={`/ledger?q=${encodeURIComponent(p.id)}`} subject={p.title} />
             </div>
           </div>
@@ -255,7 +267,7 @@ export function Plan({ view: first, list, choices, port, nowMs, floorRuns, compo
         <div className={s.plan} data-component="PlanBreakdown">
           <div className={s.planMain}>
             {err !== null && <ErrorLine message={err} live />}
-            <PlanTable parts={view.parts} selectedId={sel} hrefOf={editorHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
+            <PlanTable parts={view.parts} selectedId={sel} hrefOf={rowHref} draft={draft} nowMs={nowMs} onModel={(id, option) => patch(id, { option })} onUnits={(id, units) => patch(id, { units })} />
           </div>
           <PlanSummary view={view} nowMs={nowMs} busy={flow.reading} onLaunch={() => void launch()} onDiscard={discard} />
         </div>

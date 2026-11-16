@@ -8,7 +8,7 @@
 // bodies are the only untyped inch and they are confined to this file — which is
 // the whole point of having a client at all.
 
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 import type { AccountSnapshot, HarnessProtocol, ProjectReadback, ResetOutcome } from "@/lib/harness/protocol";
 
@@ -54,6 +54,25 @@ export async function connect(page: Page): Promise<Control> {
   ).toBe(SPEAK);
 
   return new Control(page);
+}
+
+/**
+ * Wait until React owns this element, before typing into it.
+ *
+ * `page.goto` resolves on `load`, and on a runner hydration lands after it. Measured 2026-11-09 on
+ * Linux from the trace of audio-hunt's draft: `fill` at 537 ms, the client's mount effects at
+ * 633-676 ms. The text went into server-rendered markup, no `onChange` fired, the controlled state
+ * stayed "", and the button gated on it stayed disabled until the test's 240 s limit. The element's
+ * own fiber is the signal (kit.live waits on the same one); a page-level one is too early, since
+ * hydration comes in pieces.
+ */
+export async function hydrated(el: Locator, what: string): Promise<void> {
+  await expect
+    .poll(() => el.evaluate((n) => Object.keys(n).some((k) => k.startsWith("__reactFiber"))), {
+      message: `${what} was never hydrated by React: the client bundle did not take over the server's markup`,
+      timeout: CONNECT_MS,
+    })
+    .toBe(true);
 }
 
 export class Control {

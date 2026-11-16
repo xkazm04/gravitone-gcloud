@@ -7,6 +7,7 @@
 // flight - so a long history cannot grow the payload every page carries.
 import type { Job, JobStatus } from "../../../lib/jobs.tsx";
 import type { ProduceJob } from "../projects/_port/contract.ts";
+import { runsJobFor } from "./links.ts";
 
 export const BELL_CAP = 40;
 
@@ -25,7 +26,7 @@ export function bellJobs(jobs: readonly ProduceJob[]): Job[] {
       startedAt: j.s,
       ...(status === "running" ? {} : { endedAt: j.e }),
       ...(j.projectId === undefined ? {} : { projectId: j.projectId }),
-      href: `/projects/runs?job=${encodeURIComponent(j.id)}`,
+      href: runsJobFor(j.id),
       ...(j.error === undefined ? {} : { error: j.error }),
       measured: false,
       progress: 0,

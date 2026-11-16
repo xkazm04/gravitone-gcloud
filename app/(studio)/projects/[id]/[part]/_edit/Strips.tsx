@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import type { PartView, StripsData } from "@gt/domain/partView";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Ghost } from "@gt/ui/components/ghost/Ghost.tsx";
@@ -16,9 +17,13 @@ import { walk } from "@gt/ui/components/part/part.ts";
 import { Provenance } from "@gt/ui/components/provenance/Provenance.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
+import { tokens } from "@gt/ui/tokens";
 
 import type { EditorProps } from "./PartEditor.tsx";
 import s from "./Cut.module.css";
+
+/** A strip card's least width (Cut.module.css `.cards`): the hint for its art's grid-size variant. */
+const CARD = Number.parseInt(tokens["w-detail"], 10);
 
 const TONE = { drawn: "emerald", pending: "amber", refused: "rose" } as const;
 
@@ -90,8 +95,8 @@ export function StripsEditor({ frame, error, view }: EditorProps<PartView<"strip
                     {c.blob === undefined ? (
                       <span className={s.cardArt} aria-hidden="true" />
                     ) : (
-                      // eslint-disable-next-line @next/next/no-img-element -- a kernel blob through /api/blob; nothing for next/image to optimise
-                      <img className={s.cardArt} src={`/api/blob/${c.blob}`} alt="" />
+                      // A kernel blob at the card's grid size (the button is named by its title).
+                      <Plate className={s.cardArt} src={`/api/blob/${c.blob}`} alt="" lazy width={CARD} aspect={4 / 3} />
                     )}
                     <span className={s.row}>
                       <strong className={s.grow}>{c.title}</strong>

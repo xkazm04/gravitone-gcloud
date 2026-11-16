@@ -172,7 +172,7 @@ export async function styleAct(ctx: ActContext, id: NightId, sourceIds: readonly
   if (uploads.length === 0) throw new Refusal(`sources ${sourceIds.join(",")} hold no picture extract can read`);
   const b = money(ctx, night);
   // The replicas and transfers are drawn by the night's still engine (./stillEngine.ts: the studio at Low
-  // unless SCOUT_REPLICA_GENERATOR names Flare or local Flux), prefer-only in the router; the reads stay on the plan.
+  // Codex unless SCOUT_REPLICA_GENERATOR names a Leonardo route), prefer-only in the router; the reads stay on the plan.
   const target = { kind: "gallery" as const, slug: slug ?? `scout-${id}-${sourceIds.join("-")}`, uploads, options: { generator: replicaGenerator() }, folder: nightDir(id) };
   const opts = { mode, actor: ctx.actor, dryOnly: ctx.dryOnly, ...(b.remainingUsd > 0 ? { ceilingUsd: b.remainingUsd } : {}) };
   const r0 = await launchExtract(ctx.store, target, opts);

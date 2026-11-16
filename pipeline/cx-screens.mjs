@@ -22,8 +22,10 @@ export const SCREENS = {
   //                   one-click import is its screen (an empty list needs an empty store, which
   //                   a browser cannot wipe the way v1's IndexedDB could)
   //   wizard-*        Compose, the dialog that replaced the four wizard stages
-  //   studio-<step>   that step's part editor on a seeded project that has one
-  //   studio-outputs  the Project's Plan: its parts are what it produced
+  //   studio-<step>   that step's part editor on a seeded project that has one (frames, score and
+  //                   cut on the trailer: made; motion on why-bitcoin: nothing to direct yet)
+  //   studio-outputs  the Project's Plan: its parts are what it produced, every number the same
+  //                   one its editors draw
   projects: { url: "/projects" },
   "projects-empty": { url: "/projects/import" },
   "wizard-discipline": { url: "/projects?compose=1" },
@@ -60,22 +62,32 @@ export const SCREENS = {
   "kit-migration": { url: "/kit#status" },
   // The part editors (Phase 4 wave C, L38): a part of a seeded project, reached as its Plan row
   // reaches it. The fixture part side seeds these two projects' own records (their notebook,
-  // their beat board), so each screen draws real work, not an empty state.
+  // their beat board), so each screen draws real work, not an empty state. why-bitcoin's script
+  // is its Plan's running turn: the document draws with that job in flight.
   "part-research-notebook": { url: "/projects/why-bitcoin/research" },
   "part-script-document": { url: "/projects/why-bitcoin/script" },
   "part-research-beats": { url: "/projects/glass-harbor-trailer/research" },
   "part-script-trailer": { url: "/projects/glass-harbor-trailer/script" },
-  // L39: frames and motion. The trailer's frames are its composed spine's SHOTS (derived on read,
-  // no adopt needed); the explainer's wait for Script's adopt, so its screen is the frame's own
-  // "no adopted script" state until a session adopts one.
+  // L39/L40 and the fixture world (2026-11-09): a part's records are projected from its Plan row
+  // (projects/[id]/_part/fixtureWorld/), so a screen shows what its project's Plan claims, made or
+  // unmade, on a fresh server with no session act. Glass Harbor's trailer is ratified to the cut:
+  // its frames, motion, score and cut are MADE (plates composed, every shot moving with its clip,
+  // cues spotted with takes, the animatic exported). The cinematic is a cut of the same film that has
+  // made nothing after Script: its editors are the trailer's UNMADE states (`-empty`). The
+  // explainer's frames wait for Script's adopt, and why-bitcoin's script is the turn in flight, so
+  // its motion has no plate to direct.
   "part-frames-shots": { url: "/projects/glass-harbor-trailer/frames" },
+  "part-frames-shots-empty": { url: "/projects/glass-harbor-cinematic/frames" },
   "part-frames-assembly": { url: "/projects/why-bitcoin/frames" },
-  "part-motion-plates": { url: "/projects/why-bitcoin/motion" },
-  // L40: score, cut and the explainer's parts. Each draws its own project's records; on a fresh
-  // server the trailer's score and cut wait on its frames record (a plate render writes it), the
-  // explainer's voice and strips on their runs - the screens show those states until a session acts.
+  // a failed frames job: its plates culled at the gate, the job's own sentence drawn over the editor
+  "part-frames-failed": { url: "/projects/the-quiet-tariff/frames" },
+  "part-motion-plates": { url: "/projects/glass-harbor-trailer/motion" },
+  "part-motion-empty": { url: "/projects/why-bitcoin/motion" },
   "part-score-spotting": { url: "/projects/glass-harbor-trailer/score" },
+  "part-score-spotting-empty": { url: "/projects/glass-harbor-cinematic/score" },
   "part-cut-timeline": { url: "/projects/glass-harbor-trailer/cut" },
+  "part-cut-timeline-empty": { url: "/projects/glass-harbor-cinematic/cut" },
+  // the explainer's voice and strips wait on their runs (its article is written; its strips queue)
   "part-explainer-strips": { url: "/projects/provider-routing-explainer/strips" },
   "part-explainer-voice": { url: "/projects/provider-routing-explainer/voice" },
   "kit-part": { url: "/kit#part" },
@@ -129,7 +141,22 @@ export const SCREENS = {
   "audio-rubric": { url: "/audio?s=rubric" },
   "audio-batch": { url: "/audio?s=batch" },
   "audio-batch-sfx": { url: "/audio?s=batch&kind=sfx" },
+  // the cover desk (spark track-mirror-studio) over the dev-only fixture (_cover/desk/fixture.ts), one cover per
+  // state among a history; a store with no covers draws the upload instead. One row per station a state opens on.
+  "audio-cover": { url: "/audio?s=cover&fixture=judging" },
+  "audio-cover-empty": { url: "/audio?s=cover&fixture=empty" },
+  "audio-cover-draft": { url: "/audio?s=cover&fixture=draft" },
+  "audio-cover-failed": { url: "/audio?s=cover&fixture=failed" },
+  "audio-cover-picked": { url: "/audio?s=cover&fixture=picked" },
+  "audio-cover-remixed": { url: "/audio?s=cover&fixture=remixed" },
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
   "kit-suno": { url: "/kit#suno" },
+  // Spark yue2-song-lab S2: the knockout on the fixture side (the contest's staged field, a scripted
+  // agent) - the main draw with its first match glowing; the post · s3 draw with its upset quarter-final
+  // open in the booth, revealed (that draw opens with its quarter-finals judged); the field sheet open.
+  "audio-songlab": { url: "/audio?s=songlab&source=fixture" },
+  "audio-songlab-match": { url: "/audio?s=songlab&source=fixture&d=037e2bd84636&m=QF-2" },
+  "audio-songlab-field": { url: "/audio?s=songlab&source=fixture&f=1" },
+  "kit-songlab": { url: "/kit#songlab" },
 };

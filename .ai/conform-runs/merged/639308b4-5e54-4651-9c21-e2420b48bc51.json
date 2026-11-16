@@ -1,0 +1,262 @@
+{
+ "schema": "conform-run/1",
+ "worker": "639308b4-5e54-4651-9c21-e2420b48bc51",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-06T03:07:08.894495+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 The score and the cut draw one clock (CutClock), and every block on it is placed in seconds and carries ok/missing/drift/proposed, so a hole or a drift has an address on the shared runtime instead of being papered over.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 One clock for score and cut; missing and drift are first-class per-block states. Cut.tsx also carries offsetMs as a measured nudge."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:100 The expensive aspect render is gated by the blocking finish checks and names their deny sentences; there is no render button while a check fails."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:203 The shot review shows unmeasured as its own count beside violations and a 'not checked' list, never folding it into pass. The cut rail counts open failures."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:71 Takes carry an explicit human keep/reject/undecided mark, and the adopted alternative shows 'in the cut', so the asset boundary is a human act. Probe fidelity per class was not checked."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:7 Renders are kernel jobs behind a receipt; progress is the running job, not an elapsed spinner over one request. The act returns a jobId (PartEditor.tsx:118, same directory, not in the file list)."
+    }
+   ]
+  },
+  {
+   "context": "frames-picture-composition",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/picture/unit.ts:77 Picture units carry startS/holdS in film seconds and leave startS null when a beat cannot be placed (unplaceableBeats surfaces it), so the frames phase speaks the shared clock and shows absence on it.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "lib/frames/picture/unit.ts:77 startS is in seconds and null when the beat cannot be placed, never a guessed 0. Shot spans tile each beat's span."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "lib/frames/stepData.ts:31 Frames are derived from the script render, never authored (frames.ts:15). A different render marks them stale, so a change upstream invalidates the work built downstream of it."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:35 A human-touched layer is an asset. The direction pass becomes per-beat proposals whose conflicts default to KEEP (directionPlan.ts:13-14), with a revert checkpoint. isStalePlate tracks the rendered subject separately from the asked subject."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotReview.ts:271 The shot-list gate returns pass/violation/not-engaged/unmeasured and records how many sites it examined (0 can never pass); unknowns never become pass."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:93 A plate's in-flight render key is saved with the cut, so a reload re-issues under the same idempotency key and the paid result is not lost. Generating and refused are persisted plate states."
+    },
+    {
+     "technique": "approval-reads-forward",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/picture/unit.ts:89 Each picture unit owns its own plate, which conditions only that unit's clip. By the technique's decision rule, an artifact conditioning exactly one request needs no forward read."
+    }
+   ]
+  },
+  {
+   "context": "runs-console",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/runs/_runs/view.ts:76 Runs draws persisted kernel jobs, giving a fraction only for a running job with recorded unit counts and no invented ETA, and propagates failed/interrupted upstreams to their dependents as blocked: background work reported honestly.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:76 A fraction only from recorded done/total units on running jobs. The job machine has an interrupted state with retry and hold acts (Acts.tsx:10). Per-lane caps limit concurrency (view.ts:44). Open ends are drawn with no ETA (model.ts:18-20)."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/runs/_runs/view.ts:17 Stuck upstreams mark their dependents blocked (blockedOf). Interrupted counts with failed. An unreadable source is a failure, never 'nothing running' (model.ts:10)."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:18 Runs works in wall-clock job time. The technique says not to extend the product's runtime clock into wall-clock scheduling."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/runs/_runs/model.ts:9 A read-only console: it persists no media artifacts, so there is nothing to classify."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 A project's state is its parts' worst (failed/blocked outranks awaiting_gate, which outranks running), and dependents of a failed or paused upstream are drawn blocked, so the shelf reports where the project is stuck rather than how far it got.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/fixtureRead.ts:115 projectStateOf (@gt/domain) is a precedence rollup where any failed/blocked part makes the project blocked. Price sums take the weakest figure source (weakest). This is fixture-side; the real side delegates to kernel listProjects, outside this context."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:9 Parts wait on their upstream through gates. A gate opens when the part it judges ends and waits on the operator (schedule.ts:85). A committed gate packet reads as ratified (real.ts:86), so graduation is a human act."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/real.ts:183 Launch writes the plan's parts as kernel jobs, which Runs draws and acts on (ProduceJob with JobState and queuePos). The page does not wait on renders. Receipts are dry unless armed (real.ts:96)."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_port/schedule.ts:1 The port's clock is job scheduling, i.e. wall-clock lane placement, not the product's runtime axis."
+    }
+   ]
+  },
+  {
+   "context": "style-trials-cull",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A style graduates candidate \u2192 proven \u2192 locked one way only: proven by operator keeps, locked by an explicit act the server admits only when the trial-coverage gate holds, and stale approvals stop vouching. The shared style asset graduates by human act against a checked gate.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/LockGate.tsx:4 A one-way ratchet. The blocker is the server's own sentence, not a view's re-derivation, so the drawn gate is the gate the write enforces."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/ProofSheet.tsx:6 An annotated trial crosses into asset (as the technique requires). Proofs under an earlier block are marked stale and no longer sent as references, so the style is versioned and supersession is explicit."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/style.ts:11 A stale approval reads idle, not done. Trial columns count stale proofs apart and never show them as the face. Unpriced spend is counted, never zeroed (style.ts:58)."
+    },
+    {
+     "technique": "approval-reads-forward",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/style/LockGate.tsx:44 Before the shared style contract can lock, it must cover a fixed battery of downstream trial problems (TrialMatrix.tsx:9). That battery is the forward list, but it is generic, not the beats of a specific project."
+    }
+   ],
+   "registryProposal": "approval-reads-forward assumes the shared asset belongs to one production with a known beat list. A library-level style contract reused across projects has no beats at lock time; the technique should say whether a fixed battery of downstream trial problems satisfies the forward read, or whether the forward check must be repeated per project when the locked style is adopted."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-06T03:07:08.894495+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:07:08.894495+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "approval-reads-forward",
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:07:08.894495+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "runs-console",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:07:08.894495+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T03:07:08.894495+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "approval-reads-forward",
+    "asset-vs-disposable-render",
+    "phase-order-and-graduation",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "style-trials-cull",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

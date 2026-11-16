@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fd83a240-4ab6-44ec-a75d-105544fc82a7",
+ "subject": "trust-base",
+ "evaluatedAt": "2026-11-08T03:08:08.865890+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "trust-base",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/runStore.ts:64 The run store's one JSON decoder casts JSON.parse's unchecked any straight to the caller's T with no validating function, so verdicts.json (store.ts:94) and the catalogue docs (catalogue.ts:262) enter typed code as trust-base members that no directive census counts.",
+   "techniques": [
+    {
+     "technique": "census-counts-unmarked-members",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/runStore.ts:64 A standard decoder returns the unchecked type and is asserted to T. The technique's cure, decoding into unknown and passing it through one checking function, is absent. Callers include readJson<Verdicts> at store.ts:94, whose verdicts then reach ledger rows (commitPlan.ts:109)."
+    },
+    {
+     "technique": "verdict-pins-its-checker",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/calibration.ts:47 Grades are stored verdicts and carry a pin (grader_digest), and calibration keeps each pin as its own series (seriesKey, calibration.ts:117), so the pin is compared. But the pin covers only the model name plus prompt/schema data. pipeline/foundry/grade.py grader_digest() hashes grader_parts() (prompts, schemas, enums) and not the import closure, so a change to the scoring code (craft_score/credit), which produces the stored craft score, moves no pin."
+    }
+   ],
+   "registryProposal": "verdict-pins-its-checker assumes the checker is code. For a model-as-grader, the instrument is model weights plus prompts plus scoring code. A worked rule for LLM/vision graders (hash the prompt/schema data AND the scoring module's import closure; pin the model by digest rather than by tag) would make the technique directly usable for grader calibration."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "trust-base",
+   "context": "kernel-python-protocol",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "trust-base",
+   "context": "library-port",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T03:08:08.865890+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "trust-base"
+   ],
+   "techniques": [
+    "census-counts-unmarked-members",
+    "verdict-pins-its-checker"
+   ],
+   "deviations": 1,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

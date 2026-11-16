@@ -52,10 +52,10 @@ export function LockGate({ status, why, keptCells, provenKeeps, coverage, lockPr
           </p>
         )
       ) : (
-        // The blocker is drawn once: when it IS the one-line why (a proven style held at the
-        // gate), the line above already says it.
+        // The blocker is drawn once: when the one-line why already carries it (a proven style
+        // held at the gate reads `proven — to lock: <blocker>`, styleView.ts), the line above says it.
         lock.blocker !== null &&
-        lock.blocker !== why && (
+        !why.includes(lock.blocker) && (
           <p className={s.blocker} role="status" data-blocker="">
             {lock.blocker}
           </p>

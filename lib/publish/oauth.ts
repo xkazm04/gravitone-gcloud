@@ -20,7 +20,7 @@ export interface TokenProvider {
   getAccessToken(): Promise<string>;
 }
 
-export const GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token";
+const GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token";
 
 /** The three variables that make YouTube live. Names only leave this module. */
 export const YOUTUBE_ENV_VARS = ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"] as const;

@@ -14,6 +14,7 @@ export const RESOURCE_LANES = [
   "cloud.elevenlabs",
   "cloud.leonardo",
   "cloud.qwen",
+  "cloud.suno",
 ] as const;
 export type ResourceLane = (typeof RESOURCE_LANES)[number];
 
@@ -40,5 +41,7 @@ export const LANE_CAPACITY: { readonly [L in ResourceLane]: number } = {
   "cloud.elevenlabs": 2,
   "cloud.leonardo": 2,
   "cloud.qwen": 1,
+  // Suno's official API (spark suno-covers): one send at a time; a cover step polls its song up to 6 min.
+  "cloud.suno": 1,
 };
 

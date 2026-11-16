@@ -225,6 +225,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.cover-brief",
+      "name": "Write a cover brief from a song measured and heard three times",
+      "description": "An agent turn with Read/Write only (no web) in an isolated workspace: analyze.py measurements and three neutral Gemini reads of one uploaded song in; the cover style, the source style, the section, empty lyrics, a reason and how many reads agreed on the genre out (pipeline/cover-brief-PROMPT.md). Validated at @gt/producers/cover-brief/define parseBriefAnswer; then applied to the cover and its five YuE2 takes launched.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/producers/coverBriefActs.ts::writeAct -> lib/agent/cliSeam.ts::runAgent()",
+      "expected_models": ["claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.probe",
       "name": "Text engine availability probe",
       "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",

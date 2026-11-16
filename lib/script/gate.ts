@@ -280,7 +280,7 @@ export function checkConstraints(
  *  supply)" — by the step whose job is to make numbers FELT. The beat chain was
  *  preserved throughout, which is why "tone may never change the beat chain"
  *  was satisfied while the epistemic layer was being stripped. */
-export function checkQualifiers(r: GateSubject, facts: Fact[]): GateFinding[] {
+function checkQualifiers(r: GateSubject, facts: Fact[]): GateFinding[] {
   const text = renderText(r);
   const out: GateFinding[] = [];
 
@@ -350,7 +350,7 @@ const PERSON_WORDS = /\b(people|person|investors?|believers?|holders who|familie
  *  conclusion about "people who believed in it". Three hops, no flag. The step
  *  built to make a number felt is also a laundering path from measured data to
  *  imputed human intent. */
-export function checkScalePromotion(
+function checkScalePromotion(
   r: GateSubject,
   scaleConversions: readonly ScaleConversion[] = fixtureSource().notebook.scaleConversions ?? [],
 ): GateFinding[] {
@@ -377,7 +377,7 @@ export function checkScalePromotion(
  *  `conclusions[]` field, so a research run could not reach it at all. A gate
  *  nothing calls is a gate nobody passes and nobody fails. This is its caller:
  *  any conclusion whose claim reaches the render is judged at the boundary. */
-export function checkConclusions(
+function checkConclusions(
   r: GateSubject,
   conclusions: Conclusion[],
   filedOrAdmitted?: ReadonlySet<string>,

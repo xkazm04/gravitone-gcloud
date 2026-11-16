@@ -1,0 +1,138 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0939c0c1-5494-458a-b09a-115e5fdb5071",
+ "subject": "data-video-virality",
+ "evaluatedAt": "2026-11-08T01:24:11.452061+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-engine-creative",
+   "subject": "data-video-virality",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/scout/idea.ts:84 A stats idea comes in through the ideas door as case/title/hook/unit/kind/illustrative data plus optional steps. Nothing records granularity, span, entity count, expected lead changes, dated events, a measure or comparables, so none of the subject's gates can run before the operator triages.",
+   "techniques": [
+    {
+     "technique": "continuity-gate",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/idea.ts:93 The format is classified (level-race, cumulative-race, counter, ranking, share), but no field counts real steps or entities and no shape is refused. 'counter' is a single-value format, and it is accepted. The data is illustrative, so the step floor is never checked against data that can actually be obtained."
+    },
+    {
+     "technique": "path-over-conclusion",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/idea.ts:91 The hook only has to be non-empty text of at most 200 chars. There is no keep-watching rationale that must name at least two dates and two entities, and the technique names exactly this as a failure."
+    },
+    {
+     "technique": "accelerator-events",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/idea.ts:96 Steps are optional free text, minimum 1, with no date or on-screen effect. Nothing enforces the 5-event floor inside the animated span, or how the events spread across it."
+    },
+    {
+     "technique": "speculative-grounding",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/reelDoor.ts:58 Partly realized: what-if sources get an on-screen fiction label (reelTaste.ts:16 sourceLine). But a what-if needs only a premise. No real-data end year, stated model, horizon at most twice the baseline, or 2100 cap is recorded or refused, and reelDoor.ts:15-22 accepts 'what if fantasy scenarios', which the technique fails as invented narrative."
+    },
+    {
+     "technique": "topic-duplicate-screen",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/ideaRepeat.ts:41 The only repeat guard at the ideas door checks character briefs. Stats ideas pass untouched (the header says 'every other target passes untouched'), and no measure is stored to screen subject+measure+span."
+    }
+   ]
+  },
+  {
+   "context": "scout-producers",
+   "subject": "data-video-virality",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/producers/src/scout-reels/define.ts:97 The reels producer's brief door, which every idea, real reel and full cut passes through, has the same shape: kind, hook, optional free-text steps and a premise-only what-if. So the producer authors and renders a 30 s to 2 min cut with no recorded continuity, path or event plan to check the finished render against.",
+   "techniques": [
+    {
+     "technique": "continuity-gate",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/scout-reels/define.ts:103 The format is named, but no step count, granularity, entity count or lead-change estimate is carried. The technique requires the estimate so it can be checked against the render, yet the lint at lib/producers/scoutReelActs.ts:102 checks only frame purity and the data block."
+    },
+    {
+     "technique": "path-over-conclusion",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/scout-reels/define.ts:101 The hook is any 1-2000 char string. There is no rationale with counted dates and entities."
+    },
+    {
+     "technique": "accelerator-events",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/scout-reels/define.ts:105 Optional untyped strings with no date, no effect and no 5-15 bound. A full cut gets no events at all."
+    },
+    {
+     "technique": "speculative-grounding",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/scout-reels/define.ts:95 A what-if source carries only a premise and a name line. No baseline end year, model or horizon is checked before the seat authors it."
+    }
+   ]
+  },
+  {
+   "context": "cull-run-desk",
+   "subject": "data-video-virality",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/cull/useRunDesk.ts:3 The run desk is a generic keep/reject verdict UI over any Board packet's cells. A case-insensitive search of packages/ui/src/components/cull and packages/ui/src/components/desk for race, overtake, accelerator, comparable and granularity found no hits, so the desk does not choose or score data-video ideas.",
+   "techniques": [],
+   "absenceTerms": [
+    "race",
+    "overtake",
+    "accelerator",
+    "comparable",
+    "granularity"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T01:24:11.452061+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-virality"
+   ],
+   "techniques": [
+    "accelerator-events",
+    "continuity-gate",
+    "path-over-conclusion",
+    "speculative-grounding",
+    "topic-duplicate-screen"
+   ],
+   "deviations": 1,
+   "context": "scout-engine-creative",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T01:24:11.452061+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-virality"
+   ],
+   "techniques": [
+    "accelerator-events",
+    "continuity-gate",
+    "path-over-conclusion",
+    "speculative-grounding"
+   ],
+   "deviations": 1,
+   "context": "scout-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T01:24:11.452061+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "data-video-virality"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "cull-run-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

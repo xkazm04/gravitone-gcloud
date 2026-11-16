@@ -32,6 +32,7 @@ import { reasonsOf, reasonVocabulary } from "@gt/domain/source";
 
 import { closeKernel } from "../../lib/kernelStore.ts";
 import { scoutAdapter } from "../../lib/decision/v1/sources/scout.ts";
+import { panelLosses } from "../../lib/decision/v1/sources/scoutBoardLoss.ts";
 import { appendTechnique } from "../../lib/foundry/scout/knowledge.ts";
 import { keptStoryboardFor } from "../../lib/foundry/scout/storyboardKept.ts";
 import type { Candidate, IdeaCandidate, Night, StoryboardCandidate, StoryboardTechnique } from "../../lib/foundry/scout/types.ts";
@@ -103,6 +104,22 @@ function seed(): void {
 const nightOf = (id: string): Night => JSON.parse(readFileSync(path.join(out, "scout", id, "night.json"), "utf8")) as Night;
 
 describe("scout adapter - a storyboard is one run, its frames then its words", () => {
+  it("a Codex-drawn board says `codex · subscription`; a Flux one, and a night with no marker, say `local · free`", async () => {
+    seed();
+    const CODEX = "2026-10-23";
+    writeNight(CODEX, false, [
+      board("c-20", { title: "Drawn by codex", images: frames("c-20", 4), drawnBy: "codex" }),
+      board("c-21", { title: "Drawn by flux", images: frames("c-21", 4) }),
+    ]);
+    for (const f of [...frames("c-20", 4), ...frames("c-21", 4)]) {
+      mkdirSync(path.dirname(path.join(out, "scout", CODEX, f)), { recursive: true });
+      writeFileSync(path.join(out, "scout", CODEX, f), `png ${f}`);
+    }
+    const { present } = (await openFlow(scoutAdapter, CODEX, blobDir)).plan;
+    expect(present.items["c-20/words"]?.meta).toBe("idea: Lantern-lit stairwell · 4 frames · codex · subscription");
+    expect(present.items["c-21/words"]?.meta).toBe("idea: Lantern-lit stairwell · 4 frames · local · free");
+  });
+
   it("draws the frames on disk then one words cell under a storyboards row; words-only is one cell; failed is a loss", async () => {
     seed();
     const flow = await openFlow(scoutAdapter, NIGHT, blobDir);
@@ -127,8 +144,8 @@ describe("scout adapter - a storyboard is one run, its frames then its words", (
     expect(present.items["c-13/words"]?.meta).toBe("idea: 2026-10-19/c-01 · 1 of 3 frames · local · free");
     expect(losses).toEqual([
       { candidate: "c-12", grade: "dropped", reason: "panel 1: comfy answered 500; panel 2: comfy answered 500" },
+      { candidate: "c-13/panel-2", grade: "dropped", reason: "panel 2: comfy answered 500" },
       { candidate: "c-13/panel-3", grade: "dropped", reason: "storyboards/c-13/panel-3-gone.png is not on disk" },
-      { candidate: "c-13", grade: "approximate", reason: "panel 2: comfy answered 500" },
     ]);
 
     // The desk: one run in the storyboards tab, its face frame 1 (a still, so it opens); keys 2-4 by its group.
@@ -242,5 +259,28 @@ describe("scout adapter - a kept storyboard files its technique (spark scout-vis
     must(await scoutAdapter.apply(flow.claim()));
     expect(nightOf(TECH_DRY).state).toBe("committed");
     expect(() => readFileSync(patterns, "utf8")).toThrow();
+  });
+});
+
+describe("a panel that drew nothing is a loss of its own, beside the frames that drew", () => {
+  const cellOf = (c: string, i: number): string => `${c}/panel-${i + 1}`;
+  const at = (over: Partial<Pick<StoryboardCandidate, "images" | "error">>) => panelLosses({ id: "c-20", ...over }, cellOf);
+
+  it("a storyboard with every frame adds none, and a words-only one adds none", () => {
+    expect(at({ images: ["a.png", "b.png"] })).toEqual({ losses: [], rest: undefined });
+    expect(at({})).toEqual({ losses: [], rest: undefined });
+  });
+  it("each null panel carries its own sentence by the engine's `panel N: ` rule; the rest stays on the run once", () => {
+    const got = at({ images: ["a.png", null, "c.png", null], error: "panel 4: comfy answered 500; clip 1: no clip engine is bound; panel 2: out of memory" });
+    expect(got.losses).toEqual([
+      { candidate: "c-20/panel-2", grade: "dropped", reason: "panel 2: out of memory" },
+      { candidate: "c-20/panel-4", grade: "dropped", reason: "panel 4: comfy answered 500" },
+    ]);
+    expect(got.rest).toBe("clip 1: no clip engine is bound");
+  });
+  it("a null panel the engine said nothing of says it drew nothing, and a sentence for a drawn panel stays whole", () => {
+    const got = at({ images: [null, "b.png"], error: "panel 2: stale" });
+    expect(got.losses).toEqual([{ candidate: "c-20/panel-1", grade: "dropped", reason: "frame 1 drew nothing" }]);
+    expect(got.rest).toBe("panel 2: stale");
   });
 });

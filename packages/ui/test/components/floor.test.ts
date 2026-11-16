@@ -230,6 +230,8 @@ describe("components", () => {
     const bare = renderToStaticMarkup(h(ShelfStyle, { name: "ghibli" }));
     expect(bare).not.toContain("<img");
     expect(bare).toContain("ghibli");
+    // the no-cover ground is a named state, not a blank: the hatch, and its name for a screen reader
+    expect(bare).toMatch(/role="img" aria-label="no cover plate"/);
   });
 
   test("a failed slot shows its error verbatim; an unknown channel speaks its id", () => {

@@ -107,7 +107,7 @@ export interface RecognizeRequest extends ProviderSteer {
 
 /** The vendor roster, as a value: a request may name a vendor, so validation
  *  needs the list at runtime and there may be exactly one copy of it. */
-export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama", "agy", "leonardo-studio", "leonardo-flare", "comfy-flux2"] as const;
+export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama", "agy", "leonardo-studio", "leonardo-flare", "codex"] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
@@ -189,6 +189,8 @@ export interface Provenance {
    * reads as "there was nothing to carry" and never as "unknown".
    */
   negativePromptChannel?: "native" | "prose";
+  /** The local CLI that drew it, as it named itself (`codex --version`), when the provider is a CLI and it answered. */
+  cliVersion?: string;
   /** Vendors eliminated before the one that served, most-preferred first.
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */

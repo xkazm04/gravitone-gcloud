@@ -45,6 +45,8 @@ export type RowWords = {
   readonly id: string;
   readonly label: string;
   readonly ref?: string;
+  /** The face of a run whose first variant is a video: a still of its own output, so never a reference. */
+  readonly poster?: string;
   readonly inCatalogue?: boolean;
   readonly group?: string;
   readonly aim?: string;
@@ -53,6 +55,10 @@ export type RowWords = {
   readonly use?: string;
   /** The prompt the run was drawn from; shown in the zoom, after triage (it is not the aim). */
   readonly prompt?: string;
+  /** A run made from a channel episode: the channel's name, the episode's logline and its five beats, verbatim. */
+  readonly channel?: string;
+  readonly logline?: string;
+  readonly beats?: readonly string[];
 };
 
 /** What the machine said before the gate (hitl-approval oracle-before-gate). */

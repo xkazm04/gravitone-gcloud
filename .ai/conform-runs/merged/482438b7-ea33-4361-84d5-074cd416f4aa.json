@@ -1,0 +1,162 @@
+{
+ "schema": "conform-run/1",
+ "worker": "482438b7-ea33-4361-84d5-074cd416f4aa",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-09T23:59:25.819476+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "frames-picture-composition",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/picture/unit.ts:78 Picture units carry their place on the film as startS/holdS seconds, and startS is null (never a guessed 0) when a beat cannot be placed. The Frames phase speaks the shared clock and shows absence on it; around that, human layers are kept, plate renders survive a reload, and the shot gate cannot fake a pass.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "lib/frames/picture/unit.ts:78 Units are start+hold in film seconds. A unit that cannot be placed has null on the clock, not an invented position."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:14 The direction pass lands as a proposal of ops. Any layer a human touched is a conflict whose default is keep, so the expensive pass edits the cut and never silently overwrites human decisions."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "lib/frames/shotReview.ts:115 The shot-list/prompt gate before plate spend turns any check that examined nothing into not-engaged. It reports engaged counts and a named NOT_CHECKED list, never a pass by default."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "lib/frames/frames.ts:92 An in-flight plate render's idempotency receipt is persisted with the cut. A reload re-issues under the same key and receives the pixels already paid for, instead of buying the render twice."
+    }
+   ]
+  },
+  {
+   "context": "research-producers",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "packages/producers/src/research/partJob.ts:75 Every research act is a persisted kernel job, single-flighted per act and unit at enqueue time inside the confirm's transaction. A double click is one purchase, a reload loses nothing, and interrupted stays a live state the operator sees.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/partJob.ts:75 Claim-time single-flight. A second confirm of the same act and unit while one is live adopts that job instead of enqueueing a second paid one."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/facts.ts:58 The runtime target is the project's own figure, seeded from the format template's default and null when neither exists. Every part act reads this one target."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/followUp.ts:69 The notebook is a durable asset. A follow-up revises it through allowlisted edit effects (confirms/downgrades/kills/adds) and an unusable answer refuses whole; the notebook is never regenerated or partially applied."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/research/define.ts:44 An act whose upstream input is not settled is refused at plan time, before any unit is bought (partAct.ts: refusals \"applied before the plan, never after\")."
+    }
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 Score and Cut draw one shared timeline whose blocks are start+duration seconds, each with a first-class ok/missing/drift state. Around it, the finish render is blocked by failing checks, renders run as jobs, and takes become assets only by adoption.",
+   "techniques": [
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 The one clock both Score and Cut draw. Each block is startS/durS with ok, missing and drift as first-class states; Score.tsx:157 marks a cue with no active take as missing at its true span."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:100 The expensive render is gated by finish checks: a blocking fail replaces the render button with a blocked chip carrying the deny sentences. The music bed reads unmeasured, never a fail, when no take exists."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:7 The render is a kernel job behind a receipt and its progress is the job's state, replacing v1's elapsed clock over one blocking request."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Takes.tsx:34 A shot counts as ready only when a person has adopted a take. Generated takes are candidates until then, so the asset boundary is the human act."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "style-trials-cull",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:59:25.819476+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:59:25.819476+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases"
+   ],
+   "deviations": 0,
+   "context": "research-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:59:25.819476+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

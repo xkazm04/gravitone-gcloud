@@ -1,0 +1,8 @@
+/* The winner's bracket head and cut fold (Knockout app.css .bhead, .cutfold), in tokens. */
+.head{font:400 var(--fs-meta)/1.45 var(--sans);flex:none;height:var(--head-h);display:flex;align-items:center;gap:var(--sp-4);padding:0 var(--sp-wide);border-bottom:1px solid var(--hair);min-width:0}
+.rules{display:flex;gap:var(--sp-2);min-width:0;overflow:hidden}
+.right{margin-left:auto;display:flex;gap:var(--sp-2);align-items:center;flex:none}
+.cutfold{flex:none;padding:var(--sp-2) var(--sp-wide) var(--sp-3);border-bottom:1px solid var(--hair);background:var(--panel-ground);display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-loose);align-items:center}
+.caps{font:500 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.ci{display:inline-flex;gap:var(--sp-3);align-items:center;font:400 var(--fs-bar) var(--mono);color:var(--muted);min-height:var(--sp-7)}
+.ci b{color:var(--text);font-weight:500}

@@ -1,0 +1,205 @@
+{
+ "schema": "conform-run/1",
+ "worker": "daf157ed-34a5-41e8-b25f-557cd20d2f8c",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-11-06T00:59:07.465812+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:224 The ledger is hash-chained (kernel events.ts), but the screen serves every event without recomputing the chain or showing any integrity verdict, and nothing in app/, lib/, pipeline/ or workers/ calls the kernel's verify, so tamper evidence is only checked by tests and a manual Python CLI.",
+   "techniques": [
+    {
+     "technique": "tamper-evidence",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:224 Rung 3 is built on the write side, but no verify on read: no verified/tampered verdict on the interactive surface."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:15 Keyset pages, facet counts over the whole filter, capped/scanned/exhausted shown on the surface (List.tsx:123, Toolbar.tsx:122). Gap: reads of the trail are not themselves recorded."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/vocab.ts:95 The detail shows the effective time plus a derived/recorded chip and the recorded `at`. Gap: the from/to window ranges over coalesce(occurredAt, at) without naming that clock in the interface."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:3 The screen's server actions are reads only; no mutation surface is exposed."
+    },
+    {
+     "technique": "record-axis-predicate",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/page.tsx:1 Rows are never invalidated, so there is no record interval to rewind."
+    }
+   ]
+  },
+  {
+   "context": "kernel-python-protocol",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/py/verify_events.py:173 The verifier keeps only the optional columns it knows and silently ignores any other, so a newer events schema adding a covered column would make this reader recompute without it and report 'hash mismatch: the row's content changed after it was written' (tampered) instead of 'written by a newer version'.",
+   "techniques": [
+    {
+     "technique": "absent-not-null-in-hashed-records",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/py/verify_events.py:173 Absent-not-null holds (line 129 drops NULL columns), but an unknown covered column is not refused as a version verdict; the verdict set is intact/tampered only."
+    },
+    {
+     "technique": "tamper-evidence",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/verify_events.py:152 A chain with serialized writers (BEGIN IMMEDIATE) and an external anchor for a cut tail; the digest is unkeyed sha256, which events.ts says plainly ('tamper-evident, not tamper-proof')."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/kernel_ledger.py:35 The Python ledger module exports append and nothing that mutates."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/kernel_ledger.py:12 One Python append shared by lease and job writers."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/kernel_ledger.py:37 A control-record inversion: the event commits with the state or the act fails, as documented."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/kernel_ledger.py:18 The ledger is the origin of the fact here, so one clock is correct and occurredAt is never written."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/py/job.py:356 str(exception) from any worker drive goes into hashed, permanent ledger data with no size cap or scrub."
+    }
+   ],
+   "registryProposal": "absent-not-null-in-hashed-records speaks of record keys; on a relational store the unknown 'key' is an unknown column, and a verifier that selects columns by a hard-coded list (PRAGMA table_info filtered against it) is the column-shaped form of the same failure. Naming it would help."
+  },
+  {
+   "context": "board-scout-spend-sources",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "lib/decision/v1/sources/seeds.ts:20 Decisions are keyed on durable item ids, rejects need a reason from a capped vocabulary, the applied state is compared rather than overwritten, and the ledger projections keep both clocks and omit absent fields from hashed event data.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/seeds.ts:20 Identity before wording; reasons are required on reject from an allowlisted vocabulary (spend.ts:22, domain source.ts)."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/seeds.ts:33 A different outcome is refused rather than edited in place."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/scout.ts:86 Projected facts carry occurredAt plus atSrc (recorded vs derived) apart from the ledger's own `at`."
+    },
+    {
+     "technique": "absent-not-null-in-hashed-records",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/scout.ts:84 Optional fields are omitted rather than set to null in hashed event data."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/spend.ts:43 The spend request record doubles as the at-most-once guard and is treated as a control record."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/scout.ts:83 Events carry a durable subject id plus runId for the Ledger's run lookup."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/scout.ts:126 Sources are pure projectors returning events; the one sync door writes them (keyed, idempotent)."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "audit-logging",
+   "context": "run-records-and-slots",
+   "reason": "evidence leans on records/write.ts, which is not a tracked file"
+  },
+  {
+   "subject": "audit-logging",
+   "context": "ui-ledger-timeline",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T00:59:07.465812+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "record-axis-predicate",
+    "tamper-evidence",
+    "two-clock-records"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:59:07.465812+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "absent-not-null-in-hashed-records",
+    "append-only-design",
+    "best-effort-with-accounting",
+    "tamper-evidence",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:59:07.465812+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "absent-not-null-in-hashed-records",
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "decision-records",
+    "two-clock-records",
+    "write-chokepoint"
+   ],
+   "deviations": 0,
+   "context": "board-scout-spend-sources",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -251,7 +251,8 @@ describe("the cut player follows the focused beat", () => {
   });
 
   test("the player seeks again when its metadata arrives", () => {
-    expect(src()).toMatch(/onLoadedMetadata=\{\(\) => seekTo\(player\.current, beats\[focus\]\)\}/);
+    // the player is a Clip (desk/Clip.tsx), which hands its element to the handler
+    expect(src()).toMatch(/onLoadedMetadata=\{\(el\) => seekTo\(el, beats\[focus\]\)\}/);
   });
 });
 

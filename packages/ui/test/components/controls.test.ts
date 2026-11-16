@@ -77,6 +77,45 @@ describe("Button", () => {
   test("a badge is a chip after the label", () => {
     expect(html(h(Button, { label: "Commit packet", badge: { label: "7 undecided" } }))).toMatch(/Commit packet<span[^>]*>7 undecided<\/span>/);
   });
+
+  test("pending is in flight, not unavailable: focusable, aria-busy, never aria-disabled, its own look", () => {
+    const p = html(h(Button, { label: "pause", size: "sm", pending: true, onPress: noop }));
+    expect(p).toMatch(/^<button type="button"[^>]*aria-busy="true">/);
+    expect(p).not.toContain("aria-disabled");
+    expect(p).not.toMatch(/ disabled|tabindex/);
+    expect(p).toContain(`class="${btn.btn} ${btn.sm} ${btn.pending}"`);
+    // The width is the label's: pending adds no node and no word, only the class.
+    expect(p.replace(` ${btn.pending}`, "").replace(' aria-busy="true"', "")).toBe(html(h(Button, { label: "pause", size: "sm", onPress: noop })));
+  });
+
+  test("a pending press is cancelled, from a click and from ⏎ in a form alike", () => {
+    let pressed = 0;
+    let cancelled = 0;
+    const on = (Button({ label: "retry", submit: true, pending: true, onPress: () => (pressed += 1) }).props as { onClick?: (e: { preventDefault: () => void }) => void }).onClick;
+    on?.({ preventDefault: () => (cancelled += 1) });
+    expect([cancelled, pressed]).toEqual([1, 0]);
+  });
+
+  test("disabled wins over pending; a pending link is a button until it lands", () => {
+    const d = html(h(Button, { label: "retry", disabled: true, pending: true }));
+    expect(d).toContain('aria-disabled="true"');
+    expect(d).not.toContain("aria-busy");
+    expect(d).not.toContain(btn.pending);
+    const a = html(h(Button, { label: "open", pending: true, href: "/x" }));
+    expect(a).toMatch(/^<button/);
+    expect(a).not.toContain("href");
+  });
+
+  test("pending enters after --dur-fast on the one curve, never dims or dashes, and is the same still look under reduced motion", () => {
+    const css = readFileSync(join(COMPONENTS, "button/Button.module.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = /\.pending\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toMatch(/animation:inflight var\(--dur\) var\(--ease\) var\(--dur-fast\) backwards/);
+    expect(rule).not.toMatch(/opacity|dashed|infinite/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion:reduce\)\{\.pending\{animation:none\}\}/);
+    // Receipt's confirm is the same look, composed - not a second spelling.
+    const receipt = readFileSync(join(COMPONENTS, "produce/Receipt.module.css"), "utf8");
+    expect(receipt).toContain('.busy{composes:pending from "../button/Button.module.css"}');
+  });
 });
 
 describe("pressed controls", () => {

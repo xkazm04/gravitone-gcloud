@@ -47,6 +47,9 @@
 // this module: **it reads no `process.env` and imports nothing that does.** Its
 // only import is type-only and therefore erased. Keep it that way.
 
+/** Why a production's casting calls book no dollars. */
+export const VOICE_CREDITS_REASON = "ElevenLabs credits, reported per round";
+
 /** What the vendor counts when it bills an operation. */
 export type MusicBillingUnit =
   /** Charged against the ElevenLabs credit balance. */
@@ -59,7 +62,7 @@ export type MusicBillingUnit =
 /** The operations this engine can perform, as the log and the ledger name
  *  them. One model can bill differently per endpoint, so the row is keyed on
  *  the operation as well as the model. */
-export type MusicOp = "generate" | "compose" | "sfx" | "plan" | "tts";
+export type MusicOp = "generate" | "compose" | "sfx" | "plan" | "tts" | "voice-design";
 
 interface MusicPriceRow {
   vendor: "elevenlabs";
@@ -146,6 +149,23 @@ export const MUSIC_PRICES: readonly MusicPriceRow[] = [
     source:
       "The vendor's own API rate card, elevenlabs.io/pricing/api, read 2026-10-24: Text to Speech, v2 Multilingual, $0.08 per 1K characters on every tier, billed in US dollars per character, not credits. An estimate of the bill: the TTS response reports no cost, and characters a plan includes cost less.",
     checked: "2026-10-24",
+  },
+  // A production's casting (lib/music/voiceDesign.ts): credits are read per round from the API, so no rate is declared.
+  {
+    vendor: "elevenlabs",
+    op: "tts",
+    model: "eleven_v3",
+    bills: "credits",
+    source: `${VOICE_CREDITS_REASON}: each call's own consumption is read from the API (the character-cost header, else the subscription delta) and shown on the round. No rate is measured or declared here, and none is needed for the casting screen.`,
+    checked: "2026-11-09",
+  },
+  {
+    vendor: "elevenlabs",
+    op: "voice-design",
+    model: "eleven_multilingual_ttv_v2",
+    bills: "credits",
+    source: `${VOICE_CREDITS_REASON}: a design call's consumption is read from the API and shown on the round. No rate is measured or declared here. The two calls of one round are the unit the operator sees.`,
+    checked: "2026-11-09",
   },
 ];
 

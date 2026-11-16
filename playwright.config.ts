@@ -71,6 +71,28 @@ process.env.GPU_LEASE_DIR ??= mkdtempSync(path.join(tmpdir(), "gpu-lease-pw-"));
 // The GPU lease is the kernel's (Phase 4 L27): its store does what GPU_LEASE_DIR used to.
 process.env.GRAVITONE_STORE_PATH ??= path.join(mkdtempSync(path.join(tmpdir(), "gt-store-pw-")), "gravitone.sqlite");
 
+// THE v1 STORE ROOTS STAY OFF THE OPERATOR'S OUTPUT TREE. lib/ reads each `*_STORE_DIR` per call and, unset,
+// falls back to foundry-out/<store>. Each name in STORE_DIR_NAMES gets its own temp directory here (`??=`: a
+// probe that sets its own keeps winning). store-dir-isolation.probe.spec.ts scans lib/ and fails with the
+// name of any `*_STORE_DIR` that is in neither list.
+export const STORE_DIR_NAMES = ["IDEA_LOOP_STORE_DIR", "MESH_STORE_DIR", "SCOUT_MUSE_STORE_DIR", "SPEND_STORE_DIR"] as const;
+for (const name of STORE_DIR_NAMES) process.env[name] ??= mkdtempSync(path.join(tmpdir(), `${name.toLowerCase().replaceAll("_", "-")}-pw-`));
+
+// NAMED EXEMPTIONS - measured 2026-11-09: setting the name centrally turns the listed probes red, because they
+// seed or read the real foundry-out tree (or delete the name from env) and assume it is unset. Fixing them
+// means editing those probes, which this lot could not; each is an open item, not a decision.
+export const STORE_DIR_EXEMPT: Readonly<Record<string, string>> = {
+  ARTICLES_STORE_DIR: "runs-live.probe: 'every live job each v1 UI calls live is a bar Runs draws'",
+  CLIP_STORE_DIR: "runs-live.probe: same case",
+  EXTRACT_STORE_DIR: "ledger-reconcile.probe 'every source's ledger counts equal...'; runs-live.probe same case as above",
+  PUBLISH_STORE_DIR: "runs-live.probe: publish live-set case",
+  SCOUT_PREBASELINE_STORE_DIR: "ledger-reconcile.probe: every source's ledger counts",
+  SCOUT_STORE_DIR: "ledger-reconcile.probe: every source's ledger counts",
+  SOUND_STORE_DIR: "runs-live.probe: same case as above",
+  STRIPS_STORE_DIR: "foundry-verdict-patch.probe cases 5, 6, 8; ledger-reconcile; runs-live",
+  TRAINING_STORE_DIR: "foundry-catalogue-tx.probe cases 4, 7; ledger-reconcile; runs-live",
+};
+
 const NATIVE_ESM = [
   "**/imaging-auth.probe.spec.ts",
   "**/ledger-reconcile.probe.spec.ts",

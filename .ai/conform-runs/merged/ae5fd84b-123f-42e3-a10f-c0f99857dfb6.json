@@ -1,0 +1,193 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ae5fd84b-123f-42e3-a10f-c0f99857dfb6",
+  "subject": "native-shell-integration",
+  "evaluatedAt": "2026-11-06T23:44:36.382058+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "studio-shell",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/_shell/liveFeed.ts:39 The shell's long-lived stream is a browser EventSource the page owns; nothing in the shell talks to a native process, and searches of app/, lib/ and packages/ui/src for ipcRenderer, __TAURI__, webview, nativeBridge and capacitor found nothing, so the subject's precondition (a native side holding capabilities the page cannot reach) does not hold.",
+      "techniques": [
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/liveFeed.ts:39 The stream lives in the document, and there is no native process it could move to. Backgrounding is handled by the in-document pagehide/pageshow and visibility backstop, which falls under realtime-events, not this subject."
+        },
+        {
+          "technique": "permission-gate-vector",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/keys.ts:4 The shell's only host surface is browser localStorage. There are no separately granted OS capabilities."
+        }
+      ],
+      "absenceTerms": [
+        "ipcRenderer",
+        "__TAURI__",
+        "webview",
+        "nativeBridge",
+        "capacitor"
+      ]
+    },
+    {
+      "context": "studio-routes-and-redirects",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/_shell/clipboard.ts:9 Clipboard access goes through the browser's navigator.clipboard with an in-document secure-context guard, and no native host bridge exists anywhere in app/ (no ipcRenderer, __TAURI__, webview, nativeBridge or capacitor), so the native-side ownership rules have nothing to govern.",
+      "techniques": [
+        {
+          "technique": "capability-presence-contract",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/_shell/clipboard.ts:11 This is a browser secure-context presence check that refuses with its reason, not a native host-capability class. The spirit matches, but the precondition doesn't."
+        }
+      ],
+      "absenceTerms": [
+        "ipcRenderer",
+        "__TAURI__",
+        "webview",
+        "nativeBridge",
+        "capacitor"
+      ]
+    },
+    {
+      "context": "ui-keymap-layers-storage",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/ui/src/keymap/dispatch.ts:41 The keymap is one document-level keydown listener reading browser KeyboardEvents. Nothing is synthesized into a foreign application, no keys are forwarded from a native wrapper, and packages/ui/src has no native-host terms (ipcRenderer, __TAURI__, webview, nativeBridge, capacitor).",
+      "techniques": [
+        {
+          "technique": "host-forwarded-key-contract",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:41 Keys arrive as ordinary browser events. No remote or controller has keys forwarded by a host."
+        },
+        {
+          "technique": "layout-resolved-input-synthesis",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/keymap/dispatch.ts:46 Input is read, never synthesized into another app."
+        },
+        {
+          "technique": "native-owned-stream",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/freshness/poll.ts:12 An in-document polling backstop. There's no native process to own a stream."
+        }
+      ],
+      "absenceTerms": [
+        "ipcRenderer",
+        "__TAURI__",
+        "webview",
+        "nativeBridge",
+        "capacitor"
+      ]
+    },
+    {
+      "context": "scout-screen",
+      "subject": "native-shell-integration",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/scout/_port/port.ts:17 The scout screen's only seam is a server-only fixture/real port reached through server actions, not a native host interface, and the scout directory has no native-shell terms, so the subject's precondition does not hold.",
+      "techniques": [
+        {
+          "technique": "native-side-owns-the-target-set",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/scout/_port/port.ts:22 Acts pass a ref identity to a server port. No native command executes paths or shells."
+        }
+      ],
+      "absenceTerms": [
+        "ipcRenderer",
+        "__TAURI__",
+        "webview",
+        "nativeBridge",
+        "capacitor"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "native-shell-integration",
+      "context": "app-root-and-dev-inspector",
+      "reason": "withdrawn after review: reviewer (sonnet): app/layout.tsx mounts HarnessBridge, a dev-gated window control surface that an external harness drives, and the verdict never examined it; its anchors cover only the in-page overlay, so a not-applicable for the whole context is unconfirmed."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T23:44:36.382058+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "native-shell-integration"
+      ],
+      "techniques": [
+        "native-owned-stream",
+        "permission-gate-vector"
+      ],
+      "deviations": 0,
+      "context": "studio-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T23:44:36.382058+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "native-shell-integration"
+      ],
+      "techniques": [
+        "capability-presence-contract",
+        "non-stealing-overlay",
+        "query-transparent-overlay"
+      ],
+      "deviations": 0,
+      "context": "app-root-and-dev-inspector",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T23:44:36.382058+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "native-shell-integration"
+      ],
+      "techniques": [
+        "capability-presence-contract"
+      ],
+      "deviations": 0,
+      "context": "studio-routes-and-redirects",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T23:44:36.382058+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "native-shell-integration"
+      ],
+      "techniques": [
+        "host-forwarded-key-contract",
+        "layout-resolved-input-synthesis",
+        "native-owned-stream"
+      ],
+      "deviations": 0,
+      "context": "ui-keymap-layers-storage",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T23:44:36.382058+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "native-shell-integration"
+      ],
+      "techniques": [
+        "native-side-owns-the-target-set"
+      ],
+      "deviations": 0,
+      "context": "scout-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

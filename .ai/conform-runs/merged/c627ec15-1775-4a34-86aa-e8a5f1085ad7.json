@@ -1,0 +1,180 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c627ec15-1775-4a34-86aa-e8a5f1085ad7",
+ "subject": "data-access",
+ "evaluatedAt": "2026-11-06T05:24:30.857555+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:214 readStrip calls countEvents once per day in a loop, so one render of the page issues about 84 count queries where one grouped aggregate (count per day and actor kind) would answer the strip in a single round trip. The technique calls exactly this loop a design failure of the surface.",
+   "techniques": [
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:214 One count query per strip day (STRIP_PAST=84). readFacets also loops countEvents once per held project. The kernel offers no grouped per-day count."
+    },
+    {
+     "technique": "layering-rules",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:6 The screen has no SQL. Every read goes through the kernel's named queryEvents and countEvents in one read module that the page, the actions and the JSONL route all share."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:142 Page, Facets and Strip are read-only projections shaped for the screen. Nothing is written back."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/ledger-read.test.ts:24 The read module is tested against a real in-memory kernel store, not a mock."
+    }
+   ]
+  },
+  {
+   "context": "asset-library-store",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/library/query.ts:85 rowOf casts the closed-vocabulary text columns (kind, state, origin, source) straight to the domain enum, and library_items.state carries no CHECK, so an unknown variant passes through as if it were a member. This is the silent third option row-mapping bans.",
+   "techniques": [
+    {
+     "technique": "row-mapping",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/library/query.ts:85 The serialized face column is parsed through a zod door and throws on failure, which is correct. The enum columns are unchecked casts."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/clauses.ts:53 A dynamic identifier reaches SQL only through the COLUMN_GROUPS allowlist. Values are bound. FTS escaping lives in one place (core.ts ftsExpression). ORDER BY comes from a closed map."
+    },
+    {
+     "technique": "batching-and-n-plus-one",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/query.ts:115 Page rows and chips (chipsFor) are fetched as membership sets keyed into a Map. There is no per-row query."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/write.ts:86 Row writes compose inside the caller's Tx. upsertItems and actOnItem own one transaction each, and the mark commits with its event."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/schema.ts:8 A stored read model with a named recomputation (lib/library/project.ts). Digest-keyed upsert makes a re-projection idempotent."
+    },
+    {
+     "technique": "repo-testing",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/library.test.ts:24 Tested on a real SQLite kernel."
+    }
+   ]
+  },
+  {
+   "context": "ledger-v1-sources",
+   "subject": "data-access",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/ledger/v1/sources/spend.ts:119 An app-level adapter in lib/ writes raw SQL against tables that packages/kernel/src/spend owns (publish.ts does the same against `parts`). The query language leaks outside the kernel's store modules, and 'who reads spend_rows' is no longer a directory listing.",
+   "techniques": [
+    {
+     "technique": "layering-rules",
+     "verdict": "deviation",
+     "evidence": "lib/ledger/v1/sources/spend.ts:119 spend_rows, spend_reservations and spend_counters are kernel tables (packages/kernel/src/spend/v1Port.ts) queried directly from lib/ledger. publish.ts:134 queries `parts` the same way."
+    },
+    {
+     "technique": "query-construction",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/spend.ts:120 Values are bound parameters. No interpolation of external text."
+    },
+    {
+     "technique": "row-mapping",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/articles.ts:141 The corrupt-row policy is visible degradation: an undecodable v1 record is skipped with its id and the door's reason, carried on Projection.skipped."
+    },
+    {
+     "technique": "transactions-and-units-of-work",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/spend.ts:118 Rows, holds and counters are read in one read transaction, so the tally checks a consistent snapshot."
+    },
+    {
+     "technique": "read-models-and-projections",
+     "verdict": "conformant",
+     "evidence": "lib/ledger/v1/sources/spend.ts:29 The adapters are pure projections that never write back to a v1 store. spend deliberately bypasses a meter read that would prune and write."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "data-access",
+   "context": "run-records-and-slots",
+   "reason": "evidence leans on records/schema.ts, which is not a tracked file"
+  },
+  {
+   "subject": "data-access",
+   "context": "style-store",
+   "reason": "evidence leans on spec/styles.json, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T05:24:30.857555+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "layering-rules",
+    "read-models-and-projections",
+    "repo-testing"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T05:24:30.857555+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "batching-and-n-plus-one",
+    "query-construction",
+    "read-models-and-projections",
+    "repo-testing",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "asset-library-store",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T05:24:30.857555+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "data-access"
+   ],
+   "techniques": [
+    "layering-rules",
+    "query-construction",
+    "read-models-and-projections",
+    "row-mapping",
+    "transactions-and-units-of-work"
+   ],
+   "deviations": 1,
+   "context": "ledger-v1-sources",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

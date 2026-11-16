@@ -46,7 +46,7 @@ DEFAULT_TTL_S = 120
 BUSY_TIMEOUT_S = 10.0
 # @gt/domain/lane RESOURCE_LANES: a lease on one of these carries it as the event's lane.
 RESOURCE_LANES = ("gpu.local", "box.render", "box.blender", "box.chrome", "seat.text",
-                  "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen")
+                  "cloud.google", "cloud.elevenlabs", "cloud.leonardo", "cloud.qwen", "cloud.suno")
 
 
 def lane_of(resource):

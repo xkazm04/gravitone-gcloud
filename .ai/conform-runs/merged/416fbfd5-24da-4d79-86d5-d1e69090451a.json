@@ -1,0 +1,104 @@
+{
+ "schema": "conform-run/1",
+ "worker": "416fbfd5-24da-4d79-86d5-d1e69090451a",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-04T02:25:17.384771+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "board-decision-adapters",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "lib/decision/v1/types.ts:330 Each adapter previews from v1's own planners and folds a digest of the v1 state it read into the commit token, so a commit over a v1 that moved is refused. The apply half is idempotent on the same outcome and refuses a conflicting one loudly.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/types.ts:330 The decision binds to the exact decisions and to a content digest (media sha256) of what was previewed."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:262 The preview refuses unless the v1 gate is still pending; illegal states are conflicts."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:401 A duplicate of the same verdict succeeds; a conflicting one is refused. These paths are kept separate, as the technique requires."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/article.ts:286 The outward effect is disclosed from the bound action (slug, branch, PR title) before commit."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/registry.ts:62 The queue is complete by construction: a packet source with no adapter line is a compile error."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/dojo.ts:297 A claim needs its blind picks (the independent read) before the Board can change it."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/types.ts:55 A record that does not fit the kernel's vocabulary is carried with a named loss, not absorbed silently."
+    },
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/forge.ts:63 The admitting outcome (proven) is minted only by a human; a model's keep is recorded as the agent's."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "article-human-gate-and-landing",
+   "reason": "evidence leans on post/meta.json, which is not a tracked file"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "domain-run-job-steps",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "project-step-store",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "foundry-strips-and-training",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T02:25:17.384771+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "fail-loud-classification-default",
+    "gate-state-machines",
+    "oracle-before-gate",
+    "resume-after-decision",
+    "review-queues",
+    "truncated-verdict-space"
+   ],
+   "deviations": 0,
+   "context": "board-decision-adapters",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

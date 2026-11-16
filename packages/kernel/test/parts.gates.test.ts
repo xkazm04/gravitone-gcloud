@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from "vitest";
 import * as gates from "../src/parts/gates.ts";
 import { gatePacketFact } from "../src/parts/gates.ts";
+import type { PlanPart } from "@gt/domain/produce";
+import { openKernel, type Kernel } from "../src/kernel.ts";
+import { planViewIn } from "../src/records/read.ts";
+import { compose } from "../src/records/write.ts";
 import type { Reader, Store } from "../src/store.ts";
 import { MODULES } from "./decision.fixtures.ts";
 import { must, steppingClock, templateStores } from "./helpers.ts";
@@ -36,6 +40,50 @@ describe("kernel/parts - the gate read context", () => {
   it("has one spelling, gateFacts(now): no variant takes a reader it never uses", () => {
     expect("gateContext" in gates).toBe(false);
     expect(gates.gateFacts(7).now).toBe(7);
+  });
+});
+
+describe("kernel/parts - where a plan's gate and slot rows open (fable-ten A)", () => {
+  const OP = { kind: "operator", id: "op" } as const;
+  const opened: Kernel[] = [];
+  afterAll(() => {
+    for (const k of opened) k.close();
+  });
+  function planned(): Store {
+    const k = must(openKernel(":memory:", { clock: steppingClock("2026-10-16T08:00:00.000Z") }));
+    opened.push(k);
+    const c = compose(k.store, { recipe: "film/trailer" }, OP, { id: "p1" });
+    if (!c.ok) throw c.error;
+    return k.store;
+  }
+  const part = (s: Store, id: string): PlanPart | undefined => must(s.read((r) => planViewIn(r, "p1", gates.gateFacts(Date.parse("2026-10-16T09:00:00Z"))))).parts.find((p) => p.id === id);
+
+  it("a gate names its NEWEST packet - a reopened #2, never the returned #1 - and a gate with none names nothing", () => {
+    const s = planned();
+    must(s.tx((t) => {
+      for (const [id, state] of [["pkt:step:p1/gate:frames", "returned"], ["pkt:step:p1/gate:frames#2", "open"]] as const) t.run("INSERT INTO packets (id, mode, state, rev, body, opened_at) VALUES (?, 'packet-review', ?, 0, '{}', ?)", id, state, t.at);
+    }));
+    expect(part(s, "p1/gate:frames")).toMatchObject({ kind: "gate", packetId: "pkt:step:p1/gate:frames#2" });
+    expect("packetId" in (part(s, "p1/gate:score") ?? {})).toBe(false);
+  });
+
+  it("a slot part names the slot that places it - a holding one before a missed one - and a cancelled one is no door", () => {
+    const s = planned();
+    expect("slotId" in (part(s, "p1/slot") ?? {})).toBe(false);
+    must(s.tx((t) => {
+      const row = (id: string, state: string, at: string) =>
+        t.run("INSERT INTO slots (id, item, channel, at, state, part_id, rev, fence, dry, record, created_at, updated_at) VALUES (?, 'video:export:x', 'youtube', ?, ?, 'p1/slot', 1, NULL, 0, '{}', ?, ?)", id, at, state, t.at, t.at);
+      row("sl-gone", "cancelled", "2026-10-20T10:00:00.000Z");
+    }));
+    expect("slotId" in (part(s, "p1/slot") ?? {})).toBe(false);
+    must(s.tx((t) => {
+      t.run("INSERT INTO slots (id, item, channel, at, state, part_id, rev, fence, dry, record, created_at, updated_at) VALUES ('sl-miss', 'video:export:y', 'tiktok', '2026-10-21T10:00:00.000Z', 'missed', 'p1/slot', 1, NULL, 0, '{}', ?, ?)", t.at, t.at);
+    }));
+    expect(part(s, "p1/slot")).toMatchObject({ slotId: "sl-miss" });
+    must(s.tx((t) => {
+      t.run("INSERT INTO slots (id, item, channel, at, state, part_id, rev, fence, dry, record, created_at, updated_at) VALUES ('sl-held', 'video:export:z', 'youtube', '2026-10-19T10:00:00.000Z', 'scheduled', 'p1/slot', 1, NULL, 0, '{}', ?, ?)", t.at, t.at);
+    }));
+    expect(part(s, "p1/slot")).toMatchObject({ slotId: "sl-held" });
   });
 });
 

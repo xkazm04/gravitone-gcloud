@@ -57,6 +57,15 @@ describe("the studio URL", () => {
     expect(low).toBe(MEDIUM_16_9.replace("16%3A9", "9%3A16").replace("quality=MEDIUM", "quality=LOW"));
     expect(STUDIO.limits.maxCreditsPerImage).toBe(25);
   });
+  it("recognises an attachment left on the prompt box, and not a clean form (2026-10-31 page text)", () => {
+    expect(STUDIO.form.attachedRef.test("Prompt\n\nImage Reference 1\n\nStart Frame 1\n\nGenerate\n20")).toBe(true);
+    expect(STUDIO.form.attachedRef.test("Prompt\n\nStart Frame 1\n\nGenerate")).toBe(true);
+    expect(STUDIO.form.attachedRef.test("Private Mode\nAdvanced Settings\nAdd to Collection\nReset to Defaults\nPrompt\n\nGenerate\n17\nImage")).toBe(false);
+  });
+  it("names size MEDIUM only when asked (music-clip keyframes, 2048x1136); SMALL stays the default", () => {
+    expect(STUDIO.page.imageUrl("16:9", "medium", "SMALL")).toBe(MEDIUM_16_9);
+    expect(STUDIO.page.imageUrl("16:9", "low", "MEDIUM")).toBe(MEDIUM_16_9.replace("size=SMALL", "size=MEDIUM").replace("quality=MEDIUM", "quality=LOW"));
+  });
 });
 
 describe("the provider", () => {

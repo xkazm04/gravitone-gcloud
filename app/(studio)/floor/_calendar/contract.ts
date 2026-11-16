@@ -20,6 +20,15 @@ export type Problem = { readonly source: string; readonly error: string };
 
 type Verb = { readonly id: string; readonly baseRev?: number };
 
+/**
+ * What the schedule verb takes: the form's draft and, when a project asked for the slot, the
+ * plan's slot part it places (`partId`, `<project>/<key>`). The slot carries it into the store, and
+ * the plan reads that part as placed (kernel slots/read.ts `slottedIn`) - without it a film's slot
+ * row waited forever. Absent is the key OMITTED, never null or "": a slot scheduled from the
+ * calendar with no project is exactly what it was.
+ */
+export type ScheduleInput = ScheduleDraft & { readonly partId?: string };
+
 export type CalendarPort = {
   readonly detail: (input: { readonly id: string }) => Promise<ActionResult<SlotView>>;
   /** To `at` (an ISO instant): scheduled stays scheduled, missed and failed are scheduled again. */
@@ -29,7 +38,7 @@ export type CalendarPort = {
   /** Overrides the missed window; never a claim left behind. */
   readonly publishNow: (input: Verb) => Promise<ActionResult<SlotView>>;
   /** Put a Library item on a channel at an instant (the schedule sheet). */
-  readonly schedule: (input: ScheduleDraft) => Promise<ActionResult<SlotView>>;
+  readonly schedule: (input: ScheduleInput) => Promise<ActionResult<SlotView>>;
   /** What there is to schedule: the Library's exports, newest first. */
   readonly items: () => Promise<ActionResult<readonly ScheduleItem[]>>;
 };

@@ -82,7 +82,13 @@ export type PartRef = { readonly partId: string; readonly key: string; readonly 
 
 /** One tab of the part rail, in recipe order. `verdict` is null for a gate or the slot (they are
  *  Board acts, drawn as ◆) and for a work part whose editor does not exist yet (`editor: false`). */
-export type PartTab = PartRef & { readonly verdict: VerdictState | null; readonly editor: boolean };
+export type PartTab = PartRef & {
+  readonly verdict: VerdictState | null;
+  readonly editor: boolean;
+  /** A gate's newest Board packet, once it exists; a slot's slot, once it has one (the walk's doors). */
+  readonly packetId?: string;
+  readonly slotId?: string;
+};
 
 export type PartProject = {
   readonly id: string;
@@ -103,8 +109,14 @@ export const OPS_SHOWN = 20;
 /** A generating act as the header offers it: ready, or what it still needs ("product", "cta"). */
 export type PartActView = { readonly act: PartActKind; readonly label: string; readonly needs: readonly string[] };
 
-/** A job this part launched and has not finished. */
-export type PartRunning = { readonly jobId: string; readonly act: PartActKind; readonly since: string; readonly stage?: string };
+/** A job this part launched and has not finished. `act` is null for the Plan's own launch of the
+ *  part (`job:part:<part>`), which serves no act of the editor's. */
+export type PartRunning = { readonly jobId: string; readonly act: PartActKind | null; readonly since: string; readonly stage?: string };
+
+/** The part's NEWEST job, when it ended failed or interrupted: its id, its state, and the store's
+ *  own error sentence verbatim (absent only when the job record carries none). A newer job of the
+ *  part - running, done, anything - is the newest, and clears it. */
+export type PartFailed = { readonly jobId: string; readonly state: "failed" | "interrupted"; readonly error?: string };
 
 type ViewBase<K extends EditorKind> = {
   readonly projectId: string;
@@ -125,6 +137,8 @@ type ViewBase<K extends EditorKind> = {
   readonly ops: readonly PartOpLine[];
   readonly acts: readonly PartActView[];
   readonly running: readonly PartRunning[];
+  /** Absent (key omitted) unless the part's newest job failed or was interrupted. */
+  readonly failed?: PartFailed;
 };
 
 export type PartData = { readonly research: ResearchData; readonly script: ScriptData } & L39Data & L40Data;

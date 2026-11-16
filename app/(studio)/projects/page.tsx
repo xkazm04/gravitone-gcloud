@@ -13,6 +13,8 @@ import { PRODUCE_PORT } from "./_port/wire.ts";
 import { ordered } from "./_plan/shelf.ts";
 import { NoPlan } from "./_plan/NoPlan.tsx";
 import { Plan } from "./_plan/Plan.tsx";
+import { readWorkerAction } from "./_plan/workerAction.ts";
+import { readWorker } from "./_plan/workerRead.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Projects" };
 
@@ -37,6 +39,6 @@ export default async function ProjectsPage({ searchParams }: { readonly searchPa
   return view === null ? (
     <NoPlan list={list} choices={choices.ok ? choices.value : null} port={PRODUCE_PORT} nowMs={nowMs} floorRuns={floorRuns} composing={composing} />
   ) : (
-    <Plan view={view.value} list={list} choices={choices.ok ? choices.value : null} port={PRODUCE_PORT} nowMs={nowMs} floorRuns={floorRuns} composed={false} composing={composing} />
+    <Plan view={view.value} list={list} choices={choices.ok ? choices.value : null} port={PRODUCE_PORT} nowMs={nowMs} floorRuns={floorRuns} composed={false} composing={composing} worker={{ read: readWorker(), reread: readWorkerAction }} />
   );
 }

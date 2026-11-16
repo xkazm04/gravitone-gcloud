@@ -101,6 +101,8 @@ export function PartSection() {
             upstream={[]}
             mode="part.research"
             facts={["card", "item"]}
+            running={[{ id: "job:part:kit/research", label: "run research", since: "14:02", stage: "turn 2 of 2" }]}
+            next={{ label: "script", href: "#part" }}
           />
         </div>
         <Row label="upstream">
@@ -119,6 +121,7 @@ export function PartSection() {
               href={() => "#part"}
               upstream={["research"]}
               mode="part.script"
+              failed={{ jobId: "job:part:kit/script", state: "failed", error: "turn 2 of 2: the text seat answered 529 overloaded_error - Overloaded", href: "#part" }}
             />
           </div>
         </Row>

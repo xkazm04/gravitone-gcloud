@@ -1,0 +1,113 @@
+{
+  "schema": "conform-run/1",
+  "worker": "b289baf3-e18e-46bb-a268-2e3e0028539e",
+  "subject": "hitl-approval",
+  "evaluatedAt": "2026-11-06T01:54:28.358933+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "board-decision-desk",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/board/_port/real.ts:200 listPackets drops any v1 Weir pile whose packet id, run id or source fails to parse (e.g. a source missing from PACKET_SOURCES) from the Board's rail with no marker, no log and no count, so an unclassifiable pending decision never reaches the one review surface — the fall-through arm is silent removal rather than the loud, marked default the standard requires.",
+      "techniques": [
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/board/_port/real.ts:200 An unparseable pile is skipped silently (line 202 does the same for an unknown mode); no defaulted-and-why marker, the operator never sees it."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:217 Gate state is read from the kernel store (head.state), not inferred; a decided packet refuses preview/decide. Writes go through money-guarded Server Actions (actions.ts)."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:245 Commit records who (author: operator/surface/uid), binds the preview token (what was shown) and a fresh v1 digest so a stale preview is refused."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:249 Commit hands off to a durable apply outbox (pending/applied/stuck, redrive in actions.ts); a retried ticket gets the first result back."
+        },
+        {
+          "technique": "review-queues",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/board/_port/real.ts:205 The rail is built from the system of record (kernel packets plus v1's unopened piles) with truncation stated; it has one hole, the silent drop at line 200."
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/board/_board/Board.tsx:8 The Board is the review flow (a human rules on machine output); there is no machine-initiated capability use asking for consent here."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "hitl-approval",
+      "context": "audio-composer-briefs",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "runs-console",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "ui-board-state",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "produce-compose-receipt",
+      "reason": "withdrawn after review: reviewer (sonnet): Nothing in the context's files shows that the confirm token pins the receipt version. produce.ts:161 is only a comment that the token binds the ceiling, and a search of the produce directory found no token or version logic, so the \"only its confirm spends\" and \"pins receipt version\" claims could not"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T01:54:28.358933+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "consent-gates",
+        "decision-records",
+        "fail-loud-classification-default",
+        "gate-state-machines",
+        "resume-after-decision",
+        "review-queues"
+      ],
+      "deviations": 1,
+      "context": "board-decision-desk",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T01:54:28.358933+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "consent-gates",
+        "cosmetic-vs-enforced-threshold-invariant",
+        "decision-records",
+        "fail-loud-classification-default",
+        "gate-state-machines",
+        "oracle-before-gate",
+        "resume-after-decision",
+        "unattended-mode"
+      ],
+      "deviations": 0,
+      "context": "produce-compose-receipt",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

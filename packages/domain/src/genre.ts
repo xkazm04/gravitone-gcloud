@@ -10,6 +10,10 @@
 // A VENTURE is what a channel, an album or a game becomes: one frame later nights produce for. It is born when the
 // operator keeps a night's `venture` proposal - a channel from a publishable genre, an album from kept tracks, a
 // game from its asset catalogue (S4; refused until then).
+//
+// Since spark concept-casting-stages S6 a channel venture has three more grounds beside a night's proposal: an imported
+// channel (`channel/<id>`), a proven video (`production/<id>`), and the operator's own press (`operator/<slug>`). Those
+// carry no genre, and NIGHTS DO NOT SEE THEM (`isNightVenture`): nights still read the channel files.
 
 export const GENRE_ID_RE = /^gn-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const VENTURE_ID_RE = /^vn-[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -66,6 +70,25 @@ export const BORN_VENTURE_KINDS = ["channel", "album"] as const satisfies readon
 /** Kept track clips of music seeds sharing a genre that make an album worth proposing. */
 export const ALBUM_TRACKS = 4;
 
+/** What a venture stands on: the first is a night's kept proposal, the rest are `proposal` prefixes (spark concept-casting-stages S6). */
+export const VENTURE_GROUNDS = ["night", "channel", "proven", "operator"] as const;
+export type VentureGround = (typeof VENTURE_GROUNDS)[number];
+/** The grounds a venture is born on outside a night; each is the operator's act, and each writes its own `proposal` prefix. */
+export type OperatorVentureGround = Exclude<VentureGround, "night">;
+const GROUND_PREFIX: Readonly<Record<OperatorVentureGround, string>> = { channel: "channel/", proven: "production/", operator: "operator/" };
+export const channelVentureProposal = (channelId: string): string => `${GROUND_PREFIX.channel}${channelId}`;
+export const provenVentureProposal = (productionId: string): string => `${GROUND_PREFIX.proven}${productionId}`;
+export const operatorVentureProposal = (slug: string): string => `${GROUND_PREFIX.operator}${slug}`;
+
+/** A head's ground, read from its `proposal`; a night's is `<night>/<c-id>`, whose first segment is a date. */
+export function ventureGroundOf(proposal: string): VentureGround {
+  for (const g of ["channel", "proven", "operator"] as const) if (proposal.startsWith(GROUND_PREFIX[g])) return g;
+  return "night";
+}
+
+/** Whether a head is one a night may read or produce for. Imported channels and proven-video ventures are the operator's slate only. */
+export const isNightVenture = (v: Pick<Venture, "proposal">): boolean => ventureGroundOf(v.proposal) === "night";
+
 /** The frame later nights produce inside. */
 export type VentureFrame = {
   /** The register: `deadpan, dark`. */
@@ -86,8 +109,10 @@ export type Venture = {
   readonly name: string;
   readonly kind: VentureKind;
   readonly frame: VentureFrame;
-  /** `<night>/<c-id>` of the kept proposal that birthed it. */
+  /** `<night>/<c-id>` of the kept proposal that birthed it, or a ground's own ref (`ventureGroundOf`). */
   readonly proposal: string;
+  /** The channel file this venture was imported from; nights keep reading that file. Omitted unless imported. */
+  readonly channelId?: string;
   readonly bornAt: string;
   readonly by: string;
   readonly retiredAt?: string;

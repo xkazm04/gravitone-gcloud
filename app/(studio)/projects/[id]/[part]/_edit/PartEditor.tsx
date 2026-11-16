@@ -21,17 +21,20 @@ import type { Receipt } from "@gt/domain/produce";
 import type { PartActKind, PartOp, PartReceipt, PartView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
-import { stepTab } from "@gt/ui/components/part/part.ts";
+import { nextTab, stepTab } from "@gt/ui/components/part/part.ts";
 import type { PartWorkspaceProps } from "@gt/ui/components/part/PartWorkspace.tsx";
+import { when } from "@gt/ui/components/produce/produce.ts";
 import { useKeys } from "@gt/ui/keymap/dispatch";
 
 import { settled } from "../../../../audio/_hunt/settled.ts";
 import { useShell } from "../../../../_shell/Providers.tsx";
+import { nextDoor } from "../../../_plan/doors.ts";
 import { outcomeOf, useReceipt } from "../../../_plan/receipt.tsx";
 import type { PartPort } from "../../_part/contract.ts";
 import { ResearchEditor } from "./Research.tsx";
 import { ScriptEditor } from "./Script.tsx";
 import { LaterEditor } from "./editors.tsx";
+import { useReread } from "./walk/useReread.ts";
 
 /** The frame every editor hands to PartWorkspace; the editor adds its rail, primary, inspector. */
 export type Frame = Omit<PartWorkspaceProps, "rail" | "primary" | "inspector" | "mode" | "facts">;
@@ -63,6 +66,9 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
   const inflight = useRef(false);
   const flow = useReceipt(nowMs);
   const at = { projectId: view.projectId, key: view.key };
+  // A job in flight is read back until it lands (./walk/useReread.ts); a re-read that would
+  // overwrite a write's answer or a field being typed in is dropped.
+  useReread(view, port, inflight, setView);
 
   const write = async (run: () => ReturnType<PartPort["opPart"]>): Promise<boolean> => {
     if (inflight.current) return false;
@@ -144,6 +150,11 @@ export function PartEditor({ first, port, nowMs }: { readonly first: PartView; r
     current: view.key,
     href: (key) => hrefOf(view.projectId, key),
     upstream: view.upstream.missing.map((m) => m.label),
+    // A job with no act is the Plan's launch of this part: named "plan", where it came from.
+    running: view.running.map((r) => ({ id: r.jobId, label: r.act === null ? "plan" : (view.acts.find((a) => a.act === r.act)?.label ?? r.act), since: when(r.since, nowMs), ...(r.stage === undefined ? {} : { stage: r.stage }) })),
+    next: nextDoor(view.projectId, nextTab(view.tabs, view.key, view.verdict.state === "ready")),
+    // Runs keys a kernel job as `kernel:<id>` (runs/_runs/Runs.tsx `initial.job`; Acts.tsx's hold link).
+    failed: view.failed === undefined ? null : { ...view.failed, href: `/projects/runs?job=${encodeURIComponent(`kernel:${view.failed.jobId}`)}` },
   };
 
   return (

@@ -153,6 +153,7 @@ def render(prompt, seed, refs, dst, prefix):
 
 
 def main():
+    guard.refuse_flux2("scene_demo")
     cyc = Path(sys.argv[1])
     if not cyc.is_absolute():
         cyc = ROOT / cyc

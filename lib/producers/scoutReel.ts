@@ -101,7 +101,9 @@ export const reelsJobId = (t: ReelsTarget): string => `job:scout-reels:${t.night
 const REEL_TURNS = 2;
 /** Seconds one cold frame takes: a Chromium launch, the page's setup, one screenshot. Illustrative. */
 const FRAME_SECONDS = 10;
-const REEL_SECONDS = REEL_TURNS * TURN_ESTIMATE.seconds + FRAME_SECONDS;
+/** The 8 s strip rendered to mp4 after the tile: measured 2026-11-08 on four reels at 90-216 s, the box busy. */
+const MOTION_SECONDS = 180;
+const REEL_SECONDS = REEL_TURNS * TURN_ESTIMATE.seconds + FRAME_SECONDS + MOTION_SECONDS;
 const round6 = (x: number): number => Math.round(x * 1e6) / 1e6;
 const REEL_USD = round6(REEL_TURNS * (TURN_ESTIMATE.usd ?? 0));
 const REEL_USD_RANGE: readonly [number, number] = [round6(TURN_ESTIMATE.usdRange?.[0] ?? 0), round6(REEL_TURNS * (TURN_ESTIMATE.usdRange?.[1] ?? 0))];

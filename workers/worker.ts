@@ -338,7 +338,7 @@ export async function runWorker(argv: readonly string[], bound: Result<ReadonlyM
       const behind = h.behind === undefined ? "nothing waits behind it" : `${h.behind} waits behind it`;
       io.err(`[worker] ${h.lane} is held by job ${h.jobId}${at}: credits may be spent - look first, then acknowledge it; ${behind}`);
     }
-    io.err(`[worker] ${s.started} drive(s), ${s.recovered} recovered as interrupted, ${failures} failed`);
+    io.err(`[worker] ${s.started} drive(s), ${s.recovered} recovered as interrupted${s.resumed > 0 ? ` (${s.resumed} resumed)` : ""}, ${failures} failed`);
     return failures > 0 ? 1 : 0;
   } finally {
     closeProcessKernel();

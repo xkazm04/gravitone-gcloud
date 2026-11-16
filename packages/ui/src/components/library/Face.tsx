@@ -15,9 +15,9 @@
 // poster, a keyframe, a style's best plate - is a query over its media facts (plan §6 Phase 5,
 // "cover choice ... are queries"), so a near-black render never arrives here as a cover.
 
-import { useState } from "react";
-
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { vars } from "../vars.ts";
 import { Wave } from "../wave/Wave.tsx";
 import s from "./Face.module.css";
@@ -51,29 +51,15 @@ function UnreadableFace({ size, name = "" }: { readonly size: FaceSize; readonly
   );
 }
 
-/** A picture with a failure path: a 404 or an undecodable blob becomes the unreadable face. The
- *  error is kept per url, so a different url is tried afresh; the ref catches a failure that
- *  landed before this handler was attached. */
+// The width a face is drawn at, as a hint for the blob door's variant (desk/sources.ts): a tile
+// at its least L width (the browser measures the real column, `sizes="auto"`), a row at its L
+// thumb. The preview is the detail: no hint, the original.
+const HINT: { readonly [S in FaceSize]: number | undefined } = { tile: Number.parseInt(tokens["w-lib-tile-l"], 10), row: Number.parseInt(tokens["w-lib-thumb-l"], 10), preview: undefined };
+
+/** A picture through the studio's one picture (desk/Plate): its error path, and the unreadable face
+ *  as the face of a failure. */
 function Picture({ url, size, alt }: { readonly url: string; readonly size: FaceSize; readonly alt: string }) {
-  const [failed, setFailed] = useState<string | null>(null);
-  if (failed === url) return <UnreadableFace size={size} name={alt} />;
-  return (
-    // A plain <img>: a library item is shown as its own bytes, at the size the grid gives it
-    // (the Board's `Plate` exemption from next/image, for the same reason).
-    // eslint-disable-next-line @next/next/no-img-element -- see above: an item is its own bytes, at the grid's size
-    <img
-      className={s.img}
-      src={url}
-      alt={alt}
-      loading={size === "preview" ? "eager" : "lazy"}
-      decoding="async"
-      draggable={false}
-      onError={() => setFailed(url)}
-      ref={(el) => {
-        if (el !== null && el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== "") setFailed(url);
-      }}
-    />
-  );
+  return <Plate className={s.img} src={url} alt={alt} lazy={size !== "preview"} width={HINT[size]} failed={<UnreadableFace size={size} name={alt} />} />;
 }
 
 /** The face, filling its box. `alt` names a picture in the preview; tiles and rows are named by their option. */

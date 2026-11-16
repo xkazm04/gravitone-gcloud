@@ -25,6 +25,8 @@ import { DatabaseSync } from "node:sqlite";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { hydrated } from "./_control.ts";
+
 const ROOT = process.cwd();
 const PORT = Number(process.env["AUDIO_INSIGHT_PORT"] ?? 3254);
 const DIST = process.env["AUDIO_INSIGHT_DIST"] ?? ".next-l66";
@@ -185,7 +187,9 @@ test("rubric: a pressed step lands in takes.json and as one take.rated event; th
 test("batch: music is a receipt that writes nothing, then N dry Suno drafts; effects price through the sfx producer", async ({ page }) => {
   await page.goto("/audio?s=batch");
   const before = sunoJobs().length;
-  await page.getByRole("textbox").first().fill("slow synthwave, warm pads");
+  const brief = page.getByRole("textbox").first();
+  await hydrated(brief, "the batch prompt");
+  await brief.fill("slow synthwave, warm pads");
   await page.getByRole("button", { name: /^Price 2 × take/ }).click();
   await expect(page.getByText("Render box · Chrome").first()).toBeVisible();
   expect(sunoJobs().length).toBe(before);

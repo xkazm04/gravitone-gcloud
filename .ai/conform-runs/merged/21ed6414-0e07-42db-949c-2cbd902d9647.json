@@ -1,0 +1,70 @@
+{
+ "schema": "conform-run/1",
+ "worker": "21ed6414-0e07-42db-949c-2cbd902d9647",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-11-06T02:42:18.777470+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:114 The window filter ranges over t = coalesce(occurredAt, at) (filter.ts windowOf), but neither the range chip nor the from/to URL params name that clock. A backfilled fact therefore falls in the week it happened with no label saying so, against two-clock-records' rule that every query names the clock it ranges over.",
+   "techniques": [
+    {
+     "technique": "two-clock-records",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:114 Both clocks are displayed in the detail (vocab.ts:95 'recorded'), but the window's clock is never named in the interface. windowOf on `t` is stated only in a code comment."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:45 Keyset pages state whether they are capped. scanned/exhausted turn a partial text scan into a 'searched N' chip, facet counts cover the whole indexed filter, and reads go through principal(\"read\")."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:20 The screen's server actions expose reads only; no mutation of the trail can be expressed from this surface."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/page.tsx:46 A failed v1 projection sync, the recorder of projected acts, is surfaced on the query surface rather than swallowed."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "audit-logging",
+   "context": "run-records-and-slots",
+   "reason": "evidence leans on resources/load.ts, which is not a tracked file"
+  },
+  {
+   "subject": "audit-logging",
+   "context": "ui-ledger-timeline",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T02:42:18.777470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "two-clock-records"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

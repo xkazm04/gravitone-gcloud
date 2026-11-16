@@ -1,0 +1,99 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6c2d43b1-c1d6-43ba-97a2-bcafd78dc282",
+ "subject": "copy-quality-gates",
+ "evaluatedAt": "2026-11-08T01:13:37.325360+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-mesh-gates",
+   "subject": "copy-quality-gates",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/mesh/gates/mesh-score.ts:61 These files grade mesh geometry, rigs and scale, not source-language copy. A search of lib/foundry/mesh/gates for locale, i18n, termbase, copy-contract and copy:check found 0 hits. The only strings are budget-preset labels and scorecard reasons, keyed by FindingCode rather than prose, so the subject's precondition (a copy catalog that a gate admits) does not hold.",
+   "techniques": [
+    {
+     "technique": "rendered-string-extraction",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/mesh/gates/polycount.ts:57 The only display strings are preset names in a geometry budget table, not a copy catalog. They are listed so the absence claim is not overstated."
+    }
+   ],
+   "absenceTerms": [
+    "locale",
+    "i18n",
+    "termbase",
+    "copy:check"
+   ]
+  },
+  {
+   "context": "ui-tokens-and-catalog",
+   "subject": "copy-quality-gates",
+   "bundle": "localization",
+   "state": "deviation",
+   "evidence": "packages/catalog/src/projects.ts:49 @gt/catalog holds rendered product copy: DISCIPLINE_NOTE is shown under each discipline pill in the create dialog, preset lines are shown in the showcase, and labels are shown on the landing and the Library. It includes about 11 em dashes in projects.ts alone, which docs/i18n/copy-contract.json bans. The contract's sources (app/**/page.tsx, app/_landing/*.tsx, app/layout.tsx) never reach packages/catalog, and its out-of-scope note does not name it, so these strings sit in an undeclared coverage hole behind a green copy:check.",
+   "techniques": [
+    {
+     "technique": "rendered-string-extraction",
+     "verdict": "deviation",
+     "evidence": "packages/catalog/src/projects.ts:49 The copy sits outside the gate's sources and is not declared out of scope. Checking matchGlob against the contract globs gave false for packages/catalog/src/libraryAreas.ts. A banned em dash survives here."
+    },
+    {
+     "technique": "format-aware-check-catalog",
+     "verdict": "deviation",
+     "evidence": "packages/catalog/src/presets.ts:67 This TS dictionary module is a serialization the gate never registered, so no structural, typography or case check runs on its full-sentence units."
+    },
+    {
+     "technique": "source-defects-from-cross-language-agreement",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/libraryAreas.ts:22 The labels are literal single-locale English with no target locales, so no target findings exist to group."
+    },
+    {
+     "technique": "layered-mechanical-gate",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/tokenLint.ts:15 The context's only lint is a CSS design-token gate with no copy layer, so it is not the copy gate this technique describes."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "copy-quality-gates",
+   "context": "landing-cosmos-shell",
+   "reason": "evidence leans on engine/nav.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T01:13:37.325360+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "copy-quality-gates"
+   ],
+   "techniques": [
+    "rendered-string-extraction"
+   ],
+   "deviations": 0,
+   "context": "foundry-mesh-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T01:13:37.325360+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "copy-quality-gates"
+   ],
+   "techniques": [
+    "format-aware-check-catalog",
+    "layered-mechanical-gate",
+    "rendered-string-extraction",
+    "source-defects-from-cross-language-agreement"
+   ],
+   "deviations": 1,
+   "context": "ui-tokens-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

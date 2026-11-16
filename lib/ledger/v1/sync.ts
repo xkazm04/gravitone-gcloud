@@ -52,7 +52,7 @@ export const SYNC_CLAIM = "v1-sync";
 /** How stale the ledger may be before a reader starts a sync. */
 export const SYNC_INTERVAL_MS = 30_000;
 /** How long a sync may run before its claim counts as dead. */
-export const SYNC_TTL_MS = 5 * 60_000;
+const SYNC_TTL_MS = 5 * 60_000;
 
 const SYNC: Actor = { kind: "machine", id: "ledger-sync" };
 

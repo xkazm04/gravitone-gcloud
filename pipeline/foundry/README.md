@@ -1,7 +1,7 @@
 # The Foundry — mass generation, hand culling, and the loop that turns one into knowledge
 
 **The question.** Every dimension of a game trailer can now be produced on this
-machine — script and prompts (Claude CLI), stills (Flux 2 in ComfyUI), clips
+machine — script and prompts (Claude CLI), stills (Codex `image_gen`; the forge's reference-window graph was Flux 2's and refuses since its removal, 2026-11-08), clips
 (Wan / minimax), music and effects (ElevenLabs) — and a vision model that runs
 locally can read a frame well enough to label its craft (see `../vlm-probe`).
 The machine can therefore run for an evening and leave hundreds of candidates
@@ -19,7 +19,7 @@ Two abilities are under test, and they are deliberately measured separately:
 ```
                  PHASE 1 · FORGE (unattended, hours, local GPU)
 reference frame ──annotate──> craft words ──× style recipe──> candidate ──grade──> run.json
-   (vlm-probe)   qwen3.8:27b   replicate.py      styles.json   Flux 2      qwen3.8:27b
+   (vlm-probe)   qwen3.8:27b   replicate.py      styles.json   (refused)   qwen3.8:27b
                                                                               │
                  PHASE 2 · CULL (a human, minutes, /foundry)                  ▼
           keep / reject per tile ──commit──> delete rejected · ledger.json · styles.json evidence · findings.md
@@ -43,7 +43,7 @@ compiled to effect language by `replicate.py` (the same lane that proved the
 vocabulary carries a shot), with the source's own `texture` field dropped and
 the style recipe put first. The `text` mechanism sees nothing else — so what
 it reproduces is what the *vocabulary* carried. The `ref-early` mechanism
-adds the source frame as a Flux 2 reference latent for the first 35% of the
+adds the source frame as a reference latent (Flux 2's graph, refused since its removal) for the first 35% of the
 denoise only: composition is decided early, texture late (measured in the
 consistency spike, where the inverse window carried a face), so it keeps the
 staging and sheds the source's rendering. It is the empirical challenger, and

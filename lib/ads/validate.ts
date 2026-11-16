@@ -446,8 +446,8 @@ export function parseIdeas(
 
 /* ── round 2: scenarios ───────────────────────────────────────────────────── */
 
-export const SUPER_MAX_WORDS = 7;
-export const MOTION_MAX_WORDS = 25;
+const SUPER_MAX_WORDS = 7;
+const MOTION_MAX_WORDS = 25;
 
 /** The super's hold: 0.2s a word plus 2s, for nine words or fewer
  *  (ad-finishing/drawn-supers). Never shortened — words move or go instead. */

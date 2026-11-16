@@ -75,6 +75,13 @@ export const binsFrom = (env: Readonly<Record<string, string | undefined>>): Bin
   ffprobe: env["FFPROBE"]?.trim() || "ffprobe",
 });
 
+/** What to do when a binary is missing: ./doctor.ts's remedy line, and the cover's link door's refusal. */
+export const BIN_REMEDY: Readonly<Record<keyof Bins, string>> = {
+  ytdlp: "install yt-dlp (https://github.com/yt-dlp/yt-dlp/releases) onto PATH, or set YTDLP to its full path",
+  ffmpeg: "install ffmpeg (https://www.gyan.dev/ffmpeg/builds/) onto PATH, or set FFMPEG to its full path",
+  ffprobe: "ffprobe ships with ffmpeg: put it on PATH, or set FFPROBE to its full path",
+};
+
 export type IngestDeps = {
   readonly spawn: Spawn;
   readonly bins: Bins;
@@ -221,7 +228,7 @@ const tooLong = (s: number): string => `the video runs ${clock(s)}; a night take
  * runtime yt-dlp's download answers HTTP 403 (measured 2026-10-22 on yt-dlp 2026.08.19, the
  * dojo overlay's 2026-08-31 note). Node is already this process's own runtime.
  */
-const YTDLP_JS = ["--js-runtimes", "node"] as const;
+export const YTDLP_JS = ["--js-runtimes", "node"] as const;
 
 async function download(url: string, media: string, deps: IngestDeps): Promise<string> {
   const probe = await tool(deps, "ytdlp", ["--no-warnings", "--no-playlist", ...YTDLP_JS, "--skip-download", "--print", "duration", url], { timeoutMs: 60_000, maxBuffer: 1024 * 1024 });

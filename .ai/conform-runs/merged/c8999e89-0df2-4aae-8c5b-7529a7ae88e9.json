@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c8999e89-0df2-4aae-8c5b-7529a7ae88e9",
+ "subject": "translation-pipeline-topology",
+ "evaluatedAt": "2026-11-06T00:42:15.756371+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "kernel-python-protocol",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/py/job.py:7 These modules are the Python side of the SQLite kernel protocols (jobs, lease, ledger, meter, styles), and 'languages' here means Python and Node, not human locales; a grep of packages/kernel (py and src) for i18n, hreflang, pseudoloc and gettext found nothing, so there is no translated content, catalog or pipeline for the subject to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "hreflang",
+    "pseudoloc",
+    "gettext"
+   ]
+  },
+  {
+   "context": "article-human-gate-and-landing",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "lib/articles/mediumPackage.ts:259 The Medium package and the registry landing ship each post in one fixed language (lang=\"en\"), with no translated variants, derived store or canonical fallback; a grep of lib/articles for translation, i18n, hreflang and pseudoloc found nothing (the only 'localization' hit is a tag string inside the dry stand-in fixture post).",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudoloc"
+   ]
+  },
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/layout.ts:351 The cosmos engine paints paper and raster layers and touches locale only once, to hard-pin number formatting to en-US; it holds no translatable strings, catalog or serving path, and a grep of app/_landing for translation, i18n, hreflang and pseudoloc found nothing (the 'translate' hits are CSS and canvas transforms).",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudoloc"
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/contract.ts:5 The part port only loads, edits, undoes and prices part views (scripts, research, scenes) from kernel records, and none of these carries a language field or translated variant; a grep of app/(studio)/projects for translation, i18n, hreflang and pseudoloc found nothing, and neither did a grep of _part for language or lang.",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudoloc"
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_port/contract.ts:6 The projects port serves project lists, choices, launches and re-routes as kernel and producer records with no locale dimension; a grep of app/(studio)/projects for translation, i18n, hreflang and pseudoloc found nothing (the word 'catalog' here means @gt/catalog recipes, not a string catalog).",
+   "techniques": [],
+   "absenceTerms": [
+    "translation",
+    "i18n",
+    "hreflang",
+    "pseudoloc"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-06T00:42:15.756371+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:42:15.756371+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "article-human-gate-and-landing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:42:15.756371+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:42:15.756371+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T00:42:15.756371+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

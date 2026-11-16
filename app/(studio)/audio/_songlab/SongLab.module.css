@@ -1,0 +1,10 @@
+/* The knockout desk (the winner's .main split): the bracket column and the booth column, which keeps
+   the winner's clamp(392px, 30vw, 470px), composed from tokens: the docked detail plus a library caption
+   (344 + 48 = 392) to the NEXT button's widest plus a pile less a nudge (360 + 112 - 2 = 470). */
+.lab{--booth-col:clamp(calc(var(--w-detail) + var(--h-lib-cap)),30vw,calc(var(--w-next) + var(--w-pile) - var(--sp-nudge)));flex:1;min-height:0;display:flex;flex-direction:column}
+.gaps{flex:none;display:flex;flex-direction:column;gap:var(--sp-1);padding:var(--sp-2) var(--sp-loose);border-bottom:1px solid var(--hair)}
+.main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--booth-col)}
+.bcol{min-width:0;min-height:0;display:flex;flex-direction:column}
+.boothcol{min-height:0;overflow:auto;border-left:1px solid var(--hair);background:var(--panel-ground)}
+.empty{padding:calc(var(--sp-6) + var(--sp-5)) var(--sp-wide);display:flex;flex-direction:column;gap:var(--sp-4);align-items:flex-start}
+.big{font:600 var(--fs-h2)/1.3 var(--sans);color:var(--ink-bright)}

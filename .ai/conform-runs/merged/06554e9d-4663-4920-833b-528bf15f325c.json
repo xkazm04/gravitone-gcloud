@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "06554e9d-4663-4920-833b-528bf15f325c",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-06T01:12:37.195274+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "trailer-structure-rules",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/script/trailer/rules/spine.ts:1 These are pure dramaturgy checkers that emit findings and say they are never a gate. A search of lib/script/trailer/rules found no consent, hitl or awaiting construct and no pending or decision state. Their 'unmeasured' verdict leaves judgement to a human (cards.ts:54) but holds no approval mechanism.",
+   "techniques": [],
+   "absenceTerms": [
+    "consent",
+    "hitl",
+    "awaiting"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T01:12:37.195274+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "trailer-structure-rules",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

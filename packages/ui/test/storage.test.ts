@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { parseJsonAt } from "@gt/domain/door";
 import { identityFlip } from "../src/storage/identity.ts";
 import { createStore, defineKey, type KeyDef, type StorageLike, type Store } from "../src/storage/store.ts";
 import { TROUBLE_COPY, classify, troubleOf } from "../src/storage/trouble.ts";
+
+const readJson = (door: string, text: string) => parseJsonAt(door, z.unknown(), text);
 
 /** A Storage stand-in that can be made to fail the way browsers do. */
 class FakeStorage implements StorageLike {
@@ -29,7 +32,7 @@ const TIER = defineKey({ key: "gravitone.cosmos-tier.v1", scope: "device", schem
 
 const make = (keys: readonly KeyDef[] = [VIEW, RECENT, TIER]): { store: Store; fake: FakeStorage } => {
   const fake = new FakeStorage();
-  const r = createStore(keys, () => fake);
+  const r = createStore(keys, () => fake, readJson);
   if (!r.ok) throw r.error;
   return { store: r.value, fake };
 };
@@ -80,9 +83,9 @@ describe("registration is the eviction list", () => {
     expect(report.failures.map((e) => troubleOf(e))).toEqual(["unavailable", "unavailable"]);
   });
   it("refuses a registration that could lie", () => {
-    expect(createStore([VIEW, VIEW], () => null).ok).toBe(false);
-    expect(createStore([defineKey({ key: "theirs.key", scope: "device", schema: z.string(), why: "x" })], () => null).ok).toBe(false);
-    expect(createStore([defineKey({ key: "gravitone.x", scope: "device", schema: z.string(), why: " " })], () => null).ok).toBe(false);
+    expect(createStore([VIEW, VIEW], () => null, readJson).ok).toBe(false);
+    expect(createStore([defineKey({ key: "theirs.key", scope: "device", schema: z.string(), why: "x" })], () => null, readJson).ok).toBe(false);
+    expect(createStore([defineKey({ key: "gravitone.x", scope: "device", schema: z.string(), why: " " })], () => null, readJson).ok).toBe(false);
   });
 });
 
@@ -136,13 +139,13 @@ describe("storage failures are Results, never throws", () => {
   it("a backing that throws on access (blocked site data) is unavailable", () => {
     const r = createStore([VIEW], () => {
       throw { name: "SecurityError" };
-    });
+    }, readJson);
     if (!r.ok) throw r.error;
     const read = r.value.read(VIEW);
     expect(read.ok === false && troubleOf(read.error)).toBe("unavailable");
   });
   it("no backing at all (a server render) is unavailable, not a crash", () => {
-    const r = createStore([VIEW], () => null);
+    const r = createStore([VIEW], () => null, readJson);
     if (!r.ok) throw r.error;
     expect(r.value.read(VIEW).ok).toBe(false);
     expect(r.value.snapshot(VIEW)).toBeNull();

@@ -1,0 +1,116 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0940969d-0156-4981-8d50-bf1e4e49df77",
+ "subject": "app-shell",
+ "evaluatedAt": "2026-11-06T02:18:42.396623+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/_landing/cosmos/Cosmos.tsx:51 The engine and registry chunks are loaded with a bare .then and no catch, retry or stated failure, so a chunk that fails to load (offline, post-deploy version skew) leaves the static sky skeleton with no account of why and no cure, which lazy-section-loading forbids.",
+   "techniques": [
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "deviation",
+     "evidence": "app/_landing/cosmos/Cosmos.tsx:51 The frame-eager split is right: the skeleton paints first and the engine is its own chunk. But a failed import is an unhandled rejection with no retry and no failure in the viewport."
+    },
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/_landing/cosmos/engine/nav.ts:64 The earlier stale deviation is fixed. Each level now pushes a same-URL browser entry carrying pcDepth, and popstate steps the stack (onPopState), so browser Back moves between levels instead of leaving the page. navTo (line 194) is the one navigate door, and the comment above the history code says the location is kept in state."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "app/_landing/cosmos/engine/index.ts:154 Every listener, timer, frame, observer and the raster worker goes through one Life owner, and destroy() reaps all of them. Each resident has a named reaper."
+    }
+   ]
+  },
+  {
+   "context": "studio-shell",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/_shell/HeaderBar.tsx:57 Every section link sets prefetch={false}. In this Next version that turns off prefetch on hover as well (link.md: 'false: Prefetching will never happen both on entering the viewport and on hover'), so pointing at or focusing a nav entry warms nothing, against lazy-section-loading's prefetch on intent.",
+   "techniques": [
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:57 This is a deliberate choice: the header comment says 'eight sections are not rendered ahead of a click' because the Floor walks every v1 store. The technique asks for prefetch on expressed intent, and none happens."
+    },
+    {
+     "technique": "navigation-model",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/nav.ts:47 SECTIONS is one closed registry with stable ids. The active section is derived from the pathname (longest prefix), and the header (aria-current) and agentNav both read the same registry."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:52 One flat level, with group separators that are labels rather than destinations. No third shell level."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/_shell/Providers.tsx:4 One enumerable host lists every resident (keymap dispatcher, layer stack, toast region, storage eviction, cookie renewal) with its reaper. The toast region is always mounted (line 119). Sign-out does a full load as the reaper (line 111), and a failed renewal surfaces as a toast."
+    },
+    {
+     "technique": "badge-and-attention",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/_shell/HeaderBar.tsx:11 The header no longer draws any attention badge: the ledger +N badge was removed on 2026-10-24. bell.ts only feeds the dev harness (HarnessBridge), not a visible nav badge."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "app-shell",
+   "context": "studio-routes-and-redirects",
+   "reason": "evidence leans on calendar/redirect.ts, which is not a tracked file"
+  },
+  {
+   "subject": "app-shell",
+   "context": "kit-design-system-specimens",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T02:18:42.396623+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "lazy-section-loading",
+    "navigation-model",
+    "shell-hosted-services"
+   ],
+   "deviations": 1,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T02:18:42.396623+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "badge-and-attention",
+    "lazy-section-loading",
+    "nav-hierarchy",
+    "navigation-model",
+    "shell-hosted-services"
+   ],
+   "deviations": 1,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

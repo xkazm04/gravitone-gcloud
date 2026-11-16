@@ -140,7 +140,7 @@ export const MUTANTS: Mutant[] = [
     id: "exit-login-not-detected",
     probe: "cli-exit-classification.probe.spec.ts",
     file: "lib/claudeCli.ts",
-    find: "/login|auth|credential/i.test(stderr)",
+    find: "/not logged in|\\/login\\b|invalid api key|login expired|session has expired/i.test(stderr)",
     replace: "/zzz-never-matches/i.test(stderr)",
     why: "A logged-out CLI is reported as a generic crash instead of telling the creator to sign in.",
   },
@@ -567,5 +567,13 @@ export const MUTANTS: Mutant[] = [
     find: "if (!text) throw new ImagingError(\"Ollama returned an empty recognition.\"",
     replace: "if (false) throw new ImagingError(\"Ollama returned an empty recognition.\"",
     why: "The local eye answers empty content and the caller receives a green, empty judgement that nothing grades.",
+  },
+  {
+    id: "store-dir-list-drops-mesh",
+    probe: "store-dir-isolation.probe.spec.ts",
+    file: "playwright.config.ts",
+    find: "\"MESH_STORE_DIR\", ",
+    replace: "",
+    why: "A store root lib/ reads drops out of the central isolation list and the next probe that touches it writes into the operator's foundry-out tree.",
   },
 ];

@@ -26,6 +26,7 @@ const ROOT = vi.hoisted(() => {
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { MERGED_WING, runCli } from "../../pipeline/scout.mts";
 import { morning } from "../../lib/foundry/scout/acts.ts";
 import type { NightBudget } from "../../lib/foundry/scout/budget.ts";
@@ -43,6 +44,8 @@ import type { IdeaCandidate, Night, NightCommit } from "../../lib/foundry/scout/
 import { parseWingRunId, wingRunId, type ScoutWing } from "../../lib/foundry/scout/wing.ts";
 import { activeWing, withWing } from "../../lib/foundry/scout/wingScope.ts";
 import type { SpawnResult } from "../../lib/foundry/scout/ingest.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
@@ -292,7 +295,7 @@ describe("the CLI: one night type, the archive by status only", () => {
   const cli = async (argv: string[]): Promise<{ code: number; out: string[]; err: string[] }> => {
     const out: string[] = [];
     const err: string[] = [];
-    const code = await runCli(argv, { env: { GRAVITONE_DRY_ONLY: "1" }, out: (x) => out.push(x), err: (x) => err.push(x) });
+    const code = await guardedRunCli(argv, { env: { GRAVITONE_DRY_ONLY: "1" }, out: (x) => out.push(x), err: (x) => err.push(x) });
     return { code, out, err };
   };
 

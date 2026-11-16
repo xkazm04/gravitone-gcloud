@@ -1,0 +1,13 @@
+/* The loading frames' own spacing (./Frame.tsx): a region's inset before its content lands, and a
+   region whose marks take its whole height. Layout only - every region class is the screen's own. */
+.pad{padding:var(--sp-4) var(--sp-5);min-width:0;min-height:0}
+.fill{height:100%;display:flex;flex-direction:column}
+/* The studio's not-found and error bodies (../../not-found.tsx, ../../error.tsx): the whole of
+   the studio frame under the header. */
+.whole{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.failed{flex:1;min-height:0;display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-4);padding:var(--sp-page);outline:none}
+/* A row whose content is one small control (a crumb trail, a head's acts) or one line of key caps:
+   held at that height, so the region below does not move when the row fills. */
+.control{height:var(--h-control-sm)}
+.chip{height:var(--h-chip)}
+.tabs{flex:1 1 auto;height:var(--h-control);display:flex;flex-direction:column}

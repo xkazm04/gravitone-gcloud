@@ -1,0 +1,288 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b7c08f51-7b85-4035-b6c5-9afbcf2226e0",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-09T01:26:34.918714+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:102 The clip inspector colours sync from the stored status word while c.offsetMs sits beside it, so a clip nudged to +300 ms still reads an emerald \"ok\" because no derived cut ever carries status \"drift\".",
+   "techniques": [
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:225 Blocks are positioned and sized from one seconds-to-pixels scale on one ruler, in stable picture/voice/music lanes; Cut.tsx feeds them drawnS, so the bench and the block share a value. No legend names the states."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:102 The 50 ms nudge, signed readout and snap-to-mark exist, but status does not follow the measurement: a non-zero offset still shows ok."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 A refused cue and a never-rendered cue collapse into one missing look; ClockBlock has no refused state. Missing plates and voice lines are drawn honestly."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:11 A cue address is whole scenes only, so it cannot enter or exit mid-scene; no mark-plus-offset form exists. Purpose and tempo fields per cue are present."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The mark is drawn from the port's derived value and a null turn draws nothing; the ruler draws it once."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 The poster preview asks for a seeded frame by index, and the compositor header states every value depends on seed and frameIndex."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:75 The monitor has no onError and its no-plate badge needs f.blob undefined, so an undecodable blob draws a blank monitor unlabelled. Render.tsx:76 handles the same class with a named ErrorLine."
+    }
+   ],
+   "registryProposal": "drift-correction's status rule states only the zeroing direction (an offset brought to zero reads as placed). Code can satisfy that sentence and never show drift at all, as here; the rule should also say a non-zero offset outside tolerance must read as drifting unless it is authored as intentional."
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:33 These files only route the cut part to CutEditor in the media context and edit text upstream of assembly: a search of the listed files for compileCut, cutDocument, ffmpeg, drawnStart, nudge, offsetMs, timeline and multitrack found nothing, and the only time-scaled drawing is the ad scenario's illustrative shot bar.",
+   "techniques": [
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Scenarios.tsx:32 A pitch-stage shot bar for choosing a scenario, not a working timeline; the technique exempts illustrative strips."
+    }
+   ],
+   "absenceTerms": [
+    "compileCut",
+    "cutDocument",
+    "ffmpeg",
+    "drawnStart",
+    "nudgeOffsets"
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 The view's status only ever maps drift to ok and deriveTimeline stamps only ok or missing, so a dialled offset never surfaces as drift and the finish line's drift row passes at any offset.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 shownStatus can only clear a stored drift; the only status \"drift\" in the tree is the hand-typed TIMELINE in lib/studio/score.ts:296, reachable solely for the seeded fixture project."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The score re-implements the rule that the cut gets from turnOf (fixtureCut.ts:143), so one structural fact has two derivations; both silently take the first match."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:89 Coverage reduces over spotted cues whether or not a take exists, so a cut with no rendered music reports every spotted second under the editor's \"seconds scored\" tally, with no refused total."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:127 A cue span is stored as a list of whole scene ids, which re-derives on a retime but cannot resolve inside a scene."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn start comes from the same stored offset the bench shows. Caveat: fps: 25 at line 137 is a literal, separate from CUT_FPS in lib/cutExport.ts."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 An export row is named by the digest of the compiled document, so a version of the cut is a comparable source."
+    }
+   ]
+  },
+  {
+   "context": "audio-composer-briefs",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/audio/brief.ts:24 A brief here asks only for tempo, key and length with no position on any clock: a case-insensitive search of the whole audio component directory for timeline, compileCut, deriveTimeline, offsetMs and storyboard found nothing, and the one picture word is the sfx technique label picture-as-timing-brief in batch.ts:42.",
+   "techniques": [
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/audio/batch.ts:42 A selectable prompt-technique label for standalone sound generation; nothing here places a cue against picture."
+    }
+   ],
+   "absenceTerms": [
+    "timeline",
+    "compileCut",
+    "deriveTimeline",
+    "offsetMs",
+    "storyboard"
+   ]
+  },
+  {
+   "context": "bound-producers",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/producers/score.ts:103 A music refusal ends the job as a fatal sentence and nothing lands on the spot, so the refusal is never recorded at the region of the clock it costs and the cue reads the same as one never rendered.",
+   "techniques": [
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "lib/producers/score.ts:103 lib/music/errors.ts keeps refused distinct from failed, but here it is only a job outcome. Motion's WAN_LIVE refusal does say its seam honestly."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "lib/producers/score.ts:182 Landing writes only takes that were made, so no refused-silence outcome reaches the spotting record. Cue durations are correctly derived from the picture at line 67."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "deviation",
+     "evidence": "lib/producers/motion.ts:54 Every clip is briefed at a fixed 5 s and ClipRequest carries no duration, so the brief does not state the length of the timeline slot it must fill."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "lib/producers/cut.ts:184 The export renders a deterministic compiled document, and the job is identified by that document's hash."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "conformant",
+     "evidence": "lib/producers/cut.ts:183 Judged on the producer's share only: dialled offsets are read from the stored record into the render, so a correction ships as data without regenerating material."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/producers/cut.ts:212 Segments the export could not reach are booked on the export record; an absent plate is carried as a gap in a draft animatic, which the technique allows."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "lib/producers/score.ts:67 Cue timing is computed from the same picture projection the cut derives its clock from, so there is one time authority."
+    },
+    {
+     "technique": "storyboard-grid-conditioning",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/motion.ts:182 Each shot is anchored on its own plate; the technique names per-shot frame anchoring as the stronger instrument when an exact start frame exists."
+    },
+    {
+     "technique": "unreferenced-channels-resample",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:41 Narration comes from an offline speech pipeline with one stored voice and the animatic picture is stills, so no generator-emitted sound channel reaches the cut."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/voice.ts:33 A line is held whole against its card and nothing places a cue inside a clip; a search of lib/ for alignment payload names hit only music-clip's lyric code."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T01:26:34.918714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:26:34.918714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "multitrack-timeline-discipline"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:26:34.918714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:26:34.918714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "music-spotting-against-picture"
+   ],
+   "deviations": 0,
+   "context": "audio-composer-briefs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:26:34.918714+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "silent-defects-get-a-code-or-an-error",
+    "storyboard-grid-conditioning",
+    "unreferenced-channels-resample"
+   ],
+   "deviations": 1,
+   "context": "bound-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

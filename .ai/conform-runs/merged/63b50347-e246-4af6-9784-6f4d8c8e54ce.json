@@ -1,0 +1,233 @@
+{
+ "schema": "conform-run/1",
+ "worker": "63b50347-e246-4af6-9784-6f4d8c8e54ce",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T00:05:32.173470+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "run-records-and-slots",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/test/records.options.test.ts:163 The test named 'no second spelling remains' reads three hand-listed files, so a fourth site spelling the ceiling crossing its own way turns nothing red and the claim covers only the list.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/test/records.options.test.ts:163 A uniformity claim runs over a hand-written population of three files instead of one derived from the tree. The needle also misses a '>=' comparison."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/test/records.test.ts:23 The helper is named store() and opens :memory:, which store.ts:134 exempts from the WAL requirement production holds. The mode fork is not stated in the name; the same helper is in records.runs, records.reroute and records.preflight. These files make no locking claim, so the defect is the unnamed fork, not a known wrong result."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/slots.process.test.ts:58 The two-process claim is asserted as a count of distinct claimed slots under a fixed clock; the 60 s timeout is only a hang guard."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/slots.claim.test.ts:18 Each file owns an OS-temp scratch directory with a named reaper, so nothing touches the operator's store."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:4949 The slot sweep's window comparison has a named mutant bound to the test file that claims to guard it; the context has further entries for sweep, core, import and records."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/slots.mode.test.ts:104 The L63 cases use a readiness that really reads the store, so the ordering of the existence check against the write is reached instead of answered by a stub."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/slots.child.ts:25 The child process runs the shipped sweep, which production reaches from packages/producers/src/publish/tick.ts."
+    }
+   ]
+  },
+  {
+   "context": "bound-producers",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/producer-gpu-harness.ts:25 This second copy of the interpreter probe lacks the CI throw that packages/kernel/test/helpers.ts:30 added, so on a runner without Python every forge and Dojo describe.skipIf block skips and the lane still reports green.",
+   "techniques": [
+    {
+     "technique": "platform-quirk-absorption",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/producer-gpu-harness.ts:25 The missing-interpreter quirk is absorbed in the kernel helper with its reason attached, but this copy returns undefined under CI and neither forge nor Dojo tests print a warning, so one entry point stays unabsorbed."
+    },
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/worker-lanes.test.ts:66 The test claims 'every studio step' over a hand copy of the registry's unexported STEPS, so a tenth step bound there is outside the assertion and nothing goes red."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "tests/golden-path/producer-registry-loads.probe.spec.ts:64 The static-import walk strips comments, skips type-only imports and declares a floor on what it read, and the file explains why the site cannot be witnessed by importing."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/produce-real.test.ts:47 The process kernel is pointed at a temp store before any import resolves, with the incident that forced it recorded beside the line."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:2385 Bound producers carry named mutants on production lines, each tied to the test file claimed to guard it."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/producer-gpu-harness.ts:47 The universe is a file store built by the shipped constructor, so WAL and the full migration chain match what the Python and Node children open."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/worker-lanes.test.ts:18 The test reads the registry the worker binds and spawns the real workers/runner.mts instead of composing its own producer list."
+    }
+   ]
+  },
+  {
+   "context": "studio-routes-and-redirects",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/calendar/page.tsx:13 The redirect targets are lifted into pure functions and tested there, but no test drives this page's adoption of them, so reading the wrong query key or dropping the call leaves every test green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/calendar/page.tsx:13 Tests cover the target functions only. I found no test or live spec driving /calendar, /foundry, /playground or /articles, and studio-routes.live.spec.ts:54 skips redirect-only pages in its legibility walk. Neither redirect file nor test names the uncovered crossing. /studio/[projectId] is excluded here because legibility.live.spec.ts:80 navigates to it."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/clipboard.test.ts:44 The 'every copy site' walk over app/ declares no floor on files read and does not check its exemption list in both directions; its needle also misses an aliased call of the shape clipboard.ts:9 itself uses."
+    },
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/agent-nav.test.ts:15 The go_to tool's enum is compared with a population derived from the shell's own SECTIONS."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:6085 The target function has a named mutant with a recorded red result; this proves the pure half only."
+    }
+   ]
+  },
+  {
+   "context": "review-and-runs-history",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/test/components/review-schedule.test.ts:47 The test claims 'only' over the PacketSource union but samples article, mv and forge, so adding suno or another source to SCHEDULE_CHANNELS offers a calendar control at the Board with this test green and no other test reading that table.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "packages/ui/test/components/review-schedule.test.ts:47 A closed-set claim runs over three hand-picked members. The Runs half of this context does the opposite and derives its population at runs.test.ts:174."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:1103 The day-line's packing priority has a named mutant bound to runs.test.ts, with further entries for thread, lanes, schedule and packetItems."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/runs.live.spec.ts:25 The live lane waits on a product-published identifier and a measured state rather than on a timer or a style hook."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "floor-lanes-runs",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T00:05:32.173470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "gate-scope-is-not-report-scope",
+    "isolation-lanes",
+    "negative-control-tests",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "run-records-and-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:05:32.173470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "gate-scope-is-not-report-scope",
+    "isolation-lanes",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "platform-quirk-absorption",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "bound-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:05:32.173470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "gate-scope-is-not-report-scope",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "studio-routes-and-redirects",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T00:05:32.173470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "gate-scope-is-not-report-scope",
+    "live-app-harness",
+    "negative-control-tests"
+   ],
+   "deviations": 1,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

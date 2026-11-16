@@ -112,14 +112,14 @@ export const LISTEN_SCHEMA: Record<string, unknown> = {
 };
 
 /** Seconds a section may run past the measured length: decoders disagree on an mp3's length by a frame or two. */
-export const SECTION_SLACK_S = 2;
+const SECTION_SLACK_S = 2;
 
 /** Share of the take's length a listener's timeline may run past the take: its timestamps are estimates
  *  that stretch on a full song (live 2026-10-29, three reads of one 215.7 s Suno take ran 2.4%, >2.2% and
  *  8.6% long: a last section ending at 221 s, a seventh STARTING at 220.5 s, a last section ending at
  *  234.3 s; a 2 s door threw all three paid reads away). Inside this window an end is trimmed to the
  *  take and a section starting past the end is dropped; beyond it the read is refused as invented. */
-export const SECTION_TRIM_SHARE = 0.15;
+const SECTION_TRIM_SHARE = 0.15;
 
 /** How far past the take a section may end and still be read (then trimmed to the take). */
 export const sectionSlackS = (durationS: number): number => Math.max(SECTION_SLACK_S, durationS * SECTION_TRIM_SHARE);

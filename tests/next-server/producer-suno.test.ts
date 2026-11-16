@@ -52,7 +52,7 @@ import { SUNO_CREDITS, sunoPlan } from "@gt/producers/suno/producer";
 
 import { projectSuno, sunoSource } from "../../lib/ledger/v1/sources/suno.ts";
 import { must, OPERATOR, soundKernel } from "../../lib/producers/sound.ts";
-import { driveSuno, launchSuno, sunoKernelId, sunoKernelJobs } from "../../lib/producers/suno.ts";
+import { driveSuno, launchSuno, sunoCreditsEntry, sunoKernelId, sunoKernelJobs } from "../../lib/producers/suno.ts";
 import { runSunoCli } from "../../lib/sound/suno/cli.ts";
 import { FAKE_SUNO, resetFakeSuno } from "../../lib/sound/suno/fakeDriver.ts";
 import { cancelJob, clearSunoQueue, enqueueProposals, FAKE_SUNO_DRIVER, setSunoQueue, sunoSnapshot, type SunoDriver } from "../../lib/sound/suno/queue.ts";
@@ -140,6 +140,35 @@ describe("the Suno producer on the kernel", () => {
     expect(() => store.read((t) => assertReconciled(t, kid))).not.toThrow();
     const reasons = store.read((t) => t.all("SELECT reason FROM spend_unpriced WHERE job_id = ?", kid).map((x) => String(x["reason"])));
     expect(reasons.ok && reasons.value).toEqual([SUNO_CREDITS, SUNO_CREDITS]);
+  });
+
+  it("a driver that reads credits: each create's spent credits on its receipt row, never as dollars; the step key reaches the driver", async () => {
+    const job = await queued();
+    const kid = await launched(job.id, "live");
+    let left = 500;
+    const keys: (string | undefined)[] = [];
+    const reading: SunoDriver = {
+      ...FAKE_SUNO_DRIVER,
+      credits: async () => left,
+      create: async (fields, model, onPhase, opts) => {
+        keys.push(opts?.key);
+        left -= model === "v6" ? 10 : 12;
+        return FAKE_SUNO_DRIVER.create(fields, model, onPhase);
+      },
+    };
+    const d = await driveSuno([kid], { driver: reading, dryOnly: false });
+    expect(d.reports[0]?.report.ok && d.reports[0].report.value.outcome).toBe("done");
+    expect(keys).toEqual([`${kid}/create:v6`, `${kid}/create:v6-wild`]);
+    const { store } = soundKernel();
+    expect(sunoKernelJobs(store).get(kid)?.spend).toEqual({ usd: 0, unpriced: 2, basis: "estimate" });
+    const reasons = store.read((t) => t.all("SELECT reason FROM spend_unpriced WHERE job_id = ? ORDER BY rowid", kid).map((x) => String(x["reason"])));
+    expect(reasons.ok && reasons.value).toEqual([`${SUNO_CREDITS}; this create spent 10 credits (500 -> 490 left)`, `${SUNO_CREDITS}; this create spent 12 credits (490 -> 478 left)`]);
+  });
+
+  it("a credits read that fails leaves the receipt's reason as it was", () => {
+    expect(sunoCreditsEntry("v6", null, 90)).toMatchObject({ amount: undefined, basis: "credits", reason: SUNO_CREDITS });
+    expect(sunoCreditsEntry("v6", 100, null).reason).toBe(SUNO_CREDITS);
+    expect(sunoCreditsEntry("v6", 100, 120).reason).toBe(SUNO_CREDITS);
   });
 
   it("cancel is refused while a create is in flight; Stop lets it finish, and Start creates only the missing model", async () => {

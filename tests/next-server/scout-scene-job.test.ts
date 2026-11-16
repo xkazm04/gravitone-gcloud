@@ -133,7 +133,7 @@ async function launch(t: SceneTarget, o: { clip: boolean; mode?: Mode; ceilingUs
 
 it("binds as the worker carries it: one producer per lane a scene can wait on", () => {
   const set = must(producerSet(SCOUT_SCENE_LANES.map((lane) => ({ name: "scout-scene" as const, producer: scoutSceneProducer(lane) }))));
-  expect([...set.keys()].sort()).toEqual(["scout-scene@box.chrome", "scout-scene@cloud.google", "scout-scene@cloud.leonardo", "scout-scene@gpu.local"]);
+  expect([...set.keys()].sort()).toEqual(["scout-scene@box.chrome", "scout-scene@cloud.google", "scout-scene@cloud.leonardo", "scout-scene@gpu.local", "scout-scene@seat.text"]);
 });
 
 it("reads the clip engine from SCOUT_CLIP_ENGINE: unset is ltx-local, an unknown word is refused", () => {
@@ -149,7 +149,7 @@ describe("a dry scene, end to end", () => {
     const { receipt, jobId } = await launch(t, { clip: true, generator: null });
     expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.model, l.usd])).toEqual([
       ["read-scene · 2 keyframe(s)", "gpu.local", "google", expect.any(String), 0],
-      ["replicate-scene · 2 still(s)", "gpu.local", "leonardo-studio", expect.any(String), null],
+      ["replicate-scene · 2 still(s)", "gpu.local", "codex", expect.any(String), 0],
       ["render-clip · 5 s", "gpu.local", "comfyui", "ltx-2.5-distilled", 0],
     ]);
     expect(jobOf(jobId).lane).toBe("gpu.local");
@@ -397,14 +397,14 @@ describe("a live scene, on fakes", () => {
 /* ── the still engine: the lane and the price are the stills' engine's ─────── */
 
 describe("a scene's still engine (spark scout-vision S6)", () => {
-  it("by default draws on the studio: the job waits on box.chrome, its replicas unpriced in studio credits, and it runs under its ceiling", async () => {
+  it("by default draws on Codex: the job waits on seat.text, its replicas $0, and it runs under its ceiling", async () => {
     const t = await seed(true);
     const { receipt, jobId } = await launch(t, { clip: false, generator: null });
     expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.usd])).toEqual([
-      ["read-scene · 2 keyframe(s)", "box.chrome", "google", 0],
-      ["replicate-scene · 2 still(s)", "box.chrome", "leonardo-studio", null],
+      ["read-scene · 2 keyframe(s)", "seat.text", "google", 0],
+      ["replicate-scene · 2 still(s)", "seat.text", "codex", 0],
     ]);
-    expect(jobOf(jobId).lane).toBe("box.chrome");
+    expect(jobOf(jobId).lane).toBe("seat.text");
     const report = must(await driveScene(k.store, LOC, jobId, { dryOnly: true, engines: NEVER }));
     expect(report.outcome).toBe("done");
     expect(calls).toEqual({ recognize: 0, generate: 0, clip: 0, localClip: 0 });
@@ -432,20 +432,21 @@ describe("a scene's still engine (spark scout-vision S6)", () => {
     expect(meter.ok ? [meter.value.usd, meter.value.unpriced] : null).toEqual([0.002, 2]);
   });
 
-  it("comfy-flux2 waits on gpu.local, admitted by the comfy engine, its stills free", async () => {
+  it("codex waits on seat.text with no card engine, its stills $0", async () => {
     const t = await seed(true);
-    const { receipt, jobId } = await launch(t, { clip: false, generator: "comfy-flux2" });
-    expect(receipt.lines.map((l) => [l.label, l.lane, l.provider, l.usd])).toEqual([
-      ["read-scene · 2 keyframe(s)", "gpu.local", "google", 0],
-      ["replicate-scene · 2 still(s)", "gpu.local", "comfy-flux2", 0],
+    const { receipt, jobId } = await launch(t, { clip: false, generator: "codex" });
+    expect(receipt.lines.map((l) => [l.lane, l.provider, l.usd])).toEqual([
+      ["seat.text", "google", 0],
+      ["seat.text", "codex", 0],
     ]);
-    expect(jobOf(jobId).lane).toBe("gpu.local");
-    expect(scoutSceneProducer("gpu.local").engine).toBe("comfy");
+    expect(jobOf(jobId).lane).toBe("seat.text");
+    expect(scoutSceneProducer("seat.text").engine).toBeUndefined();
   });
 
-  it("comfy-flux2 replicas with a hosted clip are refused: no lane holds both", async () => {
+  it("codex replicas with a hosted clip launch on the seat lane", async () => {
     const t = await seed(true);
-    const r = await launchScene(k.store, t, { mode: "dry", ceilingUsd: 15, clip: true, clipEngine: "hailuo", generator: "comfy-flux2", actor: OP, dryOnly: true });
-    expect(r.ok ? null : r.error.message).toMatch(/comfy-flux2 replicas and a hailuo clip share no lane/);
+    const { receipt, jobId } = await launch(t, { clip: true, engine: "hailuo", generator: "codex" });
+    expect(receipt.lines.map((l) => l.lane)).toEqual(["seat.text", "seat.text", "seat.text"]);
+    expect(jobOf(jobId).lane).toBe("seat.text");
   });
 });

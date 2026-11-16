@@ -33,6 +33,7 @@
 .confirm:hover{background:color-mix(in srgb,var(--cyan) 30%,transparent)}
 .confirm:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
 .confirm[aria-disabled=true]{opacity:.45;cursor:default;border-style:dashed}
-.busy{cursor:progress}
+/* In flight: the Button's `pending` look, composed, so the confirm and every Button share one. */
+.busy{composes:pending from "../button/Button.module.css"}
 .error{flex:none;padding:0 var(--sp-wide) var(--sp-4)}
 @media (max-width:700px){.head,.foot,.scroll{padding-left:var(--sp-4);padding-right:var(--sp-4)}}

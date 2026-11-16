@@ -1,0 +1,239 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ea158e64-f5da-4606-9b46-d99cd8a06f09",
+ "subject": "module-design",
+ "evaluatedAt": "2026-11-04T03:38:09.439815+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "decision-and-gates",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/decision/apply.ts:221 The apply driver asks for the whole Effects port (tx, blob, call) but only uses tx and call, so its one production caller (lib/decision/v1/applier.ts) has to pass an adapter that refuses `blob`; seams-and-adapters says the fix belongs here, in the consumer naming only the contract it uses.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/decision/apply.ts:221 applyNext and drainApplies take the full Effects but call only fx.tx and fx.call. The interface is one capability too wide, which pushes a blob-refusing adapter onto the applier."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/apply-core.ts:65 The outbox core takes the row and the instant as values and returns a plan. packages/kernel/test/decision.apply.test.ts tests it without doubles."
+    },
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/apply.ts:244 Only the drain at the edge is async, and it is a bounded sequential loop. core.ts, apply-core.ts and the Tx-taking writers are synchronous."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/apply-core.ts:43 The outbox state is one named value with an enumerated set of states, not booleans, and the TakePlan/FinishPlan unions are explicit."
+    },
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/decision/schema.ts:191 SQL rows come back through a zod door (parseAt) rather than a type assertion. No `as` casts were found in decision/ or parts/."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/parts/driver.ts:97 The caller supplies one pure function. The driver hides the write planning, the op log, the revision check and undo behind writePartIn."
+    },
+    {
+     "technique": "mirror-type-at-the-edge",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/decision/core.ts:43 Core inputs are plain rows a test can build. No host-bound type has to be mirrored."
+    }
+   ]
+  },
+  {
+   "context": "spend-and-pricing",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/kernel/src/spend/core.ts:93 Ceiling admission is a pure function over a class, totals and an amount. The ledger runs it inside the caller's Tx, and the vendor call goes through the Effects port, so the core is tested as a value.",
+   "techniques": [
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/core.ts:93 Pure admission over values. Time reaches the ledger as the Tx's `at` (ledger.ts nowOf), not from a clock."
+    },
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/v1Port.ts:15 The v1 SpendStore contract is re-declared in the kernel's own vocabulary. packages/kernel/test/spend.v1port.test.ts runs the meter conformance kit's core against this adapter."
+    },
+    {
+     "technique": "declarative-or-sequential",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/core.ts:62 The reservation lifecycle is an explicit state machine held as data."
+    },
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/settler.ts:117 The only awaits are the vendor call through the port (settler and meter). Ledger writes are synchronous Tx functions."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/pricing/quote.ts:86 One function over one table replaces four v1 pricers, and the basis and dated-rate rules stay hidden behind it."
+    },
+    {
+     "technique": "state-carrier-decides-the-lane",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/settler.ts:19 A deferred settle is carried as data (reservation id and entries) and settle is idempotent on it, so it can be replayed or crossed to another process. Closures could not."
+    },
+    {
+     "technique": "structure-is-not-delegable",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend/v1Port.ts:28 Moving an enforcing class from the file store to SQLite is reserved for the operator. Executing the agreed switch is spelled out step by step."
+    },
+    {
+     "technique": "mirror-type-at-the-edge",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/spend/core.ts:37 Every spend input is a plain constructible value. No host-bound input type exists here."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-adapters",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/decision/v1/applier.ts:62 applyEffects claims to be a full Effects but refuses the blob verb. This is the 'adapter that refuses a verb is not an adapter' failure: it type-checks as a substitute anywhere an Effects is expected and fails only at runtime.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "deviation",
+     "evidence": "lib/decision/v1/applier.ts:62 The comment at lines 35-37 owns the choice, but the standard puts the fix in the interface: split Effects so drainApplies names only tx and call."
+    },
+    {
+     "technique": "io-free-core",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/types.ts:107 The adapter contract splits each source into pure packet/consequence halves and I/O read/apply halves."
+    },
+    {
+     "technique": "concurrency-at-the-edge",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/sources/forge.ts:234 The planning half is synchronous. Only read and apply, which touch v1's stores, are async."
+    },
+    {
+     "technique": "borrowed-surface",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/registry.ts:62 The registry restates the domain's source set as an exhaustive contract it owns. A new upstream source is a compile error, not a silent gap."
+    },
+    {
+     "technique": "marked-unverifiable-region",
+     "verdict": "conformant",
+     "evidence": "lib/decision/v1/types.ts:93 The one unsound step, method-parameter bivariance into DecisionAdapter<unknown>, is deliberate and comes with its written justification."
+    }
+   ]
+  },
+  {
+   "context": "board-decision-desk",
+   "subject": "module-design",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/_port/port.ts:35 The seam's enabling point is a constant hard-coded inside the seam module, so nothing outside it can substitute. The 766-line fixture adapter, which re-implements the kernel's decision rules by hand, is imported by no test, route or specimen and is not checked against any shared contract.",
+   "techniques": [
+    {
+     "technique": "seams-and-adapters",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/port.ts:35 'An interface with a hard-coded answer.' port.ts:11 admits fixture.ts is reached by nothing, and grep for fixtureBoard finds only port.ts. The double re-states kernel rules (fixture.ts:5) with no contract suite to keep it honest."
+    },
+    {
+     "technique": "module-depth",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/wire.ts:10 The client island receives one eight-verb port as a prop and never sees the kernel, adapters or session."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "module-design",
+   "context": "scout-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T03:38:09.439815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "concurrency-at-the-edge",
+    "declarative-or-sequential",
+    "io-free-core",
+    "marked-unverifiable-region",
+    "mirror-type-at-the-edge",
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "decision-and-gates",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T03:38:09.439815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "concurrency-at-the-edge",
+    "declarative-or-sequential",
+    "io-free-core",
+    "mirror-type-at-the-edge",
+    "module-depth",
+    "seams-and-adapters",
+    "state-carrier-decides-the-lane",
+    "structure-is-not-delegable"
+   ],
+   "deviations": 0,
+   "context": "spend-and-pricing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T03:38:09.439815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "borrowed-surface",
+    "concurrency-at-the-edge",
+    "io-free-core",
+    "marked-unverifiable-region",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "board-decision-adapters",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T03:38:09.439815+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "module-design"
+   ],
+   "techniques": [
+    "module-depth",
+    "seams-and-adapters"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

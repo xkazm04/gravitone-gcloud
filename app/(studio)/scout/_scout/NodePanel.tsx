@@ -55,6 +55,8 @@ export function NodePanel({ graph, node, port, onView, onClose }: NodePanelProps
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const steer = steerRefOf(graph, node);
+  // A kept idea or storyboard may be started as a production; the page says plainly when this one has nothing to start.
+  const startRef = node.state === "kept" && (node.kind === "storyboard" || node.kind === "idea") && !isArchiveNode(node) && node.id.startsWith("cand:") ? node.id.slice("cand:".length) : undefined;
   const from = graph.edges.filter((e) => e.to === node.id).map((e) => nodeOf(graph, e.from)).filter((x): x is GraphNode => x !== undefined);
 
   const act = async (run: () => Promise<ActionResult<ScoutView>>): Promise<void> => {
@@ -88,6 +90,7 @@ export function NodePanel({ graph, node, port, onView, onClose }: NodePanelProps
         )}
         <div className={s.row}>
           <Button label="open on Board" size="sm" href={boardFor(node.packet)} glyphAfter="chevR" />
+          {startRef !== undefined && <Button label="Start" size="sm" tone="emerald" href={`/scout/productions?from=${encodeURIComponent(startRef)}`} glyphAfter="chevR" />}
           {steer !== undefined &&
             (steer.paused ? (
               <Button label={`Resume ${steer.ref}`} size="sm" tone="emerald" disabled={busy} onPress={() => void act(() => port.resume({ ref: steer.ref }))} />

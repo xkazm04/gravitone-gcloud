@@ -1,0 +1,145 @@
+{
+ "schema": "conform-run/1",
+ "worker": "8af19e0b-a469-493b-bad7-7a012356dcb7",
+ "subject": "transactions-over-a-replicated-log",
+ "evaluatedAt": "2026-11-06T04:38:08.288959+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "transactions-over-a-replicated-log",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/verdictLog.ts:14 Foundry verdicts are written under a local exclusive-create lock file (diskTx acquireLock) into one run directory, and the append-only verdicts.log.jsonl is a local history file rather than a replicated consensus log; searching lib/foundry for consensus, quorum, follower and appliedIndex found nothing, so the subject's precondition (writes ordered by a consensus log and applied on every node) does not hold.",
+   "techniques": [
+    {
+     "technique": "same-value-still-conflicts",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/verdictLog.ts:11 An optimistic check against a map-wide revision under a local lock. There is no verify-list apply step in a replicated log."
+    },
+    {
+     "technique": "no-writes-no-log",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/verdictLog.ts:27 Follows the spirit of the rule (an empty change logs nothing), but the log is a local audit file, not a consensus log that would carry proposals."
+    },
+    {
+     "technique": "snapshot-read-plus-verify-log",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/verdictLog.ts:32 The writer is a local disk lock held for the whole read-modify-write. No consensus round trip separates the read from the apply."
+    }
+   ],
+   "absenceTerms": [
+    "consensus",
+    "quorum",
+    "follower",
+    "appliedIndex"
+   ]
+  },
+  {
+   "context": "kernel-store-and-events",
+   "subject": "transactions-over-a-replicated-log",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/kernel/src/store.ts:37 The kernel store is a single-process node:sqlite file whose writes run under BEGIN IMMEDIATE inside a synchronous callback; the header names this subject only as the shape a future hosted adapter would need, and no such adapter exists (searching packages/kernel for consensus, quorum, follower and appliedIndex found nothing), so no write goes through a replicated log.",
+   "techniques": [
+    {
+     "technique": "snapshot-read-plus-verify-log",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:234 Holds the engine's write lock for the transaction body. That is correct here because the store is not replicated and there is no round trip (the technique's own 'when not to reach' case)."
+    },
+    {
+     "technique": "live-file-is-the-snapshot",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:74 The snapshots are backup copies made with VACUUM INTO. No log library asks for compaction snapshots."
+    },
+    {
+     "technique": "capture-index-before-snapshot",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:71 A read transaction records no log index, so there is no index/snapshot ordering to get wrong."
+    }
+   ],
+   "absenceTerms": [
+    "consensus",
+    "quorum",
+    "follower",
+    "appliedIndex"
+   ]
+  },
+  {
+   "context": "v1-import-and-archive",
+   "subject": "transactions-over-a-replicated-log",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/import/commit.ts:33 An import commits each project as one local SQLite transaction through the kernel store's tx port, with blobs written first outside it; searching lib/import for consensus, quorum, follower and appliedIndex found nothing, so no consensus log or replicated apply step exists for the techniques to govern.",
+   "techniques": [
+    {
+     "technique": "compose-then-conform",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:96 A Store wrapper that runs inside the caller's transaction, over a local engine that is not replicated. The subject's conformance matrix is for layers above a replicated transactional store."
+    },
+    {
+     "technique": "snapshot-read-plus-verify-log",
+     "verdict": "not-applicable",
+     "evidence": "lib/import/commit.ts:46 The transaction body is synchronous and local. Staleness is caught by re-staging the preview token, not by a verify list checked at apply."
+    }
+   ],
+   "absenceTerms": [
+    "consensus",
+    "quorum",
+    "follower",
+    "appliedIndex"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-06T04:38:08.288959+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "transactions-over-a-replicated-log"
+   ],
+   "techniques": [
+    "no-writes-no-log",
+    "same-value-still-conflicts",
+    "snapshot-read-plus-verify-log"
+   ],
+   "deviations": 0,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:38:08.288959+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "transactions-over-a-replicated-log"
+   ],
+   "techniques": [
+    "capture-index-before-snapshot",
+    "live-file-is-the-snapshot",
+    "snapshot-read-plus-verify-log"
+   ],
+   "deviations": 0,
+   "context": "kernel-store-and-events",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:38:08.288959+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "transactions-over-a-replicated-log"
+   ],
+   "techniques": [
+    "compose-then-conform",
+    "snapshot-read-plus-verify-log"
+   ],
+   "deviations": 0,
+   "context": "v1-import-and-archive",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -59,6 +59,8 @@ const draft = z.object({
   title: z.string().trim().min(1).max(100),
   description: z.string().max(5000),
   tags: z.array(z.string().trim().min(1).max(100)).max(50),
+  // The plan's slot part the slot places (./contract.ts ScheduleInput); omitted stays omitted.
+  partId: z.string().min(1).max(400).optional(),
 });
 const scheduleAction = action("calendar schedule", draft, (i, who) => serverCalendar().schedule(i, actOf(who, undefined)));
 export async function schedule(input: In<"schedule">): Out<"schedule"> {

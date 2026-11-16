@@ -11,6 +11,7 @@
 import type { Keymap } from "../../keymap/keymap.ts";
 import { cx } from "../cx.ts";
 import { Tip } from "../hint/Tip.tsx";
+import { CapText } from "./CapText.tsx";
 import { capsFor, legendFor, type TableOptions } from "./caps.ts";
 import s from "./Keycaps.module.css";
 
@@ -29,7 +30,7 @@ export function Keycap({ mode, verb, size = "md", map }: KeycapProps) {
     <>
       {caps.map((c) => (
         <kbd key={c} className={cx(s.cap, size === "sm" && s.sm)}>
-          {c}
+          <CapText cap={c} />
         </kbd>
       ))}
     </>
@@ -58,13 +59,13 @@ export function Keycaps({ mode, label, map, tips, ...opts }: KeycapsProps) {
             const tip = tips?.[r.does]?.[k];
             return tip === undefined ? (
               <kbd key={k} className={s.cap}>
-                {k}
+                <CapText cap={k} />
               </kbd>
             ) : (
               <Tip key={k} text={tip.text} term={tip.term} above>
                 {(id) => (
                   <kbd className={s.cap} role="term" tabIndex={0} aria-describedby={id}>
-                    {k}
+                    <CapText cap={k} />
                   </kbd>
                 )}
               </Tip>

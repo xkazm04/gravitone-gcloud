@@ -1,0 +1,104 @@
+{
+ "schema": "conform-run/1",
+ "worker": "de051eca-d0f4-4d86-86e2-44b7e410c3cd",
+ "subject": "client-fetch-cache",
+ "evaluatedAt": "2026-11-08T05:05:39.399224+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "client-fetch-cache",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:12 Every read the screen makes (server render, older-page and related Server Actions) goes through one read module, keyed by the full filter. Older pages and the selection live in component state that remounts when the filter changes. The detail paints from the list row, and an event-driven refresh keeps the old rows on screen with a staleness badge beside them; none of the techniques checked is realized in a way the standard names as a failure.",
+   "techniques": [
+    {
+     "technique": "portable-read-definitions",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/actions.ts:37 The older-page action re-parses the page's own search string with the same parseParams and calls the same readPage the server render uses (read.ts readView). One declaration, no hand-copied key/fetcher."
+    },
+    {
+     "technique": "cache-key-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/page.tsx:36 Client-held data (older pages, selection) is keyed by a canonical identity built from every filter axis (filter.ts:131 toSearch with windowing fields normalised) plus order. A different question is a fresh mount, so old-filter rows never answer a new one."
+    },
+    {
+     "technique": "parse-and-derive-caches",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:141 The derived row list is a one-slot memo keyed by input reference identity, bounded by construction. rowsOf stays the named, exported recomputation door."
+    },
+    {
+     "technique": "sibling-entry-warmth",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:180 The detail paints at once from the list row (found by seq, not by listing key), and the dependent related read leaves keyed by that seq. The deep-link cold twin is served by read.ts:285 readOne on the server."
+    },
+    {
+     "technique": "prefetch-and-defer",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/feed.ts:179 The live stream is deferred past first paint, and the timer is cleared on unmount. The related read is debounced 120 ms (Detail.tsx:67) and cancelled when the selection moves. No intent prefetch exists, and none is needed for an in-page selection."
+    },
+    {
+     "technique": "swr-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:126 Revalidation triggers are enumerated: an event arrival or reset runs a coalesced router.refresh in a transition (Ledger.tsx:211), with no focus refetch. A feed failure is reported beside the rows still drawn and never clears them. There is no TTL pair because freshness is event-driven, as the golden path's 'cache is subordinate to events' allows."
+    },
+    {
+     "technique": "admission-hypothesis",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/page.tsx:31 No client cache is constructed. Each render reads the kernel afresh, and the only client-held data is per-mount component state, so there is no admission decision to state."
+    }
+   ],
+   "registryProposal": "swr-design's 'name both thresholds per cache' assumes a TTL cache. A server-rendered surface refreshed only by pushed invalidations has no fresh window to name; the technique could say whether an event-driven surface with a liveness edge satisfies the rule or still owes a refetch floor."
+  },
+  {
+   "context": "domain-parts-projects-slots",
+   "subject": "client-fetch-cache",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/domain/src/partView.ts:2 These files are pure type contracts, state-machine tables and projections with no transport, request or cache construction. A case-insensitive search of the 12 files for fetch, cache, memo, prefetch, swr and revalidate found nothing, and a search of all of packages/domain/src for prefetch, revalidate, useSWR and staleTime found nothing, so the client-fetch-cache subject has nothing to govern here.",
+   "techniques": [],
+   "absenceTerms": [
+    "prefetch",
+    "revalidate",
+    "useSWR",
+    "staleTime"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:05:39.399224+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-fetch-cache"
+   ],
+   "techniques": [
+    "admission-hypothesis",
+    "cache-key-discipline",
+    "parse-and-derive-caches",
+    "portable-read-definitions",
+    "prefetch-and-defer",
+    "sibling-entry-warmth",
+    "swr-design"
+   ],
+   "deviations": 0,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:05:39.399224+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-fetch-cache"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "domain-parts-projects-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

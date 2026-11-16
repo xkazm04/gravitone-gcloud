@@ -1,0 +1,252 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4dc2cc9d-98dc-4edd-8625-31eae8a72e93",
+ "subject": "table",
+ "evaluatedAt": "2026-11-08T04:39:43.631769+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 The event list is a role=grid with one tab stop. Up/Down, J/K, PgUp/PgDn and Home/End move a selection, but focus never leaves the scroller, no cell or row takes focus and there is no aria-activedescendant, so the selected row is never announced inside the grid.",
+   "techniques": [
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/List.tsx:109 One tab stop and movement stops at the edges (Ledger.tsx move clamps the index), but no cell or row is ever focused and there is no activedescendant. The technique says a cell that cannot take focus is skipped silently. The subject link in each row is tabIndex -1."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:103 Keyset paging on a (t, seq) cursor with a load-more button. The 'shown' tally and the '+' bound are honest when a text scan stops early."
+    },
+    {
+     "technique": "sorting",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:59 Total order: time, then the immutable seq as tiebreaker. Newest-first is the named default and the order lives in the URL. Not checked: the order button sits outside the grid with no aria-sort (its state is only in its name), and the change is announced only by the remounted aria-live tally."
+    },
+    {
+     "technique": "filtering",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:136 Facets commit on change and free text on submit (Toolbar.tsx:57), as the technique asks. But a filter change is a router.replace inside a transition whose isPending is discarded, and the route has no loading boundary. Until the server answers, the previous predicate's rows stay on screen undimmed and nothing shows a fetch is in flight. Rule 3 says the rows clear."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/List.tsx:61 Pages are bounded at 500 rows, then windowed with fixed row heights taken from tokens. aria-rowcount and aria-rowindex keep the full position."
+    },
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/List.tsx:120 Empty states are typed by cause: nothing recorded, '0 in the newest N' for a partial scan, and '0 events' with a clear-filters action when filtered. Store failures render ErrorLine (page.tsx:32), not empty. Loading older pages keeps the rows on screen."
+    },
+    {
+     "technique": "client-server-split",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Toolbar.tsx:70 Filter, sort and window are all on the server and counts are the kernel's. The one count the server cannot give (a text scan) is shown from loaded rows and marked with + and 'searched N'."
+    },
+    {
+     "technique": "compressed-scroll-space",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:34 Rows grow 500 per explicit 'older' press, far below a browser's scroll-height ceiling."
+    },
+    {
+     "technique": "one-door-for-range-writes",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/page.tsx:1 Read-only, append-only list: no editable cells, paste or fill."
+    },
+    {
+     "technique": "clipboard-range-round-trip",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/List.tsx:88 Copying is out only, whole rows as JSONL. There is no cell-range copy and no paste back."
+    },
+    {
+     "technique": "export-escapes-for-its-consumer",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/List.tsx:84 The export is JSON Lines encoded by JSON.stringify, not CSV for a spreadsheet, so the formula-escape layer does not apply."
+    }
+   ]
+  },
+  {
+   "context": "library-browser-screen",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 Free text in the search field commits 220 ms after typing stops. Each commit is a server navigation in an all-server regime, which is the debounce-as-guess the filtering technique names as a failure. Library.tsx also keeps the old predicate's rows on screen while the new query is in flight.",
+   "techniques": [
+    {
+     "technique": "filtering",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/library/_library/Toolbar.tsx:82 Keystroke-plus-debounce commit on a text filter that costs a round trip, though Enter and the \u2193 key also apply it. Library.tsx:8 deliberately keeps old rows (aria-busy) on a filter change, where rule 3 says they clear."
+    },
+    {
+     "technique": "sorting",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/query.ts:31 Every order ends on the unique seq. Kind sorts by declared rank (kind_ord) and name by sort_name. Sorting runs on the server."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/library/query.ts:22 Offset was chosen deliberately: the windowed grid needs random access, and each offset walks an index. Not checked: blocks fetched after a library sync inserts rows could shift under a cached block 0."
+    },
+    {
+     "technique": "client-server-split",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_library/blocks.ts:71 All-server: blocks are asked of the port under the full query, the server's order is the only order, and a stale block is dropped by query identity."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_library/Results.tsx:48 Windowed over the total with sparse block fetching, so a 50k result is never loaded whole."
+    },
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_library/Results.tsx:84 Unloaded rows are same-size placeholder slots, so nothing moves when data lands. Empty is asserted only from the server total, with clear-filters when filtered. A failed page renders ErrorLine."
+    },
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Results.tsx:98 Not a table or grid: a listbox of cards and rows with one tab stop and aria-activedescendant."
+    },
+    {
+     "technique": "compressed-scroll-space",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:12 At the 50k-item design point the scroll height stays far below browser ceilings."
+    }
+   ]
+  },
+  {
+   "context": "floor-lanes-runs",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/floor/RunRow.tsx:5 These components draw four fixed lanes (floor.ts FLOOR_LANES), pile cards, read-only run rows and shelf cells. A grep of packages/ui/src/components/floor found no table markup, sort state, pagination or cursor, so no filter, sort or window axis exists here for the subject to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "aria-sort",
+    "<thead",
+    "paginat",
+    "keyset"
+   ]
+  },
+  {
+   "context": "floor-hub-screen",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/floor/_floor/shelf.ts:48 The hub fills lane cells with capped previews (24 shelf rows beside a total) and a calendar. A grep of app/(studio)/floor found no table markup, sort header, pagination, offset or cursor, so it is a dashboard, not a comparison table.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "aria-sort",
+    "<thead",
+    "paginat",
+    "keyset"
+   ]
+  },
+  {
+   "context": "scout-screen",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/scout/runs/page.tsx:21 Scout draws a graph of bands and node panels, and its runs page redirects to one packet instead of rendering a list. A grep of app/(studio)/scout found no table markup, sort header, pagination or cursor.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "aria-sort",
+    "<thead",
+    "paginat",
+    "keyset"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:39:43.631769+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "clipboard-range-round-trip",
+    "compressed-scroll-space",
+    "export-escapes-for-its-consumer",
+    "filtering",
+    "grid-keyboard-model",
+    "loading-and-empty-states",
+    "one-door-for-range-writes",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:39:43.631769+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "compressed-scroll-space",
+    "filtering",
+    "grid-keyboard-model",
+    "loading-and-empty-states",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 1,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:39:43.631769+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "floor-lanes-runs",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:39:43.631769+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "floor-hub-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:39:43.631769+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

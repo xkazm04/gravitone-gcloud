@@ -9,6 +9,9 @@
 //     `refused` and never retried, any other throw `failed`;
 //   · at the until: the queued items expire and the night closes as `close --stop deadline`; a night the seat closed is
 //     left alone;
+//   · a held lane (an interrupted paid job's kernel hold) is skipped for the next item, never cleared, and the idle reason
+//     names it; a night open past its until with no plan is closed as the deadline closes it, its stranded pending
+//     candidates failed only where their jobs are provably gone, and the episodes they held freed;
 //   · a draft item writes drafts/<pl-NN>.md through a fake text turn, and the next taste lists it.
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,7 +52,9 @@ import { EXPIRED_REASON, nightFillTick } from "../../lib/foundry/scout/nightFill
 import { planAct, planFile, readPlan, type PlanItem, type PlanKind } from "../../lib/foundry/scout/plan.ts";
 import { planDoors, type PlanDoor, type PlanDoors } from "../../lib/foundry/scout/planDoors.ts";
 import { closeWith } from "../../lib/foundry/scout/acts.ts";
-import { createNight, nightDir, readNight } from "../../lib/foundry/scout/store.ts";
+import { setEpisodeDoorForTests } from "../../lib/foundry/scout/episodeMoves.ts";
+import { createNight, mutateNight, nightDir, readNight } from "../../lib/foundry/scout/store.ts";
+import type { Candidate, Night } from "../../lib/foundry/scout/types.ts";
 import { draftsSection, DRAFTS_HEADING } from "../../lib/foundry/scout/tasteDrafts.ts";
 import { nightFillTimer } from "../../lib/producers/nightFill.ts";
 import type { TickContext } from "../../workers/timers.ts";
@@ -178,7 +183,7 @@ describe("the night-fill tick", () => {
     samples(T0 + 20 * MIN, 0.65);
     const r = await tick(f, T0 + 20 * MIN);
     expect(r).toMatchObject({ kind: "idle", night: id });
-    expect(r.kind === "idle" ? r.why : "").toMatch(/^the box is at the band: cpu 65% · ram 65% · gpu 65%/);
+    expect(r.kind === "idle" ? r.why : "").toMatch(/^the box is at the band: cpu 65% · ram 65% over 15 min \(low 60%\)$/); // ideas sit on box.chrome: judged on cpu and ram (scout-lane-band.test.ts holds the map)
     expect(f.launched).toEqual([]);
   });
 
@@ -261,5 +266,97 @@ describe("a draft item", () => {
     expect((await readNight(id)).candidates).toEqual([]);
     expect(await draftsSection([await readNight(id)])).toEqual([DRAFTS_HEADING, "", `night ${id}:`, `- The keeper - ${file}`, ""]);
     expect(await draftsSection([])).toEqual([]);
+  });
+});
+
+const hold = (lane: ResourceLane, jobId: string): void => {
+  const j = enqueue(store, { id: jobId, of: { kind: "run", id: `run-${jobId}` }, producer: "scout-test", lane }, actor);
+  if (!j.ok) throw j.error;
+  // The job is over (cancelled), the hold is what stays: the lane's count is zero and only the kernel's hold speaks.
+  const r = store.tx((t) => {
+    t.run("UPDATE jobs SET state = 'cancelled' WHERE id = ?", jobId);
+    t.run("INSERT INTO lane_holds (lane, job_id, stage, at) VALUES (?, ?, ?, ?)", lane, jobId, "write", "2026-10-24T03:00:00.000Z");
+  });
+  if (!r.ok) throw r.error;
+};
+
+describe("a held lane", () => {
+  it("is skipped for the next item, the idle reason names the hold, and the tick never clears it", async () => {
+    const id = await night("2026-10-26");
+    const f = fakeDoors();
+    await planAct(ctxAt(T0), id, [{ kind: "draft", payload: { prompt: "p", title: "t" }, why: "a" }, { kind: "storyboards", payload: [1], why: "b" }], f.doors);
+    hold("seat.text", "job:died");
+    samples(T0 + 20 * MIN, 0.1);
+    expect(await tick(f, T0 + 20 * MIN)).toMatchObject({ kind: "launched", item: "pl-02" });
+    const r = await tick(f, T0 + 21 * MIN);
+    expect(r).toMatchObject({ kind: "idle", night: id });
+    expect(r.kind === "idle" ? r.why : "").toBe("lane seat.text is held by interrupted job job:died at write since 2026-10-24T03:00:00.000Z: a paid step may have died unbooked, look before releasing it");
+    expect(f.launched.map((x) => x.item)).toEqual(["pl-02"]);
+    expect(store.read((x) => x.get("SELECT count(*) AS c FROM lane_holds")?.["c"])).toEqual({ ok: true, value: 1 });
+  });
+});
+
+describe("a night that died before it had a plan", () => {
+  const add = (n: Night, c: Candidate): Night => ({ ...n, candidates: [...n.candidates, c] });
+  const cand = (id: string, kind: "storyboard" | "scene", extra: object = {}): Candidate =>
+    ({ id, kind, sourceIds: [], status: "pending", ...(kind === "storyboard" ? { title: "t", paragraph: "p", bullets: ["b"], panels: ["x"] } : { keyframes: [], replicas: [] }), ...extra }) as unknown as Candidate;
+
+  it("is closed as the deadline closes it; stranded storyboards fail with the night's death, their episodes are freed, a live or interrupted job's candidate is left", async () => {
+    const id = await night("2026-10-26", { dry: false });
+    for (const [c, jobId] of [["c-01", "job:scout-storyboard:2026-10-26:c-01"], ["c-02", undefined], ["c-03", "job:live"], ["c-04", "job:lost"], ["c-05", "job:rendered"]] as const) {
+      if (jobId !== undefined) {
+        const j = enqueue(store, { id: jobId, of: { kind: "run", id: `run-${jobId}` }, producer: "scout-test", lane: "gpu.local" }, actor);
+        if (!j.ok) throw j.error;
+      }
+      await mutateNight(id, (n) => add(n, cand(c, c === "c-05" ? "scene" : "storyboard", { ...(c === "c-01" ? { fromEpisode: "F1-01" } : {}), ...(jobId === undefined || c === "c-01" ? {} : { jobId }) })));
+    }
+    // c-01's job failed, c-02 never launched, c-03 is alive, c-04's job was cancelled, c-05's scene rendered (done).
+    const r = store.tx((t) => {
+      t.run("UPDATE jobs SET state = 'failed' WHERE id = ?", "job:scout-storyboard:2026-10-26:c-01");
+      t.run("UPDATE jobs SET state = 'cancelled' WHERE id = ?", "job:lost");
+      t.run("UPDATE jobs SET state = 'done' WHERE id = ?", "job:rendered");
+    });
+    if (!r.ok) throw r.error;
+    const moves: string[] = [];
+    setEpisodeDoorForTests({
+      episodeOf: async () => ({ channel: {} as never, episode: { state: "in-production", candidate: `${id}/c-01` } as never }),
+      setEpisodeState: async (ep, next) => {
+        moves.push(`${ep}->${next}`);
+        return {} as never;
+      },
+    });
+    try {
+      const at = Date.parse(UNTIL) + MIN;
+      expect(await nightFillTick({ store, location: ":memory:", now: new Date(at), dryOnly: false, doors: fakeDoors().doors })).toEqual({ kind: "closed", night: id, expired: 0 });
+      const n = await readNight(id);
+      expect([n.state, n.stop]).toEqual(["closed", "deadline"]);
+      const by = Object.fromEntries(n.candidates.map((c) => [c.id, c]));
+      expect(by["c-01"]).toMatchObject({ status: "failed", error: expect.stringContaining("the night died: its until") });
+      expect(by["c-01"]?.error).toContain("its job job:scout-storyboard:2026-10-26:c-01 failed");
+      expect(by["c-02"]).toMatchObject({ status: "failed", error: expect.stringContaining("its job was never launched") });
+      expect(by["c-03"]?.status).toBe("pending");
+      expect(by["c-04"]).toMatchObject({ status: "failed", error: expect.stringContaining("job:lost cancelled") });
+      expect(by["c-05"]?.status).toBe("pending");
+      expect(moves).toEqual(["F1-01->outline-kept"]);
+    } finally {
+      setEpisodeDoorForTests(null);
+    }
+  });
+
+  it("leaves an interrupted job's candidate and a night with a plan alone", async () => {
+    const id = await night("2026-10-26", { dry: false });
+    const j = enqueue(store, { id: "job:int", of: { kind: "run", id: "run-int" }, producer: "scout-test", lane: "gpu.local" }, actor);
+    if (!j.ok) throw j.error;
+    store.tx((t) => t.run("UPDATE jobs SET state = 'interrupted' WHERE id = ?", "job:int"));
+    await mutateNight(id, (n) => add(n, cand("c-01", "storyboard", { jobId: "job:int" })));
+    await tick(fakeDoors(), Date.parse(UNTIL) + MIN);
+    const n = await readNight(id);
+    expect(n.state).toBe("closed");
+    expect(n.candidates[0]?.status).toBe("pending");
+
+    const planned = await night("2026-10-27");
+    const f = fakeDoors();
+    await planAct(ctxAt(T0), planned, [{ kind: "ideas", payload: [1], why: "a" }], f.doors);
+    expect(await tick(f, Date.parse(UNTIL) + MIN)).toMatchObject({ kind: "closed", night: planned, expired: 1 });
   });
 });

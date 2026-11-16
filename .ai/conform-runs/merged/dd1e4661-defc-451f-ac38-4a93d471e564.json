@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "dd1e4661-defc-451f-ac38-4a93d471e564",
+ "subject": "engine-binding-surface",
+ "evaluatedAt": "2026-11-08T01:54:02.568695+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "landing-cosmos-paper-raster",
+   "subject": "engine-binding-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/engine/raster.worker.ts:3 The worker and the main-thread fallback both run the repository's own TypeScript job runner over standard browser canvas APIs, and a search of the context directory found no WebAssembly, wasm, PhantomData, thread_local or extern \"C\" (zero hits), so this code has no binding layer over a foreign engine for the subject to govern.",
+   "techniques": [
+    {
+     "technique": "capability-deferred-release",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:333 ImageBitmap.close() is legal on whichever thread holds the transferred bitmap. This release is not limited to one thread, so the technique's precondition does not hold."
+    },
+    {
+     "technique": "hierarchy-as-three-relations",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.ts:20 This is a closed two-member union narrowed with instanceof, not a re-expressed foreign class hierarchy. The technique's 'closed set' when-not-to-use case applies."
+    },
+    {
+     "technique": "pre-resolve-what-the-engine-cannot-await",
+     "verdict": "not-applicable",
+     "evidence": "app/_landing/cosmos/engine/raster.worker.ts:51 The worker's handler is itself async, and no unchangeable engine calls back synchronously for a resource."
+    }
+   ],
+   "absenceTerms": [
+    "WebAssembly",
+    "wasm",
+    "PhantomData",
+    "thread_local"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T01:54:02.568695+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-binding-surface"
+   ],
+   "techniques": [
+    "capability-deferred-release",
+    "hierarchy-as-three-relations",
+    "pre-resolve-what-the-engine-cannot-await"
+   ],
+   "deviations": 0,
+   "context": "landing-cosmos-paper-raster",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

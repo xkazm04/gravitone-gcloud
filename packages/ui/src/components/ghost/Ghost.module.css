@@ -4,3 +4,6 @@
    height. */
 .list{display:flex;flex-direction:column;gap:var(--sp-3)}
 .card{height:var(--h-field);border:var(--stroke-glyph) dashed color-mix(in srgb,var(--faint) 80%,transparent);border-radius:var(--r-control)}
+/* `fill`: the region's height, shared; a card never shrinks under a field's height. */
+.fill{flex:1 1 auto;width:100%;height:100%;min-height:0}
+.fill .card{flex:1 1 0;height:auto;min-height:var(--h-field)}

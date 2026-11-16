@@ -4,7 +4,19 @@
 // (lifetime-cap-rotation), not a failure the freshness edge should hear.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { COALESCE_MS, openFeed } from "../../app/(studio)/_shell/liveFeed.ts";
+import { BACKSTOP_MS, COALESCE_MS, concerns, openFeed } from "../../app/(studio)/_shell/liveFeed.ts";
+import { usePollBackstop } from "../../packages/ui/src/freshness/useFreshness.ts";
+
+// The page's backstop is @gt/ui's usePollBackstop, a React hook; with no DOM renderer here, React
+// is stood in for by the two calls the hook makes - its effect runs at once, as a mount would.
+vi.mock("react", () => ({
+  useRef: <T,>(v: T) => ({ current: v }),
+  useEffect: (fn: () => void) => {
+    fn();
+  },
+  useState: <T,>(v: T) => [v, () => undefined],
+  useCallback: <T,>(fn: T) => fn,
+}));
 
 class FakeSource {
   static made: FakeSource[] = [];
@@ -45,9 +57,12 @@ beforeEach(() => {
   FakeSource.made = [];
   windowListeners.clear();
   vi.stubGlobal("EventSource", FakeSource);
+  vi.stubGlobal("document", { hidden: false, addEventListener: () => undefined, removeEventListener: () => undefined });
   vi.stubGlobal("window", {
     setTimeout: (fn: () => void, ms: number) => setTimeout(fn, ms),
     clearTimeout: (t: ReturnType<typeof setTimeout>) => clearTimeout(t),
+    setInterval: (fn: () => void, ms: number) => setInterval(fn, ms),
+    clearInterval: (t: ReturnType<typeof setInterval>) => clearInterval(t),
     addEventListener: (name: string, fn: () => void) => windowListeners.set(name, [...(windowListeners.get(name) ?? []), fn]),
     removeEventListener: (name: string, fn: () => void) => windowListeners.set(name, (windowListeners.get(name) ?? []).filter((f) => f !== fn)),
   });
@@ -102,6 +117,54 @@ describe("the shell's live feed", () => {
     expect(es.closed).toBe(true);
     fire("pageshow");
     expect(FakeSource.made[1]?.url).toBe("/api/events/stream?after=57");
+  });
+
+  it("with no families, every event but ingest.* is advice, as before families existed", () => {
+    expect(concerns("job.done", undefined)).toBe(true);
+    expect(concerns("metric.tick", undefined)).toBe(true);
+    expect(concerns("commit", undefined)).toBe(true);
+    expect(concerns("ingest.batch", undefined)).toBe(false);
+    expect(concerns("", undefined)).toBe(true);
+  });
+
+  it("with families, only an event of one of them refreshes; an untyped frame and a reset still do", () => {
+    const calls = { refresh: 0 };
+    openFeed({ head: 10, refresh: () => calls.refresh++, fail: () => undefined, families: ["job", "commit", "publish.fail"] });
+    const es = FakeSource.made[0];
+    if (es === undefined) throw new Error("the feed opened no stream");
+    es.event(11, "metric.tick");
+    es.event(12, "jobs.other");
+    es.event(13, "publish.done");
+    vi.advanceTimersByTime(COALESCE_MS);
+    expect(calls.refresh).toBe(0);
+    for (const [seq, type] of [[14, "job.done"], [15, "commit"], [16, "publish.fail.quota"]] as const) {
+      es.event(seq, type);
+      vi.advanceTimersByTime(COALESCE_MS);
+    }
+    expect(calls.refresh).toBe(3);
+    es.onmessage?.({ data: "{}", lastEventId: "17" });
+    vi.advanceTimersByTime(COALESCE_MS);
+    expect(calls.refresh).toBe(4);
+    es.control("reset", { head: 3 });
+    vi.advanceTimersByTime(COALESCE_MS);
+    expect(calls.refresh).toBe(5);
+  });
+
+  it("a page whose families leave out every event it hears still re-reads on its backstop", () => {
+    const calls = { refresh: 0 };
+    const refresh = (): void => {
+      calls.refresh++;
+    };
+    openFeed({ head: 10, refresh, fail: () => undefined, families: ["job"] });
+    usePollBackstop(refresh, BACKSTOP_MS);
+    const es = FakeSource.made[0];
+    if (es === undefined) throw new Error("the feed opened no stream");
+    for (let i = 0; i < 30; i++) {
+      es.event(11 + i, "metric.tick");
+      vi.advanceTimersByTime(BACKSTOP_MS / 10);
+    }
+    // 30 ticks of a tenth of the backstop: three backstop reads, and none from the feed.
+    expect(calls.refresh).toBe(3);
   });
 
   it("after a reset, resumes from the head the server named", () => {

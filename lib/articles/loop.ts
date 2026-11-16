@@ -23,9 +23,9 @@
 // THE CEILINGS ARE BOUNDARY CHECKS. Every agent turn of a run, writer or reviewer, goes
 // through a guard that runs before the turn starts. It refuses the turn when the run is over
 // its cost or turn ceiling, or the loop is over its budget; the refusal reaches the engine as
-// an ordinary failed turn, so the run lands in `failed` with the reason in its error. A writer
-// turn also gets `--max-budget-usd` (the smaller of the per-turn cap and what is left of the
-// run's ceiling), so one runaway revise turn is stopped inside the turn too. COST HERE IS
+// an ordinary failed turn, so the run lands in `failed` with the reason in its error. Nothing
+// caps a turn from inside: the seat is flat-fee and takes no budget flag (operator, 2026-10-23),
+// so a long revise turn runs to its end and the ceiling refuses the next one. COST HERE IS
 // WHAT THE ENGINE REPORTS: the Claude seat's turns. Codex and agy turns report nothing, so
 // the real cost of a run is higher than the ledger. Set the budget with that margin.
 //
@@ -232,7 +232,7 @@ export async function listUncoveredTopics(opts: { limit?: number; includeBundles
 export interface Ceilings {
   /** Stop a run at the next turn boundary once its reported cost reaches this. */
   runUsd: number;
-  /** Passed to the writer's CLI as --max-budget-usd: no single turn may pass it. */
+  /** The most one writer turn may be charged against the run's ceiling; the CLI is not told. */
   turnUsd: number;
   /** Agent turns (writer and reviewer) a run may start. */
   runTurns: number;

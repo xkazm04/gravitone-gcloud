@@ -5,8 +5,8 @@
 // The page's data arrives from the Server Component (./load.ts -> ./model.ts); what lives here
 // is what the operator is doing with it: the selection (a job, a project), the zoom, which
 // lanes are opened past their +N, and where the view is centred. Selection is in the URL
-// (`?project=&job=&zoom=`), written with history.replaceState, which Next's router observes
-// without a server round trip - a click must not re-read eleven v1 stores.
+// (`?project=&job=&zoom=&state=`, ./url.ts), written with history.replaceState, which Next's router
+// observes without a server round trip - a click must not re-read eleven v1 stores.
 //
 // THE ACTS (Phase 4, L28): a produce job selected here can be paused or resumed (P), retried
 // (T, under an optional raised ceiling), moved earlier or later in its lane (`[` `]`), re-routed
@@ -47,21 +47,13 @@ import { mvRegenerateSpec, type MvPort } from "./MvActs.tsx";
 import { settled } from "./actRunner.ts";
 import { legendOf } from "./legend.ts";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
-import { barsOf, blockedOf, depsOf, floorRunsOf, heldLabel, heldMoney, litOf, pinsOf, projectMeta, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
+import { Totals } from "./Totals.tsx";
+import type { Selection } from "./url.ts";
+import { useSelection } from "./useSelection.ts";
+import { barsOf, blockedOf, depsOf, filterModel, floorRunsOf, heldMoney, litOf, pinsOf, projectMeta, projectsOf, rowsOf, step, totalsOf, walkPool } from "./view.ts";
 import s from "./Runs.module.css";
 
-export type Selection = { readonly job: string | null; readonly project: string | null; readonly zoom: Zoom };
-
 const LEGEND = legendOf();
-
-function urlOf(sel: Selection): string {
-  const q = new URLSearchParams();
-  if (sel.project !== null) q.set("project", sel.project);
-  if (sel.job !== null) q.set("job", sel.job);
-  if (sel.zoom !== "24h") q.set("zoom", sel.zoom);
-  const qs = q.toString();
-  return `${window.location.pathname}${qs === "" ? "" : `?${qs}`}`;
-}
 
 const runsHref = (id: string): string => `/projects/runs?project=${encodeURIComponent(id)}`;
 
@@ -76,7 +68,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
   const [ceiling, setCeiling] = useState<TypedCeiling>({ job: null, text: "" });
   const [alts, setAlts] = useState<{ readonly job: string; readonly options: readonly RerouteOption[] | null; readonly error?: string } | null>(null);
   const altsRef = useRef<HTMLDivElement | null>(null);
-  const [sel, setSel] = useState<Selection>(initial);
+  const [sel, setSel] = useSelection(initial);
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [hover, setHover] = useState<string | null>(null);
   // A link that arrives with `?job=` opens centred on that job; otherwise on NOW.
@@ -95,16 +87,14 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
   usePollBackstop(() => router.refresh(), BACKSTOP_MS);
   useEffect(() => openFeed({ head: firstHead.current, refresh: () => router.refresh(), fail: () => feed({ kind: "fail", at: Date.now() }) }), [router, feed]);
 
-  useEffect(() => {
-    const next = urlOf(sel);
-    if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(null, "", next);
-  }, [sel]);
-
+  // The state filter (fm, ./Totals.tsx's doors) is what is drawn, walked and listed with nothing selected;
+  // threads, blocks, lane occupancy and the totals read every job (m).
+  const fm = useMemo(() => filterModel(m, sel.state), [m, sel.state]);
   const deps = useMemo(() => depsOf(m), [m]);
   const blocked = useMemo(() => blockedOf(m, deps), [m, deps]);
   const rows = useMemo(() => rowsOf(m, data.holds), [m, data.holds]);
-  const bars = useMemo(() => barsOf(m, blocked), [m, blocked]);
-  const pins = useMemo(() => pinsOf(m), [m]);
+  const bars = useMemo(() => barsOf(fm, blocked), [fm, blocked]);
+  const pins = useMemo(() => pinsOf(fm), [fm]);
   const projects = useMemo(() => projectsOf(m), [m]);
   const produceIds = new Set(data.projects.projects.map((p) => p.id));
   const firstPlan = data.projects.projects[0];
@@ -243,7 +233,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
       if (b !== undefined) setCentre({ key: `job:${id}`, at: (b.s + b.e) / 2 });
     }
   };
-  const walkJob = (dir: 1 | -1): void => select(step(walkPool(m, sel.project), job, dir), true);
+  const walkJob = (dir: 1 | -1): void => select(step(walkPool(fm, sel.project), job, dir), true);
   const walkProject = (dir: 1 | -1): void => {
     const ids = projects.map((p) => p.id);
     const next = step(ids, sel.project, dir);
@@ -301,8 +291,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
     setCentre({ key: `zoom:${z}:${Date.now()}`, at: job === null ? "now" : (bars.find((b) => b.id === job)?.s ?? "now") });
   };
 
-  const total = bars.length + pins.length;
-  const name = `Runs day-line: ${rows.length} rows, ${m.jobs.length} jobs, ${m.weir.length} weir piles, ${pins.length} slots`;
+  const name = `Runs day-line: ${rows.length} rows, ${fm.jobs.length} jobs, ${fm.weir.length} weir piles, ${pins.length} slots`;
 
   return (
     <div className={s.proj}>
@@ -333,14 +322,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
           </div>
           <div className={s.row}>
             <h1 className={s.title}>{title ?? "Runs · every resource"}</h1>
-            <div className={s.totals}>
-              {/* projects.js totals: the count first, the word bold after it. */}
-              <Chip label={String(totals.running)} value="running" tone="cyan" name={`${totals.running} running`} />
-              <Chip label={String(totals.waiting)} value="waiting" name={`${totals.waiting} waiting`} />
-              <Chip label={String(totals.weir)} value="at the weir" tone="amber" name={`${totals.weir} at the weir`} />
-              <Chip label={String(totals.failed)} value="failed" tone="rose" name={`${totals.failed} failed`} />
-              {money.n > 0 && <Chip label={heldLabel(money)} value="held" tone="violet" name={`${money.n} open spend holds`} />}
-            </div>
+            <Totals totals={totals} money={money} state={sel.state} onState={(state) => setSel((cur) => ({ ...cur, state }))} worker={data.worker} now={m.now} />
           </div>
         </div>
         <div className={s.runs}>
@@ -383,7 +365,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               </div>
             ))}
             <RunsDayline
-              name={total === 0 ? `${name}; nothing in the window` : name}
+              name={bars.length + pins.length === 0 ? `${name}; nothing in the window` : name}
               rows={rows}
               bars={bars}
               pins={pins}
@@ -399,7 +381,7 @@ export function Runs({ data, initial, port, dojo, mv }: { readonly data: RunsDat
               centre={centre}
             />
           </div>
-          <Inspector acts={acts} projectTitle={title} m={m} job={job} project={sel.project} deps={deps} blocked={blocked} onSelect={(id) => select(id, true)} />
+          <Inspector acts={acts} projectTitle={title} m={job === null ? fm : m} job={job} project={sel.project} deps={deps} blocked={blocked} onSelect={(id) => select(id, true)} />
         </div>
       </section>
       {compose.dialog}

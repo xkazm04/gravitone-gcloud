@@ -1,0 +1,108 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d80ab54f-4dff-49a5-8204-5a9335b9a24d",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-11-04T04:21:42.594260+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "article-run-engine",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/articles/types.ts:689 The trial contract this engine writes posts around decides upheld or challenged only by comparing delta with a declared minimum-effect band, and the per-arm sd and the CI are reported but never decide; nothing checks that the between-arm spread clears the within-arm SD, so with n=3 and a wide sd a band-clearing delta still publishes an order that sits inside the noise (computeVerdict in lib/articles/trial/verdict.ts, in another context, works the same way).",
+   "techniques": [
+    {
+     "technique": "resolution-precondition",
+     "verdict": "deviation",
+     "evidence": "lib/articles/types.ts:689 Only the declared band decides (types.ts:624 minEffect). Nothing compares delta with sd before upheld or challenged is emitted, so an order can be published inside the noise."
+    },
+    {
+     "technique": "metric-role-contract",
+     "verdict": "conformant",
+     "evidence": "lib/articles/types.ts:584 Exactly one optimized metric, plus TrialThreshold guards that each arm must clear to win."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "lib/articles/types.ts:679 The verdict is code over prereg and results; the model reviewers critique the prose only. engine.ts:18 makes the post check code as well."
+    },
+    {
+     "technique": "eval-economics",
+     "verdict": "conformant",
+     "evidence": "lib/articles/types.ts:634 The model-call and wall-time budget is sealed in the prereg, and going over it voids the trial. The dry stand-in (dryAgent.ts) is a mock mode at the job level."
+    },
+    {
+     "technique": "comparison-modes",
+     "verdict": "conformant",
+     "evidence": "lib/articles/types.ts:566 A two-arm question with a declared vocabulary of winners, including null and void, so a tie or a broken protocol is not reported as a win."
+    }
+   ],
+   "registryProposal": "candidate-write-access covers only the CANDIDATE writing to the instrument. Here an agent with a shell and a declared prior (types.ts:617) writes the harness that measures both arms and the results.json the coded verdict reads, and only the prereg is sealed. The technique could name the experimenter-writes-the-measurement surface: an agent arbitrating between two techniques, rather than being scored itself."
+  },
+  {
+   "context": "cull-run-desk",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/cull/useRunDesk.ts:10 This is an operator's keyboard triage desk for keeping or rejecting generated runs: no model is run against declared scenarios and nothing is scored or aggregated across trials. A grep of components/cull and components/desk for benchmark, scenario, rubric and harness found no hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "benchmark",
+    "scenario",
+    "rubric",
+    "harness"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "style-trials-cull",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "agent-cli-and-turns",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "resource-gates-and-gpu",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T04:21:42.594260+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "comparison-modes",
+    "eval-economics",
+    "metric-role-contract",
+    "resolution-precondition"
+   ],
+   "deviations": 1,
+   "context": "article-run-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T04:21:42.594260+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "cull-run-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

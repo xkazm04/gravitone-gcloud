@@ -14,11 +14,16 @@ import type { ItemWords } from "../../board/port.ts";
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { useLayer } from "../../layers/useLayer.ts";
 import { Chip } from "../chip/Chip.tsx";
+import { Clip } from "../desk/Clip.tsx";
 import { Plate } from "../desk/Plate.tsx";
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
 import { Keycap } from "../keycaps/Keycaps.tsx";
 import { Wave } from "../wave/Wave.tsx";
 import s from "./Cull.module.css";
+
+/** A matrix tile's least width: the hint for a blob's grid-size variant (the lens asks for the original). */
+const TILE = Number.parseInt(tokens["w-lib-tile-m"], 10);
 
 export type TileMedia = { readonly url: string; readonly mime: string };
 
@@ -86,9 +91,9 @@ export function CullTile({ index, words, media, verdict, current, nudged, playin
       ) : (
         <>
           {kind === "video" ? (
-            <video className={s.media} src={media.url} muted playsInline preload="metadata" />
+            <Clip className={s.media} src={media.url} label="" poster={words.poster} width={TILE} muted />
           ) : (
-            <Plate className={s.media} src={kind === "model" ? (words.poster ?? "") : media.url} alt="" lazy />
+            <Plate className={s.media} src={kind === "model" ? (words.poster ?? "") : media.url} alt="" lazy width={TILE} />
           )}
           <span className={s.cap}>
             <span className={s.ell}>{words.label}</span>
@@ -152,7 +157,7 @@ export function Zoom({ words, media, verdict, position, onClose, specimen = fals
           </Suspense>
         </div>
       ) : kind === "video" ? (
-        <video className={s.zMedia} src={media.url} autoPlay muted loop playsInline />
+        <Clip className={s.zMedia} src={media.url} label={words.label} preload="auto" autoPlay muted loop />
       ) : (
         <Plate className={s.zMedia} src={media.url} alt={words.label} />
       )}

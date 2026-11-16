@@ -15,6 +15,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { scriptFaceOf, type EngineView, type PartActKind, type PartActView, type PartVerdict, type ScriptData, type ScriptOp } from "@gt/domain/partView";
 
 import { scenariosStandIn } from "./fixtureAds.ts";
+import { TARIFF_RENDERS } from "./fixtureWorld/tariff.ts";
 import type { Ctx } from "./fixture.ts";
 import { digest } from "./hash.ts";
 import { cardsOf, dryEngine } from "./fixtureResearch.ts";
@@ -46,7 +47,12 @@ export type ScriptRec = {
   readonly adsEngine?: EngineView;
 };
 
-const COMPOSED: Readonly<Record<string, readonly ScriptRender[]>> = { "why-bitcoin": RENDERS };
+const COMPOSED: Readonly<Record<string, readonly ScriptRender[]>> = { "why-bitcoin": RENDERS, "the-quiet-tariff": TARIFF_RENDERS };
+
+/** A script whose Plan job is done adopted its first candidate (the fixture world: what a Plan row
+ *  claims, its editor shows); one still composing, or never launched, has adopted nothing. */
+const adoptedBy = (ctx: Ctx, composed: readonly ScriptRender[] | undefined): string | null =>
+  ctx.plan.parts.some((p) => p.kind === "script" && p.state === "ratified") ? (composed?.[0]?.id ?? null) : null;
 
 const face = (ctx: Ctx) => scriptFaceOf(ctx.project.discipline, ctx.research().choice) ?? "document";
 const template = (ctx: Ctx): AdTemplateId => (ctx.project.recipe.endsWith("ad-spot-30") ? "ad-spot-30" : "ad-social-15");
@@ -64,7 +70,7 @@ function seed(ctx: Ctx): ScriptRec {
   const cut = face(ctx) === "trailer" ? spineCut(ctx) : null;
   return {
     candidates: composed ?? [],
-    adopted: null,
+    adopted: adoptedBy(ctx, composed),
     ...(composed === undefined ? {} : { engine: dryEngine(ctx, "script", 840) }),
     notes: [],
     accepted: [BASELINE],

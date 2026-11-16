@@ -1,7 +1,7 @@
 // SCOUT'S STILLS, STEERED (plan humble-soaring-wave WP-B; studio-first since spark scout-vision S6) - the
 // two steers, pinned where they are made: extract's `generator` option reaches the imaging router as
 // `prefer` (and an extract run without one is unchanged; one naming the studio is shaped for it), /scout's
-// style act asks for the night's still engine (`leonardo-studio` by default, SCOUT_REPLICA_GENERATOR
+// style act asks for the night's still engine (`codex` by default, SCOUT_REPLICA_GENERATOR
 // otherwise), and a scene's replica request prefers the same. The imaging router is a fake that records what it was asked; every root is
 // a temp directory set before any lib/ module loads.
 
@@ -112,7 +112,7 @@ describe("extract's generator option", () => {
 });
 
 describe("/scout", () => {
-  it("the style act launches its extract run with the night's still engine: the studio by default, the switch otherwise", async () => {
+  it("the style act launches its extract run with the night's still engine: Codex by default, the switch otherwise", async () => {
     const n = await createNight({ dry: true, day: "2026-10-22" });
     const file = "sources/s-01/p-001.png";
     mkdirSync(path.dirname(path.join(nightDir(n.id), file)), { recursive: true });
@@ -131,11 +131,11 @@ describe("/scout", () => {
       else process.env["SCOUT_REPLICA_GENERATOR"] = prev;
     }
     expect(asked.launches).toHaveLength(2);
-    expect(asked.launches[0]).toMatchObject({ kind: "gallery", options: { generator: "leonardo-studio" } });
+    expect(asked.launches[0]).toMatchObject({ kind: "gallery", options: { generator: "codex" } });
     expect(asked.launches[1]).toMatchObject({ kind: "gallery", options: { generator: "leonardo-flare" } });
   });
 
-  it("a scene's replica still prefers the studio at Low by default, Flare when named, with no reference image", () => {
+  it("a scene's replica still prefers the named engine: the studio at Low, Flare when named, with no reference image", () => {
     const recipe: SceneRecipe = {
       shot: "wide",
       camera: "eye level, a normal lens",
@@ -147,7 +147,7 @@ describe("/scout", () => {
       durationS: 3,
       prompt: "A flat colour poster of a lighthouse on a cliff at dusk, two inks, open sky to the right.",
     };
-    expect(REPLICA_GENERATOR).toBe("leonardo-studio");
+    expect(REPLICA_GENERATOR).toBe("codex");
     const req = replicaRequest(recipe, 1, "leonardo-studio");
     expect(req).toMatchObject({ prefer: "leonardo-studio", aspect: "16:9", count: 1, seed: 1, quality: "low", prompt: recipe.prompt });
     expect("references" in req).toBe(false);

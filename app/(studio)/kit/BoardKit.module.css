@@ -9,6 +9,7 @@
    spilling three --w-tile columns past its edge. */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--w-tile)),1fr));gap:var(--sp-4);width:100%}
 .thumb{width:var(--w-pair-thumb);border-radius:var(--r-sm)}
+.media{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:flex-start}
 .note{width:100%}
 /* The open reason tip stands over its chip: room for it above the verdict, inside the specimen. */
 .pick{padding-top:var(--sp-page-end)}

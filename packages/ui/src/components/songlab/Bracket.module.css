@@ -1,0 +1,46 @@
+/* The winner's bracket (Knockout app.css "the bracket"), in tokens. Row 28 = --h-row; a cell is two
+   rows and a hair (58); a connector reaches half the column gap (16 = --sp-wide). */
+.bracket{font:400 var(--fs-meta)/1.45 var(--sans);flex:1;min-height:0;overflow:auto;padding:var(--sp-1) var(--sp-wide) var(--sp-3);display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);column-gap:calc(var(--sp-wide) * 2)}
+.round{--n:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.rhead{height:var(--sp-7);flex:none;display:flex;align-items:center;gap:var(--sp-3)}
+.caps{font:500 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.rhead .caps{color:var(--muted)}
+.cells{flex:1;display:flex;flex-direction:column;min-height:calc(var(--n) * (var(--h-row) * 2 + var(--sp-nudge)))}
+.cell{flex:1;display:flex;align-items:center;position:relative;min-height:calc(var(--h-row) * 2 + var(--sp-nudge))}
+.round:not(:last-child) .cell::after{content:"";position:absolute;left:100%;width:var(--sp-wide);border-right:1px solid var(--hair-3);pointer-events:none}
+.round:not(:last-child) .cell:nth-child(odd)::after{top:50%;height:50%;border-top:1px solid var(--hair-3);border-top-right-radius:var(--r-chip)}
+.round:not(:last-child) .cell:nth-child(even)::after{bottom:50%;height:50%;border-bottom:1px solid var(--hair-3);border-bottom-right-radius:var(--r-chip)}
+.round:not(:first-child) .cell::before{content:"";position:absolute;right:100%;width:var(--sp-wide);top:50%;border-top:1px solid var(--hair-3);pointer-events:none}
+.round:not(:last-child) .cell.lit::after,.round:not(:first-child) .cell.litin::before{border-color:color-mix(in srgb,var(--emerald) 55%,transparent)}
+.fcell{flex-direction:column;justify-content:center;align-items:stretch}
+
+.match{width:100%;position:relative;border:1px solid var(--hair-2);border-radius:var(--r-sm);background:var(--ink-2);cursor:pointer;padding:0;text-align:left;display:block;color:inherit;font:inherit;transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease),background var(--dur) var(--ease)}
+.match:hover{border-color:var(--hair-3);background:var(--ink-3)}
+.match[aria-disabled=true]{cursor:default}
+.match[aria-disabled=true]:hover{border-color:var(--hair-2);background:var(--ink-2)}
+.tbd,.tbd:hover,.match.tbd[aria-disabled=true]:hover{background:transparent;border-style:dashed;border-color:var(--hair-2)}
+.cur{border-color:color-mix(in srgb,var(--amber) 70%,transparent);box-shadow:0 0 0 var(--ring-halo) var(--amber-a),0 0 calc(var(--sp-6) + var(--sp-1)) color-mix(in srgb,var(--amber) 16%,transparent);background:var(--ink-3)}
+.cur::before{content:"";position:absolute;left:calc(-1 * 1px);top:var(--sp-2);bottom:var(--sp-2);width:var(--sp-hair);border-radius:var(--sp-nudge);background:var(--amber)}
+.sel{border-color:var(--focus-line);box-shadow:0 0 0 var(--ring-halo) var(--cyan-a)}
+.upset{border-color:color-mix(in srgb,var(--amber) 38%,transparent)}
+.neither{border-color:color-mix(in srgb,var(--rose) 32%,transparent)}
+
+.slot{height:var(--h-row);display:grid;grid-template-columns:var(--h-chip) minmax(0,1fr) auto;align-items:center;gap:var(--sp-2);padding:0 var(--sp-2) 0 var(--sp-3);font:400 var(--fs-bar)/1 var(--mono);color:var(--text)}
+.slot + .slot{border-top:1px solid var(--hair)}
+.sd{font:500 var(--fs-micro) var(--mono);color:var(--faint);text-align:right}
+.lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tail{display:flex;gap:var(--sp-1);align-items:center}
+.win{color:var(--ink-bright);background:linear-gradient(90deg,color-mix(in srgb,var(--emerald) 10%,transparent),transparent 70%)}
+.win .sd{color:var(--emerald)}
+.out .lb,.out .sd{color:var(--faint)}
+.out .lb{text-decoration:line-through;text-decoration-color:var(--hair-3)}
+.ghost .lb{color:var(--faint);font-style:italic}
+.won{color:var(--emerald);font:500 var(--fs-micro) var(--mono)}
+.up{color:var(--amber);font:500 var(--fs-micro) var(--mono)}
+.none{color:var(--rose);font:500 var(--fs-micro) var(--mono)}
+
+.champ{margin-top:var(--sp-6);border:1px solid color-mix(in srgb,var(--emerald) 45%,transparent);border-radius:var(--r-sm);padding:var(--sp-4) var(--sp-5);background:var(--emerald-a);display:flex;flex-direction:column;gap:var(--sp-2)}
+.waiting{border-color:var(--hair-2);border-style:dashed;background:transparent}
+.t{font:600 var(--fs-h3)/1.25 var(--sans);color:var(--ink-bright);word-break:break-word}
+.waiting .t{color:var(--faint);font-weight:500;font-size:var(--fs-ui)}
+.chips{display:flex;gap:var(--sp-2);flex-wrap:wrap}

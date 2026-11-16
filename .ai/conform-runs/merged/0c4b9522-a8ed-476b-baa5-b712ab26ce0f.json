@@ -1,0 +1,137 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0c4b9522-a8ed-476b-baa5-b712ab26ce0f",
+  "subject": "music-prompt-composition",
+  "evaluatedAt": "2026-11-10T01:19:46.816324+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "frames-picture-composition",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/frames/shotPrompt.ts:1 The prompts this context writes are image prompts for shots and plates. A case-insensitive search of all of lib/frames (picture/ included) for music, suno, bpm, lyric, tempo, instrumental, melody, song and elevenlabs found nothing; the only nearby hits are 'Score' step references that read frames and do not brief a music generator, so the subject's precondition does not hold.",
+      "techniques": [],
+      "absenceTerms": [
+        "music",
+        "suno",
+        "bpm",
+        "lyric",
+        "tempo"
+      ]
+    },
+    {
+      "context": "music-clip-engine",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/music-clip/tempo.ts:4 This context takes a finished Suno track with its lyrics and style prompt as input and only analyses them (the BPM in the style text is a prior for detection). It never writes a music brief: searching lib/music-clip for SunoFields, composeMusic, generateMusic, musicPrompt and music_v1 found zero hits, so the brief-side subject does not govern it.",
+      "techniques": [],
+      "absenceTerms": [
+        "SunoFields",
+        "composeMusic",
+        "generateMusic",
+        "musicPrompt"
+      ]
+    },
+    {
+      "context": "music-vendors-and-publish",
+      "subject": "music-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/music/plan.ts:227 cueToPlan locks every section to its scene length and the whole cue to the summed picture at a hand-typed bpm. When a section is not a whole number of bars it says so in the brief rather than re-deriving the tempo (barsFit's doc says 'the caller then adjusts bpm', and the caller never does), and the tail is never floated, which is the over-determination the technique names.",
+      "techniques": [
+        {
+          "technique": "duration-and-tempo-locking",
+          "verdict": "deviation",
+          "evidence": "lib/music/plan.ts:227 Durations come from the picture, which is good, but tempo is not chosen so cuts land on bar lines and both edges are locked. The bar math is reported, not used to pick B."
+        },
+        {
+          "technique": "section-plan-as-the-brief",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:203 Each cue becomes an ordered plan, one section per scene, each with durationMs, positive/negative styles and directions. Stored-for-inpainting and audio-ref chunks make sections editable by address (types.ts:164)."
+        },
+        {
+          "technique": "sonic-style-vocabulary",
+          "verdict": "conformant",
+          "evidence": "lib/music/plan.ts:194 The standing style block is restated in full on every section. 'instrumental' is said positively, and standing excludes (vocals, singing, fade-out ending) fence the other side."
+        },
+        {
+          "technique": "lyrics-for-singability",
+          "verdict": "conformant",
+          "evidence": "lib/music/elevenlabs.ts:150 The wire chunk puts the section role in brackets, delivery directions in braces and lyric lines verbatim, so structure metadata stays out of the sung text. No syllable-load check exists, but no lyrics are authored here."
+        }
+      ],
+      "registryProposal": "duration-and-tempo-locking's 'lock one edge, float the other' assumes one picture event inside a cue. When a plan is cut one section per scene, every internal boundary is a picture event, so the technique should say how to choose one tempo across several fixed section lengths, or when a per-section tempo or a floated final section is the honest answer."
+    }
+  ],
+  "declined": [
+    {
+      "subject": "music-prompt-composition",
+      "context": "audio-composer-briefs",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that the music brief has no ordered sections and a take can only be accepted or regenerated whole is true of batch.ts but contradicted by the same directory: packages/ui/src/components/audio/intent.ts compiles an ordered section plan (sectionsFor, with PlanSectionOut carrying name, duratio"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-10T01:19:46.816324+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "music-prompt-composition"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "frames-picture-composition",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T01:19:46.816324+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "music-prompt-composition"
+      ],
+      "techniques": [
+        "duration-and-tempo-locking",
+        "lyrics-for-singability",
+        "reference-track-anchoring",
+        "section-plan-as-the-brief",
+        "sonic-style-vocabulary"
+      ],
+      "deviations": 1,
+      "context": "audio-composer-briefs",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T01:19:46.816324+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "music-prompt-composition"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "music-clip-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T01:19:46.816324+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "music-prompt-composition"
+      ],
+      "techniques": [
+        "duration-and-tempo-locking",
+        "lyrics-for-singability",
+        "section-plan-as-the-brief",
+        "sonic-style-vocabulary"
+      ],
+      "deviations": 1,
+      "context": "music-vendors-and-publish",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

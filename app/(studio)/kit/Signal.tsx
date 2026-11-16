@@ -129,6 +129,9 @@ export function SignalSections() {
         </Spec>
         <Spec names={["Ghost"]} source="ghost/Ghost.tsx">
           <Ghost count={2} label="runs: none yet" />
+          <div className={k.workspaceShort}>
+            <Ghost count={2} fill label="desk" />
+          </div>
         </Spec>
       </Section>
 
@@ -172,7 +175,7 @@ export function SignalSections() {
           </div>
         </Spec>
         <Spec names={["Provenance"]} source="provenance/Provenance.tsx">
-          <Provenance model="flux2-dev-fp8" run="2026-08-26-sweep-01" step="frames" vendor="GPU box" cost="$0" />
+          <Provenance model="codex-image-gen" run="2026-08-26-sweep-01" step="frames" vendor="GPU box" cost="$0" />
         </Spec>
         <Spec names={["UpstreamBreak"]} source="upstream/UpstreamBreak.tsx" wide>
           <UpstreamBreak
@@ -188,7 +191,7 @@ export function SignalSections() {
         <Spec names={["Facts"]} source="facts/Facts.tsx">
           <Facts
             facts={[
-              { term: "model", value: "flux2-dev-fp8" },
+              { term: "model", value: "codex-image-gen" },
               { term: "plates", value: 20 },
               { term: "minutes", value: 32 },
               { term: "spend", value: "$0" },

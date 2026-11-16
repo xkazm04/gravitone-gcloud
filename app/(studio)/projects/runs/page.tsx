@@ -7,17 +7,17 @@
 //
 // A Server Component: the data is read here, on the server, where the stores are (./_runs/
 // load.ts), and handed to one client island. The selection arrives in the search params so a
-// link can carry it (`/ledger` links a job here as `?job=<source>:<id>`), and the island keeps
-// it there afterwards without asking the server again.
+// link can carry it (`/ledger` links a job here as `?job=<source>:<id>`, the header's needs chip
+// as `?state=needs`; ./_runs/url.ts), and the island keeps it there afterwards without asking
+// the server again.
 import type { Metadata } from "next";
-
-import { DEFAULT_ZOOM, isZoom } from "@gt/ui/components/runs/dayline.ts";
 
 import { PRODUCE_PORT } from "../_port/wire.ts";
 import { dojoReceipt, startDojo } from "./_runs/dojo.ts";
 import { loadRuns } from "./_runs/load.ts";
 import { Runs } from "./_runs/Runs.tsx";
 import { mvRegenerate, mvRegenerateReceipt, mvSchedule } from "./_runs/mvActs.ts";
+import { parseRuns } from "./_runs/url.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Runs" };
 
@@ -25,11 +25,6 @@ type Search = Promise<Readonly<Record<string, string | string[] | undefined>>>;
 
 export default async function RunsPage({ searchParams }: { readonly searchParams: Search }) {
   const q = await searchParams;
-  const one = (k: string): string | null => {
-    const v = q[k];
-    return typeof v === "string" && v !== "" ? v : null;
-  };
-  const zoom = one("zoom");
   const data = await loadRuns();
-  return <Runs data={data} port={PRODUCE_PORT} dojo={{ receipt: dojoReceipt, start: startDojo }} mv={{ receipt: mvRegenerateReceipt, regenerate: mvRegenerate, schedule: mvSchedule }} initial={{ job: one("job"), project: one("project"), zoom: isZoom(zoom) ? zoom : DEFAULT_ZOOM }} />;
+  return <Runs data={data} port={PRODUCE_PORT} dojo={{ receipt: dojoReceipt, start: startDojo }} mv={{ receipt: mvRegenerateReceipt, regenerate: mvRegenerate, schedule: mvSchedule }} initial={parseRuns(q)} />;
 }

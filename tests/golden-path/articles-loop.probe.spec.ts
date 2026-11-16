@@ -18,7 +18,7 @@
 // Each run is a kernel job (Phase 4, L30): the loop is driven through the CLI's own driver
 // (lib/producers/article.ts `loopDriver`, live jobs on the sandbox's kernel store), so the
 // ceilings below are the jobs' as well as the loop's.
-//   · the writer's CLI is given --max-budget-usd
+//   · the writer's CLI is never given a budget flag
 //   · the CLI refuses `loop` without --budget-usd
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -256,8 +256,8 @@ test("loop: a run over its cost ceiling stops at a turn boundary, is marked for 
   expect(report.runs[0].costUsd).toBeLessThan(100 + 3 * 30 + 1);
   expect(await readRun(report.runs[0].runId)).toMatchObject({ status: "failed", error: expect.stringMatching(/run-ceiling/) });
   expect(readFileSync(path.join(loopsRoot(), report.id, "events.log"), "utf8")).toMatch(/CEILING .*marked for a human, not resumed/);
-  // the writer's CLI was handed the per-turn cap
-  expect(readFileSync(process.env.STUB_AGENT_ARGV_LOG, "utf8")).toMatch(/--max-budget-usd/);
+  // the seat is never handed a budget flag: the ceiling is enforced between turns, above
+  expect(readFileSync(process.env.STUB_AGENT_ARGV_LOG, "utf8")).not.toMatch(/--max-budget-usd/);
 });
 
 test("loop: a run ceiling under a run's price launches - a stop point, not a refusal - and stops at it, marked for a human", async () => {

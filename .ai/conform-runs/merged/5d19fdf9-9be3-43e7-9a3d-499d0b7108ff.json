@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5d19fdf9-9be3-43e7-9a3d-499d0b7108ff",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-10T00:27:21.696553+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that names no decider is logged as a human's: a PUT, a PATCH without `by`, and the commit's own auto-rejects (commitPlan.ts:80 mints `{verdict:\"reject\"}` with no `by`, then replaceVerdictMapHeld passes `undefined`). humanKeep then counts any keep without `by:\"model\"` as a vote toward `proven`, the state adoptionDraft/adoptInStore admit, so admission is still reachable through an unmarked default and not only through an authenticated human decision.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/verdictLog.ts:172 The `who` field defaults to human, so the append-only log records the commit's auto-rejects and unattributed writes as human verdicts that no one made."
+    },
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/commitPlan.ts:37 Only an explicit `model` keep is kept out of the admitting count. An absent `by` (legacy or unattributed) counts as a human vote toward `proven`, and `proven` gates adoption into the Library (adopt.ts:229)."
+    },
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/verdictLog.ts:241 Who decided is read from the request body as a claim, not resolved from an authenticated principal, so the sender of a write chooses whether it counts as a human's."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/verdictLog.ts:202 A stale base is refused with a 409 that carries the current revision, never merged. A committed run refuses further writes (guarded/committed, store.ts:274)."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/verdictLog.ts:132 A damaged verdicts.json is a loud 503 refusal, not read as an empty, undecided map."
+    }
+   ]
+  },
+  {
+   "context": "ui-board-state",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/board/boardGate.ts:110 Every revised write (patch, undo, pick, return) answers the kernel's stale-base conflict by re-reading and sending the same act again on the new revision, without the human seeing what moved. A same-key verdict another tab or agent made in between is overwritten, and because the kernel's planUndo (packages/kernel/src/decision/core.ts:125) takes back the newest act whoever made it, a stale undo can reverse someone else's decision.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/board/boardGate.ts:110 The standard wants a verdict that lands on moved state refused loudly. Here the client turns the kernel's conflict into a silent re-base and resend."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/board/boardGate.ts:136 A commit is only sent with the token of the preview that was shown. Commit, unlike the other writes, is not retried on conflict."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/board/commit.ts:35 Undecided items block the commit instead of being recorded as rejects (the header contrasts this with v1's undecidedAs), so no verdict is minted that a human did not make."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/board/commit.ts:1 The commit state machine is data (idle\u2192previewing\u2192shown\u2192committing) and requires the consequence on screen before confirming."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/board/cull.ts:16 The desk is complete by construction: an item whose row the presentation does not name is still drawn."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "trailer-structure-rules",
+   "reason": "absence contradicted: lib/script/trailer/rules/promises.ts:42 contains 'pending' (2 hit(s) in the context's directories)"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T00:27:21.696553+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fail-loud-classification-default",
+    "gate-state-machines",
+    "handoff-is-a-declared-door",
+    "truncated-verdict-space"
+   ],
+   "deviations": 1,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:27:21.696553+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "ui-board-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

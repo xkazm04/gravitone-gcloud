@@ -62,15 +62,39 @@ export const PRODUCERS = [
   // A /scout night's stats-reel ideas (spark stats-reels): each authored as a full 8 s strip in code on the
   // Claude seat, linted, and its frame 120 rendered as the idea's tile (lib/producers/scoutReel.ts).
   "scout-reels",
-  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Flux 2 on this
+  // A /scout night's storyboards (spark scout-storyboards): a kept idea's frames drawn by Codex, not on this
   // box's ComfyUI, one job per storyboard (lib/producers/scoutStoryboard.ts).
   "scout-storyboard",
   // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and the clips cut into
   // one video with ffmpeg on this box, one job per piece (lib/producers/scoutPiece.ts).
   "scout-piece",
-  // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Flux 2 still on this box's ComfyUI, her
+  // A cover (spark track-mirror-studio): a song's section transcribed and rendered as five YuE2 takes on this
+  // box's ComfyUI, one job per cover (lib/producers/cover.ts).
+  "cover",
+  // A cover's brief (spark track-mirror-studio, follow-up): the song measured, listened to three times through Gemini,
+  // its title, styles and section written by a Claude Code turn, then its cover launched (lib/producers/coverBrief.ts).
+  "cover-brief",
+  // A cover's Suno send (spark suno-covers): the winner uploaded once, covered twice through Suno's official API and each cover read for free,
+  // one job per send on cloud.suno (lib/producers/coverSuno.ts).
+  "cover-suno",
+  // A kept character's reference sheet (spark scout-vision S3): one neutral 1:1 Codex still on the operator's seat, her
   // kept portrait admitted late as the reference, one job per sheet (lib/producers/scoutSheet.ts).
   "scout-sheet",
+  // The song lab (spark yue2-song-lab): YuE2 renders a batch of seeds in WSL, every take is scored (lyric WER,
+  // SongEval, aesthetics, buzz), and a post-chain or a blind window is made from a take - three jobs on gpu.local
+  // (lib/producers/yue2.ts).
+  "yue2-render",
+  "yue2-score",
+  "yue2-post",
+  // A production's hero shot or rough cut (spark concept-casting-stages S1): H3 clips from its board's frames, on gpu.local.
+  "production-take",
+  // A casting round's ElevenLabs voices (spark concept-casting-stages S3): designed previews levelled to one loudness, a voice created only on the pick; on cloud.elevenlabs.
+  "production-voices",
+  "production-cast",
+  // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip craft by format, on box.render, the result to the Board.
+  "production-cut",
+  // A done production's three proposed lessons (spark concept-casting-stages S6): one text turn on seat.text, enqueued by the Board's approval.
+  "production-lessons",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

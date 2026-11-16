@@ -3,21 +3,27 @@
 // (source, run, style, lesson, used by) and its references, each a door:
 //   item    another Library item: selects it (its thumbnail when it has one, else its kind)
 //   facet   a value of the vocabulary: filters by it (a run, a hunt, a bundle, "6 forge plates")
+//   link    a page outside the Library (a production that used this character)
 //   text    something the Library knows by name only - drawn, not linked (the prototype's
 //           "not in catalogue" ghost chip says a style is referenced but not kept)
 // A run also links its Ledger events, the one page that always renders for any id.
 // A parent that is gone is a `text` ref with `ghost`: the item still has a past, and it says so
 // (@gt/domain/libraryItem: "the Library shows that as a broken link, never as an item with no past").
 
+import { tokens } from "../../tokens.ts";
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { LedgerLink } from "../ledgerlink/LedgerLink.tsx";
 import { LibraryGlyph, type KindId } from "./LibraryGlyph.tsx";
 import s from "./Lineage.module.css";
 
+const THUMB = Number.parseInt(tokens["w-lineage-thumb"], 10);
+
 export type LineageRef =
   | { readonly kind: "item"; readonly id: string; readonly label: string; readonly itemKind: Exclude<KindId, "all">; readonly thumb?: string }
   | { readonly kind: "facet"; readonly group: string; readonly value: string; readonly label: string; readonly goto?: Exclude<KindId, "all">; readonly ledger?: string; readonly mono?: boolean }
+  | { readonly kind: "link"; readonly href: string; readonly label: string }
   | { readonly kind: "text"; readonly label: string; readonly ghost?: boolean };
 
 export type LineageNode = { readonly role: string; readonly self?: boolean; readonly refs: readonly LineageRef[] };
@@ -33,8 +39,8 @@ function Ref({ r, onItem, onFacet }: { readonly r: LineageRef } & Pick<LineagePr
     case "item":
       return (
         <button type="button" className={s.link} onClick={() => onItem(r.id)}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- a library item is shown as its own bytes (Face.tsx) */}
-          {r.thumb !== undefined ? <img className={s.thumb} src={r.thumb} alt="" loading="lazy" /> : <LibraryGlyph name={r.itemKind} className={s.mark} />}
+          {/* A grid-size variant: a lineage thumb is a link's mark (desk/Plate.tsx). */}
+          {r.thumb !== undefined ? <Plate className={s.thumb} src={r.thumb} alt="" lazy width={THUMB} /> : <LibraryGlyph name={r.itemKind} className={s.mark} />}
           <span className={s.ell}>{r.label}</span>
         </button>
       );
@@ -46,6 +52,12 @@ function Ref({ r, onItem, onFacet }: { readonly r: LineageRef } & Pick<LineagePr
           </button>
           {r.ledger !== undefined && <LedgerLink href={r.ledger} subject={r.label} label="" />}
         </>
+      );
+    case "link":
+      return (
+        <a className={cx(s.link, s.plain)} href={r.href}>
+          {r.label}
+        </a>
       );
     case "text":
       return <Chip label={r.label} casing="lower" ghost={r.ghost === true} />;

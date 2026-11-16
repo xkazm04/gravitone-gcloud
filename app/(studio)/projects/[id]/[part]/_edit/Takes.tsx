@@ -10,6 +10,8 @@ import { useState } from "react";
 import type { AdsClips, AdsTakes, PartView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Clip } from "@gt/ui/components/desk/Clip.tsx";
+import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
@@ -17,10 +19,14 @@ import { RailList } from "@gt/ui/components/part/RailList.tsx";
 import { secs, walk } from "@gt/ui/components/part/part.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
+import { tokens } from "@gt/ui/tokens";
 import { cx } from "@gt/ui/components/cx.ts";
 
 import type { EditorProps } from "./PartEditor.tsx";
 import s from "./Frames.module.css";
+
+/** A take tile's width hint for a blob's grid-size variant (the browser measures the real one). */
+const TAKE = Number.parseInt(tokens["w-lib-tile-m"], 10);
 
 type ShotLike = { readonly id: string; readonly durationS: number; readonly adopted: string | null };
 
@@ -132,8 +138,7 @@ export function AdsTakesEditor({ frame, send, busy, error, act, data: d }: Edito
                     onClick={() => send({ op: "adopt-image", shotId: shot.id, takeId: t.id })}
                     data-take={t.id}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {t.url === null ? <span className={s.blank} /> : <img src={t.url} alt="" />}
+                    {t.url === null ? <span className={s.blank} /> : <Plate className={s.takeArt} src={t.url} alt="" lazy width={TAKE} />}
                     <span className={s.takeFoot}>
                       <span className={s.key}>{i < 9 ? i + 1 : ""}</span>
                       {t.adopted && <Chip label="adopted" tone="emerald" casing="lower" />}
@@ -226,8 +231,7 @@ export function AdsClipsEditor({ frame, send, busy, error, act, data: d }: Edito
               <Empty label="no shot selected" />
             ) : (
               <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {shot.still === null ? <Empty label="no adopted still" /> : <img className={s.clip} src={shot.still} alt={`still for ${shot.id}`} />}
+                {shot.still === null ? <Empty label="no adopted still" /> : <Plate className={s.clip} src={shot.still} alt={`still for ${shot.id}`} />}
                 <div className={s.grid} role="listbox" aria-label={`clips for ${shot.id}`}>
                   {shot.clips.map((c, i) => (
                     <button
@@ -240,7 +244,7 @@ export function AdsClipsEditor({ frame, send, busy, error, act, data: d }: Edito
                       onClick={() => send({ op: "adopt-clip", shotId: shot.id, clipId: c.id })}
                       data-clip={c.id}
                     >
-                      {c.url === null ? <span className={s.blank} /> : <video src={c.url} muted loop autoPlay playsInline aria-label={c.id} />}
+                      {c.url === null ? <span className={s.blank} /> : <Clip className={s.takeArt} src={c.url} label={c.id} muted loop autoPlay />}
                       <span className={s.takeFoot}>
                         <span className={s.key}>{i < 9 ? i + 1 : ""}</span>
                         <span>{c.status}</span>

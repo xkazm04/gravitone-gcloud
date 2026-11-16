@@ -1,0 +1,83 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e9826ad0-443c-4fc9-9283-337d553bbc40",
+  "subject": "talking-avatar",
+  "evaluatedAt": "2026-11-08T02:51:55.299471+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "kit-design-system-specimens",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/kit/sections.ts:10 The /kit route shows design-system specimens, and its only 'motion' is CSS easing and duration tokens, not face motion; a search of app/(studio)/kit for viseme, lipsync, avatar and talking found no hits, so no companion face is drawn here.",
+      "techniques": [],
+      "absenceTerms": [
+        "viseme",
+        "lipsync",
+        "avatar",
+        "talking"
+      ]
+    },
+    {
+      "context": "audio-arrange-desk",
+      "subject": "talking-avatar",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/audio/page.tsx:11 The audio desk arranges music and sound-effect takes into version stacks and plays them through a transport, with no face or speaking element driven by the audio; a search of app/(studio)/audio for viseme, lipsync, avatar and talking found no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "viseme",
+        "lipsync",
+        "avatar",
+        "talking"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "talking-avatar",
+      "context": "foundry-mesh-gates",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor at rig-gate.ts:333 is a facial-deformation gate. It fails a character with 0 morph targets because it 'cannot blink, speak or change expression', so this context does touch the face-capability precondition of a talking avatar. The not-applicable verdict is contradicted rather than support"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T02:51:55.299471+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "talking-avatar"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "foundry-mesh-gates",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:51:55.299471+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "talking-avatar"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "kit-design-system-specimens",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:51:55.299471+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "talking-avatar"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-arrange-desk",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

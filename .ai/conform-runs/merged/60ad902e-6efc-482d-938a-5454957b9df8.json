@@ -1,0 +1,74 @@
+{
+ "schema": "conform-run/1",
+ "worker": "60ad902e-6efc-482d-938a-5454957b9df8",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-06T00:36:59.835065+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "foundry-extract-engine",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/store.ts:406 commitExtractRun checks that the preview token still matches only when a caller supplies one, and the CLI commit (pipeline/foundry/extract.mts:128) calls it with inline verdicts and no token, so styles can be written to the catalogue with no binding to any preview the operator saw.",
+   "techniques": [
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/store.ts:406 Binding the verdict to a version is optional, so whether it happens depends on the caller. The Board adapter passes a token and the CLI does not."
+    },
+    {
+     "technique": "handoff-is-a-declared-door",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/store.ts:327 The decider class is taken from the record payload when present, overriding the door's `by`. This is a claim of who decided carried in the requester's own message."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/store.ts:394 Commit runs under the run lock against the recorded manifest status. Dry runs and runs still in progress are refused."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T00:36:59.835065+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "handoff-is-a-declared-door"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

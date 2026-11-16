@@ -1,0 +1,151 @@
+{
+  "schema": "conform-run/1",
+  "worker": "62f0f79f-64e7-483e-ad30-b006522c3d32",
+  "subject": "agent-memory",
+  "evaluatedAt": "2026-11-09T03:19:59.616518+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "library-projection-feeds",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/library/feeds/types.ts:9 Feeds map the studio's finished work into a media catalogue and a recursive search of lib/library for recall, consolidat, belief, distill and memories found nothing; agents can query it through the `library` MCP op (app/_server/mcp/tools/read.ts:121), which the earlier verdict missed, but that op searches produced assets and nothing here is carried forward or injected as a belief.",
+      "techniques": [
+        {
+          "technique": "lane-reconciliation",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/project.ts:171 The index is a derived projection that the sync reconciles with its feeds, but its items are catalogue entries, not memories with a retrieval lane."
+        },
+        {
+          "technique": "probe-without-write-back",
+          "verdict": "not-applicable",
+          "evidence": "lib/library/probe.ts:11 This probe times queries over a generated corpus; this context has no usage term that recall would feed."
+        }
+      ],
+      "absenceTerms": [
+        "recall",
+        "consolidat",
+        "belief",
+        "distill",
+        "memories"
+      ]
+    },
+    {
+      "context": "project-step-store",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/steps/index.ts:8 This is browser IndexedDB storage for UI step content: a recursive search of lib/steps for recall, consolidat, belief, distill and memories found nothing, and no file in lib/producers, lib/script, app/_server, workers or pipeline references lib/steps, so no agent reads it as memory.",
+      "techniques": [
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "not-applicable",
+          "evidence": "lib/steps/readStep.ts:14 The read separates missing from failed in the same spirit, but the technique's precondition is a store the model reads and writes, and no model reads this one."
+        }
+      ],
+      "absenceTerms": [
+        "recall",
+        "consolidat",
+        "belief",
+        "distill",
+        "memories"
+      ]
+    },
+    {
+      "context": "v1-import-and-archive",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/import/commit.ts:32 The context moves v1 projects, shelves and archive rows into the kernel and back through deterministic mapping, and a recursive search of lib/import for recall, consolidat, belief, distill and memories found nothing, nor any agent, LLM or Claude reference.",
+      "techniques": [
+        {
+          "technique": "observation-clock",
+          "verdict": "not-applicable",
+          "evidence": "lib/import/project.ts:154 The import carries timestamps across unchanged; no distillation pass grounds relative time against them, which is the technique's precondition for imports."
+        }
+      ],
+      "absenceTerms": [
+        "recall",
+        "consolidat",
+        "belief",
+        "distill",
+        "memories"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-memory",
+      "context": "studio-local-store-and-projects",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "agent-memory",
+      "context": "foundry-forge-store-and-verdicts",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that no verdict reaches a model as recalled memory is contradicted inside lib/foundry: lib/foundry/scout/idea-loop/generate.ts:25-38 (`ideaPrompt`) puts the operator's last 20 keep/reject idea verdicts, with reasons, into the generation prompt. The evidence mentions lib/foundry/scout only "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T03:19:59.616518+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "lane-reconciliation",
+        "probe-without-write-back"
+      ],
+      "deviations": 0,
+      "context": "library-projection-feeds",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T03:19:59.616518+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "durable-store-failure-posture"
+      ],
+      "deviations": 0,
+      "context": "project-step-store",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T03:19:59.616518+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "observation-clock"
+      ],
+      "deviations": 0,
+      "context": "v1-import-and-archive",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T03:19:59.616518+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-memory"
+      ],
+      "techniques": [
+        "exposure-is-not-credit",
+        "memory-governance",
+        "procedure-promotion"
+      ],
+      "deviations": 0,
+      "context": "foundry-forge-store-and-verdicts",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

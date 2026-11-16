@@ -37,7 +37,16 @@ import { scoutIdeasProducer } from "./scoutIdea.ts";
 import { scoutReelsProducer } from "./scoutReel.ts";
 import { scoutPieceProducer } from "./scoutPiece.ts";
 import { scoutSheetProducer } from "./scoutSheet.ts";
-import { scoutStoryboardProducer } from "./scoutStoryboard.ts";
+import { coverProducer } from "./cover.ts";
+import { coverBriefProducer } from "./coverBrief.ts";
+import { coverSunoProducer } from "./coverSuno.ts";
+import { SCOUT_STORYBOARD_LANES, scoutStoryboardProducer } from "./scoutStoryboard.ts";
+import { productionTakeProducer } from "./production.ts";
+import { productionVoicesProducer } from "./productionVoices.ts";
+import { productionCutProducer } from "./productionCut.ts";
+import { productionCastProducer } from "./productionCast.ts";
+import { productionLessonsProducer } from "./productionLessons.ts";
+import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
 import { huntProducer } from "../sound/huntRender.ts";
@@ -126,7 +135,7 @@ export const BOUND: readonly Bound[] = [
   // The /scout night's ingest (spark media-training-loop): a found picture, page or video brought onto this box.
   { name: "scout-ingest", producer: scoutIngestProducer() },
   // A /scout scene: one job per candidate, on the lane of its expensive half (a local clip: gpu.local; else its stills' engine's:
-  // box.chrome for the studio, gpu.local for local Flux, cloud.leonardo for Flare - lib/foundry/scout/stillEngine.ts).
+  // box.chrome for the studio, seat.text for Codex, cloud.leonardo for Flare - lib/foundry/scout/stillEngine.ts).
   ...SCOUT_SCENE_LANES.map((lane): Bound => ({ name: "scout-scene", producer: scoutSceneProducer(lane) })),
   // The desk's effect batch (Phase 6, L66): one run of N clips through the metered call.
   ...lanesOf("sfx").map((lane): Bound => ({ name: "sfx", producer: sfxProducer(lane) })),
@@ -148,15 +157,39 @@ export const BOUND: readonly Bound[] = [
   // A /scout night's stats reels (spark stats-reels): one batch, each idea's full strip authored on the Claude
   // seat and its frame 120 drawn cold, on seat.text - the strips producer's lane.
   { name: "scout-reels", producer: scoutReelsProducer() },
-  // A /scout night's storyboards (spark scout-storyboards): one job per kept idea's storyboard, its frames drawn by Flux 2
-  // on this box's ComfyUI, on gpu.local (engine comfy).
-  { name: "scout-storyboard", producer: scoutStoryboardProducer() },
+  // A /scout night's storyboards (spark scout-storyboards): one job per kept idea's storyboard, its frames drawn by Codex,
+  // on seat.text; a trial on gpu.local (engine comfy) because its LTX clips own the card.
+  ...SCOUT_STORYBOARD_LANES.map((lane): Bound => ({ name: "scout-storyboard", producer: scoutStoryboardProducer({ lane }) })),
   // A genre's piece (spark scout-vision S2): its best kept trial's rejected clips re-made on LTX and every clip cut with
   // ffmpeg, one job per piece on gpu.local (engine comfy).
   { name: "scout-piece", producer: scoutPieceProducer() },
-  // A kept character's reference sheet (spark scout-vision S3): one Flux 2 still, her kept portrait as a late reference,
-  // one job per sheet on gpu.local (engine comfy).
+  // A kept character's reference sheet (spark scout-vision S3): one Codex still, her kept portrait attached as a reference,
+  // one job per sheet on seat.text.
   { name: "scout-sheet", producer: scoutSheetProducer() },
+  // A cover (spark track-mirror-studio): a song's section transcribed by SheetSage2 and rendered as five YuE2 takes,
+  // one job per cover on gpu.local (engine comfy).
+  { name: "cover", producer: coverProducer() },
+  // A cover's brief (cover brief WP-A): the song measured, heard three times through Gemini and written up by a Claude
+  // Code turn, then its cover launched; one job per cover on seat.text.
+  { name: "cover-brief", producer: coverBriefProducer() },
+  // A cover's Suno send (spark suno-covers): the picked winner uploaded once, covered twice through Suno's official API and
+  // each cover read for free; one job per send on cloud.suno.
+  { name: "cover-suno", producer: coverSunoProducer() },
+  // The song lab (spark yue2-song-lab): YuE2 in WSL on this box's card - a batch of seeds rendered, every take scored,
+  // a post-chain or a blind window made from a take; three jobs on gpu.local, each $0 (lib/producers/yue2.ts).
+  { name: "yue2-render", producer: yue2RenderProducer() },
+  { name: "yue2-score", producer: yue2ScoreProducer() },
+  { name: "yue2-post", producer: yue2PostProducer() },
+  // A production's take (spark concept-casting-stages S1): H3 clips from its board's frames, one job per take on gpu.local (engine comfy).
+  { name: "production-take", producer: productionTakeProducer() },
+  // A casting round's voices (spark concept-casting-stages S3): design calls and the operator's pick, on cloud.elevenlabs.
+  { name: "production-voices", producer: productionVoicesProducer() },
+  // A casting round's words and new faces (spark concept-casting-stages S4): on the text and image seats, one job per act.
+  { name: "production-cast", producer: productionCastProducer() },
+  // A production's final cut (spark concept-casting-stages S5): the trailer or music-clip script over its takes, then the Board; on box.render.
+  { name: "production-cut", producer: productionCutProducer() },
+  // A done production's lessons (spark concept-casting-stages S6): one text turn, enqueued by the Board's approval of the cut.
+  { name: "production-lessons", producer: productionLessonsProducer() },
   ...stepsBound(),
 ];
 

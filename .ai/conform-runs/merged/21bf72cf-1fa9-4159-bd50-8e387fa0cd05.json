@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "21bf72cf-1fa9-4159-bd50-8e387fa0cd05",
+ "subject": "visual-style-locking",
+ "evaluatedAt": "2026-11-08T03:18:19.575305+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "style-atelier",
+   "subject": "visual-style-locking",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:105 The atelier keeps the send count (SEND_REFS) as a named constant separate from the approved-only window. It requires a note before a rejection lands and offers lock only when the server's gate admits it. Changing a locked look goes through duplicate, and a style captured by adopt records its origin.",
+   "techniques": [
+    {
+     "technique": "approved-reference-sheet",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Dossier.tsx:105 Send count is a named constant distinct from PROOF_CAP. The domain's styleRefs sends approved, non-stale proofs only. Generation is disabled when sheet.full (Atelier.tsx line 69)."
+    },
+    {
+     "technique": "rejections-as-negative-evidence",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:120 A rejection cannot be sent without a reason. The port's remove-proof op is refused by the kernel for a rejected proof (packages/kernel/src/styles/core.ts:103), so rejections are never deleted."
+    },
+    {
+     "technique": "draft-proofing-locked-ratchet",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/[id]/_atelier/Atelier.tsx:203 Lock is offered only when the server's gate admits it; otherwise 'lock held' shows the blocker. A refused op draws the ratchet's sentence verbatim. Duplicate is the only path to change a locked look. An unknown id is a 404, never a stand-in style (page.tsx:44)."
+    },
+    {
+     "technique": "style-onboarding-from-sample",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/style/_port/fixtureActs.ts:96 Adopt reads the palette off a kept plate (the recognize model) and splits the recipe into slots. It leaves subject empty for a person to write, and the slots stay editable. Seeded forge plates come in UNDECIDED, so they must pass the gate. The origin is shown in the dossier (Dossier.tsx:47 view.origin.kind)."
+    }
+   ],
+   "registryProposal": "The repo's ratchet is candidate -> proven -> locked. 'proven' is earned by operator keeps in distinct cells, and lock adds trial-problem coverage on top of the technique's 'at least one approval, zero undecided'. The technique could note that a lock gate may add coverage requirements: that strengthens the gate and does not count as a deviation."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "visual-style-locking",
+   "context": "style-trials-cull",
+   "reason": "conformant below the evidence floor: 3 distinct anchors for 7 techniques, 4 needed"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T03:18:19.575305+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "visual-style-locking"
+   ],
+   "techniques": [
+    "approved-reference-sheet",
+    "draft-proofing-locked-ratchet",
+    "rejections-as-negative-evidence",
+    "style-onboarding-from-sample"
+   ],
+   "deviations": 0,
+   "context": "style-atelier",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

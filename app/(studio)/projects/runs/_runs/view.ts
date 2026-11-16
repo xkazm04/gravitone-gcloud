@@ -12,14 +12,14 @@ import { blockedBy, light, type Dep, type Lit } from "@gt/ui/components/runs/thr
 import { STATUS } from "@gt/ui/components/status/status.ts";
 
 import type { RunJob, RunWeir, RunsModel } from "./model.ts";
+import { NEEDS } from "./needs.ts";
 
 /** States that end a dependency's chances: whatever waits on them is blocked. */
 const STUCK: ReadonlySet<JobState> = new Set(["failed", "interrupted", "cancelled"]);
 /** States that hold a lane now. */
 const HOLDING: ReadonlySet<JobState> = new Set(["running"]);
-/** An interrupted job waits on the operator's look, not on its lane: it is counted with the failed. */
+/** An interrupted job waits on the operator's look, not on its lane: it is counted with the failed (./needs.ts). */
 const WAITING: ReadonlySet<JobState> = new Set(["queued", "planned", "paused"]);
-const NEEDS: ReadonlySet<JobState> = new Set(["failed", "interrupted"]);
 
 /** `14:05` today, `Wed 15 Oct 14:05` otherwise; `≈` when the time is derived. UTC, as the axis is. */
 export function when(t: number, now: number, approx = false): string {
@@ -153,12 +153,37 @@ export const projectMeta = (p: { readonly jobs: number; readonly slots: number }
 
 export type Totals = { readonly running: number; readonly waiting: number; readonly weir: number; readonly failed: number };
 
-export function totalsOf(m: RunsModel): Totals {
-  const live = m.jobs.filter((j) => j.from !== "ledger");
+/** The states Runs filters by (`?state=`), one per totals chip. Absent is everything. */
+export const RUN_FILTERS = ["needs", "running", "waiting", "weir"] as const;
+export type RunFilter = (typeof RUN_FILTERS)[number];
+export const isRunFilter = (v: unknown): v is RunFilter => RUN_FILTERS.some((f) => f === v);
+
+/** Each filter's jobs; the Weir's piles are their own filter. The ledger's past is in none. */
+const KEEPS: { readonly [F in RunFilter]: ReadonlySet<JobState> } = { needs: NEEDS, running: HOLDING, waiting: WAITING, weir: new Set() };
+
+/**
+ * The model as the filtered day-line and rail draw it: the jobs (and, for `weir`, the open
+ * piles) that the filter's totals chip counts - exactly those, so a chip's figure is the number
+ * of bars its door leaves. Calendar slots belong to no state and leave with any filter; so do
+ * the ledger's unplaced runs. Holds and read failures stay: they are not bars.
+ */
+export function filterModel(m: RunsModel, state: RunFilter | null): RunsModel {
+  if (state === null) return m;
+  const keep = KEEPS[state];
   return {
-    running: live.filter((j) => HOLDING.has(j.state)).length,
-    waiting: live.filter((j) => WAITING.has(j.state)).length,
-    weir: m.weir.filter((w) => !w.done).length,
+    ...m,
+    jobs: m.jobs.filter((j) => j.from !== "ledger" && keep.has(j.state)),
+    weir: state === "weir" ? m.weir.filter((w) => !w.done) : [],
+    pins: [],
+    unplaced: 0,
+  };
+}
+
+export function totalsOf(m: RunsModel): Totals {
+  return {
+    running: filterModel(m, "running").jobs.length,
+    waiting: filterModel(m, "waiting").jobs.length,
+    weir: filterModel(m, "weir").weir.length,
     failed: failedOf(m).length,
   };
 }

@@ -2,10 +2,14 @@ import "server-only";
 
 import { errorMessage } from "@gt/domain/errors";
 import { buildOf, corePrompt, normText, type CharacterLook, type LibraryOrigin } from "@gt/domain/library";
+import type { CharacterRecord, CharacterUse } from "@gt/domain/production";
+import type { CharacterImage } from "@gt/kernel/characters/schema";
+import { allCharacterUses, characterImages, savedCharacters, sourcesOfPool } from "@gt/kernel/characters/store";
+import type { Store } from "@gt/kernel/store";
 
 import { ideaCell } from "../../decision/v1/sources/scoutPlan.ts";
 import { getCatalogue } from "../../foundry/store.ts";
-import { keptCharacters, rootedRunId, type RootedNight } from "../../foundry/scout/characters.ts";
+import { characterKey, keptCharacters, rootedRunId, type RootedNight } from "../../foundry/scout/characters.ts";
 import { listNights, readNight, resolveInNight } from "../../foundry/scout/store.ts";
 import type { IdeaCandidate } from "../../foundry/scout/types.ts";
 import { withWing } from "../../foundry/scout/wingScope.ts";
@@ -32,6 +36,12 @@ import { isoOf, mimeOf, type Feed, type FeedItem, type FeedRead } from "./types.
 // (written before spark scout-use-aim) and are omitted the same way.
 //
 // knowledge/scout-muse/characters.md is not read: nothing parses it and it holds no pictures.
+//
+// THE CHARACTER RECORDS (spark concept-casting-stages S2, packages/kernel/src/characters): every record saved to the
+// library is a Library item, `character:<chr id>`, with its pictures already in blobs. A record imported from a kept
+// Scout character is NOT a second item: the night's item keeps its id and takes the record's used-by list; only such a
+// record whose night is gone is shelved from the record. Used-by is every `character.used` event: a pointer per
+// production, labelled with its title, drawn as a link to it.
 
 const ORIGIN: LibraryOrigin = "scout";
 const NIGHT_CAP = 120;
@@ -163,6 +173,78 @@ async function readRoot(root: RootedNight["root"]): Promise<{ nights: RootedNigh
 /** A root's night file on disk, inside that root's scope. */
 const resolveIn = (root: RootedNight["root"], night: string, rel: string): string => withWing(root === "archive" ? "muse" : "scout", () => resolveInNight(night, rel));
 
+/** What the Library needs of one saved record: its pictures with their blobs and where it was used. */
+export type ShelfRecord = { readonly record: CharacterRecord; readonly images: readonly CharacterImage[]; readonly uses: readonly CharacterUse[] };
+
+const RECORD_ORIGIN: Readonly<Record<CharacterRecord["origin"], LibraryOrigin>> = { "scout-character": "scout", "muse-army": "import", "codex-kept": "import", "casting-new": "studio" };
+
+const productionPointers = (uses: readonly CharacterUse[]): { kind: "production"; id: string; label: string }[] => uses.flatMap((u) => (u.productionId === undefined ? [] : [{ kind: "production" as const, id: u.productionId, label: u.label }]));
+
+/** One saved record as a Library item, or why not: the Library's age facet needs an age. */
+function recordItem(s: ShelfRecord, universe: "real" | "fixture"): FeedItem | { readonly reason: string } {
+  const { record, images, uses } = s;
+  const { card } = record;
+  if (card.age === undefined) return { reason: `${card.name} has no age; the Library shelves a character by her age` };
+  const first = images[0];
+  if (first === undefined) return { reason: `${card.name} has no picture` };
+  const build = buildOf(card.look);
+  const looks: CharacterLook[] = images.map((i) => ({ night: `${record.origin} ${i.role}`, cell: i.role, image: `/api/blob/${i.blob.sha256}?type=${encodeURIComponent(i.blob.mime)}` }));
+  return {
+    item: {
+      kind: "character",
+      id: `character:${record.id}`,
+      title: card.name,
+      state: "ratified",
+      collections: [{ kind: "run", id: record.origin }],
+      origin: RECORD_ORIGIN[record.origin],
+      rights: { use: "publishable" },
+      source: universe,
+      lineage: productionPointers(uses),
+      vocabulary: { age: card.age, ...(build === undefined || build.length < 3 ? {} : { build }), looks: [], applications: [] },
+      media: first.blob,
+      at: record.createdAt,
+    },
+    meta: `aged ${card.age} · ${record.origin} · ${images.length} ${images.length === 1 ? "picture" : "pictures"}`,
+    extras: { character: { card: { name: card.name, age: card.age, look: card.look, personality: card.personality }, prompt: corePrompt({ name: card.name, age: card.age, look: card.look }, ""), looks } },
+  };
+}
+
+/**
+ * Pure: the nights' items and the saved records as one shelf. A night's item takes the used-by list of the record
+ * imported from it, keeping its own id; every other saved record is its own item, once. `scoutRecord` maps a character
+ * key to the record imported from that kept Scout character.
+ */
+export function shelveRecords(nights: FeedRead, saved: readonly ShelfRecord[], scoutRecord: ReadonlyMap<string, string>, universe: "real" | "fixture"): FeedRead {
+  const byId = new Map(saved.map((s) => [s.record.id as string, s] as const));
+  const skipped = [...nights.skipped];
+  const onNight = new Set<string>();
+  const items: FeedItem[] = nights.items.map((it) => {
+    const id = scoutRecord.get(characterKey(it.item.title));
+    const s = id === undefined ? undefined : byId.get(id);
+    if (id === undefined || s === undefined) return it;
+    onNight.add(id);
+    return { ...it, item: { ...it.item, lineage: [...(it.item.lineage ?? []), ...productionPointers(s.uses)] } };
+  });
+  for (const s of saved) {
+    if (onNight.has(s.record.id)) continue;
+    const item = recordItem(s, universe);
+    if ("reason" in item) skipped.push({ id: s.record.id, reason: item.reason });
+    else items.push(item);
+  }
+  return { ...nights, items, skipped };
+}
+
+function readRecords(store: Store): { readonly saved: readonly ShelfRecord[]; readonly scoutRecord: ReadonlyMap<string, string> } {
+  const r = store.read((x) => {
+    const uses = allCharacterUses(x);
+    const saved = savedCharacters(x).map((record): ShelfRecord => ({ record, images: characterImages(x, record.id), uses: uses.get(record.id) ?? [] }));
+    const scoutRecord = new Map([...sourcesOfPool(x, "scout-character")].map(([key, id]) => [key.slice("scout-character:".length), id] as const));
+    return { saved, scoutRecord };
+  });
+  if (!r.ok) throw r.error;
+  return r.value;
+}
+
 async function readBoth(universe: "real" | "fixture"): Promise<FeedRead> {
   const [scout, archive] = await Promise.all([readRoot("scout"), readRoot("archive")]);
   const styleBySource = new Map<string, string>();
@@ -173,5 +255,10 @@ async function readBoth(universe: "real" | "fixture"): Promise<FeedRead> {
 
 export const characterFeed: Feed = {
   id: "character",
-  read: (ctx) => readBoth(ctx.universe),
+  read: async (ctx) => {
+    const nights = await readBoth(ctx.universe);
+    if (ctx.store === undefined) return nights;
+    const { saved, scoutRecord } = readRecords(ctx.store);
+    return shelveRecords(nights, saved, scoutRecord, ctx.universe);
+  },
 };

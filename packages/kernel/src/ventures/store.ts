@@ -9,7 +9,7 @@
 import { parseAt, parseJsonAt } from "@gt/domain/door";
 import { AppError, type Result } from "@gt/domain/errors";
 import type { Actor, EventData } from "@gt/domain/event";
-import { BORN_VENTURE_KINDS, mintSlugId, type Genre, type Venture, type VentureFrame, type VentureKind } from "@gt/domain/genre";
+import { BORN_VENTURE_KINDS, mintSlugId, ventureGroundOf, type Genre, type OperatorVentureGround, type Venture, type VentureFrame, type VentureKind } from "@gt/domain/genre";
 
 import { append } from "../events.ts";
 import type { Reader, Row, Tx } from "../store.ts";
@@ -26,8 +26,11 @@ import {
 
 /** What a kept `genre` proposal births; the id is minted from the name (mintSlugId), bornAt/by from the act. */
 export type GenreBirth = Pick<Genre, "name" | "bornFrom" | "proposal" | "use" | "look" | "grammar">;
-/** What a kept `venture` proposal births; a channel's frame names the genre(s) it is born from. */
-export type VentureBirth = { readonly name: string; readonly kind: VentureKind; readonly frame: VentureFrame; readonly proposal: string };
+/**
+ * What a kept `venture` proposal births; a channel's frame names the genre(s) it is born from. `ground` is set by the
+ * operator's own doors only (an imported channel, a proven video, the operator's press), and only then may a channel name no genre.
+ */
+export type VentureBirth = { readonly name: string; readonly kind: VentureKind; readonly frame: VentureFrame; readonly proposal: string; readonly ground?: OperatorVentureGround; readonly channelId?: string };
 
 /** A Result's value, or its error thrown: inside a read or a tx, a throw is the refusal. */
 function must<T>(r: Result<T>): T {
@@ -70,6 +73,7 @@ function toVenture(row: Row): Venture {
     kind: r.kind,
     frame,
     proposal: r.proposal,
+    ...(r.channel_id === null ? {} : { channelId: r.channel_id }),
     bornAt: r.born_at,
     by: r.born_by,
     ...(r.retired_at === null ? {} : { retiredAt: r.retired_at }),
@@ -131,8 +135,12 @@ export function bornVenture(t: Tx, birth: VentureBirth, actor: Actor): Venture {
   const prior = t.get(`SELECT ${VENTURE_COLUMNS} FROM ventures WHERE proposal = ?`, b.proposal);
   if (prior !== undefined) return toVenture(prior);
   if (!bornKinds.includes(b.kind)) throw new AppError("refused", `a ${b.kind} venture is born from its asset catalogue in S4; ${b.proposal} cannot birth one yet`);
+  const claimed = ventureGroundOf(b.proposal);
+  if (claimed !== (b.ground ?? "night")) throw new AppError("invalid", `${b.proposal} is a ${claimed} ground; this birth says ${b.ground ?? "night"}`);
+  if (b.ground !== undefined && actor.kind !== "operator") throw new AppError("refused", `only the operator births a venture on a ${b.ground} ground; ${actor.kind} ${actor.id} cannot`);
+  if ((b.channelId !== undefined) !== (b.ground === "channel")) throw new AppError("invalid", `a channel id belongs only to an imported channel: ${b.proposal}`);
   const genres = [...new Set(b.frame.genres)];
-  if (b.kind === "channel" && genres.length === 0) throw new AppError("invalid", `a channel is born from at least one genre; ${b.proposal} names none`);
+  if (b.kind === "channel" && genres.length === 0 && b.ground === undefined) throw new AppError("invalid", `a channel is born from at least one genre; ${b.proposal} names none`);
   for (const gid of genres) {
     const g = readGenre(t, gid);
     if (g === undefined) throw new AppError("not-found", `${b.proposal} names genre ${gid}, which was never born`);
@@ -142,17 +150,18 @@ export function bornVenture(t: Tx, birth: VentureBirth, actor: Actor): Venture {
   const id = mintSlugId("vn", b.name, takenIds(t, "ventures"));
   const frame = { ...b.frame, genres };
   t.run(
-    "INSERT INTO ventures (id, name, kind, frame, proposal, born_at, born_by_kind, born_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO ventures (id, name, kind, frame, proposal, channel_id, born_at, born_by_kind, born_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     id,
     b.name,
     b.kind,
     JSON.stringify(frame),
     b.proposal,
+    b.channelId ?? null,
     t.at,
     actor.kind,
     actor.id,
   );
-  const data = { name: b.name, kind: b.kind, proposal: b.proposal, genres };
+  const data = { name: b.name, kind: b.kind, proposal: b.proposal, genres, ...(b.channelId === undefined ? {} : { channelId: b.channelId }) };
   op(t, "venture", id, "born", actor, data);
   if (b.kind === "channel") {
     for (const gid of genres) {

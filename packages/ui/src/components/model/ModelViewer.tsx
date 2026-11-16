@@ -19,6 +19,7 @@ import { lazy, Suspense, useState, useSyncExternalStore } from "react";
 
 import { Chip } from "../chip/Chip.tsx";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { count } from "../tally/count.ts";
 import { Toggle } from "../toggle/Toggle.tsx";
@@ -74,8 +75,8 @@ export function ModelViewer({ src, title, poster, tris, bones, fill = false }: M
     <figure className={cx(s.viewer, fill && s.fill)} aria-label={`${title}, 3D model`} data-model-state={load.kind}>
       <div className={s.stage}>
         {load.kind !== "ready" && poster !== undefined && (
-          // eslint-disable-next-line @next/next/no-img-element -- the poster is the model's own render, at the pane's size
-          <img className={s.poster} src={poster} alt="" draggable={false} />
+          // The model's own render under the stage while it loads, at the pane's size (the original).
+          <Plate className={s.poster} src={poster} alt="" />
         )}
         {stage && (
           <Suspense fallback={null}>

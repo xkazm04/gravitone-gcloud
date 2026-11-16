@@ -39,12 +39,12 @@ import { scoutStillOption } from "./scoutStillOption.ts";
 // character whose T2 is asked) by the night's still engine (lib/foundry/scout/stillEngine.ts,
 // SCOUT_REPLICA_GENERATOR), priced by it (./scoutStillOption.ts) - the scene replica's line: the
 // Leonardo studio at Low by default, unpriced (prepaid studio credits); Flare at its per-image
-// fallback; local Flux 2 free. Each is prefer-only in the router, so a refusal is the candidate's
+// fallback; Codex $0 on the seat. Each is prefer-only in the router, so a refusal is the candidate's
 // sentence and never a quiet second vendor's bill.
 // The hand-off and everything after it - TRELLIS.2 through ComfyUI, the Blender finish - run on
 // this box and cost $0; they are the mesh store's jobs, admitted by resources, not by money.
 //
-// ONE JOB PER CANDIDATE AT A TIME, on its concepts' engine's lane (box.chrome, gpu.local or cloud.leonardo): `job:scout-asset:<night>:<c-NN>`, `~2` after a
+// ONE JOB PER CANDIDATE AT A TIME, on its concepts' engine's lane (seat.text, box.chrome or cloud.leonardo): `job:scout-asset:<night>:<c-NN>`, `~2` after a
 // failed one. night.json names it on the candidate and on `night.jobs` once the job exists.
 
 export type AssetTarget = { readonly nightId: NightId; readonly candidateId: CandidateId };
@@ -59,7 +59,7 @@ export type LaunchAssetOptions = {
   /** Absent: answer with the receipt and launch nothing. */
   readonly token?: string;
   readonly dryOnly: boolean;
-  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `leonardo-studio`). */
+  /** Absent: `SCOUT_REPLICA_GENERATOR` (default `codex`). */
   readonly generator?: ReplicaGenerator;
   readonly now?: number;
 };
@@ -74,7 +74,7 @@ export type AssetLaunch =
 /** The lane an asset enqueued before S6 waits on, and Flare's (the concepts were Flare's alone until then). */
 export const SCOUT_ASSET_LANE: ResourceLane = "cloud.leonardo";
 /** Every lane an asset job can wait on - its concepts' engine's (stillEngine.ts `stillLane`): the worker binds the producer on each. */
-export const SCOUT_ASSET_LANES: readonly ResourceLane[] = ["cloud.leonardo", "box.chrome", "gpu.local"];
+export const SCOUT_ASSET_LANES: readonly ResourceLane[] = ["cloud.leonardo", "box.chrome", "gpu.local", "seat.text"];
 
 /* ── The candidate a launch may price ─────────────────────────────────────── */
 
@@ -214,8 +214,8 @@ export function scoutAssetProducer(o: { readonly lane?: ResourceLane; readonly s
     },
     ...assetActs(o.engines ?? LIVE_ASSET_ENGINES, store),
   });
-  // Concepts on the card are Flux 2 through ComfyUI: the job names the `comfy` engine so the worker
-  // ADMITS it by that engine's profile against the machine's load, like a storyboard's frames.
+  // A concept job on the card (one queued before Flux 2's removal) keeps the `comfy` engine so the worker admits it by
+  // that engine's profile; Codex draws its stills either way.
   return lane === "gpu.local" ? { ...p, engine: "comfy" } : p;
 }
 

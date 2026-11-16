@@ -19,7 +19,9 @@
 .channel{display:inline-flex;align-items:center;gap:var(--sp-2);height:var(--h-control);padding:0 var(--sp-4);border-radius:var(--r-sm);border:1px solid color-mix(in srgb,var(--faint) 80%,transparent);background:var(--ink-2);color:var(--text);font:600 var(--fs-meta)/1 var(--sans)}
 .channelName{color:var(--ink-bright)}
 .channelState{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
-.locked{cursor:not-allowed;background:var(--hatch);color:var(--faint)}
+/* A channel that cannot be picked carries words ("not wired"): its ground is the faint hatch a
+   text-bearing cell takes, since the mark hatch runs its stripes through the letters. */
+.locked{cursor:not-allowed;background:var(--hatch-future) var(--ink-2);border-style:dashed;color:var(--muted)}
 .locked .channelName{color:var(--muted)}
 
 .row{display:flex;gap:var(--sp-3);align-items:center}

@@ -12,7 +12,6 @@ import type { BoardPacket, CommitReceipt } from "@gt/ui/board/port";
 import type { BoardVerdict } from "@gt/ui/board/boardGate";
 import type { Gate } from "@gt/ui/board/gate";
 import { isStalePreview } from "@gt/ui/board/port";
-import { ConsequencePanel } from "@gt/ui/components/consequence/ConsequencePanel.tsx";
 
 type BoardGateT = Gate<BoardPacket, BoardVerdict, Consequence, CommitReceipt>;
 
@@ -22,7 +21,12 @@ export type CommitFlow = {
   readonly consequence: Consequence | null;
   readonly refreshed: boolean;
   readonly error?: string;
-  readonly start: () => void;
+  /** What the commit leaves behind in tabs never opened, asked first (a statement of consequence), or null. */
+  readonly asking: readonly string[] | null;
+  /** Commit; handed `heldBack` lines, it asks about them before it previews. */
+  readonly start: (heldBack?: readonly string[]) => void;
+  readonly proceed: () => void;
+  readonly dismiss: () => void;
   readonly confirm: () => void;
   readonly cancel: () => void;
 };
@@ -35,12 +39,17 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
   const [error, setError] = useState<string | undefined>(undefined);
   const { onDone, toast, announce } = opts;
 
-  const start = useCallback(() => {
+  const [asking, setAsking] = useState<readonly string[] | null>(null);
+  const begin = useCallback(() => {
+    setAsking(null);
     setOpen(true);
     setRefreshed(false);
     setError(undefined);
     void gate.prepareCommit();
   }, [gate]);
+  // A deliberate partial still works: the ask is only a pause before the same preview.
+  const start = useCallback((heldBack?: readonly string[]) => (heldBack !== undefined && heldBack.length > 0 ? setAsking(heldBack) : begin()), [begin]);
+  const dismiss = useCallback(() => setAsking(null), []);
 
   const cancel = useCallback(() => {
     gate.clearPlan();
@@ -82,21 +91,11 @@ export function useCommitFlow(gate: BoardGateT, opts: { readonly onDone: () => v
     consequence: plan.plan,
     refreshed,
     ...(shownError === undefined ? {} : { error: shownError }),
+    asking,
     start,
+    proceed: begin,
+    dismiss,
     confirm,
     cancel,
   };
-}
-
-export function CommitLayer({ flow }: { readonly flow: CommitFlow }) {
-  return (
-    <ConsequencePanel
-      consequence={flow.consequence}
-      refreshed={flow.refreshed}
-      busy={flow.busy}
-      {...(flow.error === undefined ? {} : { error: flow.error })}
-      onConfirm={flow.confirm}
-      onCancel={flow.cancel}
-    />
-  );
 }

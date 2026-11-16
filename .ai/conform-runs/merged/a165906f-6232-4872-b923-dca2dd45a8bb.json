@@ -1,0 +1,273 @@
+{
+  "schema": "conform-run/1",
+  "worker": "a165906f-6232-4872-b923-dca2dd45a8bb",
+  "subject": "agent-cli-transport",
+  "evaluatedAt": "2026-11-04T03:59:55.987019+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "agent-cli-and-turns",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/claudeCli.ts:383 The reasoning (generate) door spawns `claude` with no `cwd` and its argv (cliArgs) carries no isolation flag, so every recalibrate/frames/text turn inherits the server's working directory (the repo root) and loads the repo's CLAUDE.md, settings and hooks as ambient context. The golden path's generate mode requires a neutral working directory, and the agent and retrieval seams already use `--safe-mode` for exactly this.",
+      "techniques": [
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:383 The generate seam has no neutral cwd and no --safe-mode or setting-source restriction. The agent seam does it right: --restricted/--safe-mode, a closed tool list validated with a throw on conflict, and an isolated workspace (agentArgs.ts:25, :36)."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:327 Unparseable output keeps no bounded prefix of the raw text. stdout is accumulated with no byte cap (claudeCli.ts:413, spawnTurn.ts:80), and an empty `result` is accepted as success (line 335). On the good side, stdout and stderr stay separate, stdin writes are guarded, and the codex event stream is folded."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "deviation",
+          "evidence": "lib/agent/reviewerEnv.ts:24 The billing strip is correct: a named list at the one door (claudeCli.ts:388) with no opt-out, and a test that reads the child's env. But reviewers read untrusted pages, and codex can run read-only shell commands. Their env is the inherited one minus a name-pattern denylist, where the technique requires clear-then-allowlist."
+        },
+        {
+          "technique": "availability-probe",
+          "verdict": "deviation",
+          "evidence": "lib/claudeCli.ts:199 The probe is zero-token and goes through the door's env and shell predicate. But its result is two-valued: ok:true means 'installed', and the unknown auth state appears only in prose. The agent seam spawns resolveAgentBin's native exe, which this shell-resolved probe never checks."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "deviation",
+          "evidence": "lib/agent/cliSeam.ts:35 Dates and methods live in comments. The flags are baked constants in agentArgs/cliArgs, with no matrix keyed by the probed version, so an unseen version never triggers re-verification."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-sandbox-args.probe.spec.ts:112 The argv the stand-in received through runClaude's real shell spawn is asserted, and engine-door.probe.spec.ts:93 asserts the metered vars never reach the child's env."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:111 Absence is classified distinctly so the router can descend. Minor issue: runAgent.ts labels a missing binary 'errored', while cliSeam.ts defines that case as 'unavailable'."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:44 No child thread id is ever passed back. No --resume or --continue exists anywhere in lib/, and agent turns disable persistence."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/agentArgs.ts:41 All turns are unattended, with the stance fixed up front. No chat surface routes approvals."
+        },
+        {
+          "technique": "derived-bash-allowlist",
+          "verdict": "not-applicable",
+          "evidence": "lib/agent/cliSeam.ts:59 The edit seam grants no shell at all, so there are no derived Bash prefixes."
+        }
+      ]
+    },
+    {
+      "context": "text-reasoning-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/text/providers/claudeCliRetrieve.ts:194 A retrieval run with no result event fails with an opaque message and no bounded prefix of the raw stream, and a success envelope with an empty `result` is returned as an answer (line 203). A login prompt, a rate-limit notice and an empty answer therefore all reach the router as undiagnosable failure or as success.",
+      "techniques": [
+        {
+          "technique": "output-normalization",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:194 No raw prefix is kept on failure, and empty text is accepted as success (line 203). The event stream is folded correctly, and stray lines are skipped."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:85 Layered fence: --tools plus --allowed-tools, dontAsk, --safe-mode and --strict-mcp-config, with the list quoted for cmd.exe."
+        },
+        {
+          "technique": "child-observed-posture",
+          "verdict": "conformant",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:228 The child's own init event (the tools it actually has) and every tool_use are checked mid-stream. A breach kills the run."
+        },
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/text/router.ts:26 Preferred, then alternate, then honest refusal. The rung and the descent trail travel in provenance, and LadderRung has no floor member."
+        },
+        {
+          "technique": "availability-probe",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCli.ts:88 ProbeResult is boolean, so 'installed, authorization unknown' reports as ok. The ceiling is stated only in `detail` prose, not as an unknown state. The posture check correctly runs first."
+        },
+        {
+          "technique": "dated-capability-matrix",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCli.ts:68 Dated beside the flag, and the router consumes the flag as data. But the witness is a comment, and the probed version (line 91) is never compared with 2.1.247."
+        },
+        {
+          "technique": "subscription-auth-selection",
+          "verdict": "deviation",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:288 The billing strip is inherited from the one door, which is correct. But the retrieval rung reads fetched pages and still gets the inherited env minus four names, not a built allowlist. Its WebSearch/WebFetch-only fence mitigates this."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCli.ts:133 The session id is only recorded in provenance and never passed back to resume a thread."
+        },
+        {
+          "technique": "host-routed-approval-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:88 Unattended: anything that would ask is denied."
+        },
+        {
+          "technique": "derived-bash-allowlist",
+          "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCliRetrieve.ts:61 There is no edit seam and no shell grant here."
+        }
+      ]
+    },
+    {
+      "context": "article-run-engine",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "lib/articles/agentSteps.ts:95 Every writer step runs one fresh headless turn in an isolated inputs/ and out/ workspace, with a per-step tool subset. Any outcome other than completed fails the step by name, and a missing or empty out/ file fails ingest. The spawn, env strip and envelope parse are delegated to lib/agent.",
+      "techniques": [
+        {
+          "technique": "fallback-ladder",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:95 Honest refusal: an editing agent has no heuristic floor, and the outcome is named. Dry runs are answered by a labeled job-level stand-in (dryAgent.ts)."
+        },
+        {
+          "technique": "permission-stance-enforcement",
+          "verdict": "conformant",
+          "evidence": "lib/articles/agentSteps.ts:29 Each step declares the narrowest tool set: no web for outline and draft. The seam validates the set against its closed list."
+        },
+        {
+          "technique": "output-normalization",
+          "verdict": "conformant",
+          "evidence": "lib/articles/ingestDraft.ts:36 The answer-file channel: the work is read from out/, and an empty or missing file is a named failure, never an empty success."
+        },
+        {
+          "technique": "thread-custody-across-resume",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/resume.ts:10 Resume restarts from the host's own run record. No child thread id is stored or passed back."
+        },
+        {
+          "technique": "derived-bash-allowlist",
+          "verdict": "not-applicable",
+          "evidence": "lib/articles/agentSteps.ts:30 Edit steps get no shell, so no project checks run inside the turn."
+        }
+      ]
+    },
+    {
+      "context": "suno-driver-queue",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/sound/suno/propose.ts:16 A case-insensitive search of lib/sound/suno for spawn, child_process, seatOnlyEnv, output-format and claude found nothing. Proposals reach a model only through the text router's reason(), and generation goes through the Suno driver, so this context spawns no agent CLI.",
+      "techniques": [],
+      "absenceTerms": [
+        "spawn",
+        "child_process",
+        "seatOnlyEnv",
+        "output-format"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-cli-transport",
+      "context": "review-and-runs-history",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lanes.ts:16 is an incidental import of LANE_CAPACITY and does not show that the context has no agent transport. lanes.ts is also not among the listed context files, so the absence claim rests only on a keyword search."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-04T03:59:55.987019+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "availability-probe",
+        "child-observed-posture",
+        "dated-capability-matrix",
+        "derived-bash-allowlist",
+        "fallback-ladder",
+        "host-routed-approval-round-trip",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "subscription-auth-selection",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 1,
+      "context": "agent-cli-and-turns",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T03:59:55.987019+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "availability-probe",
+        "child-observed-posture",
+        "dated-capability-matrix",
+        "derived-bash-allowlist",
+        "fallback-ladder",
+        "host-routed-approval-round-trip",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "subscription-auth-selection",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 1,
+      "context": "text-reasoning-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T03:59:55.987019+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [
+        "derived-bash-allowlist",
+        "fallback-ladder",
+        "output-normalization",
+        "permission-stance-enforcement",
+        "thread-custody-across-resume"
+      ],
+      "deviations": 0,
+      "context": "article-run-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T03:59:55.987019+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "review-and-runs-history",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-04T03:59:55.987019+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "suno-driver-queue",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

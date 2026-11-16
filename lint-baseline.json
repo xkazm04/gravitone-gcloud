@@ -25,7 +25,7 @@
     "    severity."
   ],
   "measuredAt": "2026-10-15",
-  "filesFloor": 150,
+  "filesFloor": 2390,
   "warnings": {
     "react-hooks/set-state-in-effect": 1,
     "react-hooks/exhaustive-deps": 0,

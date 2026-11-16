@@ -34,6 +34,29 @@ export const EXEMPT: Record<string, string> = {
   // spark audio-agent-studio: writes the playhead onto a ref'd timeline every animation frame; its
   // arithmetic (fracAt) is unit-tested in packages/ui/test/components/studio-desk.test.ts.
   "app/(studio)/audio/studio/_view/usePlayhead.ts": NEEDS_DOM,
+  // spark track-mirror-studio: the cover desk. The A/B player owns two HTMLAudioElements; the cover hook decodes the
+  // song with Web Audio to draw its peaks; the desk hook reads and writes the URL through next/navigation's router.
+  // Their pure parts are tested: the span arithmetic in packages/ui/test/components/rangepick.test.ts, the acts in
+  // tests/next-server/cover-doors.test.ts.
+  "app/(studio)/audio/_cover/desk/useAB.ts": NEEDS_DOM,
+  "app/(studio)/audio/_cover/desk/useCover.ts": "decodes the uploaded song with Web Audio (AudioContext), which this DOM-less lane has none of",
+  "app/(studio)/audio/_cover/desk/useDesk.ts": "reads and writes the URL through next/navigation's useRouter and useSearchParams, which need a mounted App Router",
+  // The take-against-take player owns two HTMLAudioElements, as useAB does.
+  "app/(studio)/audio/_cover/desk/sleeve/usePair.ts": NEEDS_DOM,
+  // Split out of useCover; its acts are tested in tests/next-server/cover-doors.test.ts.
+  "app/(studio)/audio/_cover/desk/useAfterPick.ts": NO_DRIVER,
+  // spark suno-covers: the suno station's send form, receipt and keep. Its state is React's (useState over the form), and
+  // the three compositions that read it ride next/navigation's useSearchParams; the plan the form makes, the steps of a send
+  // and the words a take wears are pure (suno/suno.ts) and unit-tested in tests/next-server/cover-suno-desk.test.ts.
+  "app/(studio)/audio/_cover/desk/suno/useSunoSend.ts": "form state held in React useState and driven through the cover acts from a mounted desk, which this DOM-less lane has none of; its pure parts are unit-tested in cover-suno-desk.test.ts",
+  // spark fable-ten: re-reads a part while a job is in flight. It asks document.activeElement whether the
+  // operator is typing and rides @gt/ui's visibility-aware poll; its adoption rule (mayAdopt) is unit-tested
+  // in packages/ui/test/components/part.test.ts.
+  "app/(studio)/projects/[id]/[part]/_edit/walk/useReread.ts": NEEDS_DOM,
+  // spark fable-ten: Runs' selection, written to the address with window.history.replaceState and re-adopted
+  // when a navigation hands the island new search params. Its address grammar (url.ts runsSearch / parse) is
+  // unit-tested in tests/next-server/runs-state-filter.test.ts.
+  "app/(studio)/projects/runs/_runs/useSelection.ts": "reads and writes window.location and window.history, which this DOM-less lane has none of",
 };
 
 /* ───────────────────────────── derivation (pure) ──────────────────────────── */

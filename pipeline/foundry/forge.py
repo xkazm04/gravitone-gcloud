@@ -33,7 +33,7 @@ dry run exists to answer:
                then the shot (style-first-token-ordering). The principled
                lane: what crosses over is the craft vocabulary, and the
                content is regenerated from a description, never copied.
-    ref-early  the same words, plus the source frame as a Flux 2 reference
+    ref-early  the same words, plus the source frame as a reference (Flux 2's; refused since its removal)
                latent that conditions ONLY the first `window` of the denoise
                and then leaves. Composition is decided early and texture late
                (measured in the consistency spike, where the inverse window
@@ -209,61 +209,9 @@ def candidate_prompt(annotation, style):
     return f"{style['recipe']} {craft} {NO_TEXT}"
 
 
-def flux_workflow(prompt, seed, ref_name=None, window=0.0, width=1280, height=720, steps=20,
-                  prefix="foundry", late=0.0):
-    """Flux 2 text-to-image; with `ref_name`, the reference conditions the
-    denoise only inside [0, window] and the text alone finishes the image.
-    `late` is the opposite dial (consistency.py's `--late`, the
-    reference-admitted-late technique): the text alone owns [0, late] so
-    composition is the brief's, then the reference joins for [late, 1] to
-    assert identity. `window` and `late` are exclusive; `late` wins.
-    Node layout matches consistency.py so that the chain sits between the text
-    encode and FluxGuidance -- guidance first silently drops the reference."""
-    w = {
-        "1": {"class_type": "UNETLoader",
-              "inputs": {"unet_name": "flux2_dev_fp8mixed.safetensors", "weight_dtype": "default"}},
-        "2": {"class_type": "CLIPLoader",
-              "inputs": {"clip_name": "mistral_3_small_flux2_fp8.safetensors",
-                         "type": "flux2", "device": "default"}},
-        "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
-        "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": prompt}},
-        "6": {"class_type": "EmptyFlux2LatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": 1}},
-        "7": {"class_type": "Flux2Scheduler", "inputs": {"steps": steps, "width": width, "height": height}},
-        "8": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
-        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-    }
-    cond = ["4", 0]
-    if ref_name:
-        w["20"] = {"class_type": "LoadImage", "inputs": {"image": ref_name}}
-        w["21"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["20", 0], "vae": ["3", 0]}}
-        w["22"] = {"class_type": "ReferenceLatent", "inputs": {"conditioning": ["4", 0], "latent": ["21", 0]}}
-        if 0.0 < late < 1.0:
-            w["30"] = {"class_type": "ConditioningSetTimestepRange",
-                       "inputs": {"conditioning": ["4", 0], "start": 0.0, "end": late}}
-            w["31"] = {"class_type": "ConditioningSetTimestepRange",
-                       "inputs": {"conditioning": ["22", 0], "start": late, "end": 1.0}}
-            w["32"] = {"class_type": "ConditioningCombine",
-                       "inputs": {"conditioning_1": ["30", 0], "conditioning_2": ["31", 0]}}
-            cond = ["32", 0]
-        elif 0.0 < window < 1.0:
-            w["30"] = {"class_type": "ConditioningSetTimestepRange",
-                       "inputs": {"conditioning": ["22", 0], "start": 0.0, "end": window}}
-            w["31"] = {"class_type": "ConditioningSetTimestepRange",
-                       "inputs": {"conditioning": ["4", 0], "start": window, "end": 1.0}}
-            w["32"] = {"class_type": "ConditioningCombine",
-                       "inputs": {"conditioning_1": ["30", 0], "conditioning_2": ["31", 0]}}
-            cond = ["32", 0]
-        else:
-            cond = ["22", 0]
-    w["5"] = {"class_type": "FluxGuidance", "inputs": {"conditioning": cond, "guidance": 4.0}}
-    w["10"] = {"class_type": "BasicGuider", "inputs": {"model": ["1", 0], "conditioning": ["5", 0]}}
-    w["11"] = {"class_type": "SamplerCustomAdvanced",
-               "inputs": {"noise": ["9", 0], "guider": ["10", 0], "sampler": ["8", 0],
-                          "sigmas": ["7", 0], "latent_image": ["6", 0]}}
-    w["12"] = {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}}
-    w["13"] = {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": prefix}}
-    return w
+def flux_workflow(*_args, **_kwargs):
+    """Flux 2 was the forge's still engine, its reference window this graph; removed 2026-11-08."""
+    guard.refuse_flux2("the forge")
 
 
 # ── the run ─────────────────────────────────────────────────────────────────
@@ -447,8 +395,9 @@ def generate_candidate(manifest, run_dir, c, staged, dry=False):
         if c["scene"] not in staged:
             staged[c["scene"]] = "dry-reference.jpg" if dry else stage_reference(run_dir / s["source"])
         ref = staged[c["scene"]]
-    wf = flux_workflow(prompt, c["seed"], ref_name=ref, window=m.get("window", 0.0),
-                       steps=plan.get("steps", 20), prefix=f"foundry-{manifest['id']}")
+    # A dry job names no engine (its sidecar's workflow is null); a live job refuses here, whole.
+    wf = None if dry else flux_workflow(prompt, c["seed"], ref_name=ref, window=m.get("window", 0.0),
+                                        steps=plan.get("steps", 20), prefix=f"foundry-{manifest['id']}")
     t0 = time.time()
     if dry:
         dry_pause()

@@ -77,14 +77,14 @@ describe("the v5 migration", () => {
     ]);
   });
 
-  it("over a v4 store: applies v5 alone and keeps every measure", () => {
+  it("over a v4 store: applies v5 (and v6 after it) and keeps every measure", () => {
     const tmp = scratch("triage-mig");
     try {
       const s = must(openStore(`${tmp.dir}/k.sqlite`));
       must(migrate(s, [{ module: "library", steps: libraryMigrations.steps.slice(0, 4) }], { snapshotDir: tmp.dir }));
       must(s.tx((t) => t.run("INSERT INTO audio_measures (sha, peaks, energy, duration_s, tempo_bpm, music_key, measured_at, error) VALUES (?, '[0.5]', 0.2, 12, NULL, NULL, ?, NULL)", SHA("a"), AT)));
       const report = must(migrate(s, [libraryMigrations], { snapshotDir: tmp.dir }));
-      expect(report.applied).toEqual([{ module: "library", version: 5 }]);
+      expect(report.applied).toEqual([{ module: "library", version: 5 }, { module: "library", version: 6 }]);
       expect(must(s.read((r) => r.all("SELECT sha FROM audio_measures")))).toEqual([{ sha: SHA("a") }]);
       expect(must(s.read((r) => r.all("SELECT * FROM audio_triage")))).toEqual([]);
       s.close();

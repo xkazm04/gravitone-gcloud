@@ -18,6 +18,8 @@
 //     waits on the network.
 //   · the session cookie's renewal (./session.ts) - follows Firebase's token rotation;
 //     unsubscribed with the shell.
+//   · the studio's global keys (./Jump.tsx) - ⌘K Jump and ⌘/ the key sheet, bound on every
+//     screen; each dialog is a layer its own close reaps, and a route change unmounts it.
 //
 // Children's effects run before this one, so a screen's first read of a remembered key can
 // precede the eviction; it reads through `useStored`, whose eviction arrives as an ordinary
@@ -32,11 +34,13 @@ import { createStore, type Store } from "@gt/ui/storage/store";
 import { Toast, type ToastLedger } from "@gt/ui/components/toast/Toast.tsx";
 import { useAuth } from "@/lib/useAuth";
 
+import { Jump } from "./Jump.tsx";
 import { KEYS, LAST_IDENTITY } from "./keys.ts";
+import { readJson } from "./plain.ts";
 import { subscribeSessionCookie } from "./session.ts";
 import { noReceipt, receipt, showToast, subscribeReceipts } from "./toast.ts";
 
-const made = createStore(KEYS, () => (typeof window === "undefined" ? null : window.localStorage));
+const made = createStore(KEYS, () => (typeof window === "undefined" ? null : window.localStorage), readJson);
 // A registration that could lie (a duplicate key, a key outside the namespace) is a
 // programming error in keys.ts, not a runtime condition: fail the module, loudly.
 if (!made.ok) throw made.error;
@@ -116,6 +120,7 @@ export function Providers({ identity, children }: { readonly identity: string | 
   return (
     <ShellContext.Provider value={shell}>
       {children}
+      <Jump />
       <Toast message={note.message} open={note.open} ledger={note.ledger} seq={note.seq} />
     </ShellContext.Provider>
   );

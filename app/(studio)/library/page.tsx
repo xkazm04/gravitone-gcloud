@@ -9,7 +9,9 @@
 // Freshness: rendering asks the projection to sync if one is due (lib/library/fresh.ts
 // `freshLibrary`: non-blocking, claim-guarded across processes, at most once a minute), the way
 // /ledger asks `freshLedger()`. What that sync lands is on the next render; new media it finds
-// is queued for its facts as a `media-facts` job, never probed inside this request.
+// is queued for its facts as a `media-facts` job, never probed inside this request. The page
+// carries the ledger seq it rendered at (`head`): the client half hears the stream from there and
+// re-renders this page on an event, so a re-read is also what starts the next due sync.
 //
 // v1's handoff: `/library?style=<id>` (the Foundry's adopt, a bookmark from v1's Styles tab)
 // opens that style's atelier. A v1 theme id is resolved to the Style it was imported as
@@ -23,6 +25,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { BLOCK } from "@gt/ui/components/library/library.ts";
 
 import { freshLibrary } from "../../../lib/library/fresh.ts";
+import { ledgerHead } from "../../../lib/library/head.ts";
 import { atelierOf, serverLibrary, SIDE } from "./_port/port.ts";
 import { styleHandoff } from "./_port/handoff.ts";
 import { LIBRARY_PORT } from "./_port/wire.ts";
@@ -38,6 +41,8 @@ export default async function LibraryPage({ searchParams }: { readonly searchPar
   const style = typeof raw["style"] === "string" ? raw["style"] : Array.isArray(raw["style"]) ? raw["style"][0] : undefined;
   if (style !== undefined && style !== "") redirect(atelierOf(SIDE === "real" ? styleHandoff(style) : style));
   const u = parseUrl(raw);
+  // Read before the page: the live feed continues from here, so an event the reads below miss is heard.
+  const head = ledgerHead();
   const sync = SIDE === "real" ? freshLibrary() : null;
   const side = serverLibrary();
   const page = side.query(queryOf(u, 0, BLOCK));
@@ -52,7 +57,7 @@ export default async function LibraryPage({ searchParams }: { readonly searchPar
     <>
       {sync !== null && !sync.ok && <ErrorLine message={`library sync: ${sync.error.message}`} />}
       {refused !== null && <ErrorLine message={`library ${u.sel ?? ""}: ${refused}`} />}
-      <Library url={shown === null ? { ...u, sel: null } : u} page={page.value} detail={shown} port={LIBRARY_PORT} />
+      <Library url={shown === null ? { ...u, sel: null } : u} page={page.value} detail={shown} port={LIBRARY_PORT} {...(head.ok ? { head: head.value } : {})} />
     </>
   );
 }

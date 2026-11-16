@@ -10,16 +10,16 @@ import type { Ending, MissingStep, Outputs, Producer, StepContext, StepOutcome }
 // A KEPT IDEA'S STORYBOARD, DRAWN (spark scout-storyboards) - one /scout `storyboard` candidate's frames as
 // the steps of ONE kernel job, priced on a receipt before it runs:
 //
-//   panel:1..N  one Flux 2 dev frame per panel prompt (OUR words, no reference image), drawn on this box's
-//               ComfyUI (lib/imaging/local/flux2.ts), written to storyboards/<c-NN>/panel-N.png in the night
+//   panel:1..N  one Codex frame per panel prompt (OUR words, with a cast's kept sheets attached), drawn on the operator's
+//               ChatGPT seat (lib/imaging/local/codex.ts), written to storyboards/<c-NN>/panel-N.png in the night
 //   clip:1..N   a TRIAL's only (spark scout-vision S2: a storyboard with a genre): after every panel, one LTX clip
 //               of each drawn panel still, its prompt the motion line, written to storyboards/<c-NN>/clip-N.mp4.
 //               A plain storyboard's request carries no `clips` and plans no clip step.
 //
-// ONE JOB, THE CARD'S LANE. Every step is the local model, so the job waits on `gpu.local` (capacity 1) and
-// names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
+// ONE JOB, ITS LANE. A plain storyboard waits on seat.text. A trial's clips are the card's, so it waits on `gpu.local`
+// (capacity 1) and names the `comfy` engine, so admission waits on the ComfyUI queue (the scene producer's clip rule).
 //
-// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule). A ComfyUI sentence for one prompt leaves
+// ONE PANEL'S FAILURE IS THAT PANEL'S (the ideas producer's rule). An engine's sentence for one prompt leaves
 // that panel empty with the sentence recorded, and the step is booked: the storyboard goes on, and a resumed
 // job never redraws a panel it already drew or already failed. A storyboard that ends with no frame at all
 // is a loss (lib/producers/scoutStoryboardActs.ts `ended`). ONE CLIP'S FAILURE IS THAT CLIP'S, the same way: a
@@ -71,7 +71,7 @@ export const parseStoryboardRequest = (raw: unknown): Result<StoryboardRequest> 
 export function storyboardPlan(req: StoryboardRequest, outputs: Outputs): MissingStep[] {
   const panels = req.panels.map((_, i) => ({ name: panelStep(i + 1), estimate: req.estimates.panel }));
   const clip = req.estimates.clip;
-  // Every panel first, then a trial's clips: the card loads Flux once, then LTX once.
+  // Every panel first, then a trial's clips.
   const clips = req.clips === undefined || clip === undefined ? [] : req.clips.map((_, i) => ({ name: clipStep(i + 1), estimate: clip }));
   return [...panels, ...clips].filter((s) => !outputs.has(s.name));
 }

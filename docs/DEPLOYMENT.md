@@ -49,8 +49,12 @@ here is about the *tree*, not a running service.
 
 ### Skip log
 
-*(empty — every `GRAVITONE_SKIP_GATE=1` push records its reason here or in its
-commit message)*
+Every `GRAVITONE_SKIP_GATE=1` push records its reason here or in its commit message.
+
+- 2026-11-09, the concept-casting-stages push (operator-approved). 24 of 25 gates green on the merged HEAD. The one red,
+  the probe `sound-store` "the committed knowledge/audio is what the committed ledger renders", reads
+  `pipeline/sound/ledger.json` from the working tree, where another session held 72 uncommitted lines of new takes; the
+  pushed commits do not touch that file. CI judges the pushed tree without it.
 
 ## Build contract
 

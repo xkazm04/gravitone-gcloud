@@ -48,6 +48,30 @@ export function calendarFor(slotId: string | null): string {
   return slotId === null ? "/floor?cal=1" : `/floor?cal=1&slot=${encodeURIComponent(slotId)}`;
 }
 
+/** The source Runs keys a kernel job's bar under (runs/_runs/model.ts `fromKernel`, `fromProduce`). */
+const KERNEL = "kernel";
+
+/**
+ * Runs, opened on one job's bar. Runs selects a bar by its KEY, `<source>:<id>` (runs/_runs/
+ * model.ts `keyOf`), not by the bare id: `?job=job:run:x` landed on Runs with nothing selected,
+ * where `?job=kernel:job:run:x` lights the bar and opens the inspector. An id that already
+ * carries its source (a key pasted from Runs' own address) is not given it twice.
+ */
+export function runsJobFor(id: string, source: string = KERNEL): string {
+  const key = id.startsWith(`${source}:`) ? id : `${source}:${id}`;
+  return `/projects/runs?job=${encodeURIComponent(key)}`;
+}
+
+/**
+ * The Library filtered to one collection or lineage value - "what job X made" (`job`), "what
+ * run X made" (`run`) - in the Library's own address grammar (library/_library/url.ts `f`,
+ * which keeps `:` bare). A caller links here only after counting what the filter holds
+ * (library/_port/made.ts), so the door never opens on an empty Library.
+ */
+export function libraryFor(group: "job" | "run", value: string): string {
+  return `/library?f=${encodeURIComponent(`${group}:${value}`).replace(/%3A/gi, ":")}`;
+}
+
 export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): SubjectLink {
   const { kind, id } = e.subject;
   const source = sourceOf(e);
@@ -71,9 +95,10 @@ export function subjectLink(e: Pick<Event, "subject" | "key" | "data">): Subject
     // A decision packet (Phase 3) is its Board, open or decided.
     case "packet":
       return { label: id, href: boardFor(id) };
-    // A kernel job (Phase 4 writes them) is a bar in Runs.
+    // A job is a bar in Runs: a kernel job (Phase 4 writes them, no key) under `kernel`, a v1
+    // queue's job (suno, mv: keyed `<source>:...`) under the source that keyed its event.
     case "job":
-      return { label: id, href: `/projects/runs?job=${encodeURIComponent(id)}` };
+      return { label: id, href: runsJobFor(id, source ?? KERNEL) };
     default:
       return { label: id, href: ledgerFor(id) };
   }

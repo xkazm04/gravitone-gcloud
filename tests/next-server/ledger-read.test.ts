@@ -234,14 +234,16 @@ describe("readStrip", () => {
 });
 
 describe("readStrip statements", () => {
-  it("reads 4 statements a past day (total, head, the actor facet and its sum), none for a later day", () => {
+  // Was 84 * 4 (one countEvents per past day) until the strip became one grouped statement
+  // (events-count.ts countByDay); ledger-strip-grouped.test.ts holds the two equal.
+  it("reads ONE statement for the whole window, whatever the number of days", () => {
     const s = store();
     fill(s, [{ at: "2026-10-14T09:00:00.000Z", kind: "operator" }]);
     let stmts = 0;
     const counted = { ...s, read: (fn) => s.read((r) => fn({ ...r, get: (q, ...p) => (stmts++, r.get(q, ...p)), all: (q, ...p) => (stmts++, r.all(q, ...p)) })) } as Store;
     const r = readStrip(counted, f({}), Date.parse("2026-10-15T12:00:00.000Z"));
     if (!r.ok) throw r.error;
-    expect(stmts).toBe(84 * 4);
+    expect(stmts).toBe(1);
   });
 });
 

@@ -82,6 +82,8 @@ const MUSE_APPS = ["videogame", "dating-sim", "roleplay", "companion-chat", "gen
 const GENRE_NAMES = ["deadpan office satire", "kitchen-table science", "rooftop noir", "tiny-town documentary", "painted folk tale", "desk-toy physics"];
 const LADDER = ["perfecting", "perfecting", "piece-due", "publishable", "retired"] as const;
 const PROJECTS = Array.from({ length: 12 }, (_, i) => `proj-${String(i + 1).padStart(2, "0")}`);
+/** The kernel job a project's cuts name in their lineage (./feeds/kernel.ts): the `job` facet Runs' "made" door filters by. */
+export const cutJobOf = (projectId: string): string => `job:part:${projectId}:cut`;
 
 const T0 = Date.parse("2025-11-03T00:00:00Z");
 const T1 = Date.parse("2026-10-13T20:00:00Z");
@@ -254,7 +256,7 @@ export function generateCorpus(n = 50_000, seed = CORPUS_SEED): Corpus {
         const format = rnd() < 0.7 ? ("music-video" as const) : ("ad" as const);
         meta = `${format}`;
         const m = media(id, "video/mp4");
-        item = { kind, ...shared(id, `${pid} · ${format === "ad" ? `ad spot ${1 + Math.floor(rnd() * 12)}` : `cut v${2 + Math.floor(rnd() * 14)}`}`, weighted([["ratified", 0.4], ["rejected", 0.25], ["unjudged", 0.35]] as const), "studio", false), collections: [{ kind: "project", id: pid }], vocabulary: { format, captions: pick(["none", "srt", "vtt"] as const) }, lineage: [{ kind: "project", id: pid }], ...(m === undefined ? {} : { media: m }) };
+        item = { kind, ...shared(id, `${pid} · ${format === "ad" ? `ad spot ${1 + Math.floor(rnd() * 12)}` : `cut v${2 + Math.floor(rnd() * 14)}`}`, weighted([["ratified", 0.4], ["rejected", 0.25], ["unjudged", 0.35]] as const), "studio", false), collections: [{ kind: "project", id: pid }], vocabulary: { format, captions: pick(["none", "srt", "vtt"] as const) }, lineage: [{ kind: "job", id: cutJobOf(pid) }, { kind: "project", id: pid }], ...(m === undefined ? {} : { media: m }) };
       } else if (kind === "model") {
         const cls = pick(["character", "weapon", "prop"] as const);
         const technique = pick(["T1", "T2", "M1"] as const);

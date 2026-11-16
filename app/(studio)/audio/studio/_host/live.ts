@@ -13,8 +13,8 @@ export function dockStateOf(offline: boolean, thinking: boolean, presence: "list
   return presence === "listening" ? "listening" : "waiting";
 }
 
-export const WAITING_LINE = "Nobody is listening yet. Your message waits in the inbox until the studio agent looks (run /studio-agent in Claude Code).";
-export const NOBODY_LINE = "Nobody is listening yet: start /studio-agent in Claude Code and the studio answers here.";
+/** A message sent while nobody listens: it is in the inbox, waiting for /studio-agent to look. */
+export const WAITING_LINE = "your message waits in the inbox for /studio-agent";
 
 export function refusedLines(refused: readonly RefusedTurn[]): string | null {
   if (refused.length === 0) return null;

@@ -1,0 +1,7 @@
+/* Clip's states (Clip.tsx); the failed ground and the blank are Plate's (Plate.module.css). A
+   video with no frame yet is transparent, so the wait is the ground; a clip with no poster fades
+   in once, when its metadata lands. */
+.clip[data-state="waiting"]{background:var(--ink-2)}
+.clip[data-enter]{animation:settle var(--dur) var(--ease)}
+@keyframes settle{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.clip[data-enter]{animation:none}}

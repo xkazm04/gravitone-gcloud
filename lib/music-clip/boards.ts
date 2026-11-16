@@ -245,6 +245,10 @@ export async function renderBoardA(dir: string): Promise<BoardResult> {
   try {
     const p = await offlinePage(browser, 1920, 1080, blocked);
     await p.goto(pathToFileURL(html).href, { waitUntil: "load", timeout: 30_000 });
+    // A full-page screenshot does not paint iframes below the viewport (measured on Stay Here,
+    // 2026-10-31: the second row of cards came out black), so the viewport grows to the page.
+    const h = await p.evaluate(() => document.documentElement.scrollHeight);
+    await p.setViewportSize({ width: 1920, height: Math.max(1080, h) });
     await settle(p, 800);
     await p.screenshot({ path: sheet, fullPage: true });
   } finally {

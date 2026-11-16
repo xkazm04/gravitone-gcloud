@@ -75,7 +75,7 @@ function depsWith(produce: () => ServerProduce = real): McpDeps {
   return { produce, part: none, board: none, library: none, store: () => ok(store) };
 }
 
-const door = (deps: McpDeps = depsWith(), mode: "family" | "operation" = "family") => route({ guard: "access", bodyCap: MCP_BODY_CAP }, mcpHandler(deps, mode, "0.1.0"));
+const door = (deps: McpDeps = depsWith(), mode: "family" | "operation" = "family") => route({ guard: "access", bodyCap: MCP_BODY_CAP, perOpScope: true }, mcpHandler(deps, mode, "0.1.0"));
 
 type Opts = { readonly bearer?: string; readonly origin?: string; readonly cookie?: string; readonly raw?: string };
 let ip = 0;
@@ -150,9 +150,9 @@ describe("the envelope", () => {
     expect((await code(await door()(post({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { arguments: {} } })))).code).toBe(-32602);
   });
 
-  it("lists exactly the four family tools", async () => {
+  it("lists exactly the five family tools", async () => {
     const r = (await (await door()(post({ jsonrpc: "2.0", id: 1, method: "tools/list" }))).json()) as { result: { tools: { name: string; description: string }[] } };
-    expect(r.result.tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend"]);
+    expect(r.result.tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend", "gt_songlab"]);
     // The audio studio's ops (S2) join two families; they add no tool.
     expect(r.result.tools.find((t) => t.name === "gt_read")?.description).toContain("audio_inbox");
     expect(r.result.tools.find((t) => t.name === "gt_launch")?.description).toContain("audio_turn");

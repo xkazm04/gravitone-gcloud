@@ -4,6 +4,9 @@ import type { WorkKind } from "@gt/catalog/recipes";
 import type { ResourceLane } from "@gt/domain/lane";
 import type { FigureSource, ModelOption } from "@gt/domain/produce";
 
+import { trailerUnits } from "../[id]/_part/fixtureWorld/trailer.ts";
+import { tariffGateError, tariffPlates } from "../[id]/_part/fixtureWorld/tariff.ts";
+
 // THE FIXTURE UNIVERSE'S DATA - the prototype's figures, each marked with where it came from
 // (docs/next/prototype/app/studio.js CATALOG, model.js estimates). Only the figures the
 // prototype itself tagged `model` (forge 1.6 min a plate, the article band $47-92, Suno 4 min a
@@ -61,7 +64,7 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
   frames: {
     noun: "plate",
     options: [
-      opt("frames", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8 · ComfyUI", "gpu.local", 1.6, 0, "model"),
+      opt("frames", "codex", "codex-image-gen", "Codex · image_gen", "seat.text", 2, 0, "model"),
       opt("frames", "google", "nano-banana", "Nano Banana", "cloud.google", 0.35, 0.04),
       opt("frames", "leonardo", "phoenix", "Leonardo · image", "cloud.leonardo", 0.5, 0.06),
     ],
@@ -71,7 +74,7 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
     options: [
       opt("still", "leonardo-studio", "cdp", "Leonardo · CDP", "box.chrome", 3, u(STUDIO)),
       opt("still", "google", "nano-banana", "Nano Banana", "cloud.google", 0.4, 0.04),
-      opt("still", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8", "gpu.local", 1.6, 0, "model"),
+      opt("still", "codex", "codex-image-gen", "Codex · image_gen", "seat.text", 2, 0, "model"),
     ],
   },
   motion: { noun: "shot", options: [opt("motion", "wan", "wan-2.2-i2v", "Wan 2.2 · i2v", "gpu.local", 6, 0), opt("motion", "strips", "strip-render", "strips · HTML/SVG 240f", "seat.text", STRIPS_ROUND_MIN, u(STRIPS_SEAT), "real", STRIPS_ROUND)] },
@@ -84,8 +87,8 @@ export const OPTIONS: Readonly<Record<WorkKind, KindSpec>> = {
   render: { noun: "encode", options: [opt("render", "ffmpeg", "libx264", "libx264 · full encode", "box.render", 31.5, 0, "model"), opt("render", "ffmpeg", "libx264-draft", "libx264 · draft preset", "box.render", 9, 0)] },
   cut: { noun: "cut", options: [opt("cut", "ffmpeg", "compositor", "ffmpeg · compositor", "box.render", 7, 0)] },
   extract: { noun: "source", options: [opt("extract", "google", "nano-banana", "Nano Banana · read back + replicate", "cloud.google", 0.8, 0.12)] },
-  forge: { noun: "plate", options: [opt("forge", "comfy", "flux-2-dev-fp8", "Flux 2 dev fp8 · ComfyUI", "gpu.local", 1.6, 0, "model")] },
-  dojo: { noun: "cycle", options: [opt("dojo", "google", "judge", "Nano Banana · Gemini judge", "cloud.google", 20, 0.45), opt("dojo", "comfy", "pairs", "Flux 2 dev fp8 · local pairs", "gpu.local", 30, 0)] },
+  forge: { noun: "plate", options: [opt("forge", "comfy", "forge-refused", "Forge · refused (Flux 2 removed)", "gpu.local", 1.6, 0, "model")] },
+  dojo: { noun: "cycle", options: [opt("dojo", "google", "judge", "Nano Banana · Gemini judge", "cloud.google", 20, 0.45)] },
 };
 
 /* ── what the composers and Compose choose from ───────────────────────────── */
@@ -150,13 +153,21 @@ export type SeedProject = {
   readonly gates: readonly string[];
 };
 
+// The trailers' units are COUNTED from the cut their editors derive (part fixture world,
+// fixtureWorld/trailer.ts), never typed beside it: the Plan's "N plates" and the Frames header's
+// "of N" are one number. The world module reads lib only, so the produce side imports nothing of
+// the part side's state.
+const TRAILER = { id: "glass-harbor-trailer", title: "Glass Harbor — trailer", recipe: "film/trailer" } as const;
+const CINEMATIC = { id: "glass-harbor-cinematic", title: "Glass Harbor — cinematic", recipe: "film/cinematic" } as const;
+
+/** The quiet tariff's plates, counted from the candidate its Plan's script adopted. */
+const TARIFF_PLATES = tariffPlates();
+
 export const SEED_PROJECTS: readonly SeedProject[] = [
   {
-    id: "glass-harbor-trailer",
-    title: "Glass Harbor — trailer",
-    recipe: "film/trailer",
+    ...TRAILER,
     launched: true,
-    units: { plates: 24, shots: 10, prompts: 2 },
+    units: trailerUnits(TRAILER),
     styleId: "glass-harbor-noir",
     jobs: { research: { state: "done", at: -960, took: 9 }, script: { state: "done", at: -940, took: 14 }, frames: { state: "done", at: -820, took: 38 }, motion: { state: "done", at: -600, took: 60 }, score: { state: "done", at: -900, took: 8 }, cut: { state: "done", at: -140, took: 7 } },
     gates: ["gate:frames", "gate:score"],
@@ -176,12 +187,12 @@ export const SEED_PROJECTS: readonly SeedProject[] = [
     title: "The quiet tariff",
     recipe: "film/short-educational-video",
     launched: true,
-    units: { plates: 18, shots: 8, prompts: 2 },
+    units: { plates: TARIFF_PLATES, shots: 8, prompts: 2 },
     styleId: "ink-graphic-novel",
     jobs: {
       research: { state: "done", at: -1500, took: 9 },
       script: { state: "done", at: -1480, took: 14 },
-      frames: { state: "failed", at: -250, took: 29, error: "gate: 0 of 18 plates kept · reason style · re-run needs a new route" },
+      frames: { state: "failed", at: -250, took: 29, error: tariffGateError(TARIFF_PLATES) },
       score: { state: "done", at: -1420, took: 8 },
     },
     gates: ["gate:score"],
@@ -193,6 +204,17 @@ export const SEED_PROJECTS: readonly SeedProject[] = [
     launched: true,
     topic: "generative-provider-routing",
     jobs: { article: { state: "done", at: -220, took: 38 } },
+    gates: [],
+  },
+  // A cut of the same film whose picture is not made yet: research dealt the board, Script composed
+  // the cut, and every part after it waits in its lane. Its editors are the trailer's unmade
+  // states - shots without plates, cues proposed and unsaved, a cut with no picture.
+  {
+    ...CINEMATIC,
+    launched: true,
+    units: trailerUnits(CINEMATIC),
+    styleId: "glass-harbor-noir",
+    jobs: { research: { state: "done", at: -400, took: 9 }, script: { state: "done", at: -380, took: 14 } },
     gates: [],
   },
   {

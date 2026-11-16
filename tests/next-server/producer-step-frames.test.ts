@@ -102,7 +102,7 @@ describe("render plates", () => {
     const { store } = universe("fx", [unit("u1", "0:00"), unit("u2", "0:05"), unit("u3", "0:10")]);
     expect(verdictOf(store, "fx")).toMatchObject({ state: "empty" });
     const r = must(partActReceipt(store, { projectId: "fx", partId: "fx/frames", act: "render-plates" }, framesUnits, { mode: "dry", now: NOW }));
-    expect(r).toMatchObject({ mode: "dry", subject: { kind: "part", act: "render-plates" }, lines: [{ lane: "gpu.local", units: 1 }] });
+    expect(r).toMatchObject({ mode: "dry", subject: { kind: "part", act: "render-plates" }, lines: [{ lane: "seat.text", units: 1 }] });
     const jobId = await confirm(store, "fx", "render-plates");
     const run = must(await driveStep(framesProducer, store, jobId, { dryOnly: true }));
     expect(run.outcome).toBe("done");

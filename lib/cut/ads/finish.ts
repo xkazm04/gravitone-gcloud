@@ -37,7 +37,7 @@ export const AD_ASPECT_PX: Record<Aspect, string> = {
 /** lib/adRender.ts AD_LOUDNORM's target, and how far a measured file may sit
  *  from it — single-pass loudnorm lands within about ±0.5 LU (its own header). */
 export const AD_LOUDNESS_TARGET_LUFS = -14;
-export const AD_LOUDNESS_TOLERANCE_LU = 1;
+const AD_LOUDNESS_TOLERANCE_LU = 1;
 
 /** The record as GET /api/ads/render/<id> answers it. */
 export type AdRenderView = AdRenderRecord;

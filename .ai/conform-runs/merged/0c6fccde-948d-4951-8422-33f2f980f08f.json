@@ -1,0 +1,174 @@
+{
+ "schema": "conform-run/1",
+ "worker": "0c6fccde-948d-4951-8422-33f2f980f08f",
+ "subject": "generative-provider-routing",
+ "evaluatedAt": "2026-11-07T01:49:36.238351+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "sound-generation-engine",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/sound/batch.ts:65 A batch names a kind (music|sfx) and the desk's engine registry answers which engine may make it, returning the registry's own withheld reason verbatim when none can, so the engine choice is made at one chokepoint rather than at the surface.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "conformant",
+     "evidence": "lib/sound/batch.ts:65 Capability (kind) in, engine out, checked against engines.ts registry `can`. Weak spots: the kind->engine pairing is hard-coded on batch.ts:66 rather than read as an ordered row of the registry, and generate.ts:136 makes the caller send provider \"elevenlabs\" (single-value, so it acts as the seam, not an escaping steer)."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "conformant",
+     "evidence": "lib/sound/sfxJob.ts:186 Only rate-limit/timeout/failed retry; MusicError `refused` falls through to fatal, so a refusal is never hammered against the same vendor. There is no second sfx vendor to hop to, so the hop itself is vacuous here."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "conformant",
+     "evidence": "lib/sound/generate.ts:206 A field the music endpoint would silently ignore is refused by name rather than dropped (the constraint elimination); batch.ts:71 also carries the registry's withheld reason into the error."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/sound/sfxJob.ts:172 ElevenLabs effects report no dollar figure, so each clip is estimated as unpriced with the recorded reason instead of an invented price."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "conformant",
+     "evidence": "lib/sound/batch.ts:154 A batch of N is priced and gated on one receipt as N units before anything runs; ledger.ts records kept/rejected per provider (acceptance data). No measured cost-per-usable ordering exists, but there is no competing vendor per kind to order."
+    },
+    {
+     "technique": "resolution-as-stage-property",
+     "verdict": "not-applicable",
+     "evidence": "lib/sound/generate.ts:64 Audio has no output-size ladder; the only size-like dial is duration, bounded per kind."
+    }
+   ]
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/foundry/extract/store.ts:292 The live IO keeps only provider/model/cost/basis from the router's provenance and drops `reroutedFrom` (lib/imaging/types.ts:193; grep of lib/foundry/extract finds no reroute field), so a replica or transfer served by a fallback vendor (e.g. after an unhonoured `prefer` steer) leaves no record on the manifest of why the first choice dropped out.",
+   "techniques": [
+    {
+     "technique": "capability-to-vendor-plan",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/store.ts:291 The engine asks for capabilities (recognize/generate/reason via EngineIO); the router's plan decides, with an optional prefer steer from options.generator."
+    },
+    {
+     "technique": "non-silent-elimination",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/extract/store.ts:292 Served vendor is recorded (round.generator) but the elimination trail `reroutedFrom` is discarded, so the trail never reaches the asset's own record."
+    },
+    {
+     "technique": "refusal-reroute-hop",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/performReplica.ts:56 A budget refusal is a named money stop (stopFor), withdrawn and never retried or tripped as a vendor failure; vendor refusals are left to the router."
+    },
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/perform.ts:33 Run ceiling checked against the unit's pre-call estimate before the unit starts."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/extract/spend.ts:44 Unpriced calls book the pre-call estimate (never zero), are counted, and flip the run's basis from reported to estimate so a receipt and an estimate cannot be confused."
+    }
+   ]
+  },
+  {
+   "context": "spend-meter-and-requests",
+   "subject": "generative-provider-routing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/spend/meter.ts:249 A settled call whose figure is absent books no row (only `counters.unpriced++`), so the window total that the next `spent + held + amount > ceiling` check reads treats an unpriced call as free once its hold is released, the 'unreported cost still counts against the next ceiling check' rule the technique requires.",
+   "techniques": [
+    {
+     "technique": "cost-per-usable-economics",
+     "verdict": "deviation",
+     "evidence": "lib/spend/meter.ts:249 Pre-call reservation gate is right (meter.ts:343), but unpriced actuals book nothing instead of the estimate, so they never count against the next ceiling check. Contrast lib/foundry/extract/spend.ts, which books the estimate."
+    },
+    {
+     "technique": "unspent-budget-is-a-defect",
+     "verdict": "conformant",
+     "evidence": "lib/spend/meter.ts:441 Budget is a band: a per-class floor is reported as underFloor (idle windows excluded), and classes.ts:78 makes it reporting-only, never a refusal."
+    },
+    {
+     "technique": "vendor-fact-ledger",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/spend-requests/schema.ts:84 Every receipt line carries its figure source, and usd is nullable with an unpricedReason, so an estimate cannot pass as a receipt."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generative-provider-routing",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "generative-provider-routing",
+   "context": "suno-driver-queue",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T01:49:36.238351+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "resolution-as-stage-property",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 0,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T01:49:36.238351+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "capability-to-vendor-plan",
+    "cost-per-usable-economics",
+    "non-silent-elimination",
+    "refusal-reroute-hop",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T01:49:36.238351+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "generative-provider-routing"
+   ],
+   "techniques": [
+    "cost-per-usable-economics",
+    "unspent-budget-is-a-defect",
+    "vendor-fact-ledger"
+   ],
+   "deviations": 1,
+   "context": "spend-meter-and-requests",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -6,7 +6,7 @@ import { queryLibrary } from "@gt/kernel/library/query";
 import { putMediaFacts, upsertItems } from "@gt/kernel/library/write";
 import type { Store } from "@gt/kernel/store";
 
-import type { Corpus } from "./corpus.ts";
+import { cutJobOf, type Corpus } from "./corpus.ts";
 
 // THE LATENCY PROBE - the plan's Phase 5 exit number ("search under 50 ms p95 at
 // 50k; measure, do not assume"), taken the way measurement-honesty asks:
@@ -39,6 +39,8 @@ export const QUERY_MIX: readonly { readonly name: string; readonly search: boole
   },
   { name: "deep scroll (offset 20k)", search: false, query: { offset: 20_000, limit: 60 } },
   { name: "name sort + attention", search: false, query: { sort: "name", facets: { attention: ["unreadable", "missing"] }, limit: 60 } },
+  // Runs' "made" door (_shell/links.ts libraryFor): a job's output, a lineage facet over every kind.
+  { name: "a job's output", search: false, query: { facets: { job: [cutJobOf("proj-03")] }, limit: 60 } },
 ];
 
 export type Stat = { readonly name: string; readonly search: boolean; readonly n: number; readonly p50: number; readonly p95: number; readonly p99: number; readonly max: number; readonly total: number };

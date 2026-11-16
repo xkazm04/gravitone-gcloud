@@ -165,6 +165,7 @@ guard.headroom_ok = lambda: True
 def fake_generate(*a, **k):
     raise RuntimeError("stop before the first shot")
 consistency.generate = fake_generate
+consistency.flux_workflow = lambda *a, **k: {}
 try:
     with contextlib.redirect_stdout(io.StringIO()):
         consistency.run_lane("baseline")

@@ -1,0 +1,332 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bdd56b14-b8c2-4d16-a5fe-c6960592810e",
+ "subject": "concurrency-guards",
+ "evaluatedAt": "2026-11-10T00:14:54.479613+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "publish-producers",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/producers/src/publish/publish.ts:158 The irreversible platform upload starts after the awaited adapter.plan with no re-read of the claim/fence as its last statement (the first heartbeat fires only after a chunk is accepted), so the guard verdict from the sweep and the prior-publication read at line 108 ages across the preparation window.",
+   "techniques": [
+    {
+     "technique": "preparation-is-the-staleness-window",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/publish/publish.ts:158 No fence re-read immediately before the external effect; dedup at the effect exists only as the adapter's slot-keyed resumable session, and the code does not record that a re-read narrows rather than closes."
+    },
+    {
+     "technique": "fence-inside-write-transaction",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/publish.ts:176 Outcome write presents the claim fence; kernel outcome.ts asserts it inside the store tx."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/publish.ts:105 A superseded attempt's late write is refused by the fence and surfaced as 'lost', not last-writer-wins."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/publish.ts:108 One publication per item x channel x mode asked first and backed by a unique index in the slots schema."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/publish.ts:120 Throws are caught and routed to recordFailure, which releases the claim in the same commit; process death is reclaimed by the sweep as interrupted."
+    },
+    {
+     "technique": "cross-process-exclusion",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:70 Slots are claimed as kernel leases in the shared SQLite store, with staleness handled by the sweep."
+    },
+    {
+     "technique": "guard-key-design",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:98 The key is the slot id; the second entry point (publish-now) goes through the same sweep claim instead of a second key."
+    },
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:109 The second caller is refused as a conflict that names the twin, distinct from an operation failure."
+    },
+    {
+     "technique": "critical-section-across-a-suspension",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/publish.ts:43 The claim is deliberately held across the upload's awaits, heartbeated per chunk, and stops the sender when lost."
+    }
+   ]
+  },
+  {
+   "context": "kernel-python-protocol",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/kernel/py/lease.py:277 Every fenced Python write checks the lease row's fence and expiry inside its BEGIN IMMEDIATE transaction, so a stale holder is refused at the write.",
+   "techniques": [
+    {
+     "technique": "fence-inside-write-transaction",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:248 The book step asserts the fence inside the same tx as its insert."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:254 Outputs carry the attempt's fence; the fence is monotonic and never reused."
+    },
+    {
+     "technique": "cross-process-exclusion",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:188 Atomic test-and-set on shared SQLite; holder identity is host/pid/bootId with heartbeat time, and dead holders are detected by pid probe."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:341 The context-manager exit releases the lease; a failed acquire leaves the queue; TTL reclaims on death."
+    },
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/lease.py:379 One shared Leases primitive with FIFO queue; the refusal names the holder."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:231 A step already booked is refused, so a replayed step does not re-spend."
+    },
+    {
+     "technique": "guard-key-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/py/job.py:121 The guard key is a named lane slot from a closed set, not per-invocation identity."
+    },
+    {
+     "technique": "renewal-deadline-two-thirds-ttl",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/job_record.py:77 A per-resource/job lease, not the cluster write lock this technique governs (job-coordination owns it)."
+    },
+    {
+     "technique": "leadership-is-the-lock",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/py/lease.py:170 An embedded SQLite file, not a replicated log with a leader."
+    }
+   ]
+  },
+  {
+   "context": "kernel-store-and-events",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/blob.ts:104 When the bounded rename retry runs out, the blob writer reports a generic 'cannot write' carrying the raw platform error instead of a distinct exhaustion failure naming the held destination, attempts and elapsed time.",
+   "techniques": [
+    {
+     "technique": "atomic-file-publish",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/blob.ts:104 Temp fsync, transient classification, bounded retry and temp cleanup are present; exhaustion is not reported distinctly."
+    },
+    {
+     "technique": "replace-is-visible-before-durable",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/blob.ts:99 No directory flush after the rename that creates the name, so a crash can undo a blob a committed row references."
+    },
+    {
+     "technique": "cross-process-exclusion",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/store.ts:234 Every write takes the DB write lock before its first read; a dead holder's lock is released by SQLite."
+    },
+    {
+     "technique": "critical-section-across-a-suspension",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/store.ts:190 The suspension is removed from the section by type and at runtime."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/store.ts:217 Every throw path rolls back, and a rollback failure quarantines the connection."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/ingest.ts:96 The natural key, UNIQUE in events, dedups the append under the write lock; a changed content is reported as same:false."
+    },
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/ingest.ts:125 The sync claim refuses and names the owner and next time."
+    },
+    {
+     "technique": "attempt-attribution",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/ingest.ts:143 The finish is conditioned on the owner, so a superseded claimant's finish matches zero rows."
+    },
+    {
+     "technique": "leadership-is-the-lock",
+     "verdict": "not-applicable",
+     "evidence": "packages/kernel/src/store.ts:14 An embedded SQLite write lock, not a replicated log with a leader."
+    }
+   ]
+  },
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/runStore.ts:90 writeJsonAtomic renames an unflushed temp, leaves it behind when the retry exhausts (no cleanup path), rethrows the raw platform error, and never flushes the directory, so the run store's publish door falls short of atomic-file-publish.",
+   "techniques": [
+    {
+     "technique": "atomic-file-publish",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/runStore.ts:90 No fsync before rename (line 89), no temp deletion on failure, raw error on exhaustion; store.ts:333 also writes grader-calibration.json in place."
+    },
+    {
+     "technique": "replace-is-visible-before-durable",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/runStore.ts:89 Neither the file nor the directory entry is flushed around the name change."
+    },
+    {
+     "technique": "release-guarantees",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/verdictLog.ts:100 The run lock is released in finally, and the queue entry is deleted only if still ours."
+    },
+    {
+     "technique": "single-flight-primitives",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/verdictLog.ts:85 A keyed in-process queue per run dir in front of the cross-process lock file (queue policy)."
+    },
+    {
+     "technique": "preparation-is-the-staleness-window",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/store.ts:293 The commit re-reads its state inside the lock and refuses if the preview token drifted."
+    },
+    {
+     "technique": "idempotency-by-design",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/store.ts:299 Evidence rows are replaced, so a retried commit converges."
+    },
+    {
+     "technique": "cross-process-exclusion",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/store.ts:269 The run lock file plus the catalogue lock, in a fixed order, across processes."
+    }
+   ]
+  },
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "concurrency-guards",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/page.tsx:52 The /kit route only reads a static token file and renders fixture specimens; a search of app/(studio)/kit for mutex, inflight, idempotent, acquire and BEGIN IMMEDIATE found no hit, so no operation here can run twice concurrently against shared state.",
+   "techniques": [],
+   "absenceTerms": [
+    "mutex",
+    "inflight",
+    "idempotent",
+    "acquire",
+    "BEGIN IMMEDIATE"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-10T00:14:54.479613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "attempt-attribution",
+    "critical-section-across-a-suspension",
+    "cross-process-exclusion",
+    "fence-inside-write-transaction",
+    "guard-key-design",
+    "idempotency-by-design",
+    "preparation-is-the-staleness-window",
+    "release-guarantees",
+    "single-flight-primitives"
+   ],
+   "deviations": 1,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:14:54.479613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "attempt-attribution",
+    "cross-process-exclusion",
+    "fence-inside-write-transaction",
+    "guard-key-design",
+    "idempotency-by-design",
+    "leadership-is-the-lock",
+    "release-guarantees",
+    "renewal-deadline-two-thirds-ttl",
+    "single-flight-primitives"
+   ],
+   "deviations": 0,
+   "context": "kernel-python-protocol",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:14:54.479613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "atomic-file-publish",
+    "attempt-attribution",
+    "critical-section-across-a-suspension",
+    "cross-process-exclusion",
+    "idempotency-by-design",
+    "leadership-is-the-lock",
+    "release-guarantees",
+    "replace-is-visible-before-durable",
+    "single-flight-primitives"
+   ],
+   "deviations": 1,
+   "context": "kernel-store-and-events",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:14:54.479613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [
+    "atomic-file-publish",
+    "cross-process-exclusion",
+    "idempotency-by-design",
+    "preparation-is-the-staleness-window",
+    "release-guarantees",
+    "replace-is-visible-before-durable",
+    "single-flight-primitives"
+   ],
+   "deviations": 1,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:14:54.479613+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "concurrency-guards"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

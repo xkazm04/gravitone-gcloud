@@ -11,6 +11,12 @@
 // path along with any reason it carried. A disabled press is CANCELLED, not merely unheard:
 // an aria-disabled submit is still its form's default button, and both its click and a ⏎ in
 // one of the form's fields (which the browser turns into a click on it) would submit.
+//
+// Pending is not disabled (2026-11-09): an act in flight looked exactly like an act that is not
+// available (dimmed, dashed). `pending` keeps the button at full strength, focusable and named,
+// announces `aria-busy`, cancels a press the way disabled does, and draws the studio's running
+// mark - the cyan rim and its halo (StatusPill's `running`) - without changing its width.
+// Produce's Receipt confirm composes the same class, so one act in flight has one look.
 import { Chip, type ChipProps } from "../chip/Chip.tsx";
 import type { Tone } from "../chip/tone.ts";
 import { cx } from "../cx.ts";
@@ -36,13 +42,15 @@ export type ButtonProps = {
   /** A trailing glyph: the act leaves for the record (ledger.js "Open record ›"). */
   readonly glyphAfter?: GlyphName;
   readonly disabled?: boolean;
+  /** The act is in flight: still focusable and named, `aria-busy`, a press is ignored. */
+  readonly pending?: boolean;
   readonly onPress?: () => void;
   readonly href?: string;
   readonly submit?: boolean;
 };
 
-export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, badge, tally, glyphAfter, disabled = false, onPress, href, submit = false }: ButtonProps) {
-  const cls = cx(s.btn, size === "sm" && s.sm, tone !== "neutral" && s[tone]);
+export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, badge, tally, glyphAfter, disabled = false, pending = false, onPress, href, submit = false }: ButtonProps) {
+  const cls = cx(s.btn, size === "sm" && s.sm, tone !== "neutral" && s[tone], pending && !disabled && s.pending);
   const body = (
     <>
       {glyph !== undefined && <Glyph name={glyph} className={s.glyph} />}
@@ -53,7 +61,7 @@ export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, 
       {shortcut !== undefined && <Keycap mode={shortcut.mode} verb={shortcut.verb} />}
     </>
   );
-  if (href !== undefined && !disabled) {
+  if (href !== undefined && !disabled && !pending) {
     return (
       <a className={cls} href={href}>
         {body}
@@ -65,7 +73,8 @@ export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, 
       type={submit ? "submit" : "button"}
       className={cls}
       aria-disabled={disabled ? true : undefined}
-      onClick={disabled ? refuse : onPress}
+      aria-busy={pending && !disabled ? true : undefined}
+      onClick={disabled || pending ? refuse : onPress}
     >
       {body}
     </button>

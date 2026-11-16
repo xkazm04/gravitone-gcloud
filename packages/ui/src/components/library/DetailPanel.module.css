@@ -12,7 +12,7 @@
 .close{display:inline-flex;align-items:center;gap:var(--sp-2);height:calc(var(--h-chip) + var(--sp-1));padding:0 var(--sp-2);border-radius:var(--r-chip);color:var(--muted)}
 .close:hover{color:var(--ink-bright);background:var(--wash-hi)}
 
-.body{flex:1;min-height:0;overflow:auto;padding:var(--sp-loose) var(--sp-wide) calc(var(--sp-7) + var(--sp-wide));animation:fadeUp .22s var(--ease)}
+.body{flex:1;min-height:0;overflow:auto;padding:var(--sp-loose) var(--sp-wide) calc(var(--sp-7) + var(--sp-wide));animation:fadeUp var(--dur) var(--ease)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(var(--sp-2))}}
 @media (prefers-reduced-motion:reduce){.body{animation:none}}
 

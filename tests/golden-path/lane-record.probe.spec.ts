@@ -149,6 +149,7 @@ def fake_generate(*a, **k):
     f.write_bytes(b"generated")
     return f
 consistency.generate = fake_generate
+consistency.flux_workflow = lambda *a, **k: {}
 
 refused = False
 try:
@@ -192,6 +193,7 @@ def fake_generate(*a, **k):
     raise RuntimeError("generation failed on shot 2")
 
 consistency.generate = fake_generate
+consistency.flux_workflow = lambda *a, **k: {}
 
 failed = False
 try:

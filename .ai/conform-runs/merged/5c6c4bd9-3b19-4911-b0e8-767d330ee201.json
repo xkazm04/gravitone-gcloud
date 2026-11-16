@@ -1,0 +1,50 @@
+{
+  "schema": "conform-run/1",
+  "worker": "5c6c4bd9-3b19-4911-b0e8-767d330ee201",
+  "subject": "mcp-tools",
+  "evaluatedAt": "2026-11-04T04:44:00.759834+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "mcp-tools",
+      "context": "studio-shell",
+      "reason": "evidence leans on athena-portable/packages/athena-bridge/inject.js, which is not a tracked file"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "server-seam",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "ledger-screen",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "spend-meter-and-requests",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "ui-tokens-and-catalog",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (partOptions.ts:97) is a comment about `isFreeReceipt` in @gt/domain/mcp, so it is incidental and does not show that no tools are registered or served. The 'only MCP contact' claim is also contradicted: packages/ui/src/components/audio/steer.ts:4 names the agent door `app/_server/mcp/tool"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-04T04:44:00.759834+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-tokens-and-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

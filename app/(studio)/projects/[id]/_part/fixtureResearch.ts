@@ -15,6 +15,8 @@ import { RAINSHELL, emptyBrief, ideasStandIn } from "./fixtureAds.ts";
 import type { Ctx } from "./fixture.ts";
 import { digest } from "./hash.ts";
 import { researchData as dataOf } from "./researchView.ts";
+import { BEAT_BOARDS } from "./fixtureWorld/trailer.ts";
+import { tariffSource } from "./fixtureWorld/tariff.ts";
 
 // RESEARCH, as the fixture side computes it - every number on the board is the v1 function's:
 // `scopeSummary` (cut vs not-taken, wounds, required), `woundsOf` through it, `scopeDiffs` for what
@@ -50,8 +52,7 @@ export type ResearchRec = {
 
 /** The notebooks a dry research run can stand in with: only a project's OWN transcribed run.
  *  Any other topic lands no notebook - never Bitcoin's (v1's "Glass Harbor shows Bitcoin"). */
-const REPLAYS: Readonly<Record<string, () => NotebookSource>> = { "why-bitcoin": fixtureSource };
-const BEAT_BOARDS: Readonly<Record<string, readonly BeatSlot[]>> = { "glass-harbor-trailer": GLASS_HARBOR_SLOTS };
+const REPLAYS: Readonly<Record<string, () => NotebookSource>> = { "why-bitcoin": fixtureSource, "the-quiet-tariff": tariffSource };
 
 const face = (ctx: Ctx, r: ResearchRec) => researchFaceOf(ctx.project.discipline, r.choice) ?? "notebook";
 const template = (ctx: Ctx): AdTemplateId => (ctx.project.recipe.endsWith("ad-spot-30") ? "ad-spot-30" : "ad-social-15");

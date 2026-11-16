@@ -9,6 +9,8 @@
 //   genre-publishable   a genre's finished piece kept (spark genre-forge)
 //   finding-restated    a kept finding that says again what an earlier night kept (n=2)
 //   source-rich         a keep from a source the skill marked as teaching a mechanism
+//   lesson-beats, lesson-art-style, lesson-technique   an operator-accepted lesson of a finished production (spark
+//                       concept-casting-stages S6): not a night's commit, so `night` is the day it was accepted
 //
 // The next night's step 0 phrases each queued event as one claim and files it with
 // `scout.mts lead`, which appends one line to .ai/registry-leads.jsonl (the registry's
@@ -27,7 +29,7 @@ import { withRunLock } from "../verdictLog";
 import { homeRoot } from "./store";
 import type { NightId } from "./types";
 
-export const LEAD_EVENT_KINDS = ["style-proven", "genre-publishable", "finding-restated", "source-rich"] as const;
+export const LEAD_EVENT_KINDS = ["style-proven", "genre-publishable", "finding-restated", "source-rich", "lesson-beats", "lesson-art-style", "lesson-technique"] as const;
 export type LeadEventKind = (typeof LEAD_EVENT_KINDS)[number];
 
 /** The registry bundle every scout lead is filed against. */
@@ -44,7 +46,7 @@ export type LeadEvent = {
   /** `<kind>:<ref>` - the event's one name. */
   readonly key: string;
   readonly kind: LeadEventKind;
-  /** The night whose commit queued it. */
+  /** The night whose commit queued it; a lesson's day of acceptance. */
   readonly night: NightId;
   /** What it is about: a style id, a genre id, `<night>/<candidate>` pairs, a source URL. */
   readonly refs: readonly string[];

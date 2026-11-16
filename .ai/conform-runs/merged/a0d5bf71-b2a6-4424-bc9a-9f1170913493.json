@@ -1,0 +1,246 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a0d5bf71-b2a6-4424-bc9a-9f1170913493",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-09T05:06:40.226939+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:11 A music cue can only be addressed as a first and last scene, so it can never enter or exit inside a scene, which music-spotting forbids, and the cut's sync, gap and state rules also fall short in this context's editors.",
+   "techniques": [
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:11 The technique requires the cue address to stay free to resolve inside a scene (a mark plus an offset). Drag, keyboard shift and the first/last selects all write scene ids only; there is also no drawn chosen-silence state."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The only step offered (buttons and the nudge key) is 50 ms, which is 1.25 frames at the 25 fps the cut view sets, so it is not sub-frame and cannot land inside the 15 ms-early window. Signed offset display, stored offset and snap-to-mark are present."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 An active pointer whose take has held=false draws as ok here while the Cut draws the same cue missing. The cue model has no refused state, so a declined cue cannot be told from one never rendered."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:231 Block state is a CSS class with no legend naming it: a search of _edit for 'legend' finds only keymap legends. Turn marks stay inside the ruler rather than spanning the lanes. The single clock, to-scale blocks and drawnS positioning do hold."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The editor draws the server-derived turn and draws no marker when absent. The duplicated derivation behind it is judged in part-port-fixtures."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 Each preview frame is requested by explicit frameIndex and a fixed seed; the compositor header states particle state depends only on (seed, frameIndex)."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 An undecodable still is an error naming the input, not a blank canvas. Scope is the composited preview; the Cut monitor's plain img has no error path and is not a composited render."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:27 A live preview through the export's own compositor comes before the priced render job."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Voice.tsx:3 Voice is whole lines and takes; a case-insensitive search of _edit for alignment and word timing found nothing, so no cue is placed inside a narration clip."
+    },
+    {
+     "technique": "motion-plate-library",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:3 Motion here is per-unit within one project; the word plate means a still, and a search for a motion plate library found nothing."
+    }
+   ],
+   "registryProposal": "drift-correction asks for sub-frame steps and for increments of a few tens of milliseconds in one sentence; at 25 fps a 50 ms step satisfies the second and fails the first, so the technique should state one bound relative to the frame."
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:33 This context only routes the cut to an editor it does not own and edits text; a search of its directory for alignment, storyboard and ffmpeg found nothing, and a search of its own files for timeline, clip, cut, render, drift and music found only comments, a shared CSS import, a scenario's music mood and the words render gate, so no material is assembled onto a clock here.",
+   "techniques": [],
+   "absenceTerms": [
+    "alignment",
+    "storyboard",
+    "ffmpeg"
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 shownStatus only turns drift into ok and the derived cut never emits drift, so a clip nudged 300 ms off its mark still reports ok and the finish line's drift row stays at 0, leaving status unable to follow the measurement.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 lib/cut/deriveTimeline.ts only assigns ok or missing outside its Glass Harbor fallback, and isDrifting requires status drift, so a non-zero offset never produces a drift state."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The position is derived from material, but the score repeats the /turn/ test that the cut gets from turnOf, breaking one derivation for all consumers, and find silently takes the first of two matching scenes."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:183 The stored cue is a list of scene ids with no offset, so it re-derives on a retime but cannot resolve inside a scene."
+    },
+    {
+     "technique": "generated-shot-sourcing",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureMotion.ts:26 The clip record has no prompt, conditioning rung, anchors, model or date, so provenance does not travel with an adopted clip."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn start and the reported offset are computed from the same stored offsets, so the block moves with the number."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:70 A pointer with no bytes stays a missing block with its reason. Dry acts here never fail, so a refused music cue has no specimen; that gap is recorded on the media editor context."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 The cut compiles to a deterministic edit document whose digest identifies what an export was cut from."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:10 An explainer card is held for its whole line (take length, else spoken length), which the technique excludes, and a search of _part for alignment and word timing found nothing."
+    }
+   ]
+  },
+  {
+   "context": "plan-and-import",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_plan/Plan.tsx:6 These screens estimate and launch jobs per resource and import archives; a search of _plan and import for timeline, drift, alignment, storyboard and offsetMs found nothing, and their lanes are compute resources rather than media on a clock, so no cut is assembled or presented here.",
+   "techniques": [],
+   "absenceTerms": [
+    "timeline",
+    "drift",
+    "alignment",
+    "storyboard",
+    "offsetMs"
+   ]
+  },
+  {
+   "context": "style-trials-cull",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 A cut reviewer's note is stored as prose against a whole-second beat time, with no frame number, frame-fraction spot, marked frame image, done flag or cut revision, so the editor must still search for what was meant.",
+   "techniques": [
+    {
+     "technique": "pinned-frame-notes",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/cut/CutReview.tsx:36 The notes are joined into one verdict note line per beat, keyed to a caption beat's m:ss start, and none of the five parts of a pinned note beyond the text is captured."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:06:40.226939+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "motion-plate-library",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:06:40.226939+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:06:40.226939+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "generated-shot-sourcing",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:06:40.226939+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "plan-and-import",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:06:40.226939+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "pinned-frame-notes"
+   ],
+   "deviations": 1,
+   "context": "style-trials-cull",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -22,7 +22,7 @@ presentation": the look (A) and the film (T) are now decided before a hero is bu
 
 | verb | does | stage after |
 |---|---|---|
-| `analyze <dir> [--yes\|--dry] [--audio f]` | decode, DSP, beats, sections; one Gemini call for line times with `--yes`, none with `--dry`; refuses with neither | `analyzed` |
+| `analyze <dir> [--yes\|--dry] [--audio f] [--suno <id\|url>]` | decode, DSP, beats, sections; with a Suno song named, Suno's analysis and lyrics alignment (free) with `--yes`; one Gemini call for line times with `--yes` only when Suno gave no word timings, none with `--dry`; refuses with neither | `analyzed` |
 | `status <dir> [--json]` | stage, picks, artifacts present, next verb; reads only | - |
 | `board a <dir>` | validates `directions.json` (<= 10, kebab ids, `#rrggbb` palettes, no empty field), assembles `board-a.html`, shoots `board-a-sheet.png` | `board-a` |
 | `board t <dir> [--only <id>]` | validates `treatments.json` (1-4, kebab ids, one plot beat per section in order, 1-6 keyframes each inside the track and in their section, grids in the union), shoots each `board-t/<id>/scene.html` at its keyframes on the GPU, assembles `board-t.html`, shoots `board-t-sheet.png`; `--only` re-shoots one scene and reuses the others' frames | `board-t` |
@@ -37,7 +37,8 @@ outside `<dir>/music-clip/` and never opens the studio store.
 ## Folder contract
 
 In: `<dir>/` holds exactly one `*.mp3` (or `--audio <file>`), `lyrics.txt|lyrics.md`,
-`style.txt|style.md|prompt.md|prompt.txt`, and optionally the same track's lossless master (one
+`style.txt|style.md|prompt.md|prompt.txt`, optionally `suno.txt` (the Suno song id or its
+`https://suno.com/song/<id>` link; `--suno` wins over it), and optionally the same track's lossless master (one
 `*.wav` or `*.flac`): the analysis reads the mp3, renders (`cut.mts`) mux the master as AAC 384 kb/s (YouTube's recommended stereo bitrate), moov at the front.
 Out, all under `<dir>/music-clip/`:
 
@@ -94,6 +95,29 @@ never `0` for unknown.
   prompt. There are no stems on this box, so **`confirmed` is always `false`**: it is an inference,
   never a measurement of who is singing.
 - **`warnings`**: every fallback and disagreement, verbatim. The session says them all at Stage 0.
+
+### When the folder names its Suno song
+
+`--suno <id | https://suno.com/song/<id>>` or a `suno.txt` (the flag wins) makes `analyze --yes`
+read Suno's own measurement through the connected account (`pipeline/suno-api.mts`): `analysis` and
+`lyrics-alignment`, both free, each polled every 3 s for up to 120 s while Suno answers `processing`.
+`--dry` makes no Suno call (a warning says the grid was not fetched); an account that is not
+connected is the warning `suno: not connected; the local grid stands`, never a failed run.
+
+- **Suno stands** where it answers: `beats` (bar 1 at the first `bar_position: 1`, a pickup is bar 0;
+  a meter other than 4 is a warning, positions clamp to 4), `tempo.bpmGlobal` (Suno's `bpm`; `curve`
+  from Suno's beats), **`key`** (new, optional), the section boundaries (handed to the section
+  builder in place of the novelty pass when the count is within two of what the lyric tags name;
+  labels still come from the tags; otherwise the local boundaries stand) and the line times.
+  Each section carries **`sunoLabel`**, Suno's letter of the part it overlaps most. A disagreement
+  with the local pass (tempo over 1%, downbeats, a boundary over 3 s) is a warning naming both
+  figures.
+- **Lyrics** with an alignment: each line's span runs from its first to its last matched word
+  (in order, case and punctuation aside, `[tags]` not sung); `source: "suno-align"`, `words` holds
+  the matched words; `high` when every word matched with `success`, `medium` when some were
+  inferred or only half matched; an unmatched line keeps its section span. **The Gemini call is
+  skipped** and `GOOGLE_AI_API_KEY` is not required.
+- **Local still**: bands, onsets, intensity, voice - and every part Suno answers `unavailable`.
 
 ## The stops
 

@@ -15,11 +15,9 @@ import type { Producer } from "@gt/kernel/job-core";
 import { runJob, type RunReport } from "@gt/kernel/job-run";
 import { readQueue } from "@gt/kernel/records/read";
 import { receiptFor, type PlanLine } from "@gt/kernel/records/receipt";
-import { TABLES } from "@gt/kernel/router/tables";
 import type { Reader, Store } from "@gt/kernel/store";
-import { defineScoutIdeas, IDEAS_REQUEST, parseIdeasRequest, SCOUT_IDEAS, STUDIO_CREDIT, type IdeasRequest } from "@gt/producers/scout-ideas/define";
+import { defineScoutIdeas, IDEAS_REQUEST, parseIdeasRequest, SCOUT_IDEAS, type IdeasRequest } from "@gt/producers/scout-ideas/define";
 
-import { drawsSomeone } from "../foundry/scout/museDoor.ts";
 import { mutateNight, readNightNow, withCandidate } from "../foundry/scout/store.ts";
 import { wingRunId, type ScoutWing } from "../foundry/scout/wing.ts";
 import { activeWing, withWing } from "../foundry/scout/wingScope.ts";
@@ -29,21 +27,22 @@ import { generate, recognize } from "../imaging/router.ts";
 import { kernel } from "../kernelProcess.ts";
 import { effectsFor } from "./extract.ts";
 import { ideaActs, type IdeaEngines } from "./scoutIdeaActs.ts";
+import { scoutStillOption } from "./scoutStillOption.ts";
 
 // THE SCOUT IDEAS PRODUCER, BOUND (spark scout-idea-artboards WP-I2) - one /scout batch of `idea`
 // candidates as one kernel job (packages/producers/src/scout-ideas/define.ts says which steps and
 // why one idea's failure is not the batch's). This file is the launch - receipt, then confirm - and
 // the binding; the acts are ./scoutIdeaActs.ts, the brief's door lib/foundry/scout/idea.ts.
 //
-// WHAT A BATCH COSTS ON ITS RECEIPT: one line on box.chrome, `idea`, one Leonardo studio still per
-// idea - UNPRICED, because the studio bills its prepaid credits and no USD-per-studio-credit rate has
-// been checked (lib/imaging/pricing.ts's leonardo-studio row). The pace is illustrative.
+// WHAT A BATCH COSTS ON ITS RECEIPT: one line on seat.text, `idea`, one Codex image_gen still per idea on the
+// operator's ChatGPT seat - $0, the seat bills no image and its quota is the real limit (operator, 2026-11-08: Codex
+// is the primary source for idea artboards too; ./scoutStillOption.ts CODEX_SEAT). The pace is illustrative.
 //
 // NO JOB CEILING. The night's ceiling caps Gemini only (lib/foundry/scout/budget.ts), and this job
 // books none; a ceiling would only make the night hold its whole remainder while the batch draws
 // (budget.ts `promiseOf` holds an unfinished live job's ceiling when its receipt has no price).
 //
-// ONE JOB PER BATCH, on box.chrome: `job:scout-ideas:<night>:<first c-NN>`, and a muse batch's
+// ONE JOB PER BATCH, on seat.text: `job:scout-ideas:<night>:<first c-NN>`, and a muse batch's
 // `job:scout-ideas:muse:<night>:<first c-NN>` - the two wings number their nights and candidates
 // apart, so the same day's first batch in each would otherwise be one id. night.json names it on
 // every idea of the batch and on `night.jobs` once the job exists.
@@ -73,27 +72,9 @@ export type IdeasLaunch =
   /** The batch already has its job: that job, never a second. */
   | { readonly kind: "existing"; readonly jobId: string; readonly state: Job["state"] };
 
-export const SCOUT_IDEAS_LANE: ResourceLane = "box.chrome";
+export const SCOUT_IDEAS_LANE: ResourceLane = "seat.text";
 
-/** Seconds one studio artboard takes: typing, generating, downloading, deleting. Illustrative. */
-const IDEA_SECONDS = 45;
-
-function ideaOption(): Result<ModelOption> {
-  const model = TABLES.image.candidates.find((c) => c.provider === "leonardo-studio")?.models["generate"];
-  if (model === undefined) return err("internal", "the router table has no leonardo-studio row to price an idea with");
-  return ok({
-    key: `scout-ideas/leonardo-studio/${model}`,
-    lane: SCOUT_IDEAS_LANE,
-    provider: "leonardo-studio",
-    model,
-    label: "idea artboard",
-    secondsPerUnit: IDEA_SECONDS,
-    usdPerUnit: null,
-    unpricedReason: STUDIO_CREDIT,
-    src: "illustrative",
-    basis: { seconds: { src: "illustrative", note: "one studio still with its download and delete, not yet measured" }, usd: { src: "real", note: STUDIO_CREDIT } },
-  });
-}
+const ideaOption = (): Result<ModelOption> => scoutStillOption("scout-ideas", "idea artboard", SCOUT_IDEAS_LANE, "codex");
 
 /* ── The candidates a launch may price ────────────────────────────────────── */
 
@@ -133,14 +114,13 @@ function readIn(r: Reader, t: IdeasTarget, o: ReadAsk): Result<{ readonly receip
   if (!ideas.ok) return ideas;
   const option = ideaOption();
   if (!option.ok) return option;
-  // A character, or an idea that casts one, draws at the studio's low quality (the muse look); the rest at its default.
-  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt, ...(c.aspect === undefined || c.aspect === "16:9" ? {} : { aspect: c.aspect }), ...(drawsSomeone(c) ? { quality: "low" as const } : {}) }));
+  const asks = ideas.value.map((c) => ({ candidateId: c.id, prompt: c.prompt, ...(c.aspect === undefined || c.aspect === "16:9" ? {} : { aspect: c.aspect }) }));
   // The key names the batch AT its prompts: a prompt that changed since the receipt is a different line.
   const at = `ideas:${night.value.id}/${t.candidateIds[0] ?? ""}@${createHash("sha256").update(asks.map((a) => `${a.candidateId}\n${a.prompt}`).join("\n")).digest("hex").slice(0, 12)}`;
   const line: PlanLine = { key: `${at}/idea`, label: `idea · ${asks.length} artboard(s)`, lane: SCOUT_IDEAS_LANE, units: asks.length, option: option.value, after: [], order: 0, status: "pending" };
   const receipt = receiptFor({ subject: { kind: "run", lane: "image" }, lines: [line], plan: [line], queue: readQueue(r), capacity: LANE_CAPACITY, now: o.now, mode: o.mode });
   const wing = t.wing === "muse" ? { wing: t.wing } : {};
-  return ok({ receipt, request: { nightId: night.value.id, ...wing, ideas: asks, ...(t.quality === undefined ? {} : { quality: t.quality }), estimates: { idea: { seconds: IDEA_SECONDS, usd: null, unpricedReason: STUDIO_CREDIT } } } });
+  return ok({ receipt, request: { nightId: night.value.id, ...wing, ideas: asks, ...(t.quality === undefined ? {} : { quality: t.quality }), estimates: { idea: { seconds: option.value.secondsPerUnit, usd: 0 } } } });
 }
 
 /* ── Launch: receipt, then confirm ────────────────────────────────────────── */

@@ -22,12 +22,15 @@ const ROOT = vi.hoisted(() => {
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { listSeedBatches, mutateSeedBatch } from "../../lib/foundry/scout/seedStore.ts";
 import { addSeedBatch, usableSeed } from "../../lib/foundry/scout/seeds.ts";
 import { pauseBranch } from "../../lib/foundry/scout/steer.ts";
 import { seedSections, tasteOf } from "../../lib/foundry/scout/taste.ts";
 import { MAX_SEED_BATCH, type IdeaCandidate, type Night, type Seed, type SeedBatch, type SeedCommit } from "../../lib/foundry/scout/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 afterAll(() => rmSync(ROOT, { recursive: true, force: true }));
 
@@ -37,7 +40,7 @@ const DAY = new Date("2026-10-23T09:00:00.000Z");
 async function cli(argv: string[], now: Date = DAY): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ports: { now: () => now } });
+  const code = await guardedRunCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s), ports: { now: () => now } });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

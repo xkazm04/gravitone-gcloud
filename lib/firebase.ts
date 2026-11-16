@@ -15,14 +15,13 @@
 // The web config is public by design — access is secured by Firebase Auth
 // (Google provider) and its authorized-domain list, not by hiding these values.
 
-import { getApp, getApps, initializeApp } from "firebase/app";
-import {
-  browserLocalPersistence,
-  getAuth,
-  GoogleAuthProvider,
-  setPersistence,
-  type Auth,
-} from "firebase/auth";
+// THE SDK IS LOADED, NOT IMPORTED (2026-11-09). Only types are imported from the SDK here, and
+// nothing else in the client may import it at all: the root layout mounts the auth context on
+// every page, so a static import put Firebase's client (~33 KB gzip, measured) in the first load
+// of every route, the landing's and the dev fixture's included. `loadAuth()` fetches it the first
+// time it is asked - by the auth context's first effect, never under DEV_AUTH or LOCAL_MODE - and
+// tests/next-gates/firebase-lazy.test.ts holds the static graph to that.
+import type { Auth, AuthProvider } from "firebase/auth";
 
 // Minimal init (apiKey/authDomain/projectId) — the proven shape from the
 // sibling apps on this same Firebase project.
@@ -67,10 +66,52 @@ export class FirebaseNotConfiguredError extends Error {
   }
 }
 
-let cached: Auth | null = null;
+/** The Firebase Auth SDK module, as `loadAuth()` hands it over. */
+export type AuthSdk = typeof import("firebase/auth");
+/** A live client: the Auth instance, the SDK that drives it, and the Google provider. */
+export type AuthKit = { readonly auth: Auth; readonly sdk: AuthSdk; readonly google: AuthProvider };
+
+let cached: AuthKit | null = null;
+let loading: Promise<AuthKit> | null = null;
 
 /**
- * THE ONE DOOR to the Firebase Auth client.
+ * THE ONE DOOR to the Firebase Auth client: fetches the SDK on first call, builds the client once.
+ *
+ *   · SUCCESS is memoised, failure is not: a refused config rejects every time (typed, below), and
+ *     a chunk that failed to load is asked for again by the next caller, never cached as poison.
+ *   · Every caller gets the same client; two callers racing the first load share one fetch.
+ */
+export function loadAuth(): Promise<AuthKit> {
+  if (!firebaseReady) return Promise.reject(new FirebaseNotConfiguredError());
+  if (cached) return Promise.resolve(cached);
+  if (loading) return loading;
+  const p = Promise.all([import("firebase/app"), import("firebase/auth")]).then(([app, sdk]) => {
+    const { getApp, getApps, initializeApp } = app;
+    const auth = sdk.getAuth(getApps().length ? getApp() : initializeApp(firebaseConfig));
+    // Keep users signed in across reloads/sessions via local storage. Firebase on its own would
+    // never expire that - see the session policy below. Set here, at the one place the client
+    // comes into existence, so it cannot be forgotten by a caller.
+    void sdk.setPersistence(auth, sdk.browserLocalPersistence).catch(() => {});
+    const google = new sdk.GoogleAuthProvider();
+    google.addScope("email");
+    google.addScope("profile");
+    cached = { auth, sdk, google };
+    return cached;
+  });
+  loading = p;
+  p.catch(() => {
+    loading = null;
+  });
+  return p;
+}
+
+/**
+ * The client `loadAuth()` built, synchronously, for a caller that runs only after it resolved
+ * (lib/sessionToken.ts's subscription, handed the client by the auth context). Throws the typed
+ * not-configured error with no config, and a plain one when the SDK is configured but not loaded
+ * yet - that is a caller's ordering bug, never a state to paper over with a stub.
+ *
+ * The history of the name, kept because the shape it records is still the rule:
  *
  * ── WHY THIS IS A FUNCTION AND NOT A CONSTANT (fixed 2026-08-24) ────────────
  *
@@ -104,18 +145,10 @@ let cached: Auth | null = null;
  *     THIS module, so a yes from the predicate cannot be followed by a throw
  *     from the accessor.
  */
-export function authClient(): Auth {
+export function authClient(): AuthKit {
   if (!firebaseReady) throw new FirebaseNotConfiguredError();
   if (cached) return cached;
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  // Keep users signed in across reloads/sessions via local storage. Firebase on
-  // its own would never expire that — see the session policy below. Set here, at
-  // the one place the client comes into existence, so it cannot be forgotten by a
-  // caller and cannot run before there is a client to set it on.
-  void setPersistence(auth, browserLocalPersistence).catch(() => {});
-  cached = auth;
-  return auth;
+  throw new Error("the Firebase SDK is not loaded yet - await loadAuth() first");
 }
 
 /* ---------------------------------------------------------------------------
@@ -183,6 +216,5 @@ export function sessionExpired(
 // refresh token survives restarts, and only an explicit sign-out or Google-side
 // revocation ends the session.
 
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("email");
-googleProvider.addScope("profile");
+// The Google provider is built with the client, inside loadAuth() (`AuthKit.google`): a module-scope
+// `new GoogleAuthProvider()` is exactly the static import this file no longer has.

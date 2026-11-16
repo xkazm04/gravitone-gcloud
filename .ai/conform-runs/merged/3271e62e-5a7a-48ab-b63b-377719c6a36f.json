@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3271e62e-5a7a-48ab-b63b-377719c6a36f",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T05:42:38.279938+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-browser-screen",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/library-screen.test.ts:53 The check that every port call goes through settle walks a hand-written file list that omits CharacterDetail, GenreDetail, ModelDetail and VentureDetail, so a bare port call in those or in any new _library file would stay green; none of the four references port today, so this is a gap in the instrument and not a live defect.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/library-screen.test.ts:42 An 'every' claim runs over a hand-written list of a directory; the technique's repair is to enumerate the directory at run time, as tests/next-server/style-atelier.test.ts:72 does."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-screen.test.ts:55 The needle requires a call's opening parenthesis, reads comment-stripped source, and line 61 pins the exact call sites as a floor."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-page.test.ts:2 The file states why its sides are stubbed and which refusal it therefore makes reachable."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/library.live.spec.ts:24 The lane locates the screen through a role identifier kept in product code, and its header confines the lane to claims only the running page can show."
+    }
+   ]
+  },
+  {
+   "context": "library-port",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "tests/next-server/library-fixture-parity.test.ts:273 The parity suite claims 'every kind' over nine hand-written kinds while LIBRARY_KINDS has eleven and the corpus holds genre and venture items, so those two kinds are never compared between fixture and kernel on this surface.",
+   "techniques": [
+    {
+     "technique": "gate-scope-is-not-report-scope",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/library-fixture-parity.test.ts:272 The 'every' claim omits genre and venture from packages/domain/src/library.ts:23, and adding a kind turns nothing red; lines 238, 255 and 297 use the same nine-kind list."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "tests/next-server/library-fixture-parity.test.ts:52 The kernel is built once per suite and items go through upsertItems, but project rows are raw inserts of a record projectSchema would refuse (recipe, rev and createdAt missing), with no invariant check afterwards."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-fixture-parity.test.ts:164 The same input goes to the fixture and the kernel and the answers are compared, which is the technique's check of the claim."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/library/_port/port.ts:57 Production builds the real side with the same constructor the tests drive in tests/next-server/library-real.test.ts:64."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/library-handoff.test.ts:35 The test asserts the process actually adopted the temp store before relying on it."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/live/library-real.live.spec.ts:211 After Pin the lane reads the effect back from the store instead of trusting the toast."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "scout-screen",
+   "reason": "evidence leans on scout/_port/real.ts, which is not a tracked file"
+  },
+  {
+   "subject": "test-harness",
+   "context": "domain-decision-board-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "style-atelier",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:42:38.279938+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "gate-scope-is-not-report-scope",
+    "live-app-harness",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:42:38.279938+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "gate-scope-is-not-report-scope",
+    "isolation-lanes",
+    "live-app-harness",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

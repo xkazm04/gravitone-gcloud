@@ -23,7 +23,6 @@ import {
   DEFAULT_PIN,
   FIXED_ORDER,
   groupLabel,
-  isSharedGroup,
   KIND_LABELS,
   LIBRARY_GROUP_TOP,
   LIBRARY_KINDS,
@@ -39,8 +38,11 @@ import {
 } from "@gt/domain/library";
 import { libraryItemSchema, type LibraryItemDetail } from "@gt/domain/libraryItem";
 import { querySchema } from "@gt/kernel/library/clauses";
+import { narrowsKinds } from "@gt/kernel/library/core";
 import { resolveLineage } from "@gt/kernel/library/detail";
 
+import { runsJobFor } from "../../_shell/links.ts";
+import { universe as produceUniverse } from "../../projects/_port/fixture.ts";
 import { buildCorpus, labelOf, type FixtureRecord } from "./fixtureCorpus.ts";
 import { PROJECTS } from "./fixtureData.ts";
 
@@ -134,7 +136,7 @@ export function fixtureQuery(input: LibraryQuery): Result<LibraryPage> {
       if (!(x.f[g] ?? []).some((v) => set.has(v))) {
         fails++;
         failKey = g;
-        if (isSharedGroup(g)) sharedFail++;
+        if (narrowsKinds(g)) sharedFail++;
       }
     }
     if (sharedFail === 0) {
@@ -178,6 +180,16 @@ const gone = (id: string): Result<never> => err("not-found", `library: no item $
 /** Groups the index keeps as columns of the item: a detail lists none of them (kernel library/detail.ts). */
 const COLUMNS: ReadonlySet<string> = new Set<string>(COLUMN_GROUPS);
 
+/**
+ * A job pointer's Runs page, on the fixture side: linked only while the produce fixture - the
+ * universe the fixture Runs draws - holds the job (the real side asks the kernel's `jobs` table,
+ * kernel library/detail.ts lineageOf). One that is gone stays text.
+ */
+const fixtureJobAt = (jobId: string): string | undefined => (produceUniverse().jobs.has(jobId) ? runsJobFor(jobId) : undefined);
+
+/** How many items carry `group:value` (kernel library/query.ts countMadeBy, over the same facets). */
+export const fixtureMadeBy = (group: "job" | "run", value: string): number => universe().items.reduce((n, x) => n + ((x.f[group] ?? []).includes(value) ? 1 : 0), 0);
+
 export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const x = universe().byId.get(id);
   if (x === undefined) return gone(id);
@@ -190,7 +202,7 @@ export function fixtureDetail(id: string): Result<LibraryItemDetail> {
   const keys = Object.keys(x.f).filter((key) => !COLUMNS.has(key) && (x.f[key] ?? []).length > 0).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   const vocabulary = keys.map((key) => ({ key, label: groupLabel(key), values: [...(x.f[key] ?? [])].sort().map((value) => ({ value, label: labelOf(key, value) })) }));
   const pinned = (x.f["pin"] ?? []).includes(DEFAULT_PIN);
-  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", ...(x.row.kind === "genre" || x.row.kind === "venture" ? [] : (["use-in-project"] as const)), ...(x.row.kind === "model" ? (["export"] as const) : [])] });
+  return ok({ item: item.value, row: x.row, vocabulary, lineage: resolveLineage(item.value, (other) => universe().byId.get(other)?.raw.title, fixtureJobAt), extras: x.extras, media: x.media, acts: [pinned ? "unpin" : "pin", ...(x.row.kind === "genre" || x.row.kind === "venture" ? [] : (["use-in-project"] as const)), ...(x.row.kind === "model" ? (["export"] as const) : [])] });
 }
 
 /** Presentation extras the index does not carry on a row (a take's peaks, a face's palette, a player's address). */

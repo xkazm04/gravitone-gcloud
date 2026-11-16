@@ -20,7 +20,7 @@ import { unwrap } from "../src/events.ts";
 
 export const ACTOR: Actor = { kind: "machine", id: "box.render" };
 
-export const POSTURE_PROD: Posture = { plan: { image: "prod", text: "cloud", audio: "hosted", video: "hosted" }, local: "managed-platform", retrieval: false };
+const POSTURE_PROD: Posture = { plan: { image: "prod", text: "cloud", audio: "hosted", video: "hosted" }, local: "managed-platform", retrieval: false };
 
 /** Lot 5's ledger, with ceilings a test can choose. */
 export function classes(imagingCeiling = 5): SpendClasses {

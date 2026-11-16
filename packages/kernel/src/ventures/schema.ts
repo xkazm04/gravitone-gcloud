@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ACTOR_KINDS } from "@gt/domain/event";
+import { CHANNEL_ID_RE } from "@gt/domain/channel";
 import { GENRE_ID_RE, VENTURE_ID_RE, VENTURE_KINDS } from "@gt/domain/genre";
 
 import type { ModuleMigrations } from "../migrate.ts";
@@ -83,6 +84,39 @@ BEGIN SELECT RAISE(ABORT, 'venture_ops is append-only'); END;
 CREATE TRIGGER venture_ops_no_delete BEFORE DELETE ON venture_ops
 BEGIN SELECT RAISE(ABORT, 'venture_ops is append-only'); END;`,
     },
+    {
+      // Spark concept-casting-stages S6: `channel_id` links a venture to its channel file, and a channel no longer has to
+      // name a genre (the door, ./store.ts bornVenture, says when it may not). A CHECK cannot be altered, so `ventures` is
+      // rebuilt: the rows move aside, the table is dropped and recreated UNDER ITS OWN NAME, then the rows return. The order
+      // matters: a deferred violation raised by the drop is only cleared by re-inserting the parent row under `ventures`.
+      version: 2,
+      sql: `
+PRAGMA defer_foreign_keys = ON;
+CREATE TEMP TABLE ventures_v1 AS SELECT id, name, kind, frame, proposal, born_at, born_by_kind, born_by, retired_at FROM ventures;
+DROP TABLE ventures;
+CREATE TABLE ventures (
+  id TEXT PRIMARY KEY CHECK (id GLOB 'vn-?*'),
+  name TEXT NOT NULL CHECK (length(name) > 0),
+  kind TEXT NOT NULL CHECK (kind IN ('channel', 'album', 'game')),
+  frame TEXT NOT NULL CHECK (json_valid(frame) AND json_type(frame) = 'object' AND json_type(frame, '$.genres') = 'array'),
+  proposal TEXT NOT NULL UNIQUE CHECK (length(proposal) > 0),
+  channel_id TEXT UNIQUE CHECK (channel_id IS NULL OR (kind = 'channel' AND proposal = 'channel/' || channel_id)),
+  born_at TEXT NOT NULL,
+  born_by_kind TEXT NOT NULL CHECK (born_by_kind IN ('operator', 'agent', 'machine')),
+  born_by TEXT NOT NULL CHECK (length(born_by) > 0),
+  retired_at TEXT CHECK (retired_at IS NULL OR retired_at >= born_at),
+  CHECK (kind <> 'channel' OR json_array_length(frame, '$.genres') > 0 OR proposal GLOB 'channel/*' OR proposal GLOB 'production/*' OR proposal GLOB 'operator/*')
+);
+INSERT INTO ventures (id, name, kind, frame, proposal, born_at, born_by_kind, born_by, retired_at) SELECT id, name, kind, frame, proposal, born_at, born_by_kind, born_by, retired_at FROM temp.ventures_v1;
+DROP TABLE temp.ventures_v1;
+CREATE TRIGGER ventures_fixed_at_birth BEFORE UPDATE OF id, name, kind, frame, proposal, channel_id, born_at, born_by_kind, born_by ON ventures
+BEGIN SELECT RAISE(ABORT, 'a venture is fixed when it is born'); END;
+CREATE TRIGGER ventures_retire_once BEFORE UPDATE OF retired_at ON ventures
+WHEN OLD.retired_at IS NOT NULL OR NEW.retired_at IS NULL
+BEGIN SELECT RAISE(ABORT, 'retiring a venture is terminal, and happens once'); END;
+CREATE TRIGGER ventures_never_deleted BEFORE DELETE ON ventures
+BEGIN SELECT RAISE(ABORT, 'a venture is retired, never deleted'); END;`,
+    },
   ],
 };
 
@@ -110,7 +144,9 @@ export const ventureFrameSchema = z
   .strict();
 
 /** What a kept `venture` proposal births (./store.ts VentureBirth). */
-export const ventureBirthSchema = z.object({ name: words, kind: z.enum(VENTURE_KINDS), frame: ventureFrameSchema, proposal: ref }).strict();
+export const ventureBirthSchema = z
+  .object({ name: words, kind: z.enum(VENTURE_KINDS), frame: ventureFrameSchema, proposal: ref, ground: z.enum(["channel", "proven", "operator"]).optional(), channelId: z.string().regex(CHANNEL_ID_RE).optional() })
+  .strict();
 
 export const grammarSchema = z.array(z.string());
 
@@ -135,7 +171,7 @@ export const genreRowSchema = z.object({
 });
 
 /** One stored venture; `frame` is text here and parses through ventureFrameSchema. */
-export const ventureRowSchema = z.object({ id: z.string().regex(VENTURE_ID_RE), kind: z.enum(VENTURE_KINDS), frame: z.string(), ...stamped });
+export const ventureRowSchema = z.object({ id: z.string().regex(VENTURE_ID_RE), kind: z.enum(VENTURE_KINDS), frame: z.string(), channel_id: z.string().nullable(), ...stamped });
 
 export const GENRE_COLUMNS = "id, name, born_from, proposal, use, look, grammar, venture_id, born_at, born_by_kind, born_by, retired_at";
-export const VENTURE_COLUMNS = "id, name, kind, frame, proposal, born_at, born_by_kind, born_by, retired_at";
+export const VENTURE_COLUMNS = "id, name, kind, frame, proposal, channel_id, born_at, born_by_kind, born_by, retired_at";

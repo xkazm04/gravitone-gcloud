@@ -11,11 +11,12 @@ import { useMemo, useState } from "react";
 import { LOOK_MISS_WORDS, type FramesBoard, type LayerView, type PartView, type UnitView } from "@gt/domain/partView";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { FrameCanvas, layerKey } from "@gt/ui/components/part/FrameCanvas.tsx";
 import { PartWorkspace } from "@gt/ui/components/part/PartWorkspace.tsx";
-import { RailList } from "@gt/ui/components/part/RailList.tsx";
+import { RAIL_ART, RailList } from "@gt/ui/components/part/RailList.tsx";
 import { clock, walk } from "@gt/ui/components/part/part.ts";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { useKeys } from "@gt/ui/keymap/dispatch";
@@ -61,13 +62,18 @@ function Marks({ u }: { readonly u: UnitView }) {
   );
 }
 
+/** A rail of shots is a rail of pictures: the unit's plate at grid size, its title over its clock,
+ *  kind and marks. A unit with no plate yet draws the hatched absence in the picture's place. */
 function UnitRow({ u }: { readonly u: UnitView }) {
   return (
-    <div className={s.row} data-unit={u.id} data-plate={u.plate.state}>
-      <span className={s.tc}>{u.startS === null ? u.at : clock(u.startS)}</span>
-      <span className={s.kind}>{u.grain === "shot" && u.staging !== undefined ? u.staging.size || u.beatKind : u.beatKind}</span>
-      <span className={s.title}>{u.title}</span>
-      <Marks u={u} />
+    <div className={s.unit} data-unit={u.id} data-plate={u.plate.state}>
+      {u.plate.url === null ? <PlateMissing className={s.unitArt} /> : <Plate className={s.unitArt} src={u.plate.url} alt="" lazy width={RAIL_ART} />}
+      <span className={s.unitTitle}>{u.title}</span>
+      <span className={s.unitFacts}>
+        <span className={s.tc}>{u.startS === null ? u.at : clock(u.startS)}</span>
+        <span className={s.kind}>{u.grain === "shot" && u.staging !== undefined ? u.staging.size || u.beatKind : u.beatKind}</span>
+        <Marks u={u} />
+      </span>
     </div>
   );
 }

@@ -30,6 +30,7 @@ import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { readNight, resolveInNight } from "../../lib/foundry/scout/store.ts";
 import { tasteOf } from "../../lib/foundry/scout/taste.ts";
@@ -105,10 +106,12 @@ afterAll(() => {
   rmSync(ROOT, { recursive: true, force: true });
 });
 
+const guardedRunCli = guardOrphans(runCli);
+
 async function cli(argv: string[]): Promise<{ code: number; out: string; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s) });
+  const code = await guardedRunCli(argv, { env: ENV, out: (s) => out.push(s), err: (s) => err.push(s) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

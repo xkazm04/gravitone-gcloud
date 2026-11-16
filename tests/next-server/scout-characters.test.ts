@@ -34,6 +34,7 @@ import path from "node:path";
 
 import { closeProcessKernel } from "@gt/kernel/process";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { body } from "../../lib/decision/v1/sources/seeds.ts";
 import { identityBlock, keptCharacters, type RootedNight } from "../../lib/foundry/scout/characters.ts";
@@ -45,9 +46,11 @@ import { checkSeedBatch, seedFacets } from "../../lib/foundry/scout/seeds.ts";
 import { mutateNight, readNight } from "../../lib/foundry/scout/store.ts";
 import type { Candidate, IdeaCandidate, Night, Seed, SeedBatch } from "../../lib/foundry/scout/types.ts";
 import { __resetBudget } from "../../lib/imaging/budget.ts";
-import { FAKE_LEONARDO_STUDIO, resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
-import { generate } from "../../lib/imaging/router.ts";
+import { resetFakeLeonardoStudio } from "../../lib/imaging/providers/leonardoStudio.ts";
+import { fakeCodexIdeas } from "./fake-codex-ideas.ts";
 import type { GenerateRequest, Recognition, RecognizeRequest } from "../../lib/imaging/types.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const DRY = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LIVE = (() => {
@@ -273,7 +276,7 @@ function writeJson(p: string, v: unknown): void {
 async function cli(argv: string[], o: { env?: Record<string, string | undefined>; ports?: CliPorts } = {}): Promise<{ code: number; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
+  const code = await guardedRunCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;
@@ -294,7 +297,7 @@ const eye = (json: Record<string, unknown>) => async (): Promise<Recognition> =>
 const read = (o: Record<string, unknown> = {}) => ({ adult: "yes", apparentAge: 33, clothing: "covered", realPerson: "no", hands: "ok", notes: "painterly", ...o });
 
 describe("a scout night draws characters", () => {
-  it("live on the fake studio: low quality and the eye for a character or a cast only, the parody clause, the kids line, no source pixel", async () => {
+  it("live on a fake Codex: the eye for a character or a cast only, the parody clause, the kids line, no source pixel", async () => {
     writeJson(path.join(ROOT, "scout", "seeds", BATCH, "batch.json"), BATCHES[0]);
     writeJson(path.join(ROOT, "scout", NIGHT, "night.json"), scoutNight);
     writeJson(path.join(ROOT, "scout-muse", NIGHT, "night.json"), archiveNight);
@@ -308,13 +311,14 @@ describe("a scout night draws characters", () => {
     expect(repeat.err).toBe(`idea 1: card Tove Lind already drawn in muse:${NIGHT}/c-03 (rejected)`);
 
     const seen: GenerateRequest[] = [];
+    const codex = fakeCodexIdeas();
     const asked: RecognizeRequest[] = [];
     const answers = [eye(read()), eye(read()), eye(read({ adult: "no", apparentAge: 9 }))];
     const ports: CliPorts = {
       ideas: {
         generate: async (req) => {
           seen.push(req);
-          return generate(req);
+          return codex.generate(req);
         },
         recognize: async (r) => {
           asked.push(r);
@@ -335,11 +339,11 @@ describe("a scout night draws characters", () => {
     expect(r.doc["jobId"]).toBe(`job:scout-ideas:${id}:c-01`);
     expect(seen.map((g) => [g.aspect, g.quality])).toEqual([
       ["16:9", undefined],
-      ["9:16", "low"],
-      ["16:9", "low"],
-      ["16:9", "low"],
+      ["9:16", undefined],
+      ["16:9", undefined],
+      ["16:9", undefined],
     ]);
-    // Words only: no request to the studio carries a picture.
+    // Words only: no request to Codex carries a picture.
     for (const g of seen) expect(Object.keys(g).sort()).toEqual(["aspect", "count", "prefer", "prompt", ...(g.quality === undefined ? [] : ["quality"])].sort());
     expect(seen[2]?.prompt.startsWith(identityBlock(BRASS))).toBe(true);
     expect(asked.map((a) => a.instruction.includes(PARODY_CLAUSE))).toEqual([false, true, false]);
@@ -354,6 +358,6 @@ describe("a scout night draws characters", () => {
     ]);
     expect(ideas[1]).toMatchObject({ source: "s-01", sourceIds: [], card: { name: "Ines Vale", audience: "adult" }, fromSeed: DATING });
     expect(ideas[2]?.cast).toEqual(["Captain Brass"]);
-    expect(FAKE_LEONARDO_STUDIO.calls).toHaveLength(4);
+    expect(codex.calls).toHaveLength(4);
   }, 60_000); // a night's ideas job: ~1 s alone, past vitest's 5 s default under the pre-push gate's load
 });

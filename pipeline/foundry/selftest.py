@@ -184,6 +184,16 @@ def test_resume_writes_provenance_for_an_adopted_plate():
     check("no generate_s is invented", "generate_s" in c.get("timings", {}), False)
 
 
+def test_the_forge_refuses_flux2():
+    print("test_the_forge_refuses_flux2")
+    F = load("forge")
+    try:
+        F.flux_workflow("p", 1)
+        got = None
+    except SystemExit as e:
+        got = str(e)
+    check("the forge names Flux 2's removal", got is not None and "Flux 2 was removed" in got, True)
+
 def test_a_run_that_gave_up_mid_generation_does_not_report_done():
     """stage_generate `break`s out of the candidate loop when ComfyUI cannot be
     recycled after a failure, leaving the rest of the plan `pending` -- and
@@ -208,6 +218,8 @@ def test_a_run_that_gave_up_mid_generation_does_not_report_done():
         raise RuntimeError("ComfyUI died")
 
     F.generate = boom
+    # Flux 2 is removed and the forge's real graph refuses; a stub graph keeps this case on the run state.
+    F.flux_workflow = lambda *_a, **_k: {}
     with contextlib.redirect_stdout(io.StringIO()):
         F.stage_generate(m, run_dir, recycle_every=6)
     left = [c["id"] for c in m["candidates"] if c["status"] in ("pending", "failed")]
@@ -688,6 +700,7 @@ def test_consistency_run_lane_refuses_drifted_resume():
         generate_called = True
         return tmp / "out.png"
     C.generate = fake_gen
+    C.flux_workflow = lambda *_a, **_k: {}
 
     refused = False
     msg = ""
@@ -731,6 +744,7 @@ def test_consistency_run_lane_writes_shot_record_per_shot():
             return f
         raise RuntimeError("generation failed on shot 2")
     C.generate = fake_gen
+    C.flux_workflow = lambda *_a, **_k: {}
 
     failed = False
     try:
@@ -893,7 +907,7 @@ def test_every_third_party_import_is_declared_in_requirements():
 
     # import name -> distribution name, where they differ
     dist_of = {"PIL": "Pillow", "facenet_pytorch": "facenet-pytorch", "cv2": "opencv-python",
-               "yaml": "PyYAML", "sklearn": "scikit-learn"}
+               "yaml": "PyYAML", "sklearn": "scikit-learn", "hydra": "hydra-core", "yue2": "yue2-infer"}
     # modules importable by bare name from a script under pipeline/ (the scripts
     # insert vlm-probe/ and foundry/ onto sys.path), plus each file's own siblings
     pipeline_local = {Path(f).stem for f in files if f.startswith("pipeline/")}
@@ -932,13 +946,20 @@ def test_every_third_party_import_is_declared_in_requirements():
                     # does not provide them, so they are never "undeclared" there
                     if f.startswith("pipeline/mesh/blender/") and top in blender_host:
                         continue
-                    if norm(dist_of.get(top, top)) not in declared:
+                    # pipeline/yue2/ runs in its own WSL venvs: its imports are checked against its own
+                    # declaration (pipeline/yue2/requirements.txt), not the CI python job's file
+                    have = declared | yue2_declared if f.startswith("pipeline/yue2/") else declared
+                    if norm(dist_of.get(top, top)) not in have:
                         out.add(f"{f}: {top}")
         return sorted(out)
 
-    lines = (root / "pipeline" / "requirements.txt").read_text(encoding="utf-8").splitlines()
-    declared = {norm(re.split(r"[<>=!~\[; ]", l.strip())[0]) for l in lines
+    def read_declared(rel):
+        ls = (root / rel).read_text(encoding="utf-8").splitlines()
+        return {norm(re.split(r"[<>=!~\[; ]", l.strip())[0]) for l in ls
                 if l.strip() and not l.strip().startswith("#")}
+
+    yue2_declared = read_declared("pipeline/yue2/requirements.txt")
+    declared = read_declared("pipeline/requirements.txt")
     check("requirements guard: nothing imported is undeclared", undeclared(declared), [])
     # the control: drop one name and the same walk must name its importers
     got = undeclared(declared - {"facenet-pytorch"})
@@ -959,6 +980,7 @@ def test_replicate_poll_survives_a_busy_card_and_names_a_dead_one():
     import urllib.error
     import urllib.request
     R = load_vlm("replicate")
+    R.flux_workflow = lambda *_a, **_k: {}  # the refused graph stubbed: this case tests the poll loop
     done = {"p1": {"outputs": {"13": {"images": [{"filename": "replica_00001_.png", "subfolder": ""}]}}}}
 
     def run(alive, history):
@@ -1039,6 +1061,7 @@ def test_motion_chain_refuses_to_restart_from_the_hero():
             read=lambda *a: {}, write_shot=lambda *a, **k: None)
         M.stage_reference = lambda p: staged.append(Path(p).name) or Path(p).name
         M.generate = lambda wf, timeout=0: None
+        M.flux_workflow = lambda *_a, **_k: {}
         M.collect = lambda prefix, dest, length: collected(prefix)
         M.guard.recycle_comfy = lambda *a: True
         M.guard.vram_ok = lambda: True
@@ -1524,6 +1547,7 @@ TESTS = [
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
     test_resume_writes_provenance_for_an_adopted_plate,
+    test_the_forge_refuses_flux2,
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,

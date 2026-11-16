@@ -6,7 +6,7 @@
 // BEFORE_SEEDS draws its own. A link crossing two bands (a child seed narrowed into another genre) is drawn in
 // neither; the node panel names what a node grew from.
 
-import { BEFORE_SEEDS, type GraphEdge, type GraphGroup, type GraphNode, type ScoutGraph } from "@gt/domain/scoutGraph";
+import { BEFORE_SEEDS, isArchiveNode, type GraphEdge, type GraphGroup, type GraphNode, type ScoutGraph } from "@gt/domain/scoutGraph";
 import { isDeadNode } from "@gt/ui/components/graph/stageGraph.ts";
 
 import type { SplitInput } from "../_port/contract.ts";
@@ -48,14 +48,63 @@ export function bandsOf(g: ScoutGraph): Band[] {
   return out;
 }
 
-/** Bands with no live node start folded. */
+/**
+ * What opens first: an audience with something live, so its genres' heads read as the index. A genre and BEFORE_SEEDS
+ * start folded: with every live genre open the page ran to thousands of rows (2026-11-09, real data: 1,175 nodes, 38
+ * genre bands open) and a folded band costs only its head.
+ */
 export function openAtFirst(bands: readonly Band[]): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   for (const b of bands) {
-    out[b.group.key] = b.group.live > 0;
-    for (const g of b.genres) out[g.group.key] = g.group.live > 0;
+    out[b.group.key] = b.genres.length > 0 && b.group.live > 0;
+    for (const g of b.genres) out[g.group.key] = false;
   }
   return out;
+}
+
+/**
+ * The nodes the live view leaves out: the dead (rejected, failed), the muse archive, and a kept node that led only to
+ * those - a branch whose every line of development was thrown out. A node still awaiting a verdict is never gone,
+ * whatever grew from it, and a kept leaf is not either: nothing has been tried on it yet.
+ */
+export function goneOf(g: ScoutGraph): ReadonlySet<string> {
+  const byId = new Map(g.nodes.map((n) => [n.id, n]));
+  const children = new Map<string, GraphNode[]>();
+  for (const e of g.edges) {
+    const to = byId.get(e.to);
+    if (to === undefined) continue;
+    const xs = children.get(e.from);
+    if (xs === undefined) children.set(e.from, [to]);
+    else xs.push(to);
+  }
+  const seen = new Map<string, boolean>();
+  const walking = new Set<string>();
+  const isGone = (n: GraphNode): boolean => {
+    const known = seen.get(n.id);
+    if (known !== undefined) return known;
+    // A cycle is not a shape the builder makes; if one appears it must not read as dead.
+    if (walking.has(n.id)) return false;
+    walking.add(n.id);
+    const kids = children.get(n.id) ?? [];
+    const gone = isDeadNode(n) || isArchiveNode(n) || (n.state === "kept" && kids.length > 0 && kids.every(isGone));
+    walking.delete(n.id);
+    seen.set(n.id, gone);
+    return gone;
+  };
+  return new Set(g.nodes.filter(isGone).map((n) => n.id));
+}
+
+/** How many of a band's nodes the live view draws; an audience counts its genres'. */
+export function shownIn(b: Band, gone: ReadonlySet<string>): number {
+  return b.genres.length > 0 ? b.genres.reduce((sum, x) => sum + shownIn(x, gone), 0) : b.nodes.filter((n) => !gone.has(n.id)).length;
+}
+
+/** The bands the live view lists: one with nothing left to draw is not a band at all. */
+export function liveBands(bands: readonly Band[], gone: ReadonlySet<string>): Band[] {
+  return bands.flatMap((b) => {
+    const genres = b.genres.filter((x) => shownIn(x, gone) > 0);
+    return shownIn({ ...b, genres }, gone) > 0 ? [{ ...b, genres }] : [];
+  });
 }
 
 /** A seed ref's chain, nearest first, itself included - read off the graph's seed-to-seed links. */

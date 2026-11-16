@@ -19,6 +19,9 @@ import s from "./Part.module.css";
 export const RAIL_ROW = Number.parseFloat(tokens["h-pile-face"]);
 /** A tall row (a card with a two-line claim): one and a half rows, the stylesheet's `railTall`. */
 export const RAIL_TALL = RAIL_ROW * 1.5;
+/** A row's picture, 16:9 at the row's inner height (the row's `sp-2` padding off both edges), in CSS
+ *  pixels: the width hint a rail's plate asks the blob door's variant for. */
+export const RAIL_ART = Math.ceil(((RAIL_ROW - 2 * Number.parseFloat(tokens["sp-2"])) * 16) / 9);
 
 export type RailListProps<T> = {
   readonly label: string;

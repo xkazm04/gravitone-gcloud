@@ -38,6 +38,8 @@ export type MotionRec = {
 const EMPTY: MotionRec = { byFrame: {}, accepted: {}, clips: {}, adsClips: {}, framesRaw: null, adsRaw: null };
 const no = (msg: string): Result<never> => err("invalid", msg);
 const dryClip = (n: number): string => dryPreset(n, "webm");
+/** A unit's stand-in clip, spread over the presets by its id (ids of one length drew one clip). */
+const clipOf = (id: string): string => dryClip([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7));
 
 const platedUnits = (ctx: KCtx): readonly UnitRec[] => unitsOf(ctx, ctx.rec("frames"));
 const lineOf = (m: MotionRec, u: UnitRec): string => m.accepted[u.id] ?? u.clip.motion;
@@ -79,7 +81,7 @@ function units(ctx: KCtx, m: MotionRec, act: PartActKind, target?: string): Resu
 
 /** The dry direction: the two recognize passes' shape with nothing called - a decline when the
  *  plate holds no separable layer (v1's own sentence), else one mover per named element. */
-function dryOutcome(u: UnitRec, at: number): MotionOutcome {
+export function dryOutcome(u: UnitRec, at: number): MotionOutcome {
   const names = u.elements.filter((e) => e.hidden !== true).map((e) => e.label || e.kind);
   const basis = { scene: u.title, elements: names, provider: "dry", model: "stand-in" };
   if (names.length === 0) return { kind: "declined", reason: "no separable element: nothing in the plate can move on its own", basis, at };
@@ -105,7 +107,7 @@ function land(ctx: KCtx, m: MotionRec, act: PartActKind, at: number, jobId: stri
   const u = platedUnits(ctx).find((x) => x.id === target);
   if (u === undefined) return no(`no unit ${target}`);
   if (act === "direct-motion") return ok({ ...m, byFrame: { ...m.byFrame, [u.id]: { outcome: dryOutcome(u, at), plate: plateSigOf(u.plate) } } });
-  if (act === "render-clip") return ok({ ...m, clips: { ...m.clips, [u.id]: { id: `${u.id}~clip`, status: "done", src: dryClip(u.id.length) } } });
+  if (act === "render-clip") return ok({ ...m, clips: { ...m.clips, [u.id]: { id: `${u.id}~clip`, status: "done", src: clipOf(u.id) } } });
   return no(`${act} is not a motion act`);
 }
 

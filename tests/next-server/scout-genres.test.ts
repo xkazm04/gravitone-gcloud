@@ -32,6 +32,7 @@ import { closeProcessKernel, processKernel } from "@gt/kernel/process";
 import type { Store } from "@gt/kernel/store";
 import { bornGenre, bornVenture, listGenres, retireVenture } from "@gt/kernel/ventures/store";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
 import { genreEvidenceOf, genreSections, genreTaste, genreViews, genresCommand, ventureRefusal } from "../../lib/foundry/scout/genres.ts";
 import { parseIdeas } from "../../lib/foundry/scout/idea.ts";
@@ -41,6 +42,8 @@ import { addSeedBatch, seedFacets } from "../../lib/foundry/scout/seeds.ts";
 import { readNight } from "../../lib/foundry/scout/store.ts";
 import type { Candidate, Night, NightCommit, PieceCandidate, SeedBatch, StoryboardCandidate, TrackCandidate } from "../../lib/foundry/scout/types.ts";
 import { withWing } from "../../lib/foundry/scout/wingScope.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const LIVE = "2026-09-10";
 const DRYN = "2026-09-11";
@@ -254,7 +257,7 @@ describe("the night's taste brief", () => {
   // Last: the CLI closes the process kernel this file shares.
   it("`open` writes ## Genre ladder and ## Ventures into taste.md, from the kernel the CLI opens", async () => {
     const lines: string[] = [];
-    const code = await runCli(["open", "--json"], { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => lines.push(s), err: () => undefined });
+    const code = await guardedRunCli(["open", "--json"], { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => lines.push(s), err: () => undefined });
     expect(code).toBe(0);
     const doc = JSON.parse(lines.join("\n")) as { taste: string };
     const taste = readFileSync(doc.taste, "utf8");

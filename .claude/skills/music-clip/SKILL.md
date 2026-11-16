@@ -1,9 +1,9 @@
 ---
 name: music-clip
-version: 2.4.0
+version: 2.11.0
 memory: none
 category: Content
-description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut}.mts. Invoke with /music-clip <folder> [verb].
+description: Turn one finished track (an mp3, its lyrics and its style prompt in a folder) into a directed music video through stop-and-resume gates - a timeline map (beats, tempo curve, bands, intensity, sections, lyric times with confidence; one Gemini call), Board A (up to 10 grounded mood directions), Board T (3-4 treatments on the picked look - characters, plot, signature device - each with GPU-shot keyframes of a lit three.js scene), Board B (story per section plus a seek-stable hero loop grown from the picked treatment's scene), then the film - our own three.js engine on the GPU (start from pipeline/music-clip/film-starter/), the edit as a beat-grid shot plan, one set module per location, proof cuts with sound, a full render muxed with the lossless master, and note rounds that go back into sets and the plan. The operator picks at every gate. Wraps pipeline/music-clip.mts (analyze / status / board / pick / shots) and pipeline/music-clip/{shoot,cut,deliver,keyframes}.mts; every film ships as a 10-bit HEVC upload copy (deliver.mts, ~0.1 GB for 4-5 min). Invoke with /music-clip <folder> [verb].
 argument-hint: "<folder> [analyze|status|board a|board t|board b|pick a:<id>|pick t:<id>|pick b:<id>|pick stack:<name>|pack|compare]"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Agent
 ---
@@ -216,19 +216,204 @@ Break the Sequence took three rounds (v1 -> v3); every note was a timestamp and 
   propose a one-take (`oneTake` / `tailTake`) to the operator. A shot cycle repeated through a long
   section repeats its story notes - check every note's time against its lyric time.
 
-### Delivery
+### The generated path - keyframes for image-to-video (after a baseline film)
 
-The upload file is the last render remuxed if only the sound changed (`-c:v copy`):
-1080p30 H.264 ~16 Mb/s + AAC 384 kb/s 48 kHz from the master, `+faststart` - about 0.5 GB for
-4 minutes. YouTube takes up to 256 GB or 12 hours, whichever is less, and recommends 8 Mb/s for
-1080p30 and 384 kb/s stereo AAC, so the file needs no compression for upload.
+The three.js film is the baseline: it fixes story, edit and timing cheaply. The next version can be shot as
+generated stills animated by an image-to-video model (Stay Here, 2026-10-31: "we can prompt the keyframes and
+afford to enhance the story or detail of scenes"). Its plan is `music-clip/storyboard-vN.md` (one keyframe per
+4-6 s clip, cut on bar downbeats) and `music-clip/keyframes.json`:
+
+```bash
+npx tsx pipeline/music-clip/keyframes.mts <folder> --dry            # the plan, nothing sent
+npx tsx pipeline/music-clip/keyframes.mts <folder> --only K05 --yes # one frame first: read its credits line
+npx tsx pipeline/music-clip/keyframes.mts <folder> --yes            # the rest (skips frames already on disk)
+npx tsx pipeline/music-clip/keyframes.mts <folder> --via studio --yes   # the same through the web studio's pool
+```
+
+- The operator's setup (2026-10-31): Leonardo v2, `openai/gpt-image-2.5-sunburst`, `quality: LOW`,
+  2048x1136, one `style_ids` entry, `prompt_enhance: OFF` - in `keyframes.json` `request`. Every frame is
+  deleted from the Leonardo library after download; `keyframes/ledger.jsonl` keeps generation id and credits.
+- It draws on the API key's own pool (`apiSubscriptionTokens` / `apiPaidTokens` in `/v1/me`), NOT the web
+  studio's subscription tokens. On 2026-10-31 that pool was 0 and v2 answered 402 "Insufficient tokens" with
+  6,844 studio tokens unused: check the pool before promising a batch. Then use `--via studio` (the operator's
+  pick that day): the same model, LOW and size MEDIUM 2048x1136 through the signed-in web studio
+  (`lib/imaging/studio/`, Chrome on CDP 9333, one tab at a time under the studio lock the scout shares),
+  paid from the studio pool - measured 20 credits and ~30 s a frame; the script deletes each generation
+  through the API afterwards. The studio's default style (Dynamic) is the operator's style id.
+- Clips: `npx tsx pipeline/music-clip/clips.mts <folder> --dry | --yes` - each keyframe plus its `motion` line
+  (keyframes.json) through the box's LTX-2.5 i2v (lib/imaging/video/comfyLtx.ts, ComfyUI, $0) into
+  `clips/<id>.mp4`, from its t to the next keyframe's in whole seconds (2-10), 1280x704, ~6-7 min per 5 s
+  alone on the card (Stay Here: 46 clips, 288 s, ~6 h - a night). It queues only on an EMPTY ComfyUI queue (it
+  waits out another session's run) and frees the models only when nothing else is waiting. Motion lines:
+  one gentle move per clip, "no zoom, no cuts". NOT "puppets of black card on wire rods": LTX draws it
+  literally and melts the figures into floating black rectangles by the clip's end (Stay Here run 1: 12 of 46
+  drifted, most broke at 20-50% of the clip). Say instead that every silhouette stays whole and keeps its
+  outline from the first frame to the last and nothing new enters the frame.
+- Pace follows the section's intensity, not the keyframe count (Stay Here v3, operator: "the song is much
+  more fast paced, whereas the scene movement and closeups are almost static"). From intensity ~0.6 up, one
+  shot per bar (2.9 s at 83 BPM), each its own keyframe and its own action verb ("snaps", "hurls",
+  "sprints", "drops"), camera locked off; a story beat that held one 9-11 s clip becomes 3-4 bars of
+  action (the climb: hook, haul, slip, vault). A gentle LTX move over 6+ s reads as a slow zoom.
+- Never write rods or strings into the STYLE sentence ("thin wire rods holding the puppets"): the image
+  model draws them on some frames and not others, and the inconsistency shows (Stay Here v3 at 1:01,
+  1:20, 1:30). Write "the figures stand free with no rods, strings or wires anywhere above them".
+- Look before the edit: a contact sheet of frames at 0/20/40/60/80/100% of each clip. A clip whose clean
+  part covers its span is trimmed (`assembly.json`); one that breaks earlier than that is re-rendered with
+  `--only <ids> --again --seed 2000` (keep the first takes in `clips/v1/`). Slowing a clean 40% to fill a
+  span reads as slow motion; the climb shots at x0.87 read fine.
+- Assembly: `npx tsx pipeline/music-clip/assemble.mts <folder> <folder>/music-clip/film-vN-1080p.mp4 [--dry]`
+  - each keyframe's t snapped to the nearest beat (within half a beat; past the beat grid the t stands),
+  clip i fills [cut i, cut i+1) frame-exact, a clip shorter than its span is slowed to fill it,
+  `music-clip/assembly.json` `{ "K25": { "in": 0, "out": 6.5 } }` picks a source window, 1920x1080 24 fps
+  NVENC + AAC 384k from the master. ~30 s for 4:44. Then deliver.mts as for any render.
+- Prompts: ONE style sentence and ONE fixed phrase per character, repeated verbatim in every frame (the model
+  keeps what it is told the same way); the act's gel named in each; type in the world named in capitals
+  (SEIZED, BANK, OPEN); hands "at natural scale". Rules the baseline's notes taught: no push-in from wide to
+  close inside a clip (frame the keyframe at the distance the shot holds); every cut carries something across
+  it (an object, a screen direction, a gel).
+
+#### Generated-first, with no three.js baseline (Count Us All, 2026-11-01)
+
+A track can go straight from Board T to generated keyframes when the operator says so. Count Us All did:
+the "Tally Marks" look, the two-colour screenprint, 48 scenes, Leonardo keyframes and local LTX, delivered
+in one session plus one night. What it taught:
+
+- **Plan on the bar grid, not the lyrics,** when the whole track is sung. Gemini timed the lines only to
+  150 s and placed the bridge and the last choruses past the end of the 195 s track. The style prompt was a
+  reference to a similar track: use neither its wording nor its "instrumental" sections. The result was
+  48 scenes, every cut on a bar line, at 2.6 s, 5.2 s or 8 s (1, 2 or 3 bars at 92 BPM).
+- **Keyframes go in two rounds.** Round 1 is drawn for approval: studio Small 1376x768 at Low, 8 credits a
+  frame. Round 2 is drawn for the film: Medium 2048x1136 at Low, 17 credits plus 3 for an Image Reference,
+  with the round 1 frame as that reference. Medium quality costs 44 credits, and the operator saw "marginal"
+  gain and chose Low. Prices are read off the Generate button; Large 3584x2016 at Medium is 137.
+- **An Image Reference locks the composition,** so a prompt fix sent with it is ignored. That happened with
+  S35 and S41. To change what a frame shows, regenerate it with no reference, draw two variants and let the
+  operator pick.
+- **The studio driver that adds a reference** (upload through Select Media, `UploadImage` returns the
+  `uploadId`) lived in the session scratchpad; `keyframes.mts --via studio` has no reference yet. Its
+  cleanup deletes ONLY the id the run's own `UploadImage` or `Generate` returned, refuses when it holds more
+  than one, and deletes nothing in a dry run. The 2026-10-31 incident: a dry run deleted every init-image id
+  seen in page traffic, 50 of the operator's own uploads, and they could not be recovered.
+- **The operator has no hailuo for clips:** all 48 went through local LTX, with weak ones redone by hand in
+  Leonardo. The clips ran overnight at 3 seeds per scene, in seed-major order (all 48 at seed 1 first, so
+  a short night still covers the film). That was 144 clips at 1024x576 (vs `clips.mts` 1280x704), median
+  165 s each cold and 86 s with the models already loaded, about 6 h.
+- **Review with one sheet per scene:** rows are seeds; columns are the keyframe and frames at 0, 1, 2.5 and
+  4 s. Then a rough cut with seed 1 everywhere, and notes against it.
+- **Where LTX held:**
+  - camera moves and crowds
+  - light pulses racing along a cable
+  - a stream of marks flying out of a horn
+  - a push-in to a lone figure
+- **Where LTX broke, on every seed:**
+  - two hands resting on or drawing on a surface (they melt by 1.5 s)
+  - a hand taking an object
+  - any number or name changing: a counter jumped from 0 to 5, a name turned to UNIT 87, and the other
+    names were wiped off the board
+  - turning heads
+- **A motion line names continuous action.** The operator's note was "closeups with slow or no movement,
+  where some activity would be expected". The cause was motion lines like "...; the robot stays still".
+  Write action that runs through the whole shot instead: marks appear one after another, the visor pulses
+  with each, a wave races out.
+- **A short scene shows the dead start of the clip.** LTX moves least in its first second, and a 2.6 s scene
+  trimmed from 0 s shows only that. Start the trim inside the clip (pick `seed-2@1.2`). `assemble.mts`
+  `assembly.json` `in` does the same.
+- **A held last frame reads as lag.** LTX clips run 5.04 s, but bar-line scenes run 5.1-5.5 s. Holding the
+  last frame for 0.1-0.27 s before the cut came back as "transitions look like lag" at 0:20 and 0:26.
+  Slow the clip to fill the scene instead (1-4% is invisible). Before handing over a cut, scan it with
+  `ffmpeg -i cut.mp4 -an -vf freezedetect=n=0.001:d=0.1 -f null -`: no freeze may sit at a cut.
+- **Share the GPU politely.** When another job holds ComfyUI, check every hour, and take the card only
+  after two readings two minutes apart show it idle (under 15% utilization and 12 GB, queue empty). Use
+  the running ComfyUI rather than starting a second one, and never stop a process you did not start.
+
+#### Inked looks on LTX (Break the Sequence, graphic novel, 2026-11-01)
+
+Three keyframes (studio Medium Low, 17 credits each) and 9 clips at 1280x704 validated an ink-and-spot-colour
+look before a full plan. Measured, 3 seeds per frame:
+
+- **The ink holds** when the motion line says it must: "keeps its ink outline and cross-hatching", "the colours
+  stay exactly as in the first frame: black ink on cream paper, red and green only in the small lamps and visor
+  strips, no glow, no fog, no beams". Without that sentence, seeds smooth the hatching toward CG shading by 4 s.
+- **Light changing colour is drawn as volumetric light.** "Green light spreads along the visor" became a laser
+  beam out of the visor; "a wave of green light races through the crowd" flooded the whole crowd with green fog
+  by 1.5 s on both seeds. With the colour sentence above, the visor turned green INSIDE the strip (a pass),
+  and the crowd wave did not happen at all. A colour change across a crowd is two keyframes (all red,
+  then the green wave) and a hard cut on the downbeat, not one clip.
+- **One stencilled serial gets copied** onto the neighbours ("0461", "045") by 3-4 s, even when the keyframe
+  shows one. Trim such shots to their first 2-3 s, or give every unit its own serial in the keyframe.
+- "Frozen in place and does not take a single step" holds a single figure still inside a moving crowd;
+  "stays still" alone did not (0451 walked off with the line).
+- A frame's own `seconds` in keyframes.json overrides the span for `clips.mts` (a validation set far apart on
+  the track).
+
+#### Fast sections: first-last-frame shots on MiniMax H3 (Stay Here v5, 2026-11-01)
+
+The v4 cut gave every bar its own LTX shot, drawn from a start frame only. The operator's verdict was that
+the pacing "is faster, but lost any logic". Each shot made up its own action, and nothing carried that action
+into the next shot. The fix is to make the next shot's keyframe the END frame of this one. The test ran on
+K25c (2:25), one shot drawn three ways:
+
+- **B, LTX with an end guide** (`LTXVAddGuide` frame_idx -1 in both passes, `LTXVCropGuides` before the
+  upsampler and the decode, start strength 1.0): 75 s to render.
+- **C, H3 at 3 s** (73 frames, below the trained range): 451 s.
+- **C5, H3 at 5.2 s** (124 frames): 1223 s. **The operator picked C5:** "C5 held the best".
+
+v5 used C5 on the 36 shots from 1:03 to 1:12 and 1:50 to 3:28. The operator's word on the result: "beautiful
+and was worth the time".
+
+- **Command:**
+  `python -I pipeline/music-clip/clips-h3.py <folder> --plan <plan.json> [--only ids] [--again] [--dry]`.
+  - The plan is a list of `{"id": "K24", "end": "K24b"}`.
+  - The prompt is the shot's `motion` line, followed by "The shot ends on: " and the end keyframe's scene.
+  - Each shot is 124 frames at 1280x704 and 24 fps, with the fl2v turbo LoRA (8 steps) and seed 5000 plus
+    the frame's index.
+  - It writes `assembly.json {in: 0, out: 5.167}`, so the whole render plays at about 1.8x inside its 2.9 s
+    bar. At that speed it reads as fast action, not as a sped-up clip.
+- **Use an end frame only where the action stays in one place:** the pact, the street run, the climb, the roof
+  and the hall. A location change gets no end frame (street to van cab, roof to hall, hall to vault). The
+  model always reaches the end frame, and when the place changes it cuts inside the clip to get there.
+- **A different framing for the end frame causes an inner cut,** even in the same place. On K25c, wide to
+  closer meant a cut inside the clip on every model. In v5:
+  - K23c (sprint, end frame K24) jumped to a dark close-up halfway.
+  - K29 (wall box, end frame K29b, the laptop close-up) dipped to black between the two.
+
+  Draw the end keyframe at the start frame's distance, or leave it out. The contact sheet (frames at 0.1,
+  2.6 and 5.0 s of every clip) catches both.
+- **H3 fills an empty set.** K29c's empty hall of red threads gained a woman in a lace dress and a dog. Say
+  "the hall stays empty; no figures appear" in the motion line of an empty-set shot.
+- **What it costs on the box:** 7-8.5 min a clip alone on the card (421-521 s), and 10-23 min while another
+  job shares the card. The 36 shots took about 6 h ($0), queued only on an empty ComfyUI queue. Plan one
+  night for a film's fast sections. Slow sections stay on LTX (`clips.mts`), which is about 3x faster and
+  holds a gentle move fine.
+- **The LTX negative prompt does nothing:** LTX-2.5 distilled samples at CFG 1. Write the prohibitions into
+  the positive motion line ("no extra figures appear; no cuts").
+
+### Delivery - always the same encode
+
+The render (`cut.mts`, NVENC H.264 ~16 Mb/s + AAC 384 kb/s from the master) is the ARCHIVE, about 0.5 GB for
+4-5 minutes. It is never the upload. Every film ships through one command:
+
+```bash
+npx tsx pipeline/music-clip/deliver.mts <folder>/music-clip/film-vN-1080p.mp4   # -> film-vN-upload.mp4
+```
+
+It encodes x265 10-bit CRF 22 (AAC 256 kb/s 48 kHz, `+faststart`) and measures VMAF against the render; it
+exits 1 under a mean of 95 (lower `--crf` and re-run). Measured on Stay Here v2 (284 s, grain over smooth
+backlit gradients), VMAF mean / worst frame: x265 10-bit CRF 22 **106 MB, 97.0 / 81.4**; x264 CRF 18 363 MB,
+96.4 / 85.4; x264 CRF 23 162 MB, 94.7 / 79.0. YouTube re-encodes every upload and recommends 8 Mb/s for
+1080p30, so the render's extra bits buy nothing; 10-bit keeps the gradients from banding; grain is what
+costs the bits. Say the size and the VMAF line when you hand a film over.
+A textured look (paper tooth, halftone, ink grain) costs about twice that: on Count Us All (195 s
+screenprint) CRF 22 gave 193 MB at VMAF 97.5, so it shipped at `--crf 25`: **134 MB, 96.4**. When the
+mean clears 96 at CRF 22, try 25 before handing over.
 
 ## Rules
 
 - Never push unless the operator asks; never commit the operator's folder, never delete the operator's
   files (the mp3, lyrics, style, anything outside `music-clip/`).
-- The live analysis is the only spend; no other vendor, no generated stills or
-  video in this pipeline.
+- The live analysis is the only spend until the generated path. There, every keyframe batch is priced
+  off the Generate button and approved by the operator before it runs, and clips run on the local GPU.
+- A Leonardo cleanup deletes only the id its own call returned (one, count-checked) and nothing in a dry run.
 - Boards carry work text only: names, palettes, lyric words, story beats,
   numbers, risks. No sentence about the board or how to use it.
 - Flash limit everywhere: <= 3 flashes per second.

@@ -1,0 +1,109 @@
+{
+  "schema": "conform-run/1",
+  "worker": "3ef64bd8-aa5e-438c-afed-616332ee6969",
+  "subject": "cinematic-language",
+  "evaluatedAt": "2026-11-06T05:12:19.933052+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "scout-engine-creative",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/foundry/scout/storyboard.ts:157 Storyboard panels are free per-frame Flux prompts with no per-beat size/angle and no axis, eyeline or progression check before frames and per-panel LTX clips are spent, so a trial can come out as a mood reel rather than a directed scene.",
+      "techniques": [
+        {
+          "technique": "scene-grammar-progression",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/storyboard.ts:157 The door checks only shape and names. No screen-direction or size-progression field, and no review of the panel list (the scout skill does not carry one either)."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:68 The scene recipe requires source, quality, temperature and a darkness clause."
+        },
+        {
+          "technique": "lens-effect-language",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:65 Lenses are described by their effect, not by focal numbers."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:64 Each recipe gets one of six shot sizes, plus height, angle and placement in film vocabulary."
+        },
+        {
+          "technique": "movement-motivation",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/scene.ts:66 Motion is stated per carrier, camera included, and limited to observed change. The stand-in at line 336 says 'camera holds' and gives a speed adverb."
+        },
+        {
+          "technique": "genre-visual-contracts",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/direction.ts:45 A direction fixes genre, style and tone before any panel is written, and a storyboard is a trial of at most one genre. The contract is still free words, not a full lighting/camera ensemble."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "cinematic-language",
+      "context": "visual-producers",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "library-characters-models",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "imaging-vendor-providers-and-video",
+      "reason": "These are transport adapters. Prompts and motion lines reach the vendors verbatim from callers (google.ts buildPrompt only adds style-reference and negative clauses; still.ts only trims length and aspect), so no cinematic decision is made here. Not-applicable cannot be claimed either, because 'motion' and 'camera' appear (video/types.ts:44 'Camera-led motion line')."
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "score-and-ads",
+      "reason": "withdrawn after review: reviewer (sonnet): The conformant verdict rests on lib/frames/shotTypes.ts, which is not in the score-and-ads context. Only lib/frames/shots.ts imports it, and nothing in the context's files does, so the claim is about the frames context. The lib/motion/direction.ts anchors are in the context, but the verdict depends "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T05:12:19.933052+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "movement-motivation",
+        "performance-direction",
+        "scene-grammar-progression"
+      ],
+      "deviations": 0,
+      "context": "score-and-ads",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T05:12:19.933052+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "genre-visual-contracts",
+        "lens-effect-language",
+        "lighting-as-dramatic-instrument",
+        "movement-motivation",
+        "scene-grammar-progression"
+      ],
+      "deviations": 1,
+      "context": "scout-engine-creative",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

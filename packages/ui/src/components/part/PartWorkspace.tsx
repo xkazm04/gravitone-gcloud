@@ -13,7 +13,9 @@ import type { ReactNode } from "react";
 import type { PartTab, PartVerdict } from "@gt/domain/partView";
 
 import { Button } from "../button/Button.tsx";
+import { Chip } from "../chip/Chip.tsx";
 import { Crumbs, type Crumb } from "../crumbs/Crumbs.tsx";
+import { ErrorLine } from "../errorline/ErrorLine.tsx";
 import { Keycaps } from "../keycaps/Keycaps.tsx";
 import { UpstreamBreak } from "../upstream/UpstreamBreak.tsx";
 import { PartTabs } from "./PartTabs.tsx";
@@ -41,10 +43,22 @@ export type PartWorkspaceProps = {
   /** The editor's keymap mode (`part.research`); the frame's own `part` rows are drawn beside it. */
   readonly mode: string;
   readonly facts?: readonly string[];
+  /** Jobs this part launched that have not ended: the act, and since when in the caller's clock. */
+  readonly running?: readonly PartRun[];
+  /** The walk's next door, once this part is ready (`nextTab`); absent or null draws nothing. */
+  readonly next?: { readonly label: string; readonly href: string } | null;
+  /** The part's newest job, failed or interrupted: the store's sentence in full and its door on
+   *  Runs, where the retry is. Absent or null draws nothing. */
+  readonly failed?: PartJobFailure | null;
 };
+
+export type PartJobFailure = { readonly jobId: string; readonly state: string; readonly error?: string; readonly href: string };
+
+export type PartRun = { readonly id: string; readonly label: string; readonly since: string; readonly stage?: string };
 
 export function PartWorkspace(p: PartWorkspaceProps) {
   const facts = new Set(p.facts ?? []);
+  const running = p.running ?? [];
   return (
     <div className={s.ws} data-component="PartWorkspace">
       <header className={s.head}>
@@ -55,9 +69,26 @@ export function PartWorkspace(p: PartWorkspaceProps) {
         <div className={s.acts} role="group" aria-label="acts">
           {p.acts}
         </div>
+        {/* A job in flight is a state, not a control: a live region, so a job that lands (and
+            leaves it) is heard as well as seen. Nothing running draws nothing. */}
+        <div className={s.running} role="status" aria-label="running">
+          {running.map((r) => (
+            <Chip key={r.id} label={r.label} value={[r.stage, `since ${r.since}`].filter((x) => x !== undefined).join(" · ")} tone="cyan" dot casing="lower" />
+          ))}
+        </div>
+        {p.next != null && <Button label={`next · ${p.next.label}`} size="sm" glyphAfter="chevR" href={p.next.href} />}
         {/* Nothing to undo draws no control (the legend still names ⌫): a disarmed button is
             illegible by design and says less than its absence. */}
         {p.undo.last !== null && <Button label={`undo ${p.undo.last}`} size="sm" shortcut={{ mode: "part", verb: "undo" }} onPress={p.undo.onUndo} />}
+        {/* A real error explains itself in full (ErrorLine, never shortened); the retry is Runs'
+            act, so this is a door to the job there, not a second retry. A failure with no
+            sentence on its record is drawn as its state. */}
+        {p.failed != null && (
+          <div className={s.failed} data-job={p.failed.jobId}>
+            {p.failed.error === undefined ? <Chip label={p.failed.state} tone="rose" casing="lower" /> : <ErrorLine message={p.failed.error} />}
+            <Button label="runs" size="sm" glyphAfter="chevR" href={p.failed.href} />
+          </div>
+        )}
       </header>
       <div className={p.inspector === null ? `${s.body} ${s.solo}` : s.body}>
         <section className={s.rail} aria-label={p.rail.label}>

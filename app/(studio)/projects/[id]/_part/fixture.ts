@@ -25,6 +25,8 @@ import { KEPT_TAKES } from "../../_port/fixtureData.ts";
 import { RESEARCH, type ResearchRec } from "./fixtureResearch.ts";
 import { SCRIPT, type ScriptRec } from "./fixtureScript.ts";
 import { encodeRecord } from "@gt/domain/steps/registry";
+import { effective, opWrite, undoIn, write, type Rec } from "./fixtureLog.ts";
+import { FIRST_ACT, LANDING_ORDER, failedLandingOf, landingOf } from "./fixtureWorld/land.ts";
 import { isLaterKind, later, type KCtx, type LaterKind, type RecOf as KindRecOf } from "./kinds.ts";
 
 // THE FIXTURE PART UNIVERSE - per project, one revisioned record per editor part and its op
@@ -44,29 +46,19 @@ import { isLaterKind, later, type KCtx, type LaterKind, type RecOf as KindRecOf 
 //     read through its public `loadPlan`; nothing here knows the produce fixture's insides.
 // State is on globalThis for the server process, like the produce fixture.
 
-type Entry<R> = {
-  readonly n: number;
-  readonly label: string;
-  readonly by: string;
-  readonly at: number;
-  /** Operator edits are undoable; job landings and undo lines are not. */
-  readonly kind: "op" | "job" | "undo";
-  readonly before: Partial<R>;
-  readonly wrote: Partial<R>;
-  undone: boolean;
-};
-type Rec<R> = { rev: number; data: R; readonly log: Entry<R>[] };
-type Records = { readonly research: Map<string, Rec<ResearchRec>>; readonly script: Map<string, Rec<ScriptRec>>; seq: number; readonly later: Map<string, Rec<object>> };
+/** `landed`: the projects whose done jobs have landed their records (./fixtureWorld/land.ts). */
+type Records = { readonly research: Map<string, Rec<ResearchRec>>; readonly script: Map<string, Rec<ScriptRec>>; seq: number; readonly later: Map<string, Rec<object>>; readonly landed: Set<string> };
 type RecOf<K extends EditorKind> = KindRecOf[K];
 
 declare global {
   var __gtPartFixture: Records | undefined;
 }
 
-const records = (): Records => (globalThis.__gtPartFixture ??= { research: new Map(), script: new Map(), seq: 0, later: new Map() });
+const fresh = (): Records => ({ research: new Map(), script: new Map(), seq: 0, later: new Map(), landed: new Set() });
+const records = (): Records => (globalThis.__gtPartFixture ??= fresh());
 /** Start the part universe over (the live lane's reset, beside `resetProduce`). */
 export function resetParts(): void {
-  globalThis.__gtPartFixture = { research: new Map(), script: new Map(), seq: 0, later: new Map() };
+  globalThis.__gtPartFixture = fresh();
 }
 
 /* ── the project, read from the produce port ─────────────────────────────── */
@@ -123,7 +115,27 @@ function contextOf(projectId: string, now: number): Result<Ctx> {
     targetS,
   };
   const ctx: Ctx = { project, plan: plan.value, now, research: () => recOf(ctx, "research").data, look: lookOf(plan.value.project.styleId, undefined), take: (id) => KEPT_TAKES.find((t) => t.id === id) };
+  landWorld(ctx);
   return ok(ctx);
+}
+
+/** The first read of a project lands what its Plan says its done jobs made (./fixtureWorld/land.ts),
+ *  in the order the parts read each other, each as one job line by the Plan's job id at its end. */
+function landWorld(ctx: Ctx): void {
+  if (records().landed.has(ctx.project.id)) return;
+  records().landed.add(ctx.project.id);
+  const k = kctxOf(ctx);
+  for (const kind of LANDING_ORDER) {
+    const part = ctx.plan.parts.find((p) => p.kind === kind);
+    if (part === undefined || !work(part) || (part.state !== "ratified" && part.state !== "failed") || part.jobId === undefined) continue;
+    const rec = laterRec(ctx, kind);
+    const at = Date.parse(part.schedule?.end ?? "") || ctx.now;
+    // A failed job lands what it made before it failed: a frames job's culled plates (its gate's packet).
+    const gate = ctx.plan.parts.find((p) => p.kind === "gate" && p.judges === part.id);
+    const l = part.state === "ratified" ? landingOf(k, kind, rec.data, at, part.jobId, part.units) : failedLandingOf(k, kind, rec.data, at, part.jobId, `pkt:step:${gate?.id ?? part.id}`);
+    // A refusal leaves the record as seeded: the consistency law names the row that claims more.
+    if (l !== null && l.ok) write(rec, asRec(l.value.next), { label: l.value.label, by: part.jobId, kind: "job", at });
+  }
 }
 
 /* ── records ──────────────────────────────────────────────────────────────── */
@@ -181,36 +193,6 @@ export function kctxOf(ctx: Ctx): KCtx {
   return k;
 }
 
-/** The top-level fields `next` changed from `prev` (records are replaced, never mutated). */
-function diff<R extends object>(prev: R, next: R): { before: Partial<R>; wrote: Partial<R> } {
-  const before: Partial<R> = {};
-  const wrote: Partial<R> = {};
-  for (const k of Object.keys(next) as (keyof R)[]) {
-    if (prev[k] === next[k]) continue;
-    before[k] = prev[k];
-    wrote[k] = next[k];
-  }
-  return { before, wrote };
-}
-
-function write<R extends object>(rec: Rec<R>, next: R, meta: { readonly label: string; readonly by: string; readonly kind: Entry<R>["kind"]; readonly at: number }): void {
-  const { before, wrote } = diff(rec.data, next);
-  rec.log.push({ n: rec.log.length + 1, ...meta, before, wrote, undone: false });
-  rec.data = next;
-  rec.rev++;
-}
-
-/** An operator's edit: the kernel refuses one that changes nothing (@gt/kernel/parts/driver.ts
- *  writePartIn, `<label>: changes nothing`) - no rev, no undo line - and so does this side. The
- *  real side compares the records by JSON (realRecs.ts `changed`); this compares the working record. */
-function opWrite<R extends object>(rec: Rec<R>, next: R, label: string, at: number): Result<null> {
-  if (JSON.stringify(next) === JSON.stringify(rec.data)) return err("invalid", `${label}: changes nothing`);
-  write(rec, next, { label, by: "operator", kind: "op", at });
-  return ok(null);
-}
-
-const effective = <R>(rec: Rec<R>): Entry<R>[] => rec.log.filter((e) => e.kind === "op" && !e.undone).reverse();
-
 /* ── the view ─────────────────────────────────────────────────────────────── */
 
 const work = (p: PlanView["parts"][number]): p is WorkPlanPart => p.kind !== "gate" && p.kind !== "slot";
@@ -259,7 +241,8 @@ function viewOf(ctx: Ctx, kind: EditorKind): Result<PartView> {
     ops: effective(rec)
       .slice(0, OPS_SHOWN)
       .map((e) => ({ n: e.n, label: e.label, by: e.by, at: new Date(e.at).toISOString() })),
-    running: [],
+    running: runningOf(part),
+    ...failedOf(part),
   };
   if (isLaterKind(kind)) return ok(later(kind).view(kctxOf(ctx), base));
   const r = recOf(ctx, "research").data;
@@ -271,6 +254,22 @@ function viewOf(ctx: Ctx, kind: EditorKind): Result<PartView> {
           return { ...base, kind: "script" as const, verdict: SCRIPT.verdict(ctx, s), acts: SCRIPT.acts(ctx, s), data: SCRIPT.data(ctx, s) };
         })();
   return ok(view);
+}
+
+/** The part's Plan job while it runs (the real side reads its events, ./realScene.ts runningOf). The
+ *  act is the kind's generating act; a kind with none has no act to name and shows nothing. */
+function runningOf(part: WorkPlanPart): PartView["running"] {
+  if (part.jobState !== "running" || part.jobId === undefined || !isEditorKind(part.kind)) return [];
+  const act = FIRST_ACT[part.kind];
+  const job = fixtureProduce().listJobs();
+  const stage = job.ok ? job.value.find((j) => j.id === part.jobId)?.stage : undefined;
+  return act === undefined ? [] : [{ jobId: part.jobId, act, since: part.schedule?.start ?? new Date(0).toISOString(), ...(stage === undefined ? {} : { stage }) }];
+}
+
+/** The part's newest job when it failed, in the job record's own words (the Plan's `error`). */
+function failedOf(part: WorkPlanPart): { failed?: NonNullable<PartView["failed"]> } {
+  if (part.jobId === undefined || (part.jobState !== "failed" && part.jobState !== "interrupted")) return {};
+  return { failed: { jobId: part.jobId, state: part.jobState, ...(part.error === undefined ? {} : { error: part.error }) } };
 }
 
 /** The editor kind a route key names in this project, or not-found (no such part, no editor). */
@@ -325,22 +324,6 @@ export function opPart(projectId: string, key: string, baseRev: number, op: Part
   const view = viewOf(done.value.ctx, done.value.kind);
   if (!view.ok) return view;
   return ok(stale ? { kind: "conflict", current: view.value } : { kind: "applied", view: view.value });
-}
-
-function undoIn<R extends object>(rec: Rec<R>, now: number): Result<null> {
-  const last = effective(rec)[0];
-  // The kernel's refusal, code and words (@gt/kernel/parts/core.ts planUndo).
-  if (last === undefined) return err("refused", "nothing on this part is left to undo");
-  for (const k of Object.keys(last.wrote) as (keyof R)[]) {
-    if (rec.data[k] !== last.wrote[k]) {
-      // The writer as planUndo names a landing: its job and the act it landed.
-      const job = [...rec.log].reverse().find((e) => e.kind === "job" && k in e.wrote);
-      return err("conflict", `${last.label}: ${String(k)} was rewritten by ${job === undefined ? "a later write" : `${job.by} (${job.label})`} since`);
-    }
-  }
-  last.undone = true;
-  write(rec, { ...rec.data, ...last.before }, { label: `undo ${last.label}`, by: "operator", kind: "undo", at: now });
-  return ok(null);
 }
 
 export function undoPart(projectId: string, key: string, baseRev: number, now: number): Result<PartOpResult> {

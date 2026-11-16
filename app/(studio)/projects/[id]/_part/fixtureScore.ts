@@ -37,7 +37,7 @@ import type { KCtx, KindModule } from "./kinds.ts";
 
 const face = (ctx: Ctx): "spotting" | "bed" => (ctx.project.discipline === "ads" ? "bed" : "spotting");
 
-function proposal(ctx: KCtx, pic: Picture | null): { spots: ScoreSpot[]; unplaced: { label: string; why: string }[] } {
+export function proposal(ctx: KCtx, pic: Picture | null): { spots: ScoreSpot[]; unplaced: { label: string; why: string }[] } {
   const log = ctx.rec("script").cut;
   if (log === null || pic === null) return { spots: [], unplaced: [] };
   const p = proposeSpots(derive(log).cut, pic.scenes);

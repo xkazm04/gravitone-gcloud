@@ -14,7 +14,7 @@
 //               other actor too).
 
 import { errorMessage, type Result } from "@gt/domain/errors";
-import { PIECE_TRIALS, TRIALS_PER_GENRE, genreStateOf, type Genre, type GenreEvidence, type GenreState, type Venture } from "@gt/domain/genre";
+import { PIECE_TRIALS, TRIALS_PER_GENRE, genreStateOf, isNightVenture, type Genre, type GenreEvidence, type GenreState, type Venture } from "@gt/domain/genre";
 import type { Store } from "@gt/kernel/store";
 import { listGenres, listVentures, readGenre, readVenture, retireGenre, retireVenture } from "@gt/kernel/ventures/store";
 
@@ -142,7 +142,14 @@ export function genreSections(views: readonly GenreView[], ventures: readonly Ve
 
 /** Both heads in one snapshot of the store. */
 export function headsOf(store: Store): Result<{ readonly genres: readonly Genre[]; readonly ventures: readonly Venture[] }> {
-  return store.read((r) => ({ genres: listGenres(r), ventures: listVentures(r) }));
+  // NIGHTS READ ONLY THEIR OWN VENTURES (spark concept-casting-stages S6): an imported channel or a proven video's venture is the
+  // operator's slate, and the channel files stay what nights read until parity is proven. Every night door comes through here.
+  return store.read((r) => ({ genres: listGenres(r), ventures: listVentures(r).filter(isNightVenture) }));
+}
+
+/** Every head, night or not, for the operator's list. */
+function allVentures(store: Store): Result<readonly Venture[]> {
+  return store.read((r) => listVentures(r));
 }
 
 /** The taste brief's two sections over a store and the scout wing's nights; a store that will not read says so in one line. */
@@ -173,7 +180,8 @@ export function ventureRefusal(venture: string, store?: Store): string | undefin
   }
   const r = s.read((x) => readVenture(x, venture));
   if (!r.ok) return `venture ${venture}: ${r.error.message}`;
-  if (r.value === undefined) return `no venture ${venture}`;
+  // A channel-imported or proven-video venture is not one a night's brief can name: to a night it does not exist (headsOf).
+  if (r.value === undefined || !isNightVenture(r.value)) return `no venture ${venture}`;
   return r.value.retiredAt === undefined ? undefined : `venture ${venture} was retired ${r.value.retiredAt.slice(0, 10)}`;
 }
 
@@ -184,7 +192,7 @@ const refused = (message: string, code = 1): CommandResult => ({ code, lines: [m
 
 /** `gn-deadpan-office  piece-due    4/4  deadpan office satire, painted 3D · from 2026-10-24/c-10`. */
 const genreLine = (v: GenreView): string => `${v.id.padEnd(28)} ${v.state.padEnd(11)} ${String(v.evidence.keptTrials.length)}/${PIECE_TRIALS}  ${v.name}${v.ventureId === undefined ? "" : ` · ${v.ventureId}`}`;
-const ventureLine = (v: Venture): string => `${v.id.padEnd(28)} ${v.kind.padEnd(7)} ${(v.retiredAt === undefined ? "live" : "retired").padEnd(7)} ${v.name} · ${frameLine(v)}`;
+const ventureLine = (v: Venture): string => `${v.id.padEnd(28)} ${v.kind.padEnd(7)} ${(v.retiredAt === undefined ? "live" : "retired").padEnd(7)} ${v.name}${v.channelId === undefined ? "" : ` [channel ${v.channelId}]`} · ${frameLine(v)}`;
 
 /** `genre list | retire <id>` and `venture list | retire <id>` - the CLI's lines, its --json doc and its exit code. */
 export async function genresCommand(
@@ -194,12 +202,14 @@ export async function genresCommand(
 ): Promise<CommandResult> {
   const [sub, id] = args;
   if (sub === "list") {
-    const h = headsOf(o.store);
-    if (!h.ok) return refused(h.error.message);
     if (what === "venture") {
-      const vs = h.value.ventures;
+      const all = allVentures(o.store);
+      if (!all.ok) return refused(all.error.message);
+      const vs = all.value;
       return { code: 0, lines: vs.length === 0 ? ["no ventures yet"] : vs.map(ventureLine), doc: { ok: true, ventures: vs } };
     }
+    const h = headsOf(o.store);
+    if (!h.ok) return refused(h.error.message);
     // A genre is the scout wing's: its evidence is the scout nights', whichever wing the command runs in.
     const nights = await withWing("scout", () => readAllNights());
     const views = genreViews(nights, h.value.genres);

@@ -47,9 +47,9 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // GPT Image 2.5 Flare over the API (providers/leonardoFlare.ts): the same key
   // and the same credit pool as Lucid Origin, a different model and adapter.
   "leonardo-flare": "LEONARDO_API_KEY",
-  // Flux 2 dev on this box's ComfyUI (providers/comfyFlux.ts): no key. Like agy, `keyFor` and `isConfigured`
-  // special-case it - a prefer-only local model is reached by name and answers for itself when ComfyUI is down.
-  "comfy-flux2": "ComfyUI at COMFY_URL (default http://127.0.0.1:8188) with the Flux 2 weights",
+  // Codex's image_gen on the operator's ChatGPT seat (providers/codex.ts): no key. Prefer-only, reached by name, and
+  // answers for itself when the CLI is missing or signed out.
+  codex: "the codex CLI, signed in to the operator's ChatGPT seat",
 };
 
 const studioFake = () => process.env.LEONARDO_STUDIO_DRIVER?.trim() === "fake";
@@ -61,7 +61,7 @@ export function keyFor(provider: ProviderId): string {
     return "agy-cli";
   }
   if (provider === "leonardo-studio" && studioFake()) return "fake";
-  if (provider === "comfy-flux2") return "local";
+  if (provider === "codex") return "seat";
   const v = process.env[KEY_VAR[provider]];
   if (!v || !v.trim()) throw noKey(provider, KEY_VAR[provider]);
   return v.trim();
@@ -72,7 +72,7 @@ export function keyFor(provider: ProviderId): string {
 export function isConfigured(provider: ProviderId): boolean {
   if (provider === "agy") return agyAvailable();
   if (provider === "leonardo-studio" && studioFake()) return true;
-  if (provider === "comfy-flux2") return true;
+  if (provider === "codex") return true;
   const v = process.env[KEY_VAR[provider]];
   return Boolean(v && v.trim());
 }

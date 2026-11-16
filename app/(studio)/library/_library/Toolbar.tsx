@@ -109,7 +109,7 @@ export function Toolbar(p: ToolbarProps) {
         {p.u.q !== "" && <span className={s.q}>“{p.u.q}”</span>}
         <span className={s.sp} />
         <span aria-live="polite" className={s.total}>
-          <Tally value={count(p.total)} label="items" />
+          <Tally value={count(p.total)} label={p.total === 1 ? "item" : "items"} />
         </span>
       </div>
       <div className={s.tool} role="toolbar" aria-label="library tools">

@@ -404,6 +404,8 @@ export async function tasteBrief(except?: string, loadOf?: (n: Night) => LoadSum
   const all = [...(await characterSections(await readRootedNights())), ...(extra ?? [])];
   all.push(...(await (await import("./tasteDrafts")).draftsSection(nights)));
   all.push(...(await import("./reelTaste")).reelsToCut(nights));
+  // What the operator accepted from finished productions, per project: nothing accepted is no section, and no change to the brief.
+  all.push(...(await (await import("./tasteLessons")).tasteLessons()));
   // On a new night (spark project-baseline, ./baseline.ts) the spread's sections are dropped by heading, the caller's too.
   const brief = await (await import("./tasteEpisodes")).episodesFirst(tasteOf(nights, last, { seeds, extra: all }));
   return archivedDoor(except) === undefined ? brief : dropArchivedSections(brief.split("\n")).join("\n");

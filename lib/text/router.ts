@@ -261,6 +261,12 @@ function resolveTimeout(req: TextRequest): number {
   return ms;
 }
 
+/** May the walk go on from `err` to `next`? A signed-out seat stops before a metered
+ *  rung (errors.ts::reroutableTo); no next rung is trivially fine. */
+function descendsTo(err: TextError, next: TextProviderId | undefined): boolean {
+  return next === undefined || err.reroutableTo(PROVIDERS[next]().transport);
+}
+
 /** Who would answer this turn right now, in order. Exported so a diagnostics
  *  surface reports the truth the router acts on rather than restating it. */
 export function planFor(turn: TurnClass, env: TextEnv = currentTextEnv()): TextProviderId[] {
@@ -473,7 +479,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
         // minutes-long metered turn is not something to repeat on a hunch, and
         // `bad-response` in particular usually means our own prompt or parser is
         // wrong — which a second engine reproduces, more expensively.
-        if (!err.reroutable) throw err;
+        if (!err.reroutable || !descendsTo(err, chain[i + 1])) throw err;
       }
     }
 
@@ -624,7 +630,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
         first ??= err;
         reached ||= err.dispatched;
         trail.push({ provider: id, why: trailReason(err) });
-        if (!err.reroutable) throw err;
+        if (!err.reroutable || !descendsTo(err, chain[i + 1])) throw err;
       }
     }
 

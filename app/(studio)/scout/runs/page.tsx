@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { scoutHeaderFacts } from "../../_shell/headerFacts.ts";
@@ -22,7 +23,8 @@ export default async function ScoutRuns() {
   return (
     <div className={s.page}>
       <ScoutHead current="runs" undecided={0} facts={await scoutHeaderFacts()} />
-      <ErrorLine message="scout: no night or seed batch has opened a packet yet" />
+      {/* Nothing has run yet: an absence, drawn as one - not a failure in the error's rose. */}
+      <Empty label="no night or seed batch has opened a packet yet" />
     </div>
   );
 }

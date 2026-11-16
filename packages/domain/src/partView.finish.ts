@@ -149,8 +149,10 @@ export type FinishRow = {
 
 export type ExportView = { readonly id: string; readonly at: string; readonly mode: "dry" | "live"; readonly label: string; readonly blob?: string; readonly bytes?: number };
 
-/** One picture under the monitor: the plate if there is one, else the unit's words. */
-export type MonitorFrame = { readonly title: string; readonly line: string; readonly kind: string; readonly blob?: string; readonly placed: boolean };
+/** One picture under the monitor: the plate if there is one, else the unit's words. `url` is the
+ *  plate by whatever door serves it - /api/blob/<sha> for a kernel blob, a public path or a data:
+ *  URL for a stand-in or a v1-era plate - so a plate that exists is drawn whoever holds its bytes. */
+export type MonitorFrame = { readonly title: string; readonly line: string; readonly kind: string; readonly blob?: string; readonly url?: string; readonly placed: boolean };
 
 export type TimelineData = {
   readonly face: "timeline";

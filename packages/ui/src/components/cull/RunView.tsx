@@ -1,5 +1,6 @@
 // One RUN opened: its variants, at most THREE to a row and as tall as the screen leaves them
 // (operator, 2026-10-22), each a VariantCard - its media, its caption and its verdict by click.
+// Four to six cells share the body in TWO rows, each frame letterboxed whole; past six the rows keep their own height and scroll.
 // The reference sits in the modal's head, beside the run's purpose. A words card after stills (a storyboard's words,
 // spark scout-storyboards) closes the row they began, else takes a row of its own.
 import type { BoardVerdict } from "../../board/boardGate.ts";
@@ -29,6 +30,9 @@ export type RunViewProps = {
  * The columns a words card takes at `at` (its place among the run's variants, `n` columns a row): what is left of a
  * row its stills began - a storyboard's 4th frame and its words share a row - or undefined for a row of its own.
  */
+/** A run of up to this many cells fits the body in two rows with no scrolling (a storyboard's five frames and its words). */
+export const FIT = 6;
+
 export function wordsSpan(at: number, n: number): 1 | 2 | undefined {
   const left = n - (at % n);
   return left === 1 || (left === 2 && n === 3) ? left : undefined;
@@ -38,7 +42,7 @@ export function RunView({ run, cells, verdicts, mediaOf, wordsOf, cur, nudged, r
   const label = run.words?.label ?? run.row;
   const n = Math.min(3, run.members.length);
   return (
-    <div className={cx(s.runTiles, n === 1 && s.cols1, n === 2 && s.cols2, run.members.length > 3 && s.runTilesMany)} role="grid" aria-label={`variants of ${label}`}>
+    <div className={cx(s.runTiles, n === 1 && s.cols1, n === 2 && s.cols2, run.members.length > 3 && run.members.length <= FIT && s.runTilesFit, run.members.length > FIT && s.runTilesMany)} role="grid" aria-label={`variants of ${label}`}>
       {run.members.map((i, at) => {
         const id = cells[i]?.id ?? "";
         const span = at > 0 && kindOf(mediaOf(id).mime) === "text" ? wordsSpan(at, n) : undefined;

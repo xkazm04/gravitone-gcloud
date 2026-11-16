@@ -214,7 +214,7 @@ async function clickIfPresent(page: Page, selector: string): Promise<boolean> {
 
 /** One still. Resolves once the image bytes are held; the generation stays in the operator's studio
  *  (the provider deletes it), and a failure after `Generate` named it carries its id for that delete. */
-export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "low" | "medium"): Promise<StudioRun> {
+export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "low" | "medium", size: "SMALL" | "MEDIUM" = "SMALL"): Promise<StudioRun> {
   let browser;
   try {
     browser = await attach({ spawn: true });
@@ -254,7 +254,7 @@ export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "
   page.on("response", onResponse);
 
   try {
-    await page.goto(STUDIO.page.imageUrl(aspect, quality), { waitUntil: "domcontentloaded", timeout: 45_000 });
+    await page.goto(STUDIO.page.imageUrl(aspect, quality, size), { waitUntil: "domcontentloaded", timeout: 45_000 });
     if (STUDIO.page.signedOutPath.test(new URL(page.url()).pathname)) throw new StudioError("not signed in to leonardo", "signed-out");
 
     const box = page.locator(STUDIO.form.prompt).filter({ visible: true }).first();
@@ -274,6 +274,14 @@ export async function studioGenerate(prompt: string, aspect: Aspect, quality?: "
     await box.fill(prompt);
 
     if (balance !== undefined && balance <= 0) throw new StudioError("leonardo studio is out of credits", "no-credits");
+
+    // A reference left on the form. The URL sets model, size and quality, not the prompt box's attachments,
+    // and a reference a hand attached STICKS to the session: on 2026-10-31 a "WE DECIDE" robot poster and a
+    // start frame from another session rode along on 46 music-clip keyframes (robots and the slogan leaked
+    // into the night frames, +3 credits each) - "Reset to Defaults" did not clear them. Refused before the
+    // click, unspent; the remedy is the chip's hover-x in the studio.
+    const attached = STUDIO.form.attachedRef.exec(await page.evaluate(() => document.body.innerText));
+    if (attached) throw new StudioError(`leonardo studio prompt carries an attachment ("${attached[0]}") left from another session; remove it in the studio and retry`, "refused");
 
     // The price before the click: the button carries it. Unreadable is not a
     // refusal (the label may change), but a price above the ceiling is.

@@ -1,6 +1,8 @@
 // /local-draws — frames and clips from GRAVITONE_LOCAL_DRAWS, read at request time.
 import { connection } from "next/server";
 
+import { Clip } from "@gt/ui/components/desk/Clip.tsx";
+import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { listRuns, type DrawCard, type DrawRun } from "../../../lib/foundry/local-draws/read.ts";
@@ -27,8 +29,8 @@ function Card({ run, card }: { readonly run: string; readonly card: DrawCard }) 
   return (
     <article className={s.card}>
       {card.frame ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a local draw served by its own route; nothing for next/image to optimise
-        <img className={s.shot} src={src(run, card.frame)} alt={`${card.title}, ${card.via}, ${card.verdict}`} />
+        // A local draw served by its own route (no blob variants): Plate for the drawn wait and failure.
+        <Plate className={s.shot} src={src(run, card.frame)} alt={`${card.title}, ${card.via}, ${card.verdict}`} lazy />
       ) : (
         <p className={s.missing}>{card.notes || card.verdict}</p>
       )}
@@ -40,7 +42,7 @@ function Card({ run, card }: { readonly run: string; readonly card: DrawCard }) 
         <p className={s.meta}>{[card.follow && `follow ${card.follow}`, card.anatomy && `anatomy ${card.anatomy}`].filter(Boolean).join(" · ")}</p>
       )}
       {card.notes && card.frame ? <p className={s.notes}>{card.notes}</p> : null}
-      {card.clip ? <video src={src(run, card.clip)} poster={card.frame ? src(run, card.frame) : undefined} controls preload="none" /> : null}
+      {card.clip ? <Clip src={src(run, card.clip)} label={card.title} poster={card.frame ? src(run, card.frame) : undefined} controls preload="none" /> : null}
       {card.prompt ? (
         <details>
           <summary>prompt</summary>

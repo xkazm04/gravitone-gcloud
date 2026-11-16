@@ -120,7 +120,7 @@ describe("a worker-driven part job opens its ready gate", () => {
     expect(packets()).toEqual([]);
     k.close();
 
-    const r = runner(file, ["--once", "--json", "--idle-ms", "50", "--lanes", "gpu.local"]);
+    const r = runner(file, ["--once", "--json", "--idle-ms", "50", "--lanes", "seat.text"]);
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout).toContain(`"jobId":"${launched.jobId}"`);
     const after = must(openKernel(file));

@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "960f2f0d-fc46-40ef-a49c-22bbf625c4e9",
+ "subject": "background-jobs",
+ "evaluatedAt": "2026-11-08T00:26:22.583167+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "publish-producers",
+   "subject": "background-jobs",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "packages/producers/src/publish/timers.ts:23 The publish loops are named once from a closed set, and each TimerSpec carries a cadence, a deadline and a first delay that the worker's one roster registers. The tick reports when the next slot is due, records the downtime it was handed and stops between claims. timerStatusIn reads staleness, any standing failure and quarantine from the store, and no technique that applies is realized the way the standard names as a failure.",
+   "techniques": [
+    {
+     "technique": "loop-supervision",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/timers.ts:23 The roster is a closed set of names. lib/producers/publish.ts publishTimers hands PUBLISH_TICK and METRICS_REFRESH to the single supervisor in workers/timers.ts, which holds a lease on timer:<name> and stops every timer the same way. No timer is armed ad hoc."
+    },
+    {
+     "technique": "tick-isolation",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/timers.ts:31 Each spec declares a deadline per tick; past it the tick is abandoned and its writes are fenced. Inside the tick, publishClaimed (publish.ts:98) never throws, so one slot's failure lands on that slot and not on the loop."
+    },
+    {
+     "technique": "adaptive-cadence",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:51 The tick returns the earliest slot still waiting. lib/producers/publish.ts turns it into wakeInMs, so the 30 s idle cadence is only the worst case and the loop also wakes at the slot's own time."
+    },
+    {
+     "technique": "loop-health-telemetry",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/timers.ts:62 timerStatusIn derives stale, lastRunAt, nextDueAt, failing and quarantined from the lease heartbeat and the timer.* events. A loop that has gone silent shows as stale, and 'never run' shows as lastRunAt null; neither looks like a quiet healthy loop."
+    },
+    {
+     "technique": "startup-sweeps",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:60 The sweep is the first tick of the steady-state loop, so one code path serves both, and its repairs are fenced compare-and-set writes. A slot missed while the worker was down carries the gap in its own slot.miss event, so the miss is attributed. There is no item cap, but the kernel's SKIP policy marks overdue slots missed instead of firing them, so a backlog cannot storm on restart."
+    },
+    {
+     "technique": "job-progress-and-cancellation",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/tick.ts:82 Cancellation is cooperative and checked between claims. Claims a stop left unstarted are failed with STOPPED_TEXT and their leases released, and the outcomes published, failed and lost are distinct. An upload already running is not cancelled; the stop is checked before it starts. There is no byte-level progress stream, only a heartbeat, so this verdict rests on cancellation and terminal states."
+    },
+    {
+     "technique": "first-tick-gates-readiness",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/tick.ts:14 The publish tick is not the only writer of the state readers use. Slots are written by scheduling acts and the same tick runs from the CLI, so readers have something to read before tick one. The tick's first output is a sweep, which is incidental, so there is no readiness to gate."
+    },
+    {
+     "technique": "timeout-is-a-status-not-a-consumption",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/tick.ts:106 No caller in this context waits on a tracked operation with a budget. publish-now awaits the tick without a limit, and the spec's deadlineMs is a deadline that abandons the tick, which the golden path names as the opposite choice from a wait that gives up."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T00:26:22.583167+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "background-jobs"
+   ],
+   "techniques": [
+    "adaptive-cadence",
+    "first-tick-gates-readiness",
+    "job-progress-and-cancellation",
+    "loop-health-telemetry",
+    "loop-supervision",
+    "startup-sweeps",
+    "tick-isolation",
+    "timeout-is-a-status-not-a-consumption"
+   ],
+   "deviations": 0,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

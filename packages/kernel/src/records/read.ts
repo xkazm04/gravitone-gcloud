@@ -34,6 +34,12 @@ export type ReadContext = {
   readonly packetOf?: (partId: string, r: Reader) => PacketFact | undefined;
   /** Is the slot part on the calendar? Read in the plan's snapshot, as `packetOf` is. */
   readonly slottedOf?: (partId: string, r: Reader) => boolean;
+  /** The gate's NEWEST packet id (`pkt:step:<gate>`, or its `#n` reopening), read in the plan's
+   *  snapshot: the Plan links a gate row to it, and only when it exists (fable-ten A). */
+  readonly packetIdOf?: (partId: string, r: Reader) => string | undefined;
+  /** The newest slot naming a slot part, in the plan's snapshot: the Plan opens a slot part that
+   *  has one at that slot, never at a second schedule sheet. */
+  readonly slotIdOf?: (partId: string, r: Reader) => string | undefined;
   /** A producer's preflight over the records as they stand (L45): a planned job whose upstream is
    *  ratified stays planned while this answers a reason (an act that waits on a human act). */
   readonly preflightOf?: (job: Job, r: Reader) => string | undefined;
@@ -115,6 +121,8 @@ export type ProjectModel = {
   /** Work parts with no job in a LAUNCHED project - an imported one's parts v1 never worked
    *  (L43). They read `draft`, and a Plan launch enqueues exactly these. */
   readonly unlaunched: ReadonlySet<string>;
+  /** Where a gate or slot row opens: its packet id or its slot id, only for what exists. */
+  readonly doors: ReadonlyMap<string, { readonly packetId?: string; readonly slotId?: string }>;
 };
 
 /**
@@ -153,6 +161,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
   const jobs = new Map<string, Job>();
   const orders = new Map<string, number>();
   const facts = new Map<string, PartFacts>();
+  const doors = new Map<string, { packetId?: string; slotId?: string }>();
   for (const row of rows) {
     const p = row.part;
     if (row.jobId !== null) {
@@ -165,8 +174,12 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
     } else if (p.kind === "gate") {
       const packet = ctx.packetOf?.(p.id, r);
       if (packet !== undefined) facts.set(p.id, { packet });
+      const packetId = ctx.packetIdOf?.(p.id, r);
+      if (packetId !== undefined) doors.set(p.id, { packetId });
     } else if (p.kind === "slot") {
       facts.set(p.id, { slotted: ctx.slottedOf?.(p.id, r) === true });
+      const slotId = ctx.slotIdOf?.(p.id, r);
+      if (slotId !== undefined) doors.set(p.id, { slotId });
     }
   }
   const launched = project.launchedAt !== undefined;
@@ -188,7 +201,7 @@ export function projectModel(r: Reader, id: string, ctx: ReadContext): ProjectMo
     const order = job === undefined ? 1e9 + row.ord : (orders.get(p.id) ?? Number.MAX_SAFE_INTEGER);
     return { key: p.id, label: p.kind, lane: option?.lane ?? null, units: p.units, ...(option === undefined ? {} : { option }), after: p.after, order, status, ...timing };
   });
-  return { project, rows, states, jobs, options, lines, state: projectStateOf([...states.values()].map((state) => ({ state }))), unlaunched };
+  return { project, rows, states, jobs, options, lines, state: projectStateOf([...states.values()].map((state) => ({ state }))), unlaunched, doors };
 }
 
 const groupOf = (s: ProjectState): ProjectGroup =>
@@ -210,7 +223,7 @@ function view(m: ProjectModel, queue: QueueRead, ctx: ReadContext): PlanView {
     const at = placed.get(p.id);
     const schedule = at === undefined ? undefined : { start: new Date(at.start).toISOString(), end: new Date(at.end).toISOString(), queuePos: at.queuePos };
     const base = { id: p.id, after: p.after, state: m.states.get(p.id) ?? "draft", ...(schedule === undefined ? {} : { schedule }) };
-    if (!isWork(p)) return { ...base, kind: p.kind, label: line?.label ?? p.kind, ...(p.kind === "gate" ? { judges: p.judges, verdict: p.verdict } : {}) };
+    if (!isWork(p)) return { ...base, kind: p.kind, label: line?.label ?? p.kind, ...(p.kind === "gate" ? { judges: p.judges, verdict: p.verdict } : {}), ...m.doors.get(p.id) };
     const options = m.options.get(p.id) ?? [];
     const option = line?.option;
     const est: PlanEstimate = option === undefined ? { seconds: 0, usd: null, unpricedReason: `no option ${p.option} for ${p.kind}`, src: "illustrative" } : priceLine(p.units, option);

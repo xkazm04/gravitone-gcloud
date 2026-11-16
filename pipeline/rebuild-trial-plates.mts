@@ -1,4 +1,4 @@
-// Re-render the trial grid's plates LOCALLY, from the index that outlived them.
+// Re-render the trial grid's plates through Codex, from the index that outlived them.
 //
 // Run:  npx tsx pipeline/rebuild-trial-plates.mts
 //       npx tsx pipeline/rebuild-trial-plates.mts --only blueprint
@@ -14,7 +14,7 @@
 // the same call build-style-trials.mts made, with `styleId` and `trialId`
 // naming which of each. So this rebuilds rather than deletes.
 //
-// LOCAL FLUX 2, not the cloud router the originals used. Sixty vendor renders
+// CODEX image_gen, not the cloud router the originals used. Sixty vendor renders
 // is real money for a demo shelf, and this box has a stack that costs
 // electricity. The consequence is stated rather than hidden: THESE ARE NOT THE
 // SAME PICTURES. Each row's stored `grade` — its description, its dominant
@@ -26,8 +26,9 @@
 // Resumable: a file on disk is a finished plate.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
+
+import { CODEX_MODEL, drawCodex } from "../lib/imaging/local/codex.ts";
 
 const { PRESETS } = await import("@gt/catalog/presets");
 const { TRIALS } = await import("../lib/library/trials");
@@ -91,10 +92,11 @@ for (const e of wanted) {
 
   mkdirSync(path.dirname(out), { recursive: true });
   const t0 = Date.now();
-  const r = spawnSync("python", [path.join("pipeline", "video", "flux_still.py"), out, prompt],
-    { encoding: "utf8" });
-  if (r.status !== 0 || !existsSync(out)) {
-    console.log(`FAIL  ${e.styleId}/${e.trialId}\n         → ${(r.stderr || r.stdout || "").trim().slice(-300)}`);
+  try {
+    const still = await drawCodex({ prompt, aspect: "16:9" });
+    writeFileSync(out, still.png);
+  } catch (x) {
+    console.log(`FAIL  ${e.styleId}/${e.trialId}\n         → ${(x instanceof Error ? x.message : String(x)).slice(-300)}`);
     failed++;
     continue;
   }
@@ -103,8 +105,8 @@ for (const e of wanted) {
   // exists; leaving it would let the shelf show a TEXT badge, or a colour list,
   // for a picture nobody has graded.
   delete e.grade;
-  e.provider = "local";
-  e.model = "flux2-dev-fp8mixed";
+  e.provider = "codex";
+  e.model = CODEX_MODEL;
   e.prompt = prompt;
   e.rebuiltAt = Date.now();
   // The WHOLE document, not just its entries. Writing `index` here replaced a

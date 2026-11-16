@@ -17,9 +17,17 @@ import type { NightId } from "./types";
 export const ARCHIVED_DOOR = "archived: the scout now serves channels (spark project-baseline); this door reopens only when the operator says so";
 
 /** The sentence when the door is shut for `id` (absent: a door no night owns, the seed batch), else undefined. */
-export function archivedDoor(id?: NightId): string | undefined {
+export function archivedDoor(id?: NightId, door?: ReopenableDoor): string | undefined {
+  if (door !== undefined && reopened(door)) return undefined;
   return onBaseline(id) ? ARCHIVED_DOOR : undefined;
 }
+
+/** A door the operator can reopen for one call: `SCOUT_REOPEN=seeds` (a comma list). The operator's own words reopen
+ * it (2026-11-10: the shortlist of a sketch contest saved as seeds), so the switch lives in that call's environment,
+ * never in a file a night reads. Only a named door opens; every other stays shut. */
+export type ReopenableDoor = "seeds";
+export const reopened = (door: ReopenableDoor, env: NodeJS.ProcessEnv = process.env): boolean =>
+  (env.SCOUT_REOPEN ?? "").split(",").map((x) => x.trim()).includes(door);
 
 /** A storyboard batch naming any `fromIdea` on a new night: shut. A `fromEpisode` brief passes (it is WP-B's door). */
 export function archivedFromIdea(id: NightId, input: unknown): string | undefined {

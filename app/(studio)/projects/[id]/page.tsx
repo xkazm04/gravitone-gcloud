@@ -11,6 +11,8 @@ import { notFound } from "next/navigation";
 import { produceNow, serverProduce } from "../_port/port.ts";
 import { PRODUCE_PORT } from "../_port/wire.ts";
 import { Plan } from "../_plan/Plan.tsx";
+import { readWorkerAction } from "../_plan/workerAction.ts";
+import { readWorker } from "../_plan/workerRead.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Plan" };
 
@@ -40,6 +42,7 @@ export default async function PlanPage({ params, searchParams }: { readonly para
   const floorRuns = jobs.ok ? jobs.value.filter((j) => j.projectId === undefined && j.state !== "done").length : 0;
   return (
     <Plan
+      worker={{ read: readWorker(), reread: readWorkerAction }}
       view={view.value}
       list={list.ok ? list.value : { projects: [], truncated: false }}
       choices={choices.ok ? choices.value : null}

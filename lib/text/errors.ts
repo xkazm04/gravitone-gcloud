@@ -25,7 +25,7 @@
 // "policy-forbidden must read as forbidden by policy in the descent record, not
 // as binary missing".
 
-import type { TextCapability, TextProviderId } from "./types";
+import type { TextCapability, TextProviderId, TextTransport } from "./types";
 
 export type TextErrorKind =
   /** No API key configured for this provider. Setup, not runtime. */
@@ -113,6 +113,16 @@ export class TextError extends Error {
       this.kind === "refused" ||
       this.kind === "rate-limited"
     );
+  }
+
+  /**
+   * May the walk go on to a rung that speaks THIS transport? Reroutable, with one
+   * exception: a signed-out seat never descends onto a metered API. `not-logged-in`
+   * is a fact about the operator's own seat, a sentence they can act on in a minute,
+   * and the cloud rung behind it is real money; it may still reach a free rung.
+   */
+  reroutableTo(next: TextTransport): boolean {
+    return this.reroutable && !(this.kind === "not-logged-in" && next === "cloud-api");
   }
 }
 

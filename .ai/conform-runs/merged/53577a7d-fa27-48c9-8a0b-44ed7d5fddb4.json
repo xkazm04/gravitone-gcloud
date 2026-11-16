@@ -1,0 +1,88 @@
+{
+  "schema": "conform-run/1",
+  "worker": "53577a7d-fa27-48c9-8a0b-44ed7d5fddb4",
+  "subject": "cinematic-language",
+  "evaluatedAt": "2026-11-08T00:39:55.255856+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-producers",
+      "subject": "cinematic-language",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "packages/producers/src/still/define.ts:17 These producer definitions only plan, price and schedule units: the prompt and the motion line arrive as opaque strings written elsewhere (lib/motion/direction.ts, the ad scenario's image line, the style block). A case-insensitive search of the frames/still/motion/style/strips/extract/cut directories for lighting, lens, shadow, genre and cinemat found 0 hits, so no camera, light, lens or genre choice is made at this layer.",
+      "techniques": [
+        {
+          "technique": "movement-motivation",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/motion/define.ts:8 The camera-move refusal is lib/motion/direction.ts's; this producer only runs that function as a priced unit."
+        },
+        {
+          "technique": "camera-position-semantics",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/frames/define.ts:53 Shot staging comes in with the shot's image line. The frames producer turns it into take units."
+        },
+        {
+          "technique": "lighting-as-dramatic-instrument",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/still/define.ts:17 The still prompt is passed through unchanged. Light is never set here."
+        }
+      ],
+      "absenceTerms": [
+        "lighting",
+        "lens",
+        "shadow",
+        "genre",
+        "cinemat"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "cinematic-language",
+      "context": "library-characters-models",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "cinematic-language",
+      "context": "score-and-ads",
+      "reason": "withdrawn after review: reviewer (sonnet): The main anchor, lib/frames/shotTypes.ts (SIZE_LADDER, sizeSteps), is imported only by lib/frames/shots.ts. It is not one of the score-and-ads context files, and nothing in lib/score, lib/ads, lib/studio/score.ts, lib/motion or lib/vocab references it, so the verdict is about the frames context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T00:39:55.255856+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "lens-effect-language",
+        "movement-motivation",
+        "scene-grammar-progression"
+      ],
+      "deviations": 0,
+      "context": "score-and-ads",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T00:39:55.255856+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "cinematic-language"
+      ],
+      "techniques": [
+        "camera-position-semantics",
+        "lighting-as-dramatic-instrument",
+        "movement-motivation"
+      ],
+      "deviations": 0,
+      "context": "visual-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

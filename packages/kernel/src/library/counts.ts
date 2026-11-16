@@ -2,7 +2,6 @@ import { AppError } from "@gt/domain/errors";
 import {
   FIXED_ORDER,
   groupLabel,
-  isSharedGroup,
   LIBRARY_GROUP_TOP,
   LIBRARY_KINDS,
   railGroups,
@@ -13,7 +12,7 @@ import {
 } from "@gt/domain/library";
 import type { Reader } from "../store.ts";
 import { marks, num, whereOf, type Clause, type ParsedQuery } from "./clauses.ts";
-import { isColumnGroup } from "./core.ts";
+import { isColumnGroup, narrowsKinds } from "./core.ts";
 
 // COUNTING THE RAIL - the total, the kind counts and every visible group, under
 // the disjunctive convention (search: faceting-and-filters; the prototype's
@@ -206,7 +205,7 @@ function servedByTable(r: Reader, q: ParsedQuery, group: string, clauses: readon
 /** Kind counts under the shared groups and the search; vocabulary groups belong to one kind. */
 function kindCountsOf(r: Reader, q: ParsedQuery, clauses: readonly Clause[]): LibraryPage["kindCounts"] {
   const out = zeroKinds();
-  const counted = clauses.filter((c) => c.group === null || (c.group !== "kind" && isSharedGroup(c.group)));
+  const counted = clauses.filter((c) => c.group === null || (c.group !== "kind" && narrowsKinds(c.group)));
   const only = counted.length === 1 ? counted[0] : undefined;
   const chosen = only?.group === null || only?.group === undefined ? [] : (q.facets?.[only.group] ?? []);
   const w = whereOf(counted);
@@ -250,7 +249,7 @@ export function countRail(r: Reader, q: ParsedQuery, clauses: readonly Clause[])
     match = scope.match;
     total = match.length;
     // With no kind chosen and every selection shared, the match IS the kind counts' set.
-    if (q.kind === undefined && clauses.every((c) => c.group === null || isSharedGroup(c.group))) {
+    if (q.kind === undefined && clauses.every((c) => c.group === null || narrowsKinds(c.group))) {
       const k = zeroKinds();
       for (const [kind, n] of scope.perKind) if (isKind(kind)) k[kind] += n;
       k.all = total;

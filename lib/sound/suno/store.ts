@@ -109,7 +109,7 @@ export function mintSunoId(prefix: "sp" | "sj" | "sc"): string {
  *  longer line is cut at its last separator so a tag is never halved. */
 export const STYLE_MAX = 200;
 export const TITLE_MAX = 80;
-export const LYRICS_MAX = 3000;
+const LYRICS_MAX = 3000;
 export const EXCLUDE_MAX = 200;
 export const INSTRUMENTAL = "[Instrumental]";
 
@@ -155,7 +155,7 @@ export function parseLane(v: unknown): SunoLane {
 const LIVE_STATES = new Set<SunoJob["state"]>(["queued", "active"]);
 
 /** The newest job a proposal produced, or null. */
-export function lastJobOf(f: Pick<SunoFile, "jobs">, proposalId: string): SunoJob | null {
+function lastJobOf(f: Pick<SunoFile, "jobs">, proposalId: string): SunoJob | null {
   let best: SunoJob | null = null;
   for (const j of f.jobs) if (j.proposalId === proposalId && (!best || j.enqueuedAt >= best.enqueuedAt)) best = j;
   return best;

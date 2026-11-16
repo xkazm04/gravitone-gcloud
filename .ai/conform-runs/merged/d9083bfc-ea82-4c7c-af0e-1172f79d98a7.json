@@ -1,0 +1,101 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d9083bfc-ea82-4c7c-af0e-1172f79d98a7",
+ "subject": "agent-cli-transport",
+ "evaluatedAt": "2026-11-08T00:04:57.839595+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "spend-meter-and-requests",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/spend/fileStore.ts:34 The spend classes, meter, stores and spend-request schema only book holds and file requests. A search of lib/spend, packages/kernel/src/spend-requests and packages/kernel/src/records for child_process, spawn(, ANTHROPIC_API_KEY and --output-format found nothing, so no agent CLI is spawned here and the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "availability-probe",
+     "verdict": "not-applicable",
+     "evidence": "lib/spend/fileStore.ts:34 The store names the CLI-spawn posture only to say it is not this store's question. It probes no binary."
+    },
+    {
+     "technique": "subscription-auth-selection",
+     "verdict": "not-applicable",
+     "evidence": "lib/spend/sqliteStore.ts:18 The store is opened under the operator's CLIs but builds no child environment, so there is no key to strip or inject."
+    }
+   ],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "ANTHROPIC_API_KEY",
+    "--output-format"
+   ]
+  },
+  {
+   "context": "mcp-agent-door",
+   "subject": "agent-cli-transport",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_server/mcp/principal.ts:9 The MCP door is the inverse of this subject: an outside agent calls in over JSON-RPC with a Gravitone bearer token, and the door spawns no agent CLI. A search of app/api/mcp, app/_server/mcp and packages/domain/src for child_process, spawn(, execFile, ANTHROPIC_API_KEY and --permission-mode found nothing.",
+   "techniques": [
+    {
+     "technique": "subscription-auth-selection",
+     "verdict": "not-applicable",
+     "evidence": "packages/domain/src/mcp.ts:83 The seat counts as free in receipt pricing. The door builds no child environment, so it has no billing direction to choose."
+    },
+    {
+     "technique": "host-routed-approval-round-trip",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/tools/launch.ts:20 A spend request is the operator approving the host's own gated op. It is not a spawned child's mid-turn permission request routed through the host."
+    }
+   ],
+   "absenceTerms": [
+    "child_process",
+    "spawn(",
+    "execFile",
+    "ANTHROPIC_API_KEY",
+    "--permission-mode"
+   ],
+   "registryProposal": "The subject could name its inverse, a server that agents call in to through its own gated tools, as out of scope and point to mcp-tools. Here the 'CLI token' wording and the seat-as-free receipt rule make such a door look like a transport adapter at first."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-cli-transport",
+   "context": "server-seam",
+   "reason": "None of the seam's own files spawn an agent CLI. A search of app/_server and the five app/api route directories for child_process, claudeCli and spawn( found nothing. lib/apiAuth.ts:4 only names a route ('app/api/frames spends local Claude-CLI compute') that the gate protects. But the context's lib/ files (principal, apiAuth, sessionToken, devAuth, firebase, useAuth) share the lib/ directory with the real spawners, lib/claudeCli.ts and lib/agent/*. A directory-scoped absence search would therefore hit, and not-applicable cannot be proven in the form the driver checks. I am not guessing a different state instead."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T00:04:57.839595+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [
+    "availability-probe",
+    "subscription-auth-selection"
+   ],
+   "deviations": 0,
+   "context": "spend-meter-and-requests",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T00:04:57.839595+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-cli-transport"
+   ],
+   "techniques": [
+    "host-routed-approval-round-trip",
+    "subscription-auth-selection"
+   ],
+   "deviations": 0,
+   "context": "mcp-agent-door",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

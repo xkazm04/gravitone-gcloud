@@ -37,6 +37,7 @@ import { closeProcessKernel, processKernel } from "@gt/kernel/process";
 import type { Store } from "@gt/kernel/store";
 import { bornGenre, retireGenre } from "@gt/kernel/ventures/store";
 
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli, type CliPorts } from "../../pipeline/scout.mts";
 import { piecesDue, trialSlots } from "../../lib/foundry/scout/genres.ts";
 import { parseStoryboards } from "../../lib/foundry/scout/storyboard.ts";
@@ -44,6 +45,8 @@ import { readNight, resolveInNight } from "../../lib/foundry/scout/store.ts";
 import type { Candidate, IdeaCandidate, Night, NightCommit, PieceCandidate, StoryboardCandidate } from "../../lib/foundry/scout/types.ts";
 import { clipSeed } from "../../lib/producers/scoutStoryboard.ts";
 import { panelStillOf } from "../../lib/producers/scoutStoryboardActs.ts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 const DRY = { ...process.env, GRAVITONE_DRY_ONLY: "1" };
 const LIVE = (() => {
@@ -111,7 +114,7 @@ afterAll(() => {
 async function cli(argv: string[], o: { env?: Record<string, string | undefined>; ports?: CliPorts } = {}): Promise<{ code: number; err: string; doc: Record<string, unknown> }> {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
+  const code = await guardedRunCli(argv, { env: o.env ?? DRY, out: (s) => out.push(s), err: (s) => err.push(s), ...(o.ports === undefined ? {} : { ports: o.ports }) });
   let doc: Record<string, unknown> = {};
   try {
     doc = JSON.parse(out.join("\n")) as Record<string, unknown>;

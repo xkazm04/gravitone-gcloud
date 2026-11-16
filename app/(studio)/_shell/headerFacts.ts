@@ -4,9 +4,11 @@ import { cache } from "react";
 
 import type { Event } from "@gt/domain/event";
 import type { Spend } from "@gt/ui/components/header/header.ts";
-import { queryEvents, type TimeCursor } from "@gt/kernel/events-query";
+import { eventsAfter, queryEvents, type TimeCursor } from "@gt/kernel/events-query";
 
 import { kernel } from "../../../lib/kernelStore.ts";
+import { serverProduce } from "../projects/_port/port.ts";
+import { needsCount, type NeedsCount } from "../projects/runs/_runs/needs.ts";
 import { nextScoutPile, SCOUT_PILE_SOURCES, spendOf } from "./facts.ts";
 import { liveRead } from "./live.ts";
 import { packetIdOf } from "./links.ts";
@@ -24,6 +26,13 @@ import { packetIdOf } from "./links.ts";
 //          ledger +N; the operator moved the one into the Scout header and dropped the other
 //          (the Ledger is in the nav). So the studio header no longer walks v1 (liveRead) at
 //          all - only the Scout header and the Floor do.
+//   needs  the jobs that need the operator (failed + interrupted, Runs' one definition:
+//          ../projects/runs/_runs/needs.ts), counted over the produce port's jobs - the kernel's
+//          jobs table on the real side, the fixture universe on the fixture side: the same rows
+//          Runs draws as its kernel bars. v1's live work (an interrupted mv or article run) is
+//          NOT counted: reading it is the v1 walk this header gave up, so Runs' rose total can
+//          be higher than the chip by exactly those. With it, the ledger's head, so the chip's
+//          own stream (./FailedSlot.tsx) resumes from the seq the count was read at.
 //
 // A store that cannot be read gives null for what it would have said - the chip shows the
 // failure, never a $0 that reads as "nothing was spent", and never an absent NEXT that reads as
@@ -69,6 +78,27 @@ export function readSpend(now: number): SpendFacts {
 
 /** The studio header's facts: the spend, read once per request. */
 export const headerFacts: () => Promise<SpendFacts> = cache(async () => readSpend(Date.now()));
+
+export type NeedsFacts = {
+  /** null: the count could not be read, and `problems` says why. */
+  readonly needs: NeedsCount | null;
+  readonly problems: readonly string[];
+  /** The ledger's seq at the read, or null when the kernel could not be read (no stream then). */
+  readonly head: number | null;
+};
+
+/** The jobs that need the operator, from the produce port's jobs (no v1 store is opened). */
+export function readNeeds(): NeedsFacts {
+  const k = kernel();
+  const page = k.ok ? eventsAfter(k.value.store, 0, 1) : null;
+  const head = page?.ok === true ? page.value.head : null;
+  const jobs = serverProduce().listJobs();
+  if (!jobs.ok) return { needs: null, problems: [`jobs: ${jobs.error.message}`], head };
+  return { needs: needsCount(jobs.value), problems: [], head };
+}
+
+/** The studio header's needs count, read once per request. */
+export const needsFacts: () => Promise<NeedsFacts> = cache(async () => readNeeds());
 
 /** The Scout header's facts: the same spend, and the next scout pile. */
 export async function scoutHeaderFacts(): Promise<ScoutHeaderFacts> {

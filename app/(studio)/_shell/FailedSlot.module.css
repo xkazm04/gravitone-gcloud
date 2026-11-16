@@ -1,0 +1,5 @@
+/* The needs chip's door (./FailedSlot.tsx): the link carries the chip and adds nothing to its look
+   but the pointer and the focus ring the world draws for every link. The slot never shrinks, as
+   the spend's does not (Shell.module.css .slotSpend). */
+.slot{display:flex;flex:none;text-decoration:none;color:inherit;border-radius:var(--r-chip)}
+.slot:hover > *{border-color:var(--hair-3)}

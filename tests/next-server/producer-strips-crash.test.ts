@@ -10,7 +10,7 @@ import { parseAt } from "@gt/domain/door";
 import { jobIdSchema } from "@gt/domain/ids";
 import { enumerateCrashes } from "@gt/kernel/crash";
 import type { Effects } from "@gt/kernel/effects";
-import { ackLane } from "@gt/kernel/job-queue";
+import { laneHold } from "@gt/kernel/job-queue";
 import { recover, runJob } from "@gt/kernel/job-run";
 import { get, retry } from "@gt/kernel/job";
 import { reconcileJobSpend } from "@gt/kernel/spend/projection";
@@ -21,10 +21,10 @@ import { stripsProducer } from "../../lib/producers/strips.ts";
 
 // A strip job killed after every effect it performs: the run is interrupted (v1's
 // "running forever" closes - a dead driver is named, with its step), the seat.text lane
-// HOLDS until the operator acknowledges it, and the operator's retry finishes the run
+// holds nothing (the seat is free), and the operator's retry finishes the run
 // without buying a booked turn again. The one turn that may be bought twice is the one in
 // flight when the process died before its page landed: the interruption names it, which is
-// what the lane hold tells the operator to look at.
+// what the interruption tells the operator to look at.
 
 afterAll(() => disposeRoot());
 afterEach(() => closeAll());
@@ -38,7 +38,7 @@ const jid = (id: string) => {
 type CW = World & { runId: string; jobId: string; seat: Seat; interrupted: string[] };
 
 describe("a crash at every effect boundary", () => {
-  it("is interrupted, holds its lane, and an operator's retry finishes it without re-buying a booked turn", async () => {
+  it("is interrupted, holds no lane, and an operator's retry finishes it without re-buying a booked turn", async () => {
     const cap = fakeCapture();
     const bindingOf = (w: CW) => ({ seat: w.seat.seat, capture: cap.capture, kernel: w.strips });
     const report = await enumerateCrashes<CW>({
@@ -63,7 +63,8 @@ describe("a crash at every effect boundary", () => {
         if (!got.ok) throw got.error;
         if (got.value.job.state === "interrupted") {
           w.interrupted.push(got.value.job.interruption?.stage ?? "(between steps)");
-          if (!ackLane(w.kernel.store, "seat.text", operator).ok) throw new Error("ack refused");
+          const held = w.kernel.store.read((r) => laneHold(r, "seat.text"));
+          if (!held.ok || held.value !== undefined) throw new Error("the free seat lane was held");
           if (!retry(w.kernel.store, jid(w.jobId), operator).ok) throw new Error("retry refused");
         }
         const now = get(w.kernel.store, jid(w.jobId));

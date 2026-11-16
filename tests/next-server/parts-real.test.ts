@@ -11,11 +11,13 @@ import { blobStore } from "@gt/kernel/blob";
 import { openKernel, type Kernel } from "@gt/kernel/kernel";
 import { writePart } from "@gt/kernel/parts/driver";
 import { compose } from "@gt/kernel/records/write";
+import { launchProject, planReceipt } from "@gt/kernel/records/launch";
+import { loadJob, putJob } from "@gt/kernel/job";
 
 import { fixtureSource } from "../../lib/notebook/source.ts";
 import type { Store } from "@gt/kernel/store";
 
-import { makeRealPart } from "../../app/(studio)/projects/[id]/_part/real.ts";
+import { makeRealPart, NO_PRODUCER } from "../../app/(studio)/projects/[id]/_part/real.ts";
 import { LATER } from "../../app/(studio)/projects/[id]/_part/kinds.ts";
 import { partOpSchema, researchOpSchema, scriptOpSchema } from "../../app/(studio)/projects/[id]/_part/schema.ts";
 
@@ -182,6 +184,42 @@ describe("an act whose kind has no producer bound", () => {
     const album = universe("album-video", "a1", "take-salt-lines");
     const words = await album.port.actReceipt({ projectId: "a1", key: "words", act: "write-words" });
     expect(words.ok).toBe(true);
+  });
+
+  // fable-ten A: the act bar draws an unbound kind's acts as the need they have, never as a live
+  // button that fails at the receipt; a bound kind's acts are untouched.
+  it("draws every act of an unbound kind as needing a producer, and leaves a bound kind's acts as they were", async () => {
+    const { port } = universe("explainer", "ex2");
+    const article = await must(port.loadPart({ projectId: "ex2", key: "article" }));
+    expect(article.acts.length).toBeGreaterThan(0);
+    for (const a of article.acts) expect(a.needs).toContain(NO_PRODUCER);
+    const album = universe("album-video", "a2", "take-salt-lines");
+    for (const key of ["words", "render"]) {
+      const v = await must(album.port.loadPart({ projectId: "a2", key }));
+      const unbound = v.kind === "render";
+      expect(v.acts.length).toBeGreaterThan(0);
+      for (const a of v.acts) expect(a.needs.includes(NO_PRODUCER)).toBe(unbound);
+    }
+  });
+});
+
+describe("a part whose newest job failed (fable-ten A)", () => {
+  // The view's `failed` is the part's NEWEST job when it ended failed or interrupted, with the
+  // store's sentence verbatim; a newer job of the part, whatever its state, clears it.
+  it("fills `failed` from a failed latest job, and a later success clears it", async () => {
+    const { store, port } = universe("film/trailer", "fp1");
+    const receipt = await must(planReceipt(store, "fp1", { mode: "dry" }, { now: NOW }));
+    await must(launchProject(store, { id: "fp1", baseRev: 1, token: receipt.token, mode: "dry" }, OP, { now: NOW, dryOnly: true }));
+    const at = { projectId: "fp1", key: "research" };
+    expect("failed" in (await must(port.loadPart(at)))).toBe(false);
+    const error = "turn 1 of 2: the text seat answered 529 overloaded_error - Overloaded";
+    const job = await must(store.read((r) => loadJob(r, "job:part:fp1/research")));
+    await must(store.tx((t) => putJob(t, { ...job.job, state: "failed", error: { code: "unavailable", message: error } })));
+    expect((await must(port.loadPart(at))).failed).toEqual({ jobId: "job:part:fp1/research", state: "failed", error });
+    // A retry that landed: a newer job of the same part, done.
+    const retry = { ...job.job, id: "job:part:fp1/research:run-research~2", state: "done" as const };
+    await must(store.tx((t) => t.run("INSERT INTO jobs (id, lane, state, ceiling_usd, record, ord) VALUES (?, ?, ?, NULL, ?, 0)", retry.id, retry.lane, retry.state, JSON.stringify(retry))));
+    expect("failed" in (await must(port.loadPart(at)))).toBe(false);
   });
 });
 

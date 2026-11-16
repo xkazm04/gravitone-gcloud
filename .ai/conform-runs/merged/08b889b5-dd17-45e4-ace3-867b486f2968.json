@@ -1,0 +1,216 @@
+{
+ "schema": "conform-run/1",
+ "worker": "08b889b5-dd17-45e4-ace3-867b486f2968",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T04:58:01.062723+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-screen",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/scout/_port/actions.ts:30 The screen's write flow (pause, resume and split, through the server action, port and redraw) is driven by no lane: no test imports the actions or realScout, and tests/live only loads /scout for the header and the legibility walk, so a wiring break here stays green while lib steer tests pass underneath.",
+   "techniques": [
+    {
+     "technique": "live-app-harness",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/scout/_port/actions.ts:30 git grep finds no test or live spec reaching pauseBranchAction, setSplitAction, serverScout or realScout; floor.live only asserts the header NextButton on /scout, and the live server runs GRAVITONE_PRODUCE_SIDE=fixture. The style atelier has the journey this screen lacks."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/scout/_port/fixture.ts:47 The fixture side runs the real builder's pure half rather than restating it. withVenture is a declared fixture-only addition."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/scout/_port/fixture.ts:24 In-memory generated universe built once at module load, the cheapest tier for screen rendering."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:8851 The one screen-level pin has a seeded mutant. scout-venture-filter.test.ts has no registry entry, so byVenture's tests have no recorded control."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/scout-pile-sources.test.ts:11 The set is widened to a value no private copy holds, so a call site keeping its own spelling disagrees; this pins adoption as well as the predicate."
+    }
+   ]
+  },
+  {
+   "context": "trailer-structure-engine",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/script/trailer/plan.ts:108 The model-plan refusal layer in plan.ts, and notes.ts beside it, are imported only by pipeline/trailer-structure-regression.mts (git grep over lib, app, packages, workers, pipeline, tests and .claude/skills), so its plan cases prove a path no production entry point takes.",
+   "techniques": [
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "deviation",
+     "evidence": "lib/script/trailer/plan.ts:108 A walk from production entry points finds zero calls to parseTrailerPlan, replayTrailerPlan, structureDelta or notesFromFindings; only the regression script calls them. The green count is evidence about a library."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "pipeline/trailer-structure-regression.mts:513 The consumed_by check matches a bare identifier against unstripped source, so a comment naming the symbol satisfies a claim about the code that reads the value. Its floor on line 515 is sound; the needle is the defect."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "pipeline/trailer-structure-regression.mts:515 The walk fails when it selects zero claims."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "pipeline/trailer-structure-regression.mts:22 Cases are fixtures built to be broken, with an opposite control against false findings."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "pipeline/trailer-structure-regression.mts:67 In-memory baseline cut; each case is one edit from it, with no environment cost."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:25 Adoption is asserted at each of the three readers, not only ops.ts logFromRecord."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/trailer-cut-log-readers.test.ts:19 The origin cut comes from the shipped composeCut, not a test-only constructor."
+    }
+   ]
+  },
+  {
+   "context": "job-queue-and-leases",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/test/job-fixture.ts:32 openWorld runs the migration chain for every world and the job suites call it once per test (job.test.ts 21 uses of world(), job.queue.test.ts 13), though lease.test.ts and dryrun.test.ts already use the kernel's build-once templateStores; the cost was not measured here.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/test/job.test.ts:16 Rebuild per test where the build-once copy helper exists one import away."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/job-fixture.ts:31 Same openStore (WAL, pragmas), migrate and liveEffects as production. Caveat: KERNEL is a four-module subset under a neutral name, though a missing table fails loudly."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/job.worker.test.ts:103 Capacity is proved with gated producers and observed in-flight sets. Caveat: the job.test.ts heartbeat cases still lean on slow(150) with heartbeatMs 20."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "tests/mutants-unit/registry.ts:363 The crash harness itself has a seeded mutant, and each job and lease test file has entries."
+    },
+    {
+     "technique": "platform-quirk-absorption",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/helpers.ts:30 A missing interpreter becomes a named failure on CI instead of a green skip."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/effects.ts:18 The effect port is a value passed to the driver, not a shared singleton."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "workers/worker.ts:292 The worker entry point calls the same workLoop the tests drive."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/test/job.kill.test.ts:89 The log names which process performed each step, so the answer carries its producer."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/worker.test.ts:68 The worker's real runner is spawned as a process, and job.kill.test.ts kills a real child mid-step."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "domain-decision-board-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "style-atelier",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:58:01.062723+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "live-app-harness",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "scout-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:58:01.062723+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "derived-selection-must-be-measured",
+    "fixture-economics",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "trailer-structure-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:58:01.062723+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "fixture-economics",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests",
+    "platform-quirk-absorption",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "job-queue-and-leases",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

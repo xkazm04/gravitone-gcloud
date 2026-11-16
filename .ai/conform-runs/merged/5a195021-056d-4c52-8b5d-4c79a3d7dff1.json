@@ -1,0 +1,95 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5a195021-056d-4c52-8b5d-4c79a3d7dff1",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-11-05T22:19:49.843035+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "sound-hunt-and-measure",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/sound/knowledge.ts:81 strengthsOf sorts provider \u00d7 term cells by raw keep rate, with only an n \u2265 3 floor and no check of spread against noise, so a 3-of-3 cell ranks above a 29-of-30 cell. That sorted list goes into params.json and the hunt prompt's top-24 STRENGTHS, which publishes an order that its own sample sizes cannot resolve.",
+   "techniques": [
+    {
+     "technique": "resolution-precondition",
+     "verdict": "deviation",
+     "evidence": "lib/sound/knowledge.ts:81 The order over providers and terms is published with no between- vs within-condition spread check. At n=3 the binomial noise swamps every gap, but the sort still puts 3/3 above 29/30."
+    },
+    {
+     "technique": "failure-signatures-beside-the-pass-rate",
+     "verdict": "conformant",
+     "evidence": "lib/sound/knowledge.ts:178 Every strength row prints the most common rejection defect next to the keep rate (computed per case in insights.ts computeInsights), so two equal rates can be told apart by how they failed."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "lib/sound/measure.ts:9 DSP measures the mechanical properties (duration, tempo, key, energy) and does not judge them. Key and tempo are withheld for sfx, where they would mean nothing. Aesthetic quality goes to the human rubric."
+    }
+   ],
+   "registryProposal": "The resolution-precondition technique assumes repeated trials per condition. Here each 'condition' (provider \u00d7 term) is a population of distinct, human-judged generations, so the within-condition SD is a binomial interval on keep rate. The technique could name that case (Wilson/Beta interval overlap as the resolution test for keep-rate rankings) explicitly."
+  },
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/page.tsx:1 /kit renders fixture specimens of @gt/ui components and runs no model against any scenario. Searching app/(studio)/kit/ for benchmark, scenario, 'pass rate' and 'pass@' found nothing. 'judge' and 'rubric' appear only as static specimen labels (e.g. Contract.tsx's 'dojo judge AUC 0.69' chip, the RubricCard specimen), so there is no harness here.",
+   "techniques": [],
+   "absenceTerms": [
+    "benchmark",
+    "scenario",
+    "pass@"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "style-trials-cull",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "notebook-contract-validation",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "board-scout-spend-sources",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-05T22:19:49.843035+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "failure-signatures-beside-the-pass-rate",
+    "resolution-precondition"
+   ],
+   "deviations": 1,
+   "context": "sound-hunt-and-measure",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T22:19:49.843035+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

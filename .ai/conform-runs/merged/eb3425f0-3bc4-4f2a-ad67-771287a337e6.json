@@ -1,0 +1,246 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eb3425f0-3bc4-4f2a-ad67-771287a337e6",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-09T04:24:49.209536+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:11 A music cue can only start and end on scene boundaries, so it cannot enter or exit mid-scene or overhang, which the spotting technique requires its address to allow.",
+   "techniques": [
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:37 The only span edit names a first and last scene; ScoreSpot holds sceneIds with no offset. Retiming re-derives correctly, but a cue cannot resolve inside a scene and silences are counted, never decided."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 A cue the vendor refused and a cue never rendered both draw as missing; CueView has no refusal field. Picture and voice gaps are honest (Cut.tsx:78 Ghost, why on the block)."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:102 The status chip reads a stored status. deriveTimeline and explainerCut emit only ok or missing, and shownStatus only clears drift, so a clip nudged +300 ms still reads ok. The \u00b150 ms nudge, signed readout and snap-to-mark at Cut.tsx:114-118 do conform."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:169 Picture, voice and music lanes on one clock, blocks at true start and length, drawn from the same drawnS the bench edits. No legend names the block looks."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The editor draws a computed turn and draws no mark when there is none; it types no time."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:85 An edit names an element and a property as an op on the record; the editor never touches pixels."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 The preview asks for a frame by index and seed from the clock timestamp; the compositor keeps no per-frame state."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:75 A plate blob that fails to load leaves a blank monitor with no error, and its accessible name still claims the plate. Render.tsx:39 already handles this same defect for the poster."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:27 The same compositor previews on canvas before the priced mp4 job runs."
+    }
+   ]
+  },
+  {
+   "context": "part-port-fixtures",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The score view re-derives the act-two turn with its own copy of the rule the cut view gets from turnOf, so one structural fact has two derivations that can age apart, and two matching scenes silently take the first.",
+   "techniques": [
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 Computed from the material with absence kept as null, but it duplicates turnOf (fixtureCut.ts:143), against one derivation for all consumers, and surfaces no duplicate-turn defect."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:183 The stored cue address is a list of whole scenes with no offset, so no cue can resolve inside a scene."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 shownStatus only turns drift into ok at zero. Project clips are never drift, so a non-zero offset never shows as off its mark and the finish line's drift row stays 0. The offset itself persists as data and the draw reads it."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn position and the bench's offset are one value."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 The cut compiles to a deterministic document whose hash names the export."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:250 Failing finish checks refuse an aspect render before it is priced, with the deny sentences."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:221 A voice take's only timed span is the whole line; no cue is placed inside a clip, which the technique excludes."
+    }
+   ]
+  },
+  {
+   "context": "audio-text-producers",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "packages/producers/src/score/define.ts:61 A cue the vendor refused has no state of its own, so the plan job treats it as a cue never rendered and asks for it again instead of labelling the region refused-silence.",
+   "techniques": [
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/score/define.ts:31 The cue view knows only taken or not. lib/music/errors.ts:5-7 says a refusal reverts the cue to refused-silence, but lib/producers/score.ts ends it as a job failure and writes nothing on the spot. The brief itself does carry purpose and tempo (cueTakeRequest)."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/voice/define.ts:32 Scoped to no phantom capability: a missing engine is stated as a seam and refused. The vendor-refused cue state is the music-spotting deviation above."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/voice/define.ts:69 A take with no bytes fails by name before the chain runs, rather than rendering silence."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/mv/plan.ts:17 The cheap validated step runs before the multi-minute render, in STEP_ORDER."
+    },
+    {
+     "technique": "alignment-names-its-text",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/voice/define.ts:7 Each line is one unit held whole; no cue is derived from a position inside a narration clip."
+    }
+   ]
+  },
+  {
+   "context": "ledger-v1-sources",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/ledger/v1/sources/mv.ts:183 Each source projects v1 job records into events, live jobs, a weir and tallies with no lanes or clock of a cut; a case-insensitive search of lib/ledger/v1/sources for the absence terms found no hits.",
+   "techniques": [
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "not-applicable",
+     "evidence": "lib/ledger/v1/sources/clips.ts:37 Refused is carried here as a job's terminal status in a ledger event; there is no region of a clock for it to be drawn on."
+    }
+   ],
+   "absenceTerms": [
+    "timeline",
+    "offsetMs",
+    "spotting",
+    "compileCut",
+    "frameIndex"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "These text-side editors (scripts, briefs, research, words) are not an assembly surface, so not-applicable is the likely verdict, but this context shares its directory with Cut.tsx and CutClock.tsx. A fair absence search over _edit/ would hit those siblings, and picking only terms that happen to miss them would be gaming the check. I read the headers of Beats, Script, Scenarios, Words and Research and found no timeline of a cut, so I am declining rather than guessing a state."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:24:49.209536+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:24:49.209536+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:24:49.209536+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "alignment-names-its-text",
+    "gap-and-refusal-honesty",
+    "music-spotting-against-picture",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "audio-text-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:24:49.209536+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "gap-and-refusal-honesty"
+   ],
+   "deviations": 0,
+   "context": "ledger-v1-sources",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

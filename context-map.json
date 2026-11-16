@@ -363,7 +363,7 @@
         "kernel-store-and-events"
       ],
       "db_tables": [],
-      "description": "The Library's kernel side: asset schema, write path, queries with clause builders, counts, detail and measures, plus the ventures schema and store. Serves the Library screens from the kernel store.",
+      "description": "The Library's kernel side: asset schema, write path, queries with clause builders, counts, detail and measures, song scores and triage, plus the ventures schema and store. Serves the Library screens from the kernel store.",
       "entry_points": [
         "packages/kernel/src/library/core.ts",
         "packages/kernel/src/library/query.ts"
@@ -378,6 +378,8 @@
         "packages/kernel/src/library/query.ts",
         "packages/kernel/src/library/schema.ts",
         "packages/kernel/src/library/write.ts",
+        "packages/kernel/src/library/songScores.ts",
+        "packages/kernel/src/library/triage.ts",
         "packages/kernel/src/ventures/schema.ts",
         "packages/kernel/src/ventures/store.ts"
       ],
@@ -386,11 +388,12 @@
       "id": "4b7d0aa8-b99a-48cb-86b7-986a7c99f9d5",
       "keywords": [
         "library",
-        "ventures",
-        "query",
-        "schema"
+        "assets",
+        "song scores",
+        "triage",
+        "ventures"
       ],
-      "last_written_at": "2026-10-26T08:37:01.637762600+00:00",
+      "last_written_at": "2026-11-08T12:27:51.581371700+00:00",
       "name": "asset-library-store",
       "pinned": false,
       "tech_stack": [
@@ -408,7 +411,7 @@
         "audio-insight-lessons"
       ],
       "db_tables": [],
-      "description": "The audio studio route where tracks are arranged, played back and dragged into lanes. The page reads through the route's port, and the Arrange and AudioLane components drive card drag, transport and desk actions. The return route receives results coming back from the audio vendor flow.",
+      "description": "The audio studio route where tracks are arranged, played back and dragged into lanes. The page reads through the route's port, and the Arrange component drives card drag, transport and desk actions (AudioLane was removed). Local acts and local reads serve the local-score path, and the return route receives results from the audio vendor flow.",
       "entry_points": [
         "app/(studio)/audio/page.tsx",
         "app/(studio)/audio/_audio/Arrange.tsx"
@@ -417,7 +420,6 @@
         "app/(studio)/audio/page.tsx",
         "app/(studio)/audio/return/route.ts",
         "app/(studio)/audio/_audio/Arrange.tsx",
-        "app/(studio)/audio/_audio/AudioLane.tsx",
         "app/(studio)/audio/_audio/actions.ts",
         "app/(studio)/audio/_audio/arrangeActs.ts",
         "app/(studio)/audio/_audio/arrangeRead.ts",
@@ -427,7 +429,9 @@
         "app/(studio)/audio/_audio/references.ts",
         "app/(studio)/audio/_audio/returnClient.ts",
         "app/(studio)/audio/_audio/useCardDrag.ts",
-        "app/(studio)/audio/_audio/useTransport.ts"
+        "app/(studio)/audio/_audio/useTransport.ts",
+        "app/(studio)/audio/_audio/localActs.ts",
+        "app/(studio)/audio/_audio/localRead.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
@@ -435,15 +439,12 @@
       "keywords": [
         "audio",
         "arrange",
-        "lane",
+        "lanes",
         "transport",
-        "drag",
-        "desk",
-        "references",
-        "return",
-        "studio"
+        "local score",
+        "drag"
       ],
-      "last_written_at": "2026-10-25T15:57:03.048475600+00:00",
+      "last_written_at": "2026-11-08T12:27:51.580889100+00:00",
       "name": "audio-arrange-desk",
       "pinned": false,
       "tech_stack": [
@@ -462,7 +463,7 @@
         "audio-lessons-measures"
       ],
       "db_tables": [],
-      "description": "Authoring side of the audio studio: prompts, seeds, briefs and their deltas, batch forms, engine and draft lists, references and variations. Each form pairs with a pure model (brief.ts, batch.ts, recipe.ts, variations.ts) so state is data. Output goes to the audio producers through the route port.",
+      "description": "Authoring side of the audio studio: prompts, briefs and their deltas, batch forms, engine and draft lists, references and variations. Each form pairs with a pure model (brief.ts, batch.ts, recipe.ts, variations.ts) so state is data. SeedComposer and TermRail were removed.",
       "entry_points": [
         "packages/ui/src/components/audio/SeedComposer.tsx",
         "packages/ui/src/components/audio/brief.ts"
@@ -480,33 +481,151 @@
         "packages/ui/src/components/audio/DraftList.tsx",
         "packages/ui/src/components/audio/EngineList.tsx",
         "packages/ui/src/components/audio/LabelPrompt.tsx",
-        "packages/ui/src/components/audio/SeedComposer.tsx",
         "packages/ui/src/components/audio/ReferenceList.tsx",
         "packages/ui/src/components/audio/variations.ts",
         "packages/ui/src/components/audio/VariationList.tsx",
-        "packages/ui/src/components/audio/recipe.ts",
-        "packages/ui/src/components/audio/TermRail.tsx"
+        "packages/ui/src/components/audio/recipe.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "03bbdce3-27bb-4361-947c-ba8f0d70fa2c",
       "keywords": [
+        "audio",
         "brief",
         "prompt",
-        "seed",
         "batch",
         "variations",
-        "recipe",
-        "engine",
-        "draft"
+        "recipe"
       ],
-      "last_written_at": "2026-10-25T15:57:03.048623800+00:00",
+      "last_written_at": "2026-11-08T12:27:51.581206500+00:00",
       "name": "audio-composer-briefs",
       "pinned": false,
       "tech_stack": [
         "React",
         "TypeScript",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "Server actions in _cover/acts.ts; read through _cover/read.ts",
+      "business_feature": "Audio Cover Desk",
+      "category": "ui",
+      "cross_refs": [
+        "cover-sound-and-producers",
+        "audio-cover-sleeve-and-routes",
+        "domain-audio-cover-yue2"
+      ],
+      "db_tables": [],
+      "description": "The Cover tab of the audio studio, where a source track is linked or uploaded, briefed, sent for a cover render and judged. The desk holds the source, brief, score and after-pick stages with an A/B comparison, driven by hooks and a fixture side. The cover port reads and acts on the cover store and sends jobs to the cover producers.",
+      "entry_points": [
+        "app/(studio)/audio/_cover/Cover.tsx",
+        "app/(studio)/audio/_cover/desk/useDesk.ts"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/_cover/Cover.tsx",
+        "app/(studio)/audio/_cover/LazyCover.tsx",
+        "app/(studio)/audio/_cover/acts.ts",
+        "app/(studio)/audio/_cover/actsCore.ts",
+        "app/(studio)/audio/_cover/contract.ts",
+        "app/(studio)/audio/_cover/read.ts",
+        "app/(studio)/audio/_cover/upload.ts",
+        "app/(studio)/audio/_cover/desk/After.tsx",
+        "app/(studio)/audio/_cover/desk/Score.tsx",
+        "app/(studio)/audio/_cover/desk/Source.tsx",
+        "app/(studio)/audio/_cover/desk/abElements.ts",
+        "app/(studio)/audio/_cover/desk/audio.ts",
+        "app/(studio)/audio/_cover/desk/cover.module.css",
+        "app/(studio)/audio/_cover/desk/coverFlow.ts",
+        "app/(studio)/audio/_cover/desk/fixture.ts",
+        "app/(studio)/audio/_cover/desk/fixtureRecords.ts",
+        "app/(studio)/audio/_cover/desk/fixtureSound.ts",
+        "app/(studio)/audio/_cover/desk/send.ts",
+        "app/(studio)/audio/_cover/desk/useAB.ts",
+        "app/(studio)/audio/_cover/desk/useAfterPick.ts",
+        "app/(studio)/audio/_cover/desk/useCover.ts",
+        "app/(studio)/audio/_cover/desk/useDesk.ts",
+        "app/(studio)/audio/_cover/desk/words.ts",
+        "app/(studio)/audio/_cover/desk/brief/Brief.tsx",
+        "app/(studio)/audio/_cover/desk/brief/brief.ts",
+        "app/(studio)/audio/_cover/desk/brief/readClock.ts",
+        "app/(studio)/audio/_cover/desk/link/LinkSource.tsx"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "48aa7d61-42fe-4e07-bc0e-0da7de023d71",
+      "keywords": [
+        "cover",
+        "remix",
+        "source",
+        "brief",
+        "A/B",
+        "desk",
+        "upload"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.549146600+00:00",
+      "name": "audio-cover-desk",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "GET/POST (studio)/audio/cover/{file,link,remix,source}, audition, reference, sketch, studio/take; GET /api/sound/ab/[pairId]/[arm]",
+      "business_feature": "Cover Sleeve Desk",
+      "category": "ui",
+      "cross_refs": [
+        "audio-cover-desk",
+        "cover-sound-and-producers"
+      ],
+      "db_tables": [],
+      "description": "The Sleeve desk of the Cover tab, where takes are laid out in a crate and a take grid, compared pairwise, and a winner is picked on stations. Also the file doors the audio studio serves: cover file, link, remix and source, audition, reference, sketch, studio take, song lab reference and the blind A/B arm stream.",
+      "entry_points": [
+        "app/(studio)/audio/_cover/desk/sleeve/SleeveDesk.tsx"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/_cover/desk/sleeve/Compare.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/Crate.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/Groove.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/SleeveDesk.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/Stations.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/TakeGrid.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/WinnerCard.tsx",
+        "app/(studio)/audio/_cover/desk/sleeve/peaks.ts",
+        "app/(studio)/audio/_cover/desk/sleeve/sleeve.module.css",
+        "app/(studio)/audio/_cover/desk/sleeve/stations.ts",
+        "app/(studio)/audio/_cover/desk/sleeve/usePair.ts",
+        "app/(studio)/audio/cover/file/route.ts",
+        "app/(studio)/audio/cover/link/route.ts",
+        "app/(studio)/audio/cover/remix/route.ts",
+        "app/(studio)/audio/cover/source/route.ts",
+        "app/(studio)/audio/audition/route.ts",
+        "app/(studio)/audio/reference/route.ts",
+        "app/(studio)/audio/sketch/route.ts",
+        "app/(studio)/audio/songlab/reference/route.ts",
+        "app/(studio)/audio/studio/take/route.ts",
+        "app/api/sound/ab/[pairId]/[arm]/route.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "d34bdb99-d5d5-431b-89ee-0b7da9b9c24f",
+      "keywords": [
+        "sleeve",
+        "crate",
+        "compare",
+        "winner",
+        "stations",
+        "audio routes",
+        "blind ab"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.549446400+00:00",
+      "name": "audio-cover-sleeve-and-routes",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
       ]
     },
     {
@@ -703,6 +822,234 @@
         "React",
         "TypeScript",
         "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Local Score and Listening",
+      "category": "lib",
+      "cross_refs": [
+        "sound-hunt-and-measure",
+        "suno-driver-queue",
+        "domain-audio-cover-yue2"
+      ],
+      "db_tables": [],
+      "description": "Local-first scoring and listening for audio: the sidecar and phrase tools, atlas, layers, render worker and acceptance ledger, local score plan and verbs, score proposals, audio preview, triage context, Suno facts and listen prompts, and the voice-FX proposer with its stand-in and producer.",
+      "entry_points": [
+        "lib/sound/localScore.ts",
+        "lib/audio/sidecar.ts"
+      ],
+      "file_paths": [
+        "lib/audio/acceptLedger.ts",
+        "lib/audio/atlas.ts",
+        "lib/audio/layers.ts",
+        "lib/audio/reference.ts",
+        "lib/audio/renderWorker.ts",
+        "lib/audio/sidecar.ts",
+        "lib/audio/sidecarPhrase.ts",
+        "lib/sound/localScore.ts",
+        "lib/sound/localScorePlan.ts",
+        "lib/sound/localScoreVerbs.ts",
+        "lib/sound/scorePropose.ts",
+        "lib/sound/audioPreview.ts",
+        "lib/sound/triageContext.ts",
+        "lib/sound/suno/facts.ts",
+        "lib/sound/suno/listen.ts",
+        "lib/sound/suno/listenPrompt.ts",
+        "lib/sound/voiceFx/propose.ts",
+        "lib/sound/voiceFx/standIn.ts",
+        "lib/producers/voiceFx.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "928a52be-b8cd-42e6-bc4a-3d3149bd4609",
+      "keywords": [
+        "local score",
+        "sidecar",
+        "atlas",
+        "layers",
+        "voice fx",
+        "suno listen",
+        "triage"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550796400+00:00",
+      "name": "audio-local-score-and-listen",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Node.js",
+        "Python sidecar"
+      ]
+    },
+    {
+      "api_surface": "Server actions in _songlab/acts.ts",
+      "business_feature": "Song Lab",
+      "category": "ui",
+      "cross_refs": [
+        "ui-songlab-components",
+        "yue2-lab"
+      ],
+      "db_tables": [],
+      "description": "The Song Lab tab of the audio studio, where a director band, draw tabs, a bracket and blind matches steer which song draws survive. The screen reads through a _port that switches fixture or real, builds the fold of draws and director words, and sends acts. URL state and a book of drafts live beside it.",
+      "entry_points": [
+        "app/(studio)/audio/_songlab/SongLab.tsx",
+        "app/(studio)/audio/_songlab/_port/port.ts"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/_songlab/Section.tsx",
+        "app/(studio)/audio/_songlab/SongLab.module.css",
+        "app/(studio)/audio/_songlab/SongLab.tsx",
+        "app/(studio)/audio/_songlab/acts.ts",
+        "app/(studio)/audio/_songlab/book.ts",
+        "app/(studio)/audio/_songlab/fixtureActs.ts",
+        "app/(studio)/audio/_songlab/read.ts",
+        "app/(studio)/audio/_songlab/url.ts",
+        "app/(studio)/audio/_songlab/_port/build.ts",
+        "app/(studio)/audio/_songlab/_port/director.ts",
+        "app/(studio)/audio/_songlab/_port/fixture.ts",
+        "app/(studio)/audio/_songlab/_port/fixtureData.ts",
+        "app/(studio)/audio/_songlab/_port/fixtureFold.ts",
+        "app/(studio)/audio/_songlab/_port/ledger.ts",
+        "app/(studio)/audio/_songlab/_port/port.ts",
+        "app/(studio)/audio/_songlab/_port/shape.ts",
+        "app/(studio)/audio/_songlab/_port/words.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "e294db9c-78bc-49c1-a8cf-4e0f0afe6fd4",
+      "keywords": [
+        "songlab",
+        "director",
+        "draws",
+        "bracket",
+        "blind match",
+        "port",
+        "fixture"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.549668100+00:00",
+      "name": "audio-songlab-screen",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "Server actions in _live; port in _port/port.ts",
+      "business_feature": "Audio Studio Conversation",
+      "category": "ui",
+      "cross_refs": [
+        "audio-studio-view",
+        "ui-studio-desk-and-suno",
+        "domain-audio-cover-yue2"
+      ],
+      "db_tables": [],
+      "description": "The conversational Studio tab, where the operator talks and the agent makes the track. The host runs rooms, turns, conversation, presence, press and Suno hand-offs; the live layer holds acts, say, taste and Suno acts; a port with fixture sessions and ledger supplies the data.",
+      "entry_points": [
+        "app/(studio)/audio/studio/Studio.tsx",
+        "app/(studio)/audio/studio/_host/StudioHost.tsx"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/studio/Studio.tsx",
+        "app/(studio)/audio/studio/url.ts",
+        "app/(studio)/audio/studio/_host/StudioHost.tsx",
+        "app/(studio)/audio/studio/_host/conversation.ts",
+        "app/(studio)/audio/studio/_host/live.ts",
+        "app/(studio)/audio/studio/_host/press.ts",
+        "app/(studio)/audio/studio/_host/rooms.tsx",
+        "app/(studio)/audio/studio/_host/studio.module.css",
+        "app/(studio)/audio/studio/_host/suno.ts",
+        "app/(studio)/audio/studio/_host/turns.ts",
+        "app/(studio)/audio/studio/_host/types.ts",
+        "app/(studio)/audio/studio/_host/upload.ts",
+        "app/(studio)/audio/studio/_host/variants.ts",
+        "app/(studio)/audio/studio/_live/acts.ts",
+        "app/(studio)/audio/studio/_live/presence.ts",
+        "app/(studio)/audio/studio/_live/say.ts",
+        "app/(studio)/audio/studio/_live/sunoActs.ts",
+        "app/(studio)/audio/studio/_live/taste.ts",
+        "app/(studio)/audio/studio/_port/fixture.ts",
+        "app/(studio)/audio/studio/_port/fixtureSessions.ts",
+        "app/(studio)/audio/studio/_port/ledger.ts",
+        "app/(studio)/audio/studio/_port/port.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "bb09b53f-0faf-495c-8c22-9bbfedbef48d",
+      "keywords": [
+        "studio",
+        "conversation",
+        "turns",
+        "rooms",
+        "suno",
+        "presence",
+        "taste"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.549872300+00:00",
+      "name": "audio-studio-host",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Audio Studio View",
+      "category": "ui",
+      "cross_refs": [
+        "audio-studio-host",
+        "ui-studio-desk-and-suno"
+      ],
+      "db_tables": [],
+      "description": "The view half of the Studio tab: the thread of cards and sentences, the lanes and master strip, the side drawer, the Suno panel, the track and the try-instead alternatives. A registry maps view kinds to components, and a playhead hook syncs playback.",
+      "entry_points": [
+        "app/(studio)/audio/studio/_view/View.tsx",
+        "app/(studio)/audio/studio/_view/registry.tsx"
+      ],
+      "file_paths": [
+        "app/(studio)/audio/studio/_view/Card.tsx",
+        "app/(studio)/audio/studio/_view/Lanes.tsx",
+        "app/(studio)/audio/studio/_view/Sentence.tsx",
+        "app/(studio)/audio/studio/_view/Side.tsx",
+        "app/(studio)/audio/studio/_view/Suno.tsx",
+        "app/(studio)/audio/studio/_view/Track.tsx",
+        "app/(studio)/audio/studio/_view/TryInstead.tsx",
+        "app/(studio)/audio/studio/_view/View.tsx",
+        "app/(studio)/audio/studio/_view/ctx.ts",
+        "app/(studio)/audio/studio/_view/drawer.module.css",
+        "app/(studio)/audio/studio/_view/lanes.module.css",
+        "app/(studio)/audio/studio/_view/master.module.css",
+        "app/(studio)/audio/studio/_view/model.ts",
+        "app/(studio)/audio/studio/_view/registry.tsx",
+        "app/(studio)/audio/studio/_view/side.module.css",
+        "app/(studio)/audio/studio/_view/strip.module.css",
+        "app/(studio)/audio/studio/_view/suno.module.css",
+        "app/(studio)/audio/studio/_view/thread.ts",
+        "app/(studio)/audio/studio/_view/usePlayhead.ts",
+        "app/(studio)/audio/studio/_view/view.module.css"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "de9066f2-b74b-43d1-a936-e7dfeb229f7c",
+      "keywords": [
+        "thread",
+        "lanes",
+        "card",
+        "drawer",
+        "playhead",
+        "registry",
+        "suno"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550097700+00:00",
+      "name": "audio-studio-view",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
       ]
     },
     {
@@ -981,6 +1328,60 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Cover Production",
+      "category": "lib",
+      "cross_refs": [
+        "audio-cover-desk",
+        "yue2-lab",
+        "domain-audio-cover-yue2"
+      ],
+      "db_tables": [],
+      "description": "The library and producer side of covers: cover store, rights, cut, hrefs, YouTube link parsing, YUE2 cover calls and the brief that listens to, measures and writes a cover direction. Bound producers (cover, cover brief) run these as kernel jobs, the pure definitions price them, and a feed projects covers into the Library.",
+      "entry_points": [
+        "lib/sound/cover/store.ts",
+        "lib/producers/cover.ts"
+      ],
+      "file_paths": [
+        "lib/sound/cover/brief/listen.ts",
+        "lib/sound/cover/brief/measure.ts",
+        "lib/sound/cover/brief/write.ts",
+        "lib/sound/cover/cut.ts",
+        "lib/sound/cover/href.ts",
+        "lib/sound/cover/link/parse.ts",
+        "lib/sound/cover/link/youtube.ts",
+        "lib/sound/cover/rights.ts",
+        "lib/sound/cover/store.ts",
+        "lib/sound/cover/yue2.ts",
+        "lib/producers/cover.ts",
+        "lib/producers/coverActs.ts",
+        "lib/producers/coverBrief.ts",
+        "lib/producers/coverBriefActs.ts",
+        "packages/producers/src/cover/define.ts",
+        "packages/producers/src/cover-brief/define.ts",
+        "lib/library/feeds/cover.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "ddcec47d-b93a-4be2-894e-95eba76e329c",
+      "keywords": [
+        "cover",
+        "rights",
+        "youtube link",
+        "brief",
+        "yue2",
+        "producer",
+        "library feed"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550275500+00:00",
+      "name": "cover-sound-and-producers",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Next.js"
+      ]
+    },
+    {
+      "api_surface": "",
       "business_feature": "Run Cull Desk",
       "category": "ui",
       "cross_refs": [
@@ -1038,7 +1439,7 @@
         "part-editor-media-cut-score"
       ],
       "db_tables": [],
-      "description": "Cut documents, timeline derivation, edits, offsets, the explainer and ads finish, plus the cut, ad and music-video exports and the headless export.",
+      "description": "Cut documents, timeline derivation, edits, offsets, narration mix, the explainer and ads finish, plus the cut, ad and music-video exports and the headless export.",
       "entry_points": [
         "lib/cut/cutDocument.ts"
       ],
@@ -1050,6 +1451,7 @@
         "lib/cut/explainer.ts",
         "lib/cut/finishLine.ts",
         "lib/cut/offsets.ts",
+        "lib/cut/narrationMix.ts",
         "lib/cutExport.ts",
         "lib/adExports.ts",
         "lib/adOverlayPage.ts",
@@ -1064,11 +1466,11 @@
         "cut",
         "timeline",
         "export",
+        "narration",
         "ads",
-        "explainer",
         "render"
       ],
-      "last_written_at": "2026-10-25T16:01:26.394045300+00:00",
+      "last_written_at": "2026-11-08T12:27:51.581670+00:00",
       "name": "cut-and-export",
       "pinned": false,
       "tech_stack": [
@@ -1126,6 +1528,67 @@
         "TypeScript",
         "SQLite",
         "zod 4.6"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Audio Domain Model",
+      "category": "lib",
+      "cross_refs": [
+        "domain-decision-board-core",
+        "yue2-lab",
+        "cover-sound-and-producers"
+      ],
+      "db_tables": [],
+      "description": "Domain types and zod doors for audio work: accept, FX with labels, intent, score with edit and templates, Studio doors, events and kinds, Suno, triage with words, YUE2 with its lab and jobs schemas, channel and cover. Everything enters through the @gt/domain door and feeds the kernel, producers and screens.",
+      "entry_points": [
+        "packages/domain/src/audio.studio.ts",
+        "packages/domain/src/cover.ts"
+      ],
+      "file_paths": [
+        "packages/domain/src/audio.accept.ts",
+        "packages/domain/src/audio.fx.label.ts",
+        "packages/domain/src/audio.fx.ts",
+        "packages/domain/src/audio.intent.schema.ts",
+        "packages/domain/src/audio.score.edit.ts",
+        "packages/domain/src/audio.score.templates.ts",
+        "packages/domain/src/audio.score.ts",
+        "packages/domain/src/audio.studio.door.ts",
+        "packages/domain/src/audio.studio.events.ts",
+        "packages/domain/src/audio.studio.kinds.ts",
+        "packages/domain/src/audio.studio.ts",
+        "packages/domain/src/audio.suno.schema.ts",
+        "packages/domain/src/audio.suno.ts",
+        "packages/domain/src/audio.triage.ts",
+        "packages/domain/src/audio.triage.words.ts",
+        "packages/domain/src/audio.yue2.jobs.schema.ts",
+        "packages/domain/src/audio.yue2.lab.schema.ts",
+        "packages/domain/src/audio.yue2.lab.ts",
+        "packages/domain/src/audio.yue2.schema.ts",
+        "packages/domain/src/audio.yue2.ts",
+        "packages/domain/src/channel.ts",
+        "packages/domain/src/cover.schema.ts",
+        "packages/domain/src/cover.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "1ed94544-2c9f-4916-a970-e6e066124510",
+      "keywords": [
+        "audio",
+        "cover",
+        "yue2",
+        "suno",
+        "triage",
+        "score",
+        "studio events",
+        "zod"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.551715800+00:00",
+      "name": "domain-audio-cover-yue2",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "zod"
       ]
     },
     {
@@ -1843,7 +2306,7 @@
         "imaging-vendor-providers-and-video"
       ],
       "db_tables": [],
-      "description": "Entry layer for image generation: request handlers, the router that picks a vendor, and the pricing, budget, forecast and receipt logic that prices every job before it runs. Shared plumbing (env, http, json, log, safe-URL checks, typed errors) keeps vendor calls bounded and dry-run by default. Providers and video clips plug in underneath.",
+      "description": "Entry layer for image generation: request handlers, the router that picks a vendor, the client, and the pricing, budget, forecast and receipt logic that prices every job before it runs. Shared plumbing (env, http, json, log, safe-URL checks, typed errors) keeps vendor calls bounded and dry-run by default.",
       "entry_points": [
         "lib/imaging/handlers.ts",
         "lib/imaging/router.ts",
@@ -1864,7 +2327,8 @@
         "lib/imaging/receipts.ts",
         "lib/imaging/router.ts",
         "lib/imaging/safeUrl.ts",
-        "lib/imaging/types.ts"
+        "lib/imaging/types.ts",
+        "lib/imagingClient.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
@@ -1875,12 +2339,9 @@
         "pricing",
         "budget",
         "receipt",
-        "forecast",
-        "dry-run",
-        "handlers",
-        "spend"
+        "vendor"
       ],
-      "last_written_at": "2026-10-25T15:57:03.093633700+00:00",
+      "last_written_at": "2026-11-08T12:27:51.582024800+00:00",
       "name": "imaging-gateway-and-spend",
       "pinned": false,
       "tech_stack": [
@@ -1957,7 +2418,7 @@
         "jobs",
         "leases"
       ],
-      "description": "Durable vendor-job execution: queueing, worker loop, run and settle steps, leases that keep two workers off one job, and crash/process handling. Dry-run and effects modules keep rehearsals from spending. Pure cores are split from the store-bound drivers.",
+      "description": "Durable vendor-job execution: queueing, worker loop, run and settle steps, leases that keep two workers off one job, and crash/process handling. The workers/ entry (worker, timers, timers-core) drives the loop and the publish and metrics timers. Dry-run and effects modules keep rehearsals from spending.",
       "entry_points": [
         "packages/kernel/src/job.ts",
         "packages/kernel/src/job-worker.ts"
@@ -1975,22 +2436,23 @@
         "packages/kernel/src/process.ts",
         "packages/kernel/src/crash.ts",
         "packages/kernel/src/dryrun.ts",
-        "packages/kernel/src/effects.ts"
+        "packages/kernel/src/effects.ts",
+        "workers/worker.ts",
+        "workers/timers.ts",
+        "workers/timers-core.ts"
       ],
       "group": "Domain Kernel Model",
       "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
       "id": "0735052e-7b05-4df7-b581-eaa0bc632249",
       "keywords": [
-        "job",
-        "queue",
+        "job queue",
         "worker",
         "lease",
-        "settle",
+        "timers",
         "crash",
-        "dry-run",
-        "effects"
+        "dry run"
       ],
-      "last_written_at": "2026-10-25T15:57:03.093792200+00:00",
+      "last_written_at": "2026-11-08T12:27:51.581527900+00:00",
       "name": "job-queue-and-leases",
       "pinned": false,
       "tech_stack": [
@@ -2165,7 +2627,7 @@
         "kit-design-system-specimens"
       ],
       "db_tables": [],
-      "description": "Specimen cards on /kit for the studio's screens: Audio, Board, Floor, Ledger, Library, Part, Produce, Runs and Style kits, with the fixture data behind the Board and Produce specimens. Each kit renders the @gt/ui components for that screen in every state so the design system can be checked against the real surfaces.",
+      "description": "Specimen cards on /kit for the studio's screens: Audio, Board, Floor, Ledger, Library, Part, Produce, Runs and Style kits, plus the Ear, Local band, Range pick, Song Lab, Studio and Suno specimens, with the fixture data behind them.",
       "entry_points": [
         "app/(studio)/kit/FloorKit.tsx",
         "app/(studio)/kit/BoardKit.tsx"
@@ -2182,24 +2644,26 @@
         "app/(studio)/kit/ProduceKit.tsx",
         "app/(studio)/kit/produceKitData.ts",
         "app/(studio)/kit/RunsKit.tsx",
-        "app/(studio)/kit/StyleKit.tsx"
+        "app/(studio)/kit/StyleKit.tsx",
+        "app/(studio)/kit/EarKit.tsx",
+        "app/(studio)/kit/LocalBandSpecimen.tsx",
+        "app/(studio)/kit/RangePickKit.tsx",
+        "app/(studio)/kit/SongLabKit.tsx",
+        "app/(studio)/kit/songLabKitData.ts",
+        "app/(studio)/kit/StudioKit.tsx",
+        "app/(studio)/kit/SunoKit.tsx"
       ],
       "group": "Production Pipeline",
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "21a8a03c-bd42-4bad-a36e-a6e929a471e0",
       "keywords": [
         "kit",
-        "specimen",
-        "design-system",
-        "floor",
-        "board",
-        "ledger",
-        "library",
-        "audio",
-        "runs",
-        "fixtures"
+        "specimens",
+        "fixture",
+        "audio kit",
+        "studio kit"
       ],
-      "last_written_at": "2026-10-25T15:57:03.094115+00:00",
+      "last_written_at": "2026-11-08T12:27:51.582483900+00:00",
       "name": "kit-screen-specimens",
       "pinned": false,
       "tech_stack": [
@@ -2773,7 +3237,7 @@
         "spend-meter-and-requests"
       ],
       "db_tables": [],
-      "description": "The agent door: MCP over one stateless JSON-RPC POST. It carries the op registry, principal, projection and rpc layers, and tools for job, launch, read and spend. An agent never spends.",
+      "description": "The agent door: MCP over one stateless JSON-RPC POST. It carries the op registry, principal, projection and rpc layers, and tools for job, launch, read and spend, plus audio, audio guide, audio studio, audio take, song lab and steer tools. An agent never spends.",
       "entry_points": [
         "app/api/mcp/route.ts",
         "app/_server/mcp/registry.ts"
@@ -2789,6 +3253,12 @@
         "app/_server/mcp/tools/launch.ts",
         "app/_server/mcp/tools/read.ts",
         "app/_server/mcp/tools/spend.ts",
+        "app/_server/mcp/tools/audio.ts",
+        "app/_server/mcp/tools/audioGuide.ts",
+        "app/_server/mcp/tools/audioStudio.ts",
+        "app/_server/mcp/tools/audioTake.ts",
+        "app/_server/mcp/tools/songlab.ts",
+        "app/_server/mcp/tools/steer.ts",
         "packages/domain/src/mcp.ts"
       ],
       "group": "Production Pipeline",
@@ -2796,18 +3266,78 @@
       "id": "ad4279e3-e7c5-48d5-b166-db447059b183",
       "keywords": [
         "mcp",
-        "json-rpc",
         "agent",
-        "act-token",
-        "tools"
+        "json-rpc",
+        "tools",
+        "act token",
+        "audio"
       ],
-      "last_written_at": "2026-10-25T16:01:26.393252100+00:00",
+      "last_written_at": "2026-11-08T12:27:51.582337800+00:00",
       "name": "mcp-agent-door",
       "pinned": false,
       "tech_stack": [
         "Next.js 16.3",
         "zod 4",
         "TypeScript 6.0"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Music Clip Analysis",
+      "category": "lib",
+      "cross_refs": [
+        "music-video-pipeline",
+        "cut-and-export"
+      ],
+      "db_tables": [],
+      "description": "The analysis and board engine behind the music-clip skill: decode and DSP, beats, tempo, intensity, sections, lyric alignment, and a Gemini timeline call, then treatments, boards, shot lists and GPU shots for a directed music video. State and folder helpers keep each track's stop-and-resume gates; a fixture timeline supports tests.",
+      "entry_points": [
+        "lib/music-clip/analyze.ts",
+        "lib/music-clip/boards.ts"
+      ],
+      "file_paths": [
+        "lib/music-clip/align.ts",
+        "lib/music-clip/analyze.ts",
+        "lib/music-clip/anchor.ts",
+        "lib/music-clip/beats.ts",
+        "lib/music-clip/boardShell.ts",
+        "lib/music-clip/boards.ts",
+        "lib/music-clip/compare.ts",
+        "lib/music-clip/decode.ts",
+        "lib/music-clip/dsp.ts",
+        "lib/music-clip/fixtures/timeline.ts",
+        "lib/music-clip/folder.ts",
+        "lib/music-clip/gemini.ts",
+        "lib/music-clip/gpuShot.ts",
+        "lib/music-clip/intensity.ts",
+        "lib/music-clip/lyricsParse.ts",
+        "lib/music-clip/pack.ts",
+        "lib/music-clip/sections.ts",
+        "lib/music-clip/shotlist.ts",
+        "lib/music-clip/state.ts",
+        "lib/music-clip/tempo.ts",
+        "lib/music-clip/treatments.ts",
+        "lib/music-clip/types.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "4801e7ab-d365-4c2d-8351-adcf188ba3c1",
+      "keywords": [
+        "music clip",
+        "beats",
+        "tempo",
+        "sections",
+        "lyrics",
+        "treatments",
+        "shotlist",
+        "gemini"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550630500+00:00",
+      "name": "music-clip-engine",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Node.js"
       ]
     },
     {
@@ -2819,7 +3349,7 @@
         "suno-driver-queue"
       ],
       "db_tables": [],
-      "description": "Music vendors (ElevenLabs music, budget, pricing, plan), the Suno browser driver, and the publish helpers for channels, exports, import, OAuth, sessions and YouTube, with the file routes for music-video jobs and takes.",
+      "description": "Music vendors (ElevenLabs music, budget, TTS budget, pricing, plan), the Suno browser driver, and the publish helpers for channels, exports, import, OAuth, sessions and YouTube, with the file routes for music-video jobs and takes.",
       "entry_points": [
         "lib/publish/youtube.ts",
         "lib/music/elevenlabs.ts"
@@ -2832,6 +3362,7 @@
         "lib/music/plan.ts",
         "lib/music/pricing.ts",
         "lib/music/types.ts",
+        "lib/music/ttsBudget.ts",
         "lib/suno/browser.ts",
         "lib/suno/driver.ts",
         "lib/suno/selectors.ts",
@@ -2854,11 +3385,11 @@
         "elevenlabs",
         "suno",
         "youtube",
-        "oauth",
         "publish",
-        "music"
+        "tts",
+        "oauth"
       ],
-      "last_written_at": "2026-10-25T16:01:26.393929200+00:00",
+      "last_written_at": "2026-11-08T12:27:51.581883200+00:00",
       "name": "music-vendors-and-publish",
       "pinned": false,
       "tech_stack": [
@@ -3181,7 +3712,7 @@
         "projects-index-port"
       ],
       "db_tables": [],
-      "description": "The per-project part page and the port that feeds the part editors: contract, schema, wire format, kinds, hashing and server actions. The real side reads kernel records for scripts, research, scenes and recommendations, and the port picks fixture or real by GRAVITONE_PRODUCE_SIDE. View modules shape research and script records for the screens.",
+      "description": "The per-project part page and the port that feeds the part editors: contract, schema, wire format, kinds, hashing, act mode and server actions. The real side reads kernel records for scripts, research, scenes and recommendations, and the port picks fixture or real by GRAVITONE_PRODUCE_SIDE.",
       "entry_points": [
         "app/(studio)/projects/[id]/_part/port.ts",
         "app/(studio)/projects/[id]/_part/contract.ts",
@@ -3190,6 +3721,7 @@
       "file_paths": [
         "app/(studio)/projects/[id]/page.tsx",
         "app/(studio)/projects/[id]/_part/actions.ts",
+        "app/(studio)/projects/[id]/_part/actMode.ts",
         "app/(studio)/projects/[id]/_part/contract.ts",
         "app/(studio)/projects/[id]/_part/hash.ts",
         "app/(studio)/projects/[id]/_part/kinds.ts",
@@ -3208,17 +3740,14 @@
       "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "id": "017c20b1-6e01-4427-b944-83501aef72b3",
       "keywords": [
+        "part",
         "port",
         "contract",
-        "schema",
         "wire",
-        "real",
-        "kernel",
-        "script",
-        "research",
-        "server action"
+        "fixture",
+        "real"
       ],
-      "last_written_at": "2026-10-25T15:57:03.095438900+00:00",
+      "last_written_at": "2026-11-08T12:27:51.582176100+00:00",
       "name": "part-port-real-and-contract",
       "pinned": false,
       "tech_stack": [
@@ -4005,6 +4534,45 @@
       "tech_stack": [
         "TypeScript 6.0",
         "Node"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Scout Channel Episodes",
+      "category": "lib",
+      "cross_refs": [
+        "scout-engine-creative",
+        "scout-producers"
+      ],
+      "db_tables": [],
+      "description": "The channel and episode layer of the scout loop: the baseline, the channel definitions, episode moves, episode storyboards and episode taste. It turns accepted outlines into storyboarded episodes for the operator's channels.",
+      "entry_points": [
+        "lib/foundry/scout/channels.ts",
+        "lib/foundry/scout/storyboardEpisode.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/scout/baseline.ts",
+        "lib/foundry/scout/channels.ts",
+        "lib/foundry/scout/episodeMoves.ts",
+        "lib/foundry/scout/storyboardEpisode.ts",
+        "lib/foundry/scout/tasteEpisodes.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "af49cb26-d1fb-40aa-8f8e-906d1a0aabcf",
+      "keywords": [
+        "scout",
+        "channels",
+        "episodes",
+        "storyboard",
+        "baseline",
+        "taste"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550947300+00:00",
+      "name": "scout-episodes-channels",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript"
       ]
     },
     {
@@ -5024,6 +5592,67 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Audio Ear and Mix Controls",
+      "category": "ui",
+      "cross_refs": [
+        "audio-composer-briefs",
+        "audio-studio-view"
+      ],
+      "db_tables": [],
+      "description": "Shared @gt/ui audio vocabulary: the Ear button and hook, transport row, mix and layers models, the atlas, lexicon, intent, steer and local band shapes, plus the dock, fader and range pick controls. Pure models back each control so state is data.",
+      "entry_points": [
+        "packages/ui/src/components/audio/useEar.ts",
+        "packages/ui/src/components/audio/mix.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/components/audio/Ear.module.css",
+        "packages/ui/src/components/audio/EarButton.tsx",
+        "packages/ui/src/components/audio/Transport.module.css",
+        "packages/ui/src/components/audio/TransportRow.tsx",
+        "packages/ui/src/components/audio/atlas.ts",
+        "packages/ui/src/components/audio/intent.ts",
+        "packages/ui/src/components/audio/layers.ts",
+        "packages/ui/src/components/audio/lexicon.rows.ts",
+        "packages/ui/src/components/audio/lexicon.ts",
+        "packages/ui/src/components/audio/localBand.ts",
+        "packages/ui/src/components/audio/mix.ts",
+        "packages/ui/src/components/audio/shape.ts",
+        "packages/ui/src/components/audio/steer.ts",
+        "packages/ui/src/components/audio/useEar.ts",
+        "packages/ui/src/components/audio/useMix.ts",
+        "packages/ui/src/components/dock/Dock.module.css",
+        "packages/ui/src/components/dock/Dock.tsx",
+        "packages/ui/src/components/dock/dock.ts",
+        "packages/ui/src/components/fader/Fader.module.css",
+        "packages/ui/src/components/fader/Fader.tsx",
+        "packages/ui/src/components/rangepick/RangePick.module.css",
+        "packages/ui/src/components/rangepick/RangePick.tsx",
+        "packages/ui/src/components/rangepick/rangepick.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "aa7d6719-79f9-4708-bd9c-912d4c2d3a6c",
+      "keywords": [
+        "ear",
+        "mix",
+        "transport",
+        "fader",
+        "dock",
+        "range pick",
+        "lexicon",
+        "atlas"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.551111+00:00",
+      "name": "ui-audio-ear-and-mix",
+      "pinned": false,
+      "tech_stack": [
+        "React",
+        "TypeScript",
+        "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
       "business_feature": "Board State",
       "category": "lib",
       "cross_refs": [
@@ -5300,6 +5929,55 @@
       ]
     },
     {
+      "api_surface": "",
+      "business_feature": "Song Lab Components",
+      "category": "ui",
+      "cross_refs": [
+        "audio-songlab-screen"
+      ],
+      "db_tables": [],
+      "description": "@gt/ui shapes for the Song Lab: director band, draw tabs, field sheet, queue, bracket and blind match, with the keys, arms hook and pure songlab model behind them.",
+      "entry_points": [
+        "packages/ui/src/components/songlab/songlab.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/components/songlab/BlindMatch.module.css",
+        "packages/ui/src/components/songlab/BlindMatch.tsx",
+        "packages/ui/src/components/songlab/Bracket.module.css",
+        "packages/ui/src/components/songlab/Bracket.tsx",
+        "packages/ui/src/components/songlab/DirectorBand.module.css",
+        "packages/ui/src/components/songlab/DirectorBand.tsx",
+        "packages/ui/src/components/songlab/DrawTabs.module.css",
+        "packages/ui/src/components/songlab/DrawTabs.tsx",
+        "packages/ui/src/components/songlab/FieldSheet.module.css",
+        "packages/ui/src/components/songlab/FieldSheet.tsx",
+        "packages/ui/src/components/songlab/Queue.module.css",
+        "packages/ui/src/components/songlab/Queue.tsx",
+        "packages/ui/src/components/songlab/keys.ts",
+        "packages/ui/src/components/songlab/songlab.ts",
+        "packages/ui/src/components/songlab/useArms.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "9e61ac82-5353-41a4-a550-a55408d6c9d9",
+      "keywords": [
+        "songlab",
+        "bracket",
+        "blind match",
+        "director",
+        "queue",
+        "draw tabs"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.551357500+00:00",
+      "name": "ui-songlab-components",
+      "pinned": false,
+      "tech_stack": [
+        "React",
+        "TypeScript",
+        "CSS Modules"
+      ]
+    },
+    {
       "api_surface": null,
       "business_feature": "Status and Provenance Shapes",
       "category": "ui",
@@ -5353,6 +6031,59 @@
       ],
       "last_written_at": "2026-10-25T15:57:03.097469200+00:00",
       "name": "ui-status-provenance",
+      "pinned": false,
+      "tech_stack": [
+        "React",
+        "TypeScript",
+        "CSS Modules"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Studio Desk and Suno Components",
+      "category": "ui",
+      "cross_refs": [
+        "audio-studio-view",
+        "audio-studio-host"
+      ],
+      "db_tables": [],
+      "description": "@gt/ui shapes for the conversational Studio and Suno takes: lane head and role mark with the desk model, and Suno lineage, prompt card, take facts, taste chips and verdict bar with the suno model.",
+      "entry_points": [
+        "packages/ui/src/components/suno/suno.ts",
+        "packages/ui/src/components/studio-desk/desk.ts"
+      ],
+      "file_paths": [
+        "packages/ui/src/components/studio-desk/LaneHead.module.css",
+        "packages/ui/src/components/studio-desk/LaneHead.tsx",
+        "packages/ui/src/components/studio-desk/RoleMark.module.css",
+        "packages/ui/src/components/studio-desk/RoleMark.tsx",
+        "packages/ui/src/components/studio-desk/desk.ts",
+        "packages/ui/src/components/suno/Lineage.module.css",
+        "packages/ui/src/components/suno/Lineage.tsx",
+        "packages/ui/src/components/suno/SunoPromptCard.module.css",
+        "packages/ui/src/components/suno/SunoPromptCard.tsx",
+        "packages/ui/src/components/suno/TakeFacts.module.css",
+        "packages/ui/src/components/suno/TakeFacts.tsx",
+        "packages/ui/src/components/suno/TasteChips.module.css",
+        "packages/ui/src/components/suno/TasteChips.tsx",
+        "packages/ui/src/components/suno/VerdictBar.module.css",
+        "packages/ui/src/components/suno/VerdictBar.tsx",
+        "packages/ui/src/components/suno/suno.ts"
+      ],
+      "group": "Domain Kernel Model",
+      "group_id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
+      "id": "6402b757-37fa-43bd-99f3-b8bc1fb303cd",
+      "keywords": [
+        "suno",
+        "lineage",
+        "take facts",
+        "taste",
+        "verdict",
+        "lane head",
+        "role mark"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.551539400+00:00",
+      "name": "ui-studio-desk-and-suno",
       "pinned": false,
       "tech_stack": [
         "React",
@@ -5548,21 +6279,76 @@
         "TypeScript",
         "zod"
       ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "YUE2 Song Lab Engine",
+      "category": "lib",
+      "cross_refs": [
+        "audio-songlab-screen",
+        "domain-audio-cover-yue2"
+      ],
+      "db_tables": [],
+      "description": "The local YUE2 song model lab: A/B draws, folds, lyrics, scoring, proposals, facts, import scan and apply, and a WSL relay that spawns the model on the box. The bound producers (yue2, acts, jobs) run it as priced kernel jobs.",
+      "entry_points": [
+        "lib/yue2/lab.ts",
+        "lib/producers/yue2.ts"
+      ],
+      "file_paths": [
+        "lib/yue2/ab.ts",
+        "lib/yue2/abFolds.ts",
+        "lib/yue2/draw.ts",
+        "lib/yue2/facts.ts",
+        "lib/yue2/importApply.ts",
+        "lib/yue2/importScan.ts",
+        "lib/yue2/importSources.ts",
+        "lib/yue2/lab.ts",
+        "lib/yue2/labRelay.ts",
+        "lib/yue2/lyrics.ts",
+        "lib/yue2/proposals.ts",
+        "lib/yue2/scores.ts",
+        "lib/yue2/sha.ts",
+        "lib/yue2/wsl.ts",
+        "lib/yue2/wslSpawn.ts",
+        "lib/producers/yue2.ts",
+        "lib/producers/yue2Acts.ts",
+        "lib/producers/yue2Jobs.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
+      "id": "6b9ca8a5-5fd1-4d33-a3e0-d8d4d5de939e",
+      "keywords": [
+        "yue2",
+        "wsl",
+        "lab",
+        "ab",
+        "lyrics",
+        "import",
+        "local model"
+      ],
+      "last_written_at": "2026-11-08T12:27:51.550463500+00:00",
+      "name": "yue2-lab",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Node.js",
+        "WSL"
+      ]
     }
   ],
-  "generated_at": "2026-10-26T08:37:02.569809500+00:00",
+  "generated_at": "2026-11-08T12:27:56.511756700+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
       "color": "blue",
-      "context_count": 85,
+      "context_count": 95,
       "domain": "feature",
       "id": "d842098b-78b9-42a7-a6af-5032f79eaf9f",
       "name": "Production Pipeline"
     },
     {
       "color": "violet",
-      "context_count": 23,
+      "context_count": 27,
       "domain": "shared",
       "id": "c047d02f-a266-4be3-be2d-03e5760b3e16",
       "name": "Domain Kernel Model"
@@ -5574,12 +6360,12 @@
     "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "095c9eb975b3ad664e891ccd1de03cd3b1b5d8a8",
-    "git_commit_count": 2841
+    "git_commit": "271e8e948295c0b89566434cc90c67ea83cc8cd3",
+    "git_commit_count": 3311
   },
   "stats": {
-    "contexts": 108,
-    "files": 1526,
+    "contexts": 122,
+    "files": 1812,
     "groups": 2,
     "use_cases": 0
   },

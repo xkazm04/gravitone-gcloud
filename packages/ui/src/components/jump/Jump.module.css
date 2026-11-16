@@ -1,0 +1,20 @@
+/* Jump and the key sheet: no prototype counterpart. Drawn from the kit's own dialog vocabulary -
+   the consequence panel's veil and sheet-ground panel, the field, the facet row's height - and
+   anchored high, under the header, because both are summoned over whatever the operator was
+   reading and the eye is at the top. Above the level sheet (`--z-popover`): Jump opens over the
+   Board. No motion: a dialog the keyboard summons is there on the keypress. */
+.backdrop{position:fixed;inset:0;z-index:var(--z-popover);display:flex;justify-content:center;align-items:flex-start;padding:calc(var(--hdr-h) + var(--sp-7)) var(--sp-6) var(--sp-6);background:color-mix(in srgb,var(--ink) 80%,transparent)}
+.inline{position:relative;inset:auto;z-index:auto;padding:0;background:none}
+.panel{width:min(100%,64ch);max-height:100%;overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-5);border-radius:var(--r-lg);border:1px solid var(--hair-2);background:var(--sheet-ground);box-shadow:0 var(--sp-4) var(--sp-7) var(--shadow)}
+.panel:focus{outline:none}
+.panel > input{width:100%;box-sizing:border-box}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:var(--sp-5);min-height:var(--h-row);padding:0 var(--sp-4);border-radius:var(--r-sm);border-left:var(--stroke-mark) solid transparent;color:var(--text);text-decoration:none;font-size:var(--fs-ui)}
+.row:hover{background:var(--wash-hi)}
+.row:focus{outline:none;background:var(--wash-hi);border-left-color:var(--cyan);color:var(--ink-bright)}
+/* While the field has focus, ⏎ goes to the first row: the row says so by the focus rule. */
+.panel:has(input:focus) .first{border-left-color:var(--cyan);color:var(--ink-bright)}
+.label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kind{flex:none;font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.sheet{width:min(100%,96ch);gap:var(--sp-6);padding:var(--sp-6)}
+.section{display:flex;flex-direction:column;gap:var(--sp-3)}

@@ -28,7 +28,7 @@ import { isWorkStep, parseArticleJob, planArticle, type WorkStep } from "./plan.
 // THE CEILING HOLDS INSIDE A STEP (cost-metering: one-pot-across-delegation). The kernel
 // admits a step against its estimate; a critique admitted at $54 can still run long. So a
 // turn is refused before it starts once the job's spend plus this step's reported turns
-// reach the ceiling, and a writer turn is capped (`--max-budget-usd`) at what is left -
+// reach the ceiling; a turn already running is not cut (the seat takes no budget flag) -
 // lib/articles/loop.ts `guardedDeps` did exactly this for the loop's runs, and every job
 // gets it now. A refused turn fails the step the engine's way; the job stops for money.
 //

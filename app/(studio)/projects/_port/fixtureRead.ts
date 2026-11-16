@@ -11,6 +11,7 @@ import type { ComposeChoices, ComposerChoices, LaneHoldView, ProduceJob } from "
 import { CANDIDATE_STYLES, KEPT_TAKES, PROVEN_STYLES, SUBJECTS, SWEEP_STYLES, TOPICS } from "./fixtureData.ts";
 import { isWorkKind, nounOf, optionOf, optionsOf, partJobId, partLabel, partStates, placeAll, type FxJob, type FxPart, type FxProject, type Universe } from "./fixture.ts";
 import type { Placed } from "./schedule.ts";
+import { fixtureSlotOfPart } from "../../floor/_calendar/fixture.ts";
 
 // THE FIXTURE'S READS - the universe (./fixture.ts) as the contract's views: a project's plan,
 // the project list in the prototype's groups, the jobs Runs draws and acts on, the held lanes,
@@ -58,7 +59,8 @@ export function planView(u: Universe, id: string, now: number): Result<PlanView>
     if (at !== undefined) eta = Math.max(eta ?? 0, at.e);
     const base = { id: part.id, label: partLabel(part), after: part.after, state: states.get(part.id) ?? "blocked", ...(at === undefined ? {} : { schedule: { start: iso(at.s), end: iso(at.e), queuePos: at.queuePos } }) };
     if (!isWorkKind(part.kind)) {
-      parts.push(part.kind === "gate" ? { ...base, kind: "gate", ...(part.judges === undefined ? {} : { judges: part.judges }), ...(part.verdict === undefined ? {} : { verdict: part.verdict }) } : { ...base, kind: "slot" });
+      const slotId = part.kind === "slot" ? fixtureSlotOfPart(part.id)?.slotId : undefined;
+      parts.push(part.kind === "gate" ? { ...base, kind: "gate", ...(part.judges === undefined ? {} : { judges: part.judges }), ...(part.verdict === undefined ? {} : { verdict: part.verdict }) } : { ...base, kind: "slot", ...(slotId === undefined ? {} : { slotId }) });
       continue;
     }
     const { option, units, job } = workView(u, { ...part, kind: part.kind });

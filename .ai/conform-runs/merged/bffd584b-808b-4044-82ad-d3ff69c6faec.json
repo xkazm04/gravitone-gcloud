@@ -1,0 +1,150 @@
+{
+  "schema": "conform-run/1",
+  "worker": "bffd584b-808b-4044-82ad-d3ff69c6faec",
+  "subject": "review-iteration-loops",
+  "evaluatedAt": "2026-11-06T03:19:34.951481+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "part-editor-writing-research",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:195 A staged recalibration reaches the reviewer as a label, a gate line and refusals. Its edit operations, the why for each one and the beats it left unchanged are not in the view (VersionView has no edits field), so the operator accepts a revision without seeing what changed or why.",
+      "techniques": [
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:195 lib/script/editPlan.ts emits ops, but the review surface shows only the staged version's label. Each op's why is not drawn, and the technique says it is part of the deliverable."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:73 Notes are typed per card. NoteKind is exactly more-focus/less-focus/descope/move-earlier/move-later/custom. This surface does not offer the custom escape hatch."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:204 Refusals are drawn verbatim on the staged version before accept or discard, so they come before the apply. An explicit unchanged list and a named conflict winner are not drawn."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:189 A card descoped in Research but still spoken by a candidate is surfaced, so the two authorities cannot silently disagree."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:63 Card usage is drawn in three states (spoken/cut/unused, CardUsage carries a why). The share split itself is computed outside this context."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:137 Unanswered is a terminal state that is drawn on screen. Results carry the verdicts strengthened/weakened/resolved/inconclusive (Notebook.tsx:144), and each effect is applied or rejected one at a time."
+        }
+      ]
+    },
+    {
+      "context": "scout-engine-creative",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/foundry/scout/idea.ts:129 The ideas door requires an anchor per artboard but lets kind \"free\" pass with an empty ref. That admits the unanchored candidate the slate technique names as its failure: it converges on the model's modal answer.",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/idea.ts:129 watch and gap anchors must quote an outside line. free needs nothing, and a gap is a need, not a reference artifact."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/piece.ts:8 A piece re-makes only the clips the operator rejected and keeps the approved ones."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/ideaRepeat.ts:6 A thrown character cannot be redrawn by a later brief, so out stays out, and the refusal names the earlier one."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/direction.ts:101 A direction standing on a cell that was not kept is refused before it is written, naming the entry and why."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "review-iteration-loops",
+      "context": "scout-producers",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "audio-composer-briefs",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "review-iteration-loops",
+      "context": "sound-generation-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): editPlan.ts:55 does show every section getting its mode through modeOf with no anchor check, but I found nothing in lib/sound showing that a receipt or review treats a regenerated first section as a local edit, and the claim that no ledger row keeps evidence was not confirmed either."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T03:19:34.951481+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "attribution-share-accounting",
+        "edit-plan-over-regeneration",
+        "follow-up-that-can-kill-a-fact",
+        "note-taxonomy-focus-scope-order",
+        "refusal-as-valid-outcome",
+        "scope-vs-preference-signals"
+      ],
+      "deviations": 1,
+      "context": "part-editor-writing-research",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T03:19:34.951481+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "edit-plan-over-regeneration",
+        "gate-record-outlives-the-media",
+        "partial-regeneration-seams",
+        "refusal-as-valid-outcome"
+      ],
+      "deviations": 1,
+      "context": "sound-generation-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T03:19:34.951481+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "review-iteration-loops"
+      ],
+      "techniques": [
+        "anchored-variation-slate",
+        "edit-plan-over-regeneration",
+        "refusal-as-valid-outcome",
+        "scope-vs-preference-signals"
+      ],
+      "deviations": 1,
+      "context": "scout-engine-creative",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

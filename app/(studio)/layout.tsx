@@ -25,14 +25,16 @@ import { principal } from "../_server/principal.ts";
 import "@gt/ui/tokens.css";
 import "./_shell/world.css";
 import { AgentNav } from "./_shell/AgentNav.tsx";
+import { ATHENA_APP } from "./_shell/agentNav.ts";
 import { Handoff } from "./_shell/Handoff.tsx";
 import { Providers } from "./_shell/Providers.tsx";
 import { StudioHeader } from "./_shell/StudioHeader.tsx";
 import s from "./_shell/Shell.module.css";
 
 // The page's identity for an agent's page bridge (athena-portable packages/athena-bridge/protocol.md
-// `page`): its tools are catalogued as `host.gravitone.<name>` (./_shell/AgentNav.tsx).
-export const metadata: Metadata = { other: { "athena:app": "gravitone", "athena:app-name": "Gravitone Studio" } };
+// `page`): its tools are catalogued as `host.gravitone.<name>` (./_shell/AgentNav.tsx). The dots are the
+// bridge's spelling; what this repo authors keeps the narrow grammar (./_shell/agentNav.ts ATHENA_APP).
+export const metadata: Metadata = { other: { "athena:app": ATHENA_APP, "athena:app-name": "Gravitone Studio" } };
 
 // `sheet` is the Board's slot (./@sheet): a soft navigation to /board/<packet> draws the Board
 // there, over the page `children` keeps mounted; every other address draws nothing in it.

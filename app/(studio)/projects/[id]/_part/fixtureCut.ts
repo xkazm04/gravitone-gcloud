@@ -8,6 +8,7 @@ import { finishOpLabel, type AdAspect, type AdFinishData, type ClipView, type Cu
 import { compileCut, cutDocumentHash } from "@/lib/cut/cutDocument";
 import { deriveTimeline, turnOf, type CutClip, type DerivedCut, type OwnerStep } from "@/lib/cut/deriveTimeline";
 import { finishLine } from "@/lib/cut/finishLine";
+import { finishRule } from "@/lib/parts/verdict";
 import { drawnStart, nudgeOffsets, offsetFrom, shownStatus, type Offsets } from "@/lib/cut/offsets";
 import { AD_RUNTIME_RANGE, type AdsFinishData, type AdsShotsData } from "@/lib/ads/types";
 import { editPoints, musicGaps } from "@/lib/cut/edits";
@@ -148,7 +149,12 @@ function timeline(ctx: KCtx, c: CutRec): TimelineData {
         const f = cut.frames[s.id];
         const pic = pictures.find((p) => p.ref === s.id);
         const blob = blobOf(pic?.src);
-        return [s.id, { title: s.label, line: f?.line ?? pic?.note ?? "", kind: f?.kind ?? s.mood, placed: pic !== undefined && pic.status !== "missing", ...(blob === undefined ? {} : { blob }) }];
+        const placed = pic !== undefined && pic.status !== "missing";
+        // The address the monitor draws: the blob door for a blob, else the plate's own URL (a dry
+        // stand-in's public still, a v1 plate's data: URL) - never a `dry:` take pointer.
+        const own = placed ? pic.src : undefined;
+        const url = blob !== undefined ? `/api/blob/${blob}` : own !== undefined && (own.startsWith("/") || own.startsWith("data:image/")) ? own : undefined;
+        return [s.id, { title: s.label, line: f?.line ?? pic?.note ?? "", kind: f?.kind ?? s.mood, placed, ...(blob === undefined ? {} : { blob }), ...(url === undefined ? {} : { url }) }];
       }),
     ),
     exports: c.exports.filter((e) => e.aspect === undefined).map(exportView),
@@ -274,25 +280,31 @@ function land(ctx: KCtx, c: CutRec, act: PartActKind, at: number, jobId: string,
 
 /* ── verdict, records ─────────────────────────────────────────────────────── */
 
-/** The cut's verdict: lib/parts/verdict's rule (READY when the finish line holds nothing; a film
- *  plans no voice part, so its voice row is reported and does not hold), over THIS derived cut -
- *  the explainer's is its own (strips and voice), which lib's cutVerdict does not derive; the ads
- *  face reads ads-finish and stays lib's. */
+/** The cut's verdict: lib/parts/verdict's finishRule (READY when the finish line holds nothing; a
+ *  film plans no voice part, so its voice row is reported and does not hold), over THIS derived
+ *  cut - the explainer's is derived from strips and voice (lib/cut/explainer.ts), which lib's
+ *  cutVerdict reads too since 930d255e; the ads face reads ads-finish and stays lib's. The editor
+ *  picks the explainer by recipe family, the gate by a strips record: that is kept as it was. */
 function verdict(ctx: KCtx, c: CutRec): PartVerdict {
   if (face(ctx) === "finish") return verdictFor(ctx, "cut", heldTakes(ctx.rec("score")));
-  const cut = derivedOf(ctx);
-  if (cut.scenes.length === 0) return { state: "empty", codes: [{ code: "no-picture", text: "no picture to cut" }] };
-  const rows = rowsOf(ctx, cut, c.offsets);
   const plansVoice = recipeById(ctx.project.recipe)?.parts.some((p) => p.kind === "voice") === true;
-  const fails = rows.filter((r) => r.verdict === "fail");
-  const holds = fails.filter((r) => r.id !== "voice" || plansVoice);
-  // What holds the cut first; a row this recipe has no part to clear (a film's voice) after it.
-  const codes = [...holds, ...fails.filter((r) => !holds.includes(r))].map((r) => ({ code: `finish-${r.id}`, text: r.deny ?? `${r.label} ${r.value} vs ${r.target}` }));
-  return holds.length === 0 ? { state: "ready", codes: [{ code: "finish-line", text: `${rows.filter((r) => r.verdict === "pass").length} of ${rows.length} checks pass` }, ...codes] } : { state: "working", codes };
+  return finishRule(derivedOf(ctx), c.offsets, { plansVoice, explainer: face(ctx) === "explainer", holdsFirst: true, emptyAnyFace: true });
 }
 
 function toRecords(c: CutRec): Record<string, Obj> {
   return { cut: { offsets: c.offsets, exports: c.exports.filter((e) => e.aspect === undefined) }, ...(c.finish === null ? {} : { "ads-finish": asObj(c.finish) }) };
+}
+
+/** A stored animatic export as the row reads it. The producer writes `id` and `label` now
+    (lib/producers/cut.ts); a record stored before that has neither, so the id falls back to the
+    job that made it (every real record names one; append-only, so stable across renders), then
+    the render's own id, and the label to the fixture side's words by position. `at` is an ISO
+    string on the real side and the document hash is its `document`. */
+function exportOf(raw: unknown, i: number): ExportRec {
+  const x = asObj(typeof raw === "object" && raw !== null ? raw : {});
+  const str = (k: string): string | undefined => (typeof x[k] === "string" && x[k] !== "" ? x[k] : undefined);
+  const at = typeof x["at"] === "number" ? x["at"] : Date.parse(str("at") ?? "");
+  return { ...(x as unknown as ExportRec), id: str("id") ?? str("jobId") ?? str("exportId") ?? `export-${i + 1}`, label: str("label") ?? `animatic ${i + 1}`, at: Number.isNaN(at) ? 0 : at, hash: str("hash") ?? str("document") ?? "", mode: x["mode"] === "dry" ? "dry" : "live" };
 }
 
 function fromRecords(recs: Recs): CutRec {
@@ -300,7 +312,7 @@ function fromRecords(recs: Recs): CutRec {
   const fin = recs.get("ads-finish");
   const offsets = (cut?.["offsets"] ?? {}) as Offsets;
   // Both written by `toRecords` through their doors; read back as written.
-  const exports = (Array.isArray(cut?.["exports"]) ? cut["exports"] : []) as ExportRec[];
+  const exports = (Array.isArray(cut?.["exports"]) ? cut["exports"] : []).map(exportOf);
   const finish = fin !== undefined && isFinish(fin) ? fin : null;
   const adExports: ExportRec[] = (finish?.exports ?? []).map((e) => {
     const x = asObj(e);

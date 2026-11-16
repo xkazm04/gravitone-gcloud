@@ -28,7 +28,7 @@ export type LaneSpec = {
 type LaneLabel = Omit<LaneSpec, "cap">;
 
 const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
-  "gpu.local": { label: "GPU box", engines: "Flux 2 dev fp8 · Wan 2.2 · qwen3.8:27b", kind: "local" },
+  "gpu.local": { label: "GPU box", engines: "LTX 2.5 · Wan 2.2 · qwen3.8:27b", kind: "local" },
   "box.render": { label: "Render box", engines: "ffmpeg · compositor", kind: "local" },
   "box.blender": { label: "Blender", engines: "mesh finish · bake · poster", kind: "local" },
   "box.chrome": { label: "Render box · Chrome", engines: "Suno v6 · Leonardo (CDP)", kind: "local" },
@@ -37,6 +37,7 @@ const LABELS: { readonly [L in ResourceLane]: LaneLabel } = {
   "cloud.elevenlabs": { label: "ElevenLabs", engines: "music · sfx · voice", kind: "cloud" },
   "cloud.leonardo": { label: "Leonardo", engines: "image", kind: "cloud" },
   "cloud.qwen": { label: "Qwen", engines: "recognition · vision", kind: "cloud" },
+  "cloud.suno": { label: "Suno", engines: "covers · official API", kind: "cloud" },
 };
 
 // Each lane is spelled ONCE, in LABELS (the mapped type makes it total); its capacity is joined

@@ -5,7 +5,7 @@
 .q{display:flex;align-items:center;gap:var(--sp-5);font-size:var(--fs-h3);color:var(--ink-bright)}
 .pos{font-family:var(--mono);color:var(--faint)}
 .arms{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-wide)}
-.arm{position:relative;display:flex;flex-direction:column;padding:0;border-radius:var(--r-arm);overflow:hidden;border:var(--stroke-mark) solid var(--hair-2);background:var(--ink-2);min-height:0;text-align:left;transition:border-color .2s,transform .2s,opacity .3s}
+.arm{position:relative;display:flex;flex-direction:column;padding:0;border-radius:var(--r-arm);overflow:hidden;border:var(--stroke-mark) solid var(--hair-2);background:var(--ink-2);min-height:0;text-align:left;transition:border-color var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease),opacity var(--dur) var(--ease)}
 .media{width:100%;flex:1;min-height:0;object-fit:contain;background:var(--letterbox)}
 .armcap{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-control) var(--sp-5);font-size:var(--fs-nav)}
 .lab{font:700 var(--fs-meta)/1 var(--mono);color:var(--ink-bright)}

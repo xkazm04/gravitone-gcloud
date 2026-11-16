@@ -1,0 +1,86 @@
+{
+  "schema": "conform-run/1",
+  "worker": "4bed5dad-7047-4dfb-9a6e-b39b57585757",
+  "subject": "mcp-tools",
+  "evaluatedAt": "2026-11-06T22:10:50.562980+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ledger-screen",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "app/(studio)/ledger/_ledger/filter.ts:155 The ledger's query grammar, served verbatim as the `q` argument of the MCP `gt_read ledger` op (app/_server/mcp/tools/read.ts imports this module's parseParams/readPage), silently drops every free word past the eighth, so an agent gets results for a query it did not write and nothing in the answer says so.",
+      "techniques": [
+        {
+          "technique": "fluent-syntax-bounded-grammar",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/filter.ts:155 Closed token set (TOKENS) is good, but the parser drops what it will not take instead of refusing by name; the technique names a dropping parser as worse than no parser."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:100 splitFilter returns `ignored` (an invalid actor/type/src value). page.tsx shows it to the operator, but readPage, the agents' path, discards it, so `type: bogus` widens the result while the call still reads as a success."
+        },
+        {
+          "technique": "budgeted-partial-response",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/ledger/_ledger/read.ts:139 A page stopped by the SCAN budget is marked capped and not exhausted, with a cursor after the last row examined. The MCP op turns that into truncated plus next.cursor."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mcp-tools",
+      "context": "studio-shell",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "server-seam",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "spend-meter-and-requests",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "ui-tokens-and-catalog",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor partOptions.ts:97 is a comment on a constant that the MCP door reads. It shows a link to the MCP code and says nothing about whether the precondition is absent, so it is an incidental anchor for a not-applicable. The packages/ui/src search also matched components/audio/steer.ts, whose com"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T22:10:50.562980+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "budgeted-partial-response",
+        "fluent-syntax-bounded-grammar",
+        "tool-schema-design"
+      ],
+      "deviations": 1,
+      "context": "ledger-screen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T22:10:50.562980+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ui-tokens-and-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

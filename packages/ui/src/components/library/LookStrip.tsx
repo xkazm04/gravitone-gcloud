@@ -3,7 +3,9 @@
 // that kept no look). A thumbnail with a door filters the Library by that look; without one it is a
 // plain figure. The picture's accessible name is the caption and the genre rung, never a sentence.
 
+import { tokens } from "../../tokens.ts";
 import { cx } from "../cx.ts";
+import { Plate } from "../desk/Plate.tsx";
 import s from "./LookStrip.module.css";
 
 export type LookThumb = {
@@ -18,14 +20,14 @@ export type LookThumb = {
   readonly inert?: boolean;
 };
 
+const STRIP_TILE = Number.parseInt(tokens["w-shelf-tile"], 10);
+
 function Thumb({ t }: { readonly t: LookThumb }) {
   const alt = t.sub === undefined ? t.label : `${t.label} · ${t.sub}`;
-  // A kept still is its own bytes, at the strip's size (FaceView's exemption from next/image).
-  // eslint-disable-next-line @next/next/no-img-element -- see above
-  const picture = <img className={s.img} src={t.image} alt={alt} loading="lazy" decoding="async" draggable={false} />;
   return (
     <>
-      {picture}
+      {/* A kept still at the strip's size: a grid-size variant when it is a blob. */}
+      <Plate className={s.img} src={t.image} alt={alt} lazy width={STRIP_TILE} aspect={9 / 16} />
       <span className={s.label}>{t.label}</span>
       {t.sub !== undefined && <span className={s.sub}>{t.sub}</span>}
     </>

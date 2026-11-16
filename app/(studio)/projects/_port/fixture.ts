@@ -11,6 +11,7 @@ import type { ModelOption, ReceiptMode } from "@gt/domain/produce";
 
 import { KEPT_TAKES, OPTIONS, SEED_INTERRUPTED, SEED_PROJECTS, SEED_RUNNING_ARTICLE, type SeedProject } from "./fixtureData.ts";
 import { schedule, type Item, type Phase, type Placed } from "./schedule.ts";
+import { fixtureSlotOfPart } from "../../floor/_calendar/fixture.ts";
 
 // THE FIXTURE PRODUCE UNIVERSE - an in-memory studio with the kernel's rules. It was written (L28)
 // so the Floor composers, the Plan, Compose and the Runs acts could be built before the records
@@ -275,6 +276,8 @@ export function partStates(u: Universe, p: FxProject): Map<string, PartState> {
       const j = jobOfPart(u, part.id);
       if (j !== undefined) facts.set(part.id, { job: j.state });
     } else if (part.kind === "gate") facts.set(part.id, { packet: part.packet === "committed" ? "committed" : "open" });
+    // The slot is placed by the fixture calendar, as the kernel's is by its slot store (slottedIn).
+    else facts.set(part.id, { slotted: fixtureSlotOfPart(part.id)?.placed === true });
   }
   return partStatesOf(p.parts.map((x) => ({ id: x.id, kind: x.kind, after: x.after })), facts, p.launched);
 }

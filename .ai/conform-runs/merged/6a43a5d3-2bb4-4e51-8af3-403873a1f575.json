@@ -1,0 +1,108 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6a43a5d3-2bb4-4e51-8af3-403873a1f575",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-11-09T04:15:01.860954+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-writing-research",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 The escape hatch from the render gate sends only a version id, so one press accepts every blocking finding on that staged version and no finding can be named or left blocking.",
+   "techniques": [
+    {
+     "technique": "waiver-names-its-finding",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:198 The waiver's unit is the whole version, not one finding; two blocking findings cannot be split. The receipt (lib/script/versions.ts GateOverride) freezes counts and the blocking render ids, which limits the time reach but does not give finding identity."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Findings.tsx:13 Unmeasured and not-engaged render as their own marks, in one list shared by the render gate and the trailer check, so a skip never reads as a pass."
+    },
+    {
+     "technique": "policy-projection",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:7 The editor projects the server's verdict and computes no second copy that could drift from what is enforced."
+    },
+    {
+     "technique": "advancement-evidence-fields",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Document.tsx:10 An override advances the version and writes the hole onto its record, as overrideFrom in fixtureScript.ts:183 does."
+    }
+   ]
+  },
+  {
+   "context": "ui-status-provenance",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/status/status.ts:90 These components only draw states computed elsewhere, and a case-insensitive search of their directories for process.exit, exitCode and waiver found nothing, while the blocked and awaiting_gate words are display labels in a look table, so no check, refusal or verdict is built here.",
+   "techniques": [
+    {
+     "technique": "severity-by-construction",
+     "verdict": "not-applicable",
+     "evidence": "packages/ui/src/components/upstream/UpstreamBreak.tsx:1 The component draws a break the caller reports; it has no severity or exit path of its own."
+    }
+   ],
+   "absenceTerms": [
+    "process.exit",
+    "exitCode",
+    "waiver"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "quality-gates",
+   "context": "board-decision-desk",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "quality-gates",
+   "context": "ui-board-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "quality-gates",
+   "context": "trailer-structure-engine",
+   "reason": "evidence leans on rules/cue.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:15:01.860954+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "advancement-evidence-fields",
+    "policy-projection",
+    "unmeasurable-criteria",
+    "waiver-names-its-finding"
+   ],
+   "deviations": 1,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:15:01.860954+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "severity-by-construction"
+   ],
+   "deviations": 0,
+   "context": "ui-status-provenance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

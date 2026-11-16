@@ -13,7 +13,7 @@
 //
 // The brand returns to the Floor, as the prototype's did (a door now that the Floor exists).
 //
-// Section links are next/link with prefetch off: a switch is a soft navigation (the shell never
+// Section links are ./NavLink.tsx (next/link with prefetch off): a switch is a soft navigation (the shell never
 // unmounts: no second session POST, no stream reopen), and eight sections are not rendered ahead
 // of a click (the Floor walks every v1 store).
 //
@@ -28,13 +28,15 @@ import { Fragment } from "react";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 
-import type { SpendFacts } from "./headerFacts.ts";
+import { FailedSlot, type NeedsReread } from "./FailedSlot.tsx";
+import type { NeedsFacts, SpendFacts } from "./headerFacts.ts";
+import { NavLink } from "./NavLink.tsx";
 import { SECTIONS, sectionOf } from "./nav.ts";
 import { useShell } from "./Providers.tsx";
 import s from "./Shell.module.css";
 import { SpendSlot } from "./SpendSlot.tsx";
 
-export function HeaderBar({ devAuth, facts }: { readonly devAuth: boolean; readonly facts: SpendFacts }) {
+export function HeaderBar({ devAuth, facts, needs, rereadNeeds }: { readonly devAuth: boolean; readonly facts: SpendFacts; readonly needs: NeedsFacts; readonly rereadNeeds: NeedsReread }) {
   const here = sectionOf(usePathname());
   const { signOut } = useShell();
   const kit = SECTIONS.find((x) => x.id === "kit");
@@ -54,9 +56,9 @@ export function HeaderBar({ devAuth, facts }: { readonly devAuth: boolean; reado
             <Fragment key={x.id}>
               {sep && <span className={s.sep} aria-hidden="true" />}
               {x.built ? (
-                <Link href={x.href} prefetch={false} aria-current={here === x.id ? "page" : undefined}>
+                <NavLink href={x.href} current={here === x.id}>
                   {x.label}
-                </Link>
+                </NavLink>
               ) : (
                 <a role="link" aria-disabled="true" tabIndex={0}>
                   {x.label}
@@ -72,13 +74,14 @@ export function HeaderBar({ devAuth, facts }: { readonly devAuth: boolean; reado
             <Chip label="dev auth" tone="rose" dot />
           </span>
         )}
+        <FailedSlot facts={needs} reread={rereadNeeds} />
         <div className={s.slotSpend}>
           <SpendSlot facts={facts} />
         </div>
         {kit !== undefined && (
-          <Link className={s.kitLink} href={kit.href} prefetch={false} aria-current={here === "kit" ? "page" : undefined}>
+          <NavLink className={s.kitLink} href={kit.href} current={here === "kit"}>
             {kit.label}
-          </Link>
+          </NavLink>
         )}
         <Button label="Sign out" size="sm" onPress={() => void signOut()} />
       </div>

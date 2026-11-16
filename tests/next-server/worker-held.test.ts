@@ -23,7 +23,7 @@ function must<T>(r: Result<T>): T {
   return r.value;
 }
 
-const job = (id: string) => ({ id, of: { kind: "run" as const, id: id.slice(8) }, producer: "research", lane: "seat.text" as const });
+const job = (id: string) => ({ id, of: { kind: "run" as const, id: id.slice(8) }, producer: "research", lane: "cloud.google" as const });
 
 describe("the --once drain names a held lane", () => {
   it("names the job that holds it, at its stage, and the head waiting behind; nothing is claimed", () => {
@@ -40,7 +40,7 @@ describe("the --once drain names a held lane", () => {
       }),
     );
     k.close();
-    const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", STUB, "--once", "--json", "--idle-ms", "50", "--lanes", "seat.text"], {
+    const r = spawnSync(process.execPath, ["--disable-warning=ExperimentalWarning", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", STUB, "--once", "--json", "--idle-ms", "50", "--lanes", "cloud.google"], {
       cwd: ROOT,
       env: { ...process.env, GRAVITONE_STORE_PATH: file, GRAVITONE_DRY_ONLY: "1" },
       encoding: "utf8",
@@ -48,6 +48,6 @@ describe("the --once drain names a held lane", () => {
     });
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout.trim()).toBe("");
-    expect(r.stderr).toContain("seat.text is held by job job:run:crashed at turn: credits may be spent - look first, then acknowledge it; job:run:behind waits behind it");
+    expect(r.stderr).toContain("cloud.google is held by job job:run:crashed at turn: credits may be spent - look first, then acknowledge it; job:run:behind waits behind it");
   }, 60_000);
 });

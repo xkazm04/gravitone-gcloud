@@ -1,0 +1,110 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c6ee18fc-105d-4b4b-bbb7-90df10ed5f5e",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-04T01:27:38.934261+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "studio-shell",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/_shell/facts.ts:1 The shell computes header numbers, session cookies, toasts and the live feed and builds no model prompt: a search of app/(studio)/_shell/ for prompt, systemPrompt, anthropic and max_tokens found nothing (the only 'token' hits are Firebase ID tokens and design tokens), so the subject's precondition, a system that owns a prompt assembler, does not hold here.",
+   "techniques": [],
+   "absenceTerms": [
+    "prompt",
+    "systemPrompt",
+    "anthropic",
+    "max_tokens"
+   ]
+  },
+  {
+   "context": "part-editor-writing-research",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:3 These editors only send typed ops to the part port and assemble no prompt. The one 'prompt' hit, in Notebook.tsx, is the operator's raw follow-up question sent as an op field; the server-side followUpPrompt assembles it. A search for systemPrompt, max_tokens, anthropic and compaction found nothing in the editor directory.",
+   "techniques": [
+    {
+     "technique": "layered-composition",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Notebook.tsx:118 The call site sends a typed task input, never pre-rendered prompt text, so this context owns no assembler."
+    }
+   ],
+   "absenceTerms": [
+    "systemPrompt",
+    "max_tokens",
+    "anthropic",
+    "compaction"
+   ]
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:3 The media editors (cut, frames, score, voice, motion, trailer, render) render views and send ops and build no model prompt. A search of these files for prompt found no hits, and the 'compose' hits are UI labels ('no cut composed', composed plates). systemPrompt, max_tokens, anthropic and compaction do not appear anywhere in the shared _edit directory.",
+   "techniques": [],
+   "absenceTerms": [
+    "systemPrompt",
+    "max_tokens",
+    "anthropic",
+    "compaction"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "frames-picture-composition",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "bound-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T01:27:38.934261+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "studio-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:27:38.934261+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "layered-composition"
+   ],
+   "deviations": 0,
+   "context": "part-editor-writing-research",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:27:38.934261+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

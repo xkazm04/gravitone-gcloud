@@ -16,6 +16,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 
 import { cx } from "../cx.ts";
 import { SrOnly } from "../a11y/SrOnly.tsx";
+import { Plate } from "../desk/Plate.tsx";
 import s from "./FrameCanvas.module.css";
 
 export type CanvasLayer = {
@@ -103,14 +104,15 @@ export function FrameCanvas(p: FrameCanvasProps) {
     <figure className={cx(s.canvas, p.aspect === "9:16" && s.tall)} data-component="FrameCanvas" aria-label={p.label}>
       <div ref={box} className={s.frame} onPointerDown={() => p.onSelect?.(null)}>
         {p.plate.url !== null ? (
-          // A plate is a content-addressed blob or a public still; next/image is not in this kit.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className={s.plate} src={p.plate.url} alt="" draggable={false} />
+          // The plate the layers are placed over, as its own bytes (no width: the editor's canvas is a
+          // detail); a plate that will not load is Plate's drawn "not loaded", not a broken glyph.
+          <Plate className={s.plate} src={p.plate.url} alt="" />
         ) : (
           <div className={cx(s.plate, s.ground)} data-state={p.plate.state}>
             <SrOnly text={`no plate · ${p.plate.state}`} />
           </div>
         )}
+        {/* The clip is a LAYER over the plate, playing in place on the canvas - not a picture in a box of its own, so it stays a bare video. */}
         {p.clip !== undefined && p.clip !== null && <video className={s.plate} src={p.clip} muted loop autoPlay playsInline aria-label="clip" />}
         {p.layers.map((l) => {
           const k = layerKey(l);

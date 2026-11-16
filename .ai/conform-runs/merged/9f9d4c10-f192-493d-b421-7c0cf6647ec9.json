@@ -1,0 +1,241 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9f9d4c10-f192-493d-b421-7c0cf6647ec9",
+  "subject": "video-assembly",
+  "evaluatedAt": "2026-11-09T02:02:05.803015+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "part-editor-media-cut-score",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 The music lane has only proposed, missing and ok looks, so a cue the provider refused is drawn exactly like a cue never rendered and its cost never appears on the clock.",
+      "techniques": [
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:157 CueView carries no refusal, and lib/producers/score.ts musicFailure makes a refusal the job's sentence, so refused and not-yet-rendered collapse into one dashed block. Picture gaps are honest (dashed .block.missing with a reason); the music lane is the defect."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:37 A cue's address is a first and last scene with no offset (CutClock header: the span IS its first and last scene), so a cue cannot enter or exit mid-scene as the technique requires. The purpose field and computed coverage are present."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Motion.tsx:54 The unit rail marks a clip only when a URL exists; a refused or failed clip render draws nothing, because UnitClipView has status, motion and url only and the refusal stays the job's sentence (lib/producers/motion.ts:242). Motion's provenance is on the proposal, not on the clip."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:169 Picture, voice and music lanes on one clock; blocks drawn from the same drawnS the bench edits, to scale (CutClock.tsx:232). No on-surface legend names the states; the inspector chip does, and the turn mark sits in the ruler rather than spanning the lanes."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:115 Signed millisecond offset, 50 ms nudges stored as ops, snap to mark when non-zero. Head and tail measurement is absent. The status computation is the port's and is judged in part-port-fixtures."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:253 The surface draws no mark when the material has no turn rather than a mark at zero, and reads the value the port derives."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:116 An edit names a clip and a value as an op on the source record, never a change to pixels; the export is compiled from that record."
+        },
+        {
+          "technique": "seek-stable-composition-authoring",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:62 The poster preview asks the compositor for an explicit seeded frameIndex; lib/sound/mv/compositor.ts documents and implements position as arithmetic over (seed, frameIndex) with no carried state."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:27 Failing checks replace the render button with a blocked chip, so the computed checks run before the priced render. There is no contact-sheet rung."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 A still that does not decode becomes an error naming the input instead of a blank canvas under a preview label."
+        }
+      ]
+    },
+    {
+      "context": "part-port-fixtures",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 The score derives the turn with its own regex while the cut calls turnOf at fixtureCut.ts:143, so one structural fact has two derivations and both silently take the first matching scene.",
+      "techniques": [
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 Position is derived from the material and absence yields null, but there is a second derivation beside turnOf, and two matching scenes are silently resolved to the first instead of being surfaced as a material defect."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:123 shownStatus only turns drift into ok at offset zero, and deriveTimeline assigns only ok or missing on a project, so a clip nudged +300 ms still reads ok and the finish line's drift row stays at 0. The offset store and the snap op are correct."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:183 The stored cue address is the scene list alone with no offset, so it re-derives on a retime but cannot resolve inside a scene."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:88 The spotting view reports unspotted scene runs and covered seconds but has no refused state or refused seconds beside them, so the three-state reduction cannot be made. Strips cards do carry refused with a reason (fixtureExplainer.ts:32)."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureMotion.ts:26 The clip kept on a unit holds no prompt, anchor, model or date and no failure reason, so provenance does not travel with the accepted material."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:121 The drawn position is computed from the same offsets the bench edits, so the number and the block are one fact."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 The cut compiles to a deterministic document whose digest is recorded on each export."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:250 A render is refused at the units step while any blocking check fails, before a receipt is priced."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScoreRecs.ts:62 A unit the timeline cannot read makes the whole picture unread rather than being silently left off the clock."
+        }
+      ],
+      "registryProposal": "drift-correction states status-follows-measurement only in the direction of a drifting clip zeroed back to placed; it could also state the reverse, that a placed clip moved off its mark past the threshold must read as drifting, since an implementation can satisfy the written example and still report a large offset as ok."
+    },
+    {
+      "context": "imaging-vendor-providers-and-video",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/imaging/video/types.ts:66 The stored clip record keeps the motion line, model, duration and dates but not the identity of the key image that conditioned it, so a clip's anchor is lost and it can be regenerated but not re-briefed from its own record.",
+      "techniques": [
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/video/types.ts:66 Provenance lacks the anchor and the conditioning rung: the base64 image is consumed by startClip and no digest is written. Durations are typed, audio is decided and a refusal is not blind-retried, so the gap is provenance."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:216 A moderation answer is a terminal refused state with the vendor's words, distinct from failed and never retried."
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/video/leonardo.ts:337 An empty download fails by name instead of landing as a done clip; an unverified aspect is likewise refused at line 172."
+        },
+        {
+          "technique": "unreferenced-channels-resample",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/video/leonardo.ts:209 The adapter asks for silent clips, so no synthesised channel exists to pin across calls."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "video-assembly",
+      "context": "part-editor-writing-research",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "video-assembly",
+      "context": "text-reasoning-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchor lib/text/types.ts:58 is an incidental comment on the TextCapability type, and the module does serve this subject: lib/text/router.ts and providers/google.ts route `scene-direction` and `edit-plan` capabilities for the frames, edit and music-video pair callers, which the sea"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T02:02:05.803015+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "drift-correction",
+        "gap-and-refusal-honesty",
+        "generated-shot-sourcing",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture",
+        "seek-stable-composition-authoring",
+        "silent-defects-get-a-code-or-an-error",
+        "verify-cheapest-artifact-first"
+      ],
+      "deviations": 1,
+      "context": "part-editor-media-cut-score",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T02:02:05.803015+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "cut-compiled-from-source",
+        "derived-turn-markers",
+        "drift-correction",
+        "gap-and-refusal-honesty",
+        "generated-shot-sourcing",
+        "multitrack-timeline-discipline",
+        "music-spotting-against-picture",
+        "silent-defects-get-a-code-or-an-error",
+        "verify-cheapest-artifact-first"
+      ],
+      "deviations": 1,
+      "context": "part-port-fixtures",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T02:02:05.803015+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "text-reasoning-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T02:02:05.803015+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "video-assembly"
+      ],
+      "techniques": [
+        "gap-and-refusal-honesty",
+        "generated-shot-sourcing",
+        "silent-defects-get-a-code-or-an-error",
+        "unreferenced-channels-resample"
+      ],
+      "deviations": 1,
+      "context": "imaging-vendor-providers-and-video",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

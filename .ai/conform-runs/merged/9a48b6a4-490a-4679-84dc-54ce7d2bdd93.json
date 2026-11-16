@@ -1,0 +1,176 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9a48b6a4-490a-4679-84dc-54ce7d2bdd93",
+ "subject": "video-assembly",
+ "evaluatedAt": "2026-11-03T22:54:44.953900+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "cut-and-export",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "lib/cut/deriveTimeline.ts:314 The act-two turn mark is derived from the material's label, but when two scenes match /turn/ the first is taken silently instead of surfacing the double match as a story defect, and two other techniques (silence spotting, drift threshold) are also missed in this context.",
+   "techniques": [
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "deviation",
+     "evidence": "lib/cut/deriveTimeline.ts:314 Derived from a labelled scene (good), but `find` silently takes the first of several matching scenes; the rule says to surface two candidates as a material defect."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "deviation",
+     "evidence": "lib/cut/finishLine.ts:99 Cue spans are re-derived from the scenes (deriveTimeline.ts:264), but the finish line fails any second not under a cue as 'unscored'; no spot kind for silence exists, so silence chosen on purpose cannot be told apart from a hole."
+    },
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "lib/cut/finishLine.ts:58 Status is re-derived from the current offset (offsets.ts:37, good), but the tolerance is zero: a clip a few ms off still fails the drift row, against the ~15 ms early / ~45 ms late leave-it threshold, and there is no head/tail measurement."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "lib/cut/cutDocument.ts:146 A missing plate compiles to an explicit gap carrying its reason, and the export renders it black and lists it in sidecar gaps; voice lines are drawn as MISSING 'written, not recorded'."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "lib/cut/finishLine.ts:93 Coverage is a union reduced over the same music clips that drew the lane, not prose; picture, voice and music are kept in separate lanes."
+    },
+    {
+     "technique": "cut-compiled-from-source",
+     "verdict": "conformant",
+     "evidence": "lib/cut/cutDocument.ts:177 The cut compiles to a deterministic, key-sorted, hashed edit decision list that the export only executes."
+    },
+    {
+     "technique": "seek-stable-composition-authoring",
+     "verdict": "conformant",
+     "evidence": "lib/musicVideoExport.ts:6 The music-video export calls renderFrameAt(frameIndex) with the same compositor the preview uses."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "lib/cutExport.ts:305 A silent stand-in take, which would otherwise mix as plausible narration, becomes an unreachable row that names it; plate-only drawing is declared as `drawn: \"plates\"`."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "lib/cutExport.ts:341 The document's shape and that the picture tiles the clock are checked before any ffmpeg spawn, and the render is a stills animatic; there is no contact-sheet rung."
+    },
+    {
+     "technique": "unreferenced-channels-resample",
+     "verdict": "conformant",
+     "evidence": "lib/adRender.ts:384 Generated clips' own sound is explicitly stripped rather than left to occupy a lane; this is the honest 'strip and author in the cut' route."
+    }
+   ],
+   "registryProposal": "drift-correction states a perceptual tolerance (~15 ms early / ~45 ms late) but the golden path also asks for a snap that returns the offset to exactly zero; a technique line saying whether a gate should pass an offset inside the tolerance (vs. requiring zero) would settle whether a zero-tolerance finish gate is a deviation."
+  },
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "video-assembly",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The sync bench nudges in 50 ms steps, more than one frame at the cut's 25 fps (40 ms), so it cannot make the sub-frame corrections the standard asks for even though snap-to-mark exists.",
+   "techniques": [
+    {
+     "technique": "drift-correction",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:114 The only step is \u00b150 ms, coarser than a frame; the golden path asks for nudge increments well under the frame (snap to mark at line 118 is present)."
+    },
+    {
+     "technique": "multitrack-timeline-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:31 Picture, voice and music lanes in a fixed order on one clock (CutClock), with blocks drawn at their drawn start and length."
+    },
+    {
+     "technique": "gap-and-refusal-honesty",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:106 Missing blocks keep their look and reason; the inspector shows a rose status chip and the reason. Strips.tsx:117 shows a refused card's reason the same way."
+    },
+    {
+     "technique": "derived-turn-markers",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:232 The mark is drawn from the derived d.turn, not a typed time; the first-match flaw in the derivation is judged under cut-and-export."
+    },
+    {
+     "technique": "music-spotting-against-picture",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Score.tsx:47 Each cue is spotted with an in/out on the shared clock and a stated purpose; gaps are shown as a count, not hidden."
+    },
+    {
+     "technique": "verify-cheapest-artifact-first",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:27 The operator sees a cheap in-browser preview from the same compositor before spending the priced render."
+    },
+    {
+     "technique": "silent-defects-get-a-code-or-an-error",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Render.tsx:76 A still that fails to decode, which used to leave a blank canvas, is now an error naming the blob."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "video-assembly",
+   "context": "visual-producers",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "sound-generation-engine",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "video-assembly",
+   "context": "part-editor-writing-research",
+   "reason": "Its own files (script, article, ads brief, beats, notebook, research, findings, words editors) hold no assembly or timeline construct that I could find. A not-applicable verdict would fail the absence re-search, though: this context shares the app/(studio)/projects/[id]/[part]/_edit/ directory with Cut.tsx, CutClock.tsx and Score.tsx, which hold every video-assembly term, so I am declining rather than claiming absence."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T22:54:44.953900+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "cut-compiled-from-source",
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "seek-stable-composition-authoring",
+    "silent-defects-get-a-code-or-an-error",
+    "unreferenced-channels-resample",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "cut-and-export",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:54:44.953900+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "video-assembly"
+   ],
+   "techniques": [
+    "derived-turn-markers",
+    "drift-correction",
+    "gap-and-refusal-honesty",
+    "multitrack-timeline-discipline",
+    "music-spotting-against-picture",
+    "silent-defects-get-a-code-or-an-error",
+    "verify-cheapest-artifact-first"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

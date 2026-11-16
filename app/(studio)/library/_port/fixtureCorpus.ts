@@ -25,7 +25,7 @@ import type { libraryItemSchema } from "@gt/domain/libraryItem";
 import { fixtureCharacters } from "./fixtureCharacters.ts";
 import { FIXTURE_VENTURE_NAMES, fixtureGenres } from "./fixtureGenres.ts";
 import { fixtureModels } from "./fixtureModels.ts";
-import { BUNDLES, CLIPS, DECK, dataBlob, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
+import { BUNDLES, CLIPS, CUT_JOBS, DECK, dataBlob, fileBlob, HUNTS, LESSONS, MECHANISMS, PALETTES, peaksOf, PROJECTS, rng, RUNS, SCENES, SOUND, STYLES, SUBJECTS, TOPICS, TRIAL_STYLES, type FixtureMedia } from "./fixtureData.ts";
 
 type Raw = z.input<typeof libraryItemSchema>;
 
@@ -62,7 +62,7 @@ export function labelOf(group: string, value: string): string {
   if (group === "style") return styleOf(value)?.name ?? words(value);
   if (group === "venture") return FIXTURE_VENTURE_NAMES.get(value) ?? value;
   if (group === "project") return PROJECTS.find((p) => p.id === value)?.title ?? value;
-  if (group === "run" || group === "hunt" || group === "pin" || group === "set" || group === "bundle" || group === "attention" || group === "state" || group === "source" || group === "origin") return value;
+  if (group === "run" || group === "job" || group === "hunt" || group === "pin" || group === "set" || group === "bundle" || group === "attention" || group === "state" || group === "source" || group === "origin") return value;
   return words(value);
 }
 
@@ -127,6 +127,9 @@ export function buildCorpus(): readonly FixtureRecord[] {
   const add = (d: Draft): void => {
     const raw: Raw = { ...d.raw, lineage: d.lineage };
     const f = d.f;
+    // The job that made it is a facet the index reads off the lineage (kernel library/core.ts facetsOf).
+    const jobs = (d.lineage ?? []).flatMap((l) => (l.kind === "job" ? [l.id] : []));
+    if (jobs.length > 0) f["job"] = jobs;
     f["state"] = [raw.state];
     f["origin"] = [raw.origin];
     f["source"] = [raw.source];
@@ -167,6 +170,11 @@ export function buildCorpus(): readonly FixtureRecord[] {
   const runPtr = (id: string): Pointer => ({ kind: "run", id });
   const stylePtr = (id: string): Pointer => ({ kind: "style", id });
   const projPtrs = (ps: readonly string[]): Pointer[] => ps.map((id): Pointer => ({ kind: "project", id }));
+  // A cut names the kernel job that rendered it (the kernel feed's lineage, lib/library/feeds/kernel.ts).
+  const jobPtrs = (projectId: string): Pointer[] => {
+    const job = CUT_JOBS[projectId];
+    return job === undefined ? [] : [{ kind: "job", id: job }];
+  };
 
   const quota = SHARE.map(([k, w]) => [k, Math.round(TOTAL * w)] as const);
   const models = fixtureModels();
@@ -298,7 +306,7 @@ export function buildCorpus(): readonly FixtureRecord[] {
           f,
           meta: `${b.id} · captions ${captions}`,
           extras: { ...(captions === "none" ? {} : { captions: 4 + Math.floor(r() * 30) }) },
-          lineage: projPtrs([p.id]),
+          lineage: [...jobPtrs(p.id), ...projPtrs([p.id])],
           media: broken ? { ...facts(v), decodable: false, posterSha: null, meanLuma: null, error: "MEDIA_ERR_SRC_NOT_SUPPORTED · ffprobe: Invalid data found when processing input" } : facts(v, { posterSha: poster.sha, durationS: 30 + Math.floor(r() * 90) }),
           ...(broken ? {} : { video: v.url, poster: poster.url }),
           palette: PALETTES[styleOf(p.style)?.obs.palette_strategy ?? ""] ?? ["#24304a", "#3a2537"],

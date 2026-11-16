@@ -47,7 +47,7 @@ import type { Reader, Tx } from "./store.ts";
 //
 // A CRASH IS AN INTERRUPTION, AND AN OPERATOR LOOKS. Nothing here resumes an
 // interrupted job; `recover` only names it, and job.ts `retry` is the
-// operator's door. The step that was in flight is named in `interruption.stage`,
+// operator's door (job-resume.ts is the live worker's, for gpu.local and box.render). The step that was in flight is named in `interruption.stage`,
 // and on a paid lane the lane HOLDS until `ackLane` (job-queue.ts).
 //
 // DRY IS THE JOB'S MODE, NOT THE CALLER'S PORT (G-dry). The driver's own calls
@@ -372,8 +372,8 @@ async function drive(fx: Effects, producer: Producer, jobId: string, opts: RunOp
  * holder and the step in flight. Gone means its slot fence no longer holds
  * (released, taken over, or past its TTL) or its holder is a dead process on
  * this host. A holder on another host inside its TTL is alive as far as
- * anyone here can know, and its job is left alone. Nothing is resumed; a paid
- * lane holds.
+ * anyone here can know, and its job is left alone. Nothing is resumed here (the
+ * worker loop does that for free lanes, job-resume.ts); a paid lane holds.
  */
 export function recover(fx: Effects, opts: { holder?: Holder; alive?: Alive; spendClasses?: readonly SpendClass[] } = {}): Result<Job[]> {
   const me = opts.holder ?? processHolder();

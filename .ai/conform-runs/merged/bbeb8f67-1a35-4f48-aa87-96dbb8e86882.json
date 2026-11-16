@@ -1,0 +1,171 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bbeb8f67-1a35-4f48-aa87-96dbb8e86882",
+ "subject": "mcp-tools",
+ "evaluatedAt": "2026-11-03T10:22:16.126961+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "mcp-agent-door",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/_server/mcp/principal.ts:52 The door takes the agent's ledger actor and its spend-request listing key from the token's name, not from the minted id (the principal carries tokenId, lib/principal.ts:462). Token names are not unique (packages/kernel/src/token.ts tokens table: only id and hash are keyed), so two tokens minted as `athena` share one audit actor and each lists the other's spend requests. The technique names this exact failure.",
+   "techniques": [
+    {
+     "technique": "authentication-and-scoping",
+     "verdict": "deviation",
+     "evidence": "app/_server/mcp/principal.ts:52 Per-consumer tokens with scopes, checked at one door before dispatch, are conformant. The identity is the token's name, though, and the minted tokenId is dropped even though the principal carries it. The audit actor and the spend list key are both name-keyed."
+    },
+    {
+     "technique": "server-composition",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/registry.ts:21 One registry. tools/list and tools/call both resolve through it (projection.ts). The dispatch door in rpc.ts catches a handler throw as an isError tool result, so a crash does not kill the transport."
+    },
+    {
+     "technique": "tool-schema-design",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/rpc.ts:25 Message errors come back as JSON-RPC errors and work errors as isError results with {code, detail}. Every op door is a strict zod object enforced at dispatch. Names are namespaced gt_<family>_<op>, and registryFaults caps descriptions at 240 chars."
+    },
+    {
+     "technique": "catalog-projection-modes",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/registry.ts:41 A family tool carries the most severe annotations of its ops. Write policy is checked again on the resolved op (rpc.ts:78), and both projections reach the same handler. The family schema publishes every op's door as a oneOf, so the model keeps its map. A call naming no op gets a -32602 error listing the known ops, not a returned sub-catalog."
+    },
+    {
+     "technique": "transport-selection",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/principal.ts:46 Streamable HTTP with identity carried by a bearer credential. A browser Origin that is not loopback is refused (DNS rebinding), and there is no GET or SSE listener."
+    },
+    {
+     "technique": "write-freshness-gate",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/tools/launch.ts:133 A write must carry the plan rev or the receipt token it read. A stale one gets the fresh receipt back and nothing is written (set_part, rename and discard carry rev too)."
+    },
+    {
+     "technique": "caller-differentiated-capability",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/tools/launch.ts:44 The invariant \"an agent never spends\" is named (packages/domain/src/mcp.ts:6) and stated in INSTRUCTIONS and in each tool description. It is enforced by a runtime rule in the handlers (liveRule here, isLive in job.ts), not by removing live from the schema. That rule must be repeated in every spending op."
+    },
+    {
+     "technique": "first-party-agent-is-a-principal",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/rpc.ts:136 Every caller, the studio's own agent included, must present a minted CLI token, and write ops are admitted by scope grant (mayAct). A grep found no other door into the REGISTRY handlers outside tests."
+    },
+    {
+     "technique": "enumeration-without-a-scope",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/tools/spend.ts:31 The spend-request list is scoped to the caller. The scope key is the token name, so it inherits the authentication-and-scoping deviation. Other listings cover the whole single-operator studio."
+    },
+    {
+     "technique": "budgeted-partial-response",
+     "verdict": "conformant",
+     "evidence": "app/_server/mcp/tools/read.ts:78 Listings are capped by count, not by a time budget. A cut page says truncated and gives the next probe. The packets op and spend list report truncated with no next probe."
+    },
+    {
+     "technique": "suspendable-request-classes",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/rpc.ts:17 There is no elicitation or server-to-client request, so no call can pause for a human. Metadata verbs (initialize, ping, tools/list) are answered by machine."
+    },
+    {
+     "technique": "sanctioned-session-state",
+     "verdict": "not-applicable",
+     "evidence": "app/_server/mcp/rpc.ts:16 The door is stateless with no protocol sessions and no sticky routing. State spanning calls is an explicit handle (rev, receipt token, cursor)."
+    }
+   ],
+   "registryProposal": "catalog-projection-modes: its self-teaching rule assumes compression removes the per-operation schemas. Here a routing tool publishes every op's full schema as a discriminated oneOf, so the model keeps its map and the 'operation name optional, return a sub-catalog' remedy may not be needed. The technique could name this variant (fewer tools without losing schemas) and say which rung of self-teaching still applies."
+  },
+  {
+   "context": "ledger-screen",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The ledger screen publishes no tools. A case-insensitive search of app/(studio)/ledger for mcp, tools/call, inputSchema and jsonrpc found nothing. Its bounded read module is imported by the MCP door's gt_read ledger op (app/_server/mcp/tools/read.ts), where the tool contract is judged.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "tools/call",
+    "inputSchema",
+    "jsonrpc"
+   ]
+  },
+  {
+   "context": "foundry-extract-engine",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/extract/engine.ts:13 The extract engine is a step machine driven by a kernel job and a CLI, not a tool server. A case-insensitive search of lib/foundry/extract for mcp, tools/call, inputSchema and jsonrpc found nothing, so the tool-protocol precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "tools/call",
+    "inputSchema",
+    "jsonrpc"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "mcp-tools",
+   "context": "studio-shell",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "mcp-tools",
+   "context": "server-seam",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T10:22:16.126961+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "authentication-and-scoping",
+    "budgeted-partial-response",
+    "caller-differentiated-capability",
+    "catalog-projection-modes",
+    "enumeration-without-a-scope",
+    "first-party-agent-is-a-principal",
+    "sanctioned-session-state",
+    "server-composition",
+    "suspendable-request-classes",
+    "tool-schema-design",
+    "transport-selection",
+    "write-freshness-gate"
+   ],
+   "deviations": 1,
+   "context": "mcp-agent-door",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T10:22:16.126961+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T10:22:16.126961+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "foundry-extract-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

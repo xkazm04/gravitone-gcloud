@@ -20,7 +20,8 @@ import { RunView } from "@gt/ui/components/cull/RunView.tsx";
 import { CutReview } from "@gt/ui/components/cut/CutReview.tsx";
 import { BoardDesk, CommitButton, DeskFrame, OracleStrip } from "@gt/ui/components/desk/Desk.tsx";
 import { PacketRail } from "@gt/ui/components/desk/PacketRail.tsx";
-import { Plate } from "@gt/ui/components/desk/Plate.tsx";
+import { Clip } from "@gt/ui/components/desk/Clip.tsx";
+import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import { StackBar } from "@gt/ui/components/stackbar/StackBar.tsx";
 import { BlindPair } from "@gt/ui/components/pair/BlindPair.tsx";
 import { EditNote } from "@gt/ui/components/review/ArticlePage.tsx";
@@ -110,7 +111,7 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
           onVerdict={noop}
         />
       </Spec>
-      <Spec names={["CullTile", "Plate"]} source="index.html CullTile · .cur .keep .reject .nudge · audio take">
+      <Spec names={["CullTile"]} source="index.html CullTile · .cur .keep .reject .nudge · audio take">
         <div className={b.tiles}>
           {(["keep", "reject", undefined] as const).map((v, i) => (
             <CullTile
@@ -142,8 +143,22 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
             <CullTile index={13} words={{ label: MODEL.label, meta: MODEL.meta }} media={modelMedia} verdict={{ verdict: "keep", reasons: [] }} current={cur === 13} nudged={false} onPress={setCur} />
           </div>
         </Row>
+      </Spec>
+      <Spec names={["Plate", "PlateMissing", "Clip"]} source="one picture, one clip · waiting · loaded · failed · the hatch alone" wide>
         <Row label="plate">
-          <Plate className={b.thumb} src="/presets/blueprint.jpg" alt="blueprint" />
+          <div className={b.media}>
+            <Plate className={b.thumb} src={undefined} alt="" aspect={16 / 10} />
+            <Plate className={b.thumb} src="/presets/blueprint.jpg" alt="blueprint" aspect={16 / 10} />
+            <Plate className={b.thumb} src="/clips/presets/blueprint.webm" alt="a plate that will not decode" aspect={16 / 10} />
+            <PlateMissing className={b.thumb} aspect={16 / 10} label="no plate" />
+          </div>
+        </Row>
+        <Row label="clip">
+          <div className={b.media}>
+            <Clip className={b.thumb} src="/clips/presets/blueprint.webm" label="blueprint" poster="/clips/presets/blueprint.jpg" aspect={16 / 9} controls />
+            <Clip className={b.thumb} src="/clips/presets/data-neon.webm" label="data neon" aspect={16 / 9} muted loop />
+            <Clip className={b.thumb} src="/presets/blueprint.jpg" label="a take that will not decode" aspect={16 / 9} />
+          </div>
         </Row>
       </Spec>
       <Spec names={["Zoom"]} source="index.html Zoom · the Z lens">

@@ -91,33 +91,34 @@ describe("a request shaped for the studio", () => {
 });
 
 describe("the still engine and its lane", () => {
-  it("the switch defaults to the studio and names one of three", () => {
-    expect(replicaGenerator({})).toBe("leonardo-studio");
+  it("the switch defaults to Codex and names one of three", () => {
+    expect(replicaGenerator({})).toBe("codex");
     expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "leonardo-flare" })).toBe("leonardo-flare");
-    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "comfy-flux2" })).toBe("comfy-flux2");
-    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "nano-banana" })).toBe("leonardo-studio");
+    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "leonardo-studio" })).toBe("leonardo-studio");
+    expect(replicaGenerator({ SCOUT_REPLICA_GENERATOR: "nano-banana" })).toBe("codex");
   });
 
-  it("stillLane: the studio on box.chrome, local Flux on gpu.local, Flare on cloud.leonardo", () => {
+  it("stillLane: Codex on seat.text, the studio on box.chrome, Flare on cloud.leonardo", () => {
     expect(stillLane("leonardo-studio")).toBe("box.chrome");
-    expect(stillLane("comfy-flux2")).toBe("gpu.local");
+    expect(stillLane("codex")).toBe("seat.text");
     expect(stillLane("leonardo-flare")).toBe("cloud.leonardo");
   });
 
-  it("an act reads the lane first: box.chrome is the studio, cloud.leonardo Flare, gpu.local the switch", () => {
-    expect(generatorOnLane("box.chrome", { SCOUT_REPLICA_GENERATOR: "comfy-flux2" })).toBe("leonardo-studio");
+  it("an act reads the lane first: seat.text is Codex, box.chrome the studio, cloud.leonardo Flare, gpu.local the switch", () => {
+    expect(generatorOnLane("seat.text", { SCOUT_REPLICA_GENERATOR: "leonardo-flare" })).toBe("codex");
+    expect(generatorOnLane("box.chrome", { SCOUT_REPLICA_GENERATOR: "codex" })).toBe("leonardo-studio");
     expect(generatorOnLane("cloud.leonardo", {})).toBe("leonardo-flare");
-    expect(generatorOnLane("gpu.local", { SCOUT_REPLICA_GENERATOR: "comfy-flux2" })).toBe("comfy-flux2");
-    expect(generatorOnLane("gpu.local", {})).toBe("leonardo-studio");
+    expect(generatorOnLane("gpu.local", { SCOUT_REPLICA_GENERATOR: "leonardo-studio" })).toBe("leonardo-studio");
+    expect(generatorOnLane("gpu.local", {})).toBe("codex");
   });
 });
 
 describe("a still on the receipt, priced by its engine", () => {
-  it("the studio is unpriced in studio credits (the idea artboard's shape), local Flux free, Flare at its fallback", () => {
+  it("the studio is unpriced in studio credits (the idea artboard's shape), Codex $0 on the seat, Flare at its fallback", () => {
     const studio = scoutStillOption("scout-asset", "concept still", "box.chrome", "leonardo-studio");
     expect(studio.ok && studio.value).toMatchObject({ lane: "box.chrome", provider: "leonardo-studio", usdPerUnit: null, unpricedReason: STUDIO_CREDIT });
-    const flux = scoutStillOption("scout-asset", "concept still", "gpu.local", "comfy-flux2");
-    expect(flux.ok && flux.value).toMatchObject({ lane: "gpu.local", provider: "comfy-flux2", usdPerUnit: 0, label: "concept still · local" });
+    const codex = scoutStillOption("scout-asset", "concept still", "seat.text", "codex");
+    expect(codex.ok && codex.value).toMatchObject({ lane: "seat.text", provider: "codex", usdPerUnit: 0, label: "concept still · codex" });
     const flare = scoutStillOption("scout-scene", "replica still", "cloud.leonardo", "leonardo-flare");
     expect(flare.ok && flare.value).toMatchObject({ lane: "cloud.leonardo", provider: "leonardo-flare", model: "openai/gpt-image-2.5-flare", usdPerUnit: 0.01542 });
   });
@@ -136,7 +137,7 @@ describe("a still on the receipt, priced by its engine", () => {
     expect(assetPlan(asset.value, new Map())[0]).toMatchObject({ name: "concept:1", credit: STUDIO_CREDIT });
   });
 
-  it("an asset launches on its engine's lane with the engine's price: the studio by default, Flux on the card, Flare on Leonardo's", async () => {
+  it("an asset launches on its engine's lane with the engine's price: Codex on the seat by default, the studio, Flare on Leonardo's", async () => {
     const n = await createNight({ dry: true, day: "2026-10-26" });
     const b = parseBrief({ class: "prop", subject: "supply crate, banded planks", use: "a crate on the quay", serves: { newProject: "a harbour game" } });
     if (!b.ok) throw b.error;
@@ -146,15 +147,15 @@ describe("a still on the receipt, priced by its engine", () => {
     const t = { nightId: n.id, candidateId: "c-01" as const };
     const base = { mode: "dry" as const, ceilingUsd: 15, techniques: ["T1" as const], actor: OP, dryOnly: true };
     const seen: [string, string | undefined, number | null | undefined][] = [];
-    for (const generator of [undefined, "comfy-flux2", "leonardo-flare"] as const) {
+    for (const generator of [undefined, "leonardo-studio", "leonardo-flare"] as const) {
       const r = await launchAsset(k.store, t, { ...base, ...(generator === undefined ? {} : { generator }) });
       if (!r.ok || r.value.kind !== "receipt") throw new Error(`expected a receipt, got ${r.ok ? r.value.kind : r.error.message}`);
       const line = r.value.receipt.lines[0];
       seen.push([line?.lane ?? "", line?.provider, line?.usd]);
     }
     expect(seen).toEqual([
+      ["seat.text", "codex", 0],
       ["box.chrome", "leonardo-studio", null],
-      ["gpu.local", "comfy-flux2", 0],
       ["cloud.leonardo", "leonardo-flare", 0.02],
     ]);
     const r = await launchAsset(k.store, t, base);

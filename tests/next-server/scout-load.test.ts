@@ -27,7 +27,10 @@ import { interruptedOf, nightLoad, recentLine, recentLoad, waitingLine } from ".
 import { createNight, mutateNight } from "../../lib/foundry/scout/store.ts";
 import { loadSection, tasteBrief, tasteOf } from "../../lib/foundry/scout/taste.ts";
 import type { Night } from "../../lib/foundry/scout/types.ts";
+import { guardOrphans } from "./_orphanGuard.ts";
 import { runCli } from "../../pipeline/scout.mts";
+
+const guardedRunCli = guardOrphans(runCli);
 
 afterAll(() => {
   closeProcessKernel();
@@ -183,7 +186,7 @@ describe("status - the load against the band, and the night's interrupted jobs",
 
     const run = async (argv: string[]) => {
       const out: string[] = [];
-      const code = await runCli(argv, { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => out.push(s), err: () => undefined, ports: { now: () => new Date(now) } });
+      const code = await guardedRunCli(argv, { env: { ...process.env, GRAVITONE_DRY_ONLY: "1" }, out: (s) => out.push(s), err: () => undefined, ports: { now: () => new Date(now) } });
       return { code, out: out.join("\n") };
     };
     const j = await run(["status", n.id, "--json"]);

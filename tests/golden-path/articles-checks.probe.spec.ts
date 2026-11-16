@@ -144,9 +144,14 @@ test.describe("rendered", () => {
     writeFileSync(path.join(dir, "claims.json"), "[]");
   }
 
+  // A browser that could not be launched, or a render that failed, comes back not-measured with the reason in `detail`;
+  // the report would show the status alone, so the failure carries the reasons.
+  const notMeasured = (items: CheckItem[]): string[] => items.filter((i) => i.status === "not-measured").map((i) => `${i.id}: ${(i.detail ?? []).join("; ")}`);
+
   test("type sizes are computed in a real browser at 390 and 1440, screenshots kept", async () => {
     stage(page({ bodyPx: 20 }));
     const ok = await runCheck(dir);
+    expect(notMeasured(ok.items), "rendered items not measured").toEqual([]);
     const items = Object.fromEntries(ok.items.map((i) => [i.id, i]));
     expect(items["body-font-1440"]).toMatchObject({ status: "pass", value: "20px" });
     expect(items["body-font-390"].status).toBe("pass");
@@ -156,6 +161,7 @@ test.describe("rendered", () => {
 
     stage(page({ bodyPx: 15, external: true }));
     const small = await runCheck(dir);
+    expect(notMeasured(small.items), "rendered items not measured").toEqual([]);
     const s = Object.fromEntries(small.items.map((i) => [i.id, i]));
     expect(s["body-font-1440"]).toMatchObject({ status: "fail", value: "15px", expected: `≥ ${THRESHOLDS.minBodyPx1440}px` });
     expect(s["body-font-390"].status).toBe("fail");

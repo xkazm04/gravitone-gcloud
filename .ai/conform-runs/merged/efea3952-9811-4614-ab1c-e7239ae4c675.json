@@ -1,0 +1,140 @@
+{
+ "schema": "conform-run/1",
+ "worker": "efea3952-9811-4614-ab1c-e7239ae4c675",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-05T23:06:00.375616+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "board-decision-desk",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/board/_port/real.ts:205 The queue of open packets is assembled with no expiry, deadline or overdue predicate (searched the board files, packages/kernel/src/decision and PacketRail for expire/overdue/deadline/reap: none; the rail only sorts by openedAt), so a pending decision is immortal, which review-queues hygiene names as a defect (pending state must name its reaper, or hold visibly as overdue).",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:245 The commit is one kernel transaction carrying the preview token, a fresh v1 digest and an idempotency ticket. The kernel refuses it with stale-preview when either side moved, and preview is refused on a packet that is not open (line 217)."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_port/real.ts:74 Every patch, pick, undo, commit and return is written with an author resolved from the session principal (actions.ts resolves it, the browser never names it), together with the surface and a base revision."
+    },
+    {
+     "technique": "consent-gates",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/commitFlow.tsx:3 The commit is informed consent. The server-computed consequence is shown in ConsequencePanel, and the confirm carries the token bound to that preview."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/board/_board/DecidedDesk.tsx:51 After a decision, the apply state (pending, applied or stuck) is shown apart from the verdict, with v1's error verbatim and a redrive. A stale-preview refusal re-previews instead of firing (commitFlow.tsx:68)."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/board/_port/real.ts:205 Completeness is structural: the rail is built from kernel packets plus unopened Weir piles, a truncated page is still checked, and a failed rail read is shown rather than reading as 'weir clear'. Queue hygiene is missing: no packet expires and none is marked overdue."
+    }
+   ]
+  },
+  {
+   "context": "foundry-forge-store-and-verdicts",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/verdictLog.ts:172 A verdict write that does not name its decider (any PUT, any PATCH without `by`, and the commit's own inline/auto-reject rewrite) is logged as a human verdict, and humanKeep counts it as a vote toward `proven`, the admitting state that adoptInStore accepts. The admission therefore stays reachable through an unmarked default, not only through an authenticated human decision.",
+   "techniques": [
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/commitPlan.ts:37 The intent is truncation: a model keep is evidence, never a vote. But only an explicit by:'model' is excluded. An absent `by` (kept for legacy rows) admits, which is the 'default that degrades to open' the technique forbids."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/verdictLog.ts:62 The log is append-only and revisioned, which is good. But 'who' is a caller-declared class ('human' | 'model') plus a free-text surface, not an authenticated decider, and the record does not store what was shown."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/adopt.ts:230 The executor door refuses anything but the recorded proven state. A committed run refuses further verdict writes (store.ts:167)."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/store.ts:293 The commit re-derives the plan inside the run and catalogue locks, and refuses with 409 when the state moved since the preview the operator read. The token parameter is optional, but the only production caller (lib/decision/v1/sources/forge.ts:396) passes it."
+    },
+    {
+     "technique": "review-queues",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/verdictLog.ts:202 Concurrent verdicts resolve to one winner. A stale base is a 409 carrying the current revision, never last-write-wins, and the log line is appended before the map is written (line 183)."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/calibration.ts:15 The module measures whether the grades shown to the reviewer predict human verdicts (AUC with a bootstrap CI). When the data is thin it reports the status 'insufficient' instead of a number."
+    }
+   ],
+   "registryProposal": "truncated-verdict-space could name the legacy-compatibility case explicitly: when records older than the decider field must keep counting, the old rows should be migrated or stamped, rather than letting 'absent' read as the human class at write time too."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "foundry-extract-engine",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "hitl-approval",
+   "context": "produce-compose-receipt",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-05T23:06:00.375616+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "consent-gates",
+    "decision-records",
+    "gate-state-machines",
+    "resume-after-decision",
+    "review-queues"
+   ],
+   "deviations": 1,
+   "context": "board-decision-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-05T23:06:00.375616+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "gate-state-machines",
+    "oracle-before-gate",
+    "resume-after-decision",
+    "review-queues",
+    "truncated-verdict-space"
+   ],
+   "deviations": 1,
+   "context": "foundry-forge-store-and-verdicts",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

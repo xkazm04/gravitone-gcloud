@@ -1,0 +1,126 @@
+{
+ "schema": "conform-run/1",
+ "worker": "eb04dc4a-45f5-496c-8eff-cc7f5d75739c",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-06T04:51:21.119470+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "agent-cli-and-turns",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/claudeCli.ts:388 Every nested `claude` run (reasoning door and agent seam alike) inherits this process's whole environment minus four metered-auth variables, so the parent runtime's ambient CLAUDE* identifiers reach the child unscrubbed, and the reasoning door also runs without --safe-mode, so user-wide hooks fire from it as if it were the parent session.",
+   "techniques": [
+    {
+     "technique": "nested-run-is-not-its-parent",
+     "verdict": "deviation",
+     "evidence": "lib/claudeCli.ts:161 The one spawn door strips a 4-name billing list, not the runtime's ambient identifier family (no CLAUDECODE/CLAUDE_CODE_* scrub anywhere in lib/); the agent seam adds --no-session-persistence, the reasoning door (cliArgs) does not."
+    },
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "conformant",
+     "evidence": "lib/turns/ledger.ts:54 A turn whose owner died gets a first-class `orphaned` status, not `failed`, and the sweep never re-dispatches it."
+    },
+    {
+     "technique": "bounded-projection-of-external-work",
+     "verdict": "conformant",
+     "evidence": "lib/turns/runner.ts:257 The record is minted before dispatch and is the truth, and an engine answer that lands after a cancel is discarded rather than written. No model polling exists, so this is only a partial fit."
+    },
+    {
+     "technique": "guard-input-custody",
+     "verdict": "conformant",
+     "evidence": "lib/agent/agentArgs.ts:36 The fence lives in argv built by host code. --restricted ignores the settings files the agent could write in its workspace, so the agent cannot rewrite its own policy."
+    },
+    {
+     "technique": "substituted-result-attribution",
+     "verdict": "conformant",
+     "evidence": "lib/turns/runner.ts:275 When a kind's dispatch falls back to another rung, the record names the prompt that actually reached the serving engine, beside its receipt."
+    },
+    {
+     "technique": "operator-tier-code-loading",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/runner.ts:164 Turn kinds are registered by in-repo modules only. There is no operator- or service-tier code loading."
+    },
+    {
+     "technique": "observer-and-mutator-surfaces",
+     "verdict": "not-applicable",
+     "evidence": "lib/turns/runner.ts:108 settle refuses by throwing, but every spec is team-owned, which is the technique's own 'when not to use'."
+    },
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "not-applicable",
+     "evidence": "lib/claudeCli.ts:286 Each turn is a single headless shot. No mid-unit input channel exists."
+    }
+   ]
+  },
+  {
+   "context": "review-and-runs-history",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/ui/src/components/runs/thread.ts:1 These are pure presentation models and components for Board review and the runs day line. A search of packages/ui/src/components/review and runs for conversation, registerTool, plugin, subagent and checkpoint found nothing; the only 'agent' hit is an icon name in RunsDayline.tsx:310. No agent loop, hook chain, extension loading or durable conversation state exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "conversation",
+    "registerTool",
+    "plugin",
+    "subagent",
+    "checkpoint"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "server-seam",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "studio-shell",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "imaging-gateway-and-spend",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T04:51:21.119470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "additive-input-at-the-call-boundary",
+    "bounded-projection-of-external-work",
+    "guard-input-custody",
+    "indeterminate-closure-on-interruption",
+    "nested-run-is-not-its-parent",
+    "observer-and-mutator-surfaces",
+    "operator-tier-code-loading",
+    "substituted-result-attribution"
+   ],
+   "deviations": 1,
+   "context": "agent-cli-and-turns",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T04:51:21.119470+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "review-and-runs-history",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
