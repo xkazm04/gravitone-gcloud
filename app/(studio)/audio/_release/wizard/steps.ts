@@ -1,4 +1,4 @@
-// THE WIZARD'S STEPS (spark audio-distribution, S1, variant "wizard"): the eight stops of the walk
+// THE WIZARD'S STEPS (spark audio-distribution, S1, variant "wizard"): the seven stops of the walk
 // and the rule that files every problem of `releaseProblems` under the step that fixes it. A step's
 // problems are a predicate over the model (registry wizard-flows/progress-communication: everything
 // displayed is a derivation) - never a flag a step sets on its way out - so an edit anywhere moves
@@ -10,8 +10,10 @@ import type { ProblemCode, ReleaseProblem } from "@gt/domain/release.problems";
 
 import type { ReleaseRead } from "../_port/port.ts";
 import type { DraftEvent } from "../draft.ts";
+import type { ReleaseSessionApi } from "../session.ts";
 
-export const STEPS = ["tracks", "details", "rights", "sleeve", "master", "channels", "extras", "review"] as const;
+// Mastering left the walk on 2026-11-17 (spark studio-to-release: the uni recipes degraded every track).
+export const STEPS = ["tracks", "details", "rights", "sleeve", "channels", "extras", "review"] as const;
 export type StepId = (typeof STEPS)[number];
 
 export const STEP_LABEL: Readonly<Record<StepId, string>> = {
@@ -19,14 +21,13 @@ export const STEP_LABEL: Readonly<Record<StepId, string>> = {
   details: "Details",
   rights: "AI & rights",
   sleeve: "Sleeve",
-  master: "Master",
   channels: "Channels",
   extras: "Extras",
   review: "Review",
 };
 
 /** Where a track-level code is fixed. Title and identifier codes belong to the track list; the people
- *  on a track to the details; provenance to AI & rights; loudness to the master. */
+ *  on a track to the details; provenance to AI & rights. */
 const TRACK_CODE_STEP: Partial<Record<ProblemCode, StepId>> = {
   "title-missing": "tracks",
   "title-has-feat": "tracks",
@@ -40,8 +41,6 @@ const TRACK_CODE_STEP: Partial<Record<ProblemCode, StepId>> = {
   "rights-unknown-licence": "rights",
   "rights-unknown-vendor": "rights",
   "rights-unknown-tier": "rights",
-  unmastered: "master",
-  "master-off-target": "master",
 };
 
 /** The 0-based track a problem sits on, or null for the release, sleeve, splits and channels. */
@@ -93,4 +92,6 @@ export interface StepProps {
   readonly track: number;
   readonly setTrack: (index: number) => void;
   readonly go: (step: StepId, track?: number) => void;
+  /** The session the step reads the agent's pending proposals from and answers them through. */
+  readonly session: ReleaseSessionApi;
 }

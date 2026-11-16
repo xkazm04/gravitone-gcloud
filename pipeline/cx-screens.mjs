@@ -161,5 +161,9 @@ export const SCREENS = {
   // Spark audio-distribution: the release wizard on its fixture - the picker, and the ready EP opened at its first step.
   "audio-release": { url: "/audio?s=release" },
   "audio-release-open": { url: "/audio?s=release&r=rel-0000000000b2" },
+  // Spark studio-to-release: the studio's package stage (both layouts under test) and its release stage, on the fixture.
+  "audio-package": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1" },
+  "audio-package-dock": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1&pv=dock" },
+  "audio-release-stage": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=release&r=rel-0000000000b2" },
   "kit-songlab": { url: "/kit#songlab" },
 };

@@ -1,16 +1,15 @@
-// THE RELEASE DRAFT (spark audio-distribution): one owned model for the whole wizard (registry
-// wizard-flows: "one model owns every step"). The tab holds it in a reducer; the steps render from it
-// and dispatch into it, so Back, a jump and a reload of a step lose nothing. Pure: ids and clocks
-// come in on the event, never from inside.
+// THE RELEASE DRAFT (spark audio-distribution; persisted by spark studio-to-release): one owned model for the
+// whole wizard (registry wizard-flows: "one model owns every step"). The page holds it in a reducer for the
+// optimistic view; the SAME pure `applyEdit` is what the server runs on the stored record (./acts.ts), so the
+// screen and the store can never disagree about what an edit does. Pure: ids and clocks come in on the event.
 import type { ChannelRow, MasterRef, Release, ReleaseChannelId, ReleaseTrack, ShelfTake, Sleeve, Split } from "@gt/domain/release";
-import { MASTER_TARGET } from "@gt/domain/release";
 
 export interface DraftState {
   readonly releases: readonly Release[];
   readonly openId: string | null;
 }
 
-export type ReleaseFields = Partial<Pick<Release, "title" | "version" | "artist" | "label" | "releaseDate" | "language" | "genre" | "upc">>;
+export type ReleaseFields = Partial<Pick<Release, "title" | "version" | "artist" | "label" | "releaseDate" | "language" | "genre" | "upc" | "sleevePrompt">>;
 export type TrackFields = Partial<Pick<ReleaseTrack, "title" | "version" | "isrc" | "explicit" | "lyrics" | "songwriters" | "credits" | "ai" | "rights">>;
 
 export type DraftEvent =
@@ -24,7 +23,6 @@ export type DraftEvent =
   | { readonly type: "sleeve"; readonly id: string; readonly sleeve: Sleeve | null }
   | { readonly type: "toggleChannel"; readonly id: string; readonly channel: ReleaseChannelId }
   | { readonly type: "splits"; readonly id: string; readonly splits: readonly Split[] }
-  | { readonly type: "master"; readonly id: string; readonly index: number; readonly master: MasterRef }
   | { readonly type: "schedule"; readonly id: string };
 
 export const initialDraft = (releases: readonly Release[], openId: string | null): DraftState => ({
@@ -67,23 +65,10 @@ export function releaseOf(id: string, artist: string, takes: readonly ShelfTake[
     upc: null,
     tracks: takes.map(trackOf),
     sleeve: null,
+    sleevePrompt: null,
     channels: [],
     splits: [],
     status: "draft",
-  };
-}
-
-/** S1's master press on a take the trial did not render: the recipe's target, marked by `takeId: null`
- *  (no master file exists). The trial's own renders arrive with a takeId and an audioHref. */
-export function plannedMaster(t: ReleaseTrack, before: { lufs: number; truePeakDb: number } | null): MasterRef {
-  return {
-    state: "done",
-    recipe: "uni-1",
-    takeId: null,
-    audioHref: null,
-    before: before === null ? null : { ...before, lra: 6 },
-    after: { lufs: MASTER_TARGET.lufs, truePeakDb: MASTER_TARGET.truePeakDb - 0.1, lra: 5.5 },
-    error: null,
   };
 }
 
@@ -99,6 +84,16 @@ function edit(s: DraftState, id: string, f: (r: Release) => Release): DraftState
 }
 
 const editTrack = (r: Release, index: number, f: (t: ReleaseTrack) => ReleaseTrack): Release => ({ ...r, tracks: r.tracks.map((t, i) => (i === index ? f(t) : t)) });
+
+/** The events that change a stored release; `open` and `create` are the page's own (create is an act of its own). */
+export type ReleaseEdit = Exclude<DraftEvent, { readonly type: "open" } | { readonly type: "create" }>;
+
+/** One edit applied to one release - the reducer's arm for it, callable by the server on the stored record. */
+export function applyEdit(r: Release, e: ReleaseEdit): Release {
+  return reduceDraft({ releases: [r], openId: r.id }, e).releases[0] ?? r;
+}
+
+export const isReleaseEdit = (e: DraftEvent): e is ReleaseEdit => e.type !== "open" && e.type !== "create";
 
 export function reduceDraft(s: DraftState, e: DraftEvent): DraftState {
   switch (e.type) {
@@ -122,8 +117,6 @@ export function reduceDraft(s: DraftState, e: DraftEvent): DraftState {
       return edit(s, e.id, (r) => ({ ...r, channels: r.channels.includes(e.channel) ? r.channels.filter((c) => c !== e.channel) : [...r.channels, e.channel] }));
     case "splits":
       return edit(s, e.id, (r) => ({ ...r, splits: e.splits }));
-    case "master":
-      return edit(s, e.id, (r) => editTrack(r, e.index, (t) => ({ ...t, master: e.master })));
     case "schedule":
       return edit(s, e.id, (r) => ({ ...r, status: "scheduled" }));
   }

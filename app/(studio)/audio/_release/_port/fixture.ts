@@ -9,6 +9,8 @@
 // over the source and its uni-1 master), so on any other checkout those two play the missing-audio state too.
 import type { ChannelRow, MasterRef, Release, ReleaseTrack, RightsRecord, ShelfTake } from "@gt/domain/release";
 
+import type { ReleaseProposal, ReleaseRecord } from "@gt/domain/release.record";
+
 import type { ReleasePort, ReleaseRead } from "./port.ts";
 
 const ARTIST = "MiSu";
@@ -125,6 +127,7 @@ const releases: Release[] = [
     upc: null,
     tracks: [track("Dancing in the Static", { master: true, tier: null, persona: null })],
     sleeve: null,
+    sleevePrompt: null,
     channels: ["youtube", "audius"],
     splits: [],
     status: "draft",
@@ -143,6 +146,7 @@ const releases: Release[] = [
       track(t, { master: i !== 4, tier: "Pro", persona: "ai", writers: i === 2 ? ["Doe"] : ["Jane Doe"] }),
     ),
     sleeve: { source: "mv-look", href: `${FIX}/past-the-sleeping-moons.jpg`, widthPx: 3000, heightPx: 3000, rgb: true },
+    sleevePrompt: "Rain on marble steps at night, a woman in a pale gown, a lyre of light above the sea",
     channels: ["youtube", "soundcloud", "archive"],
     splits: [
       { name: "Jane Doe", share: 70 },
@@ -164,6 +168,7 @@ const releases: Release[] = [
       track(t, { master: true, tier: "Pro", persona: "ai" }),
     ),
     sleeve: { source: "generated", href: `${FIX}/leave-the-door-unlatched.jpg`, widthPx: 3000, heightPx: 3000, rgb: true },
+    sleevePrompt: null,
     channels: ["youtube", "soundcloud", "audius", "mixcloud", "archive"],
     splits: [],
     status: "scheduled",
@@ -179,11 +184,31 @@ const channels: ChannelRow[] = [
   ...(["spotify", "apple", "amazon", "tidal", "deezer"] as const).map((id): ChannelRow => ({ id, kind: "dsp", state: "not-reachable", detail: "delivery needs a licensed distributor" })),
 ];
 
+const AT = "2026-11-17T09:00:00.000Z";
+
+/** The agent's suggestions on the draft single: what the studio-agent would draft from the session (the Suno style, the
+ *  turn ledger). Pending until the operator accepts or dismisses each. */
+const SINGLE_PENDING: ReleaseProposal[] = [
+  { id: "p-persona", path: "track:1.ai", value: { lyrics: true, music: true, audio: "all", persona: "ai" }, source: "the session: lyrics and music both generated on Suno", turnId: "t-0007", at: AT },
+  { id: "p-genre2", path: "genre.secondary", value: "Ambient", source: "the Suno style: \"airy, slow-building, rain textures\"", turnId: "t-0007", at: AT },
+  { id: "p-tier", path: "track:1.rights", value: { vendor: "suno", model: "v5", planTier: "Pro", generatedAt: "2026-11-03", briefDigest: "sha256:9f2c41d07ab3e5c8", reference: null, licence: "commercial" }, source: "the Suno account the take was pulled from", turnId: "t-0007", at: AT },
+  { id: "p-sleeve", path: "sleevePrompt", value: "Static on a night sea, a lone dancer lit by a broken neon sign, film grain, no text", source: "the lyrics' first verse", turnId: "t-0008", at: AT },
+];
+
+const records: ReleaseRecord[] = releases.map((release, i) => ({
+  release,
+  version: i + 1,
+  sessionId: i === 0 ? "night-drive" : null,
+  createdAt: AT,
+  updatedAt: AT,
+  pending: i === 0 ? SINGLE_PENDING : [],
+}));
+
 const read: ReleaseRead = {
   source: "fixture",
   artist: ARTIST,
   shelf,
-  releases,
+  records,
   channels,
   mvLooks: ["Dancing in the Static", "Past the Sleeping Moons", "Leave the Door Unlatched", "I Kept the Key"].map((title) => ({
     takeId: takeIdOf(title),

@@ -77,6 +77,7 @@ export const releaseSchema = z.strictObject({
   upc: nullableText(13),
   tracks: z.array(releaseTrackSchema).max(40),
   sleeve: sleeveSchema.nullable(),
+  sleevePrompt: nullableText(2000),
   channels: z.array(z.enum(RELEASE_CHANNELS)).max(RELEASE_CHANNELS.length),
   splits: z.array(z.strictObject({ name: z.string().min(1).max(200), share: z.number().min(0).max(100) })).max(20),
   status: z.enum(RELEASE_STATUSES),

@@ -44,5 +44,5 @@ function channels(): ChannelRow[] {
 }
 
 export const realPort: ReleasePort = {
-  read: async (): Promise<ReleaseRead> => ({ source: "real", artist: "", shelf: await shelf(), releases: [], channels: channels(), mvLooks: [] }),
+  read: async (): Promise<ReleaseRead> => ({ source: "real", artist: "", shelf: await shelf(), records: [], channels: channels(), mvLooks: [] }),
 };

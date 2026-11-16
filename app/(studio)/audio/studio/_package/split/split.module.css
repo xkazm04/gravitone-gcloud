@@ -1,0 +1,4 @@
+/* Packaging layout "split" (spark studio-to-release): the conversation narrowed | the release step. */
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:var(--sp-4);padding:var(--sp-4) var(--sp-loose) var(--sp-page-end);min-width:0}
+.thread{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.step{min-width:0;min-height:0;overflow:auto}

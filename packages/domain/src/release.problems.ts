@@ -1,9 +1,9 @@
 // WHAT A RELEASE IS MISSING (spark audio-distribution, S1): the one validator the review of every
 // layout draws. The rules are a distributor's upload rules (DistroKid as researched 2026-11-16,
-// docs/concepts/distribution/distrokid-research.md) plus the studio's own: an unmastered track and
-// a rights gap WARN, they never block (owner, wave 2). A `block` is something a store would reject
-// or that leaves the release with nowhere to go.
-import { MASTER_TARGET, SLEEVE_PX, type AiCredits, type Release, type RightsRecord } from "./release.ts";
+// docs/concepts/distribution/distrokid-research.md) plus the studio's own: a rights gap WARNS, never blocks (owner, wave 2). A `block` is something a store
+// would reject or that leaves the release with nowhere to go. Mastering left the flow on 2026-11-17 (spark
+// studio-to-release: the uni recipes degraded every track); its lab is pipeline/audio/master.py.
+import { SLEEVE_PX, type AiCredits, type Release, type RightsRecord } from "./release.ts";
 
 export type ProblemSeverity = "block" | "warn";
 
@@ -27,8 +27,6 @@ export const PROBLEM_CODES = [
   "sleeve-not-rgb",
   "splits-not-100",
   "no-channel",
-  "unmastered",
-  "master-off-target",
   "rights-nc-licence",
   "rights-unknown-licence",
   "rights-unknown-vendor",
@@ -66,8 +64,6 @@ const SEVERITY: Readonly<Record<ProblemCode, ProblemSeverity>> = {
   "sleeve-not-rgb": "block",
   "splits-not-100": "block",
   "no-channel": "block",
-  unmastered: "warn",
-  "master-off-target": "warn",
   "rights-nc-licence": "warn",
   "rights-unknown-licence": "warn",
   "rights-unknown-vendor": "warn",
@@ -95,8 +91,6 @@ export const PROBLEM_TEXT: Readonly<Record<ProblemCode, string>> = {
   "sleeve-not-rgb": "Cover art must be RGB.",
   "splits-not-100": "Split shares must add up to 100%.",
   "no-channel": "Pick at least one channel.",
-  unmastered: "Not mastered.",
-  "master-off-target": `Master is off ${MASTER_TARGET.lufs} LUFS / ${MASTER_TARGET.truePeakDb} dBTP.`,
   "rights-nc-licence": "CC BY-NC: the generator's licence forbids commercial use.",
   "rights-unknown-licence": "Licence unknown.",
   "rights-unknown-vendor": "Generator unknown.",
@@ -110,8 +104,6 @@ const UPC = /^\d{12,13}$/;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 /** Vendors whose commercial grant depends on the plan tier the take was made on. */
 const TIERED_VENDORS = new Set(["suno", "elevenlabs", "udio"]);
-/** A master within this many LU and dB of the target reads as on target. */
-const LUFS_SLACK = 0.5;
 
 function titleProblems(title: string): ProblemCode[] {
   const t = title.trim();
@@ -153,8 +145,6 @@ export function releaseProblems(r: Release): ReleaseProblem[] {
     if (writers.length === 0) add("songwriter-missing", at);
     else if (writers.some((w) => !/\S\s+\S/.test(w.trim()))) add("songwriter-not-full-name", at);
     if (personaUnstated(t.ai)) add("persona-unstated", at);
-    if (t.master.state !== "done" || t.master.after === null) add("unmastered", at);
-    else if (Math.abs(t.master.after.lufs - MASTER_TARGET.lufs) > LUFS_SLACK || t.master.after.truePeakDb > MASTER_TARGET.truePeakDb) add("master-off-target", at);
     for (const c of rightsWarnings(t.rights)) add(c, at);
   });
   if (r.sleeve === null) add("sleeve-missing", "sleeve");

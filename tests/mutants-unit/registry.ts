@@ -5578,6 +5578,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "A CC BY-NC take blocks the release, against the owner's wave-2 ruling that rights gaps warn and never block (spark audio-distribution).",
   },
   {
+    id: "release-proposal-track-zero",
+    test: "packages/domain/test/release.record.test.ts",
+    file: "packages/domain/src/release.record.ts",
+    find: "  const m = /^track:([1-9]\\d{0,2})\\.([a-z]+)$/.exec(path);",
+    replace: "  const m = /^track:(\\d{1,3})\\.([a-z]+)$/.exec(path);",
+    why: "A proposal addressed to track 0 passes the path check and lands on tracks[-1], so the agent's suggestion silently writes nowhere the operator can see (spark studio-to-release).",
+  },
+  {
     id: "metrics-first-delta-not-null",
     test: "packages/domain/test/publication.test.ts",
     file: "packages/domain/src/publication.ts",

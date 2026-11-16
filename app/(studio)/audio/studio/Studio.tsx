@@ -13,6 +13,8 @@ import { sunoApiStatus } from "../../../../lib/suno/api/client.ts";
 import { readPresence } from "./_live/presence.ts";
 import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
+import { readRelease } from "../_release/read.ts";
+import { LazyPackaging } from "./_package/LazyPackaging.tsx";
 
 export async function StudioSection({ url, port }: { readonly url: StudioUrl; readonly port?: StudioPort }) {
   const read = await (port ?? (url.source === "fixture" ? fixturePort : ledgerPort)).read();
@@ -20,7 +22,7 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
   // Spark suno-api: the token file only, no network; the reason is the client's own sentence.
   const grant = await sunoApiStatus();
   const connection = grant.connected ? ({ connected: true } as const) : ({ connected: false, reason: grant.reason } as const);
-  return (
+  const host = (
     <StudioHost
       url={url}
       sessions={read.sessions}
@@ -34,4 +36,8 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
       connection={connection}
     />
   );
+  // Spark studio-to-release: in package and release the conversation stays, beside the release's steps.
+  if (url.stage === undefined || url.stage === "make") return host;
+  const release = await readRelease({ source: url.source === "fixture" ? "fixture" : "real", release: url.release ?? null });
+  return <LazyPackaging url={url} read={release} thread={host} />;
 }

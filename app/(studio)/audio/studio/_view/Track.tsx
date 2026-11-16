@@ -16,6 +16,7 @@ import { localPlay, nodeSound, soundKey } from "../_host/press.ts";
 import { cardSound, turnOf, type CardCtx } from "./ctx.ts";
 import { LaneBody, PEAKS } from "./Lanes.tsx";
 import { AnswersChip, TakeRow } from "./Suno.tsx";
+import { ReleaseThis } from "../_package/ReleaseThis.tsx";
 import lanes from "./lanes.module.css";
 import s from "./master.module.css";
 
@@ -65,6 +66,7 @@ export function TrackLane({ placed, ctx }: { readonly placed: Placed<"track">; r
           <div className={s.chips}>
             <AnswersChip node={node} />
             {ctx.slot("measures")}
+            {!placed.carried && node.takeId !== undefined && <ReleaseThis takeId={node.takeId} />}
           </div>
           {placed.carried && <span className={s.hint}>from an earlier answer</span>}
         </div>

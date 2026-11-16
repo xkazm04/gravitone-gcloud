@@ -1,8 +1,8 @@
 "use client";
 
 // THE RELEASE WIZARD (spark audio-distribution; picked 2026-11-16): DistroKid's upload flow, made calm. First
-// which release (one in the draft, or a new one from the shelf); then eight steps - tracks, details,
-// AI & rights, sleeve, master, channels, extras, review - with a rail that shows every step and its
+// which release (one in the draft, or a new one from the shelf); then seven steps - tracks, details,
+// AI & rights, sleeve, channels, extras, review - with a rail that shows every step and its
 // live problems and lets any step be jumped to. Each step gets the room for its one job.
 //
 // Registry wizard-flows: one model owns every step. The draft lives in Release.tsx's reducer, above
@@ -27,7 +27,6 @@ import { STATUS_ENTRY } from "./status.ts";
 import { StepChannels } from "./StepChannels.tsx";
 import { StepDetails } from "./StepDetails.tsx";
 import { StepExtras } from "./StepExtras.tsx";
-import { StepMaster } from "./StepMaster.tsx";
 import { StepReview } from "./StepReview.tsx";
 import { StepRights } from "./StepRights.tsx";
 import { StepSleeve } from "./StepSleeve.tsx";
@@ -40,7 +39,6 @@ const BODY: Readonly<Record<StepId, (p: StepProps) => ReactNode>> = {
   details: StepDetails,
   rights: StepRights,
   sleeve: StepSleeve,
-  master: StepMaster,
   channels: StepChannels,
   extras: StepExtras,
   review: StepReview,
@@ -70,11 +68,12 @@ function Identity({ r, onLeave }: { readonly r: Release; readonly onLeave: () =>
   );
 }
 
-export function Wizard({ read, state, dispatch, newId }: WizardProps) {
+export function Wizard({ read, session, newId, startStep }: WizardProps) {
+  const { state, dispatch } = session;
   const release = state.releases.find((r) => r.id === state.openId) ?? null;
   const problems = useMemo(() => (release === null ? [] : releaseProblems(release)), [release]);
   const [fresh, setFresh] = useState<string | null>(null);
-  const [walk, setWalk] = useState<Walk>(() => ({ id: release?.id ?? null, step: release === null ? "tracks" : entryStep(problems, false), track: 0 }));
+  const [walk, setWalk] = useState<Walk>(() => ({ id: release?.id ?? null, step: release === null ? "tracks" : (startStep ?? entryStep(problems, false)), track: 0 }));
   const [visited, setVisited] = useState<Readonly<Record<string, readonly StepId[]>>>({});
   const heading = useRef<HTMLHeadingElement | null>(null);
   const moved = useRef(false);
@@ -122,7 +121,7 @@ export function Wizard({ read, state, dispatch, newId }: WizardProps) {
   const next = STEPS[at + 1];
   const here = severityOf(problemsOf(problems, step));
   const Body = BODY[step];
-  const props: StepProps = { release, read, problems, dispatch, track, setTrack: (i) => setWalk((w) => ({ ...w, track: i })), go };
+  const props: StepProps = { release, read, problems, dispatch, track, setTrack: (i) => setWalk((w) => ({ ...w, track: i })), go, session };
 
   return (
     <div data-variant-body="wizard" className={s.wizard}>

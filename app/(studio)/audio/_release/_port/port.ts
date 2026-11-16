@@ -1,8 +1,9 @@
 // THE RELEASE TAB'S PORT (spark audio-distribution, S1): what the desk reads, from either side. The
 // fixture side is scripted (./fixture.ts); the real side reads the kept takes and the channels'
-// readiness (./real.ts) and holds no releases - S1 persists nothing, a release is a draft the page
-// owns until it closes (wizard-flows: state lives where the side effects live, and S1 has none).
-import type { ChannelRow, Release, ShelfTake } from "@gt/domain/release";
+// readiness and the releases the kernel store keeps (./real.ts; spark studio-to-release persists them: the agent
+// and the operator now edit one record, so the record lives where both writes land).
+import type { ChannelRow, ShelfTake } from "@gt/domain/release";
+import type { ReleaseRecord } from "@gt/domain/release.record";
 
 export type ReleaseSource = "fixture" | "real";
 
@@ -23,7 +24,8 @@ export interface ReleaseRead {
   readonly source: ReleaseSource;
   readonly artist: string;
   readonly shelf: readonly ShelfTake[];
-  readonly releases: readonly Release[];
+  /** Every release as the store keeps it (version, session, the agent's pending proposals), newest first. */
+  readonly records: readonly ReleaseRecord[];
   readonly channels: readonly ChannelRow[];
   readonly mvLooks: readonly MvLook[];
 }

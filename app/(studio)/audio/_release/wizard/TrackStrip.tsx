@@ -1,6 +1,6 @@
 "use client";
 
-// The track picker inside a per-track step (details' people, AI & rights, master): one door per
+// The track picker inside a per-track step (details' people, AI & rights): one door per
 // track, numbered in release order, carrying the count of THIS step's problems on that track.
 import type { ReleaseProblem } from "@gt/domain/release.problems";
 import type { ReleaseTrack } from "@gt/domain/release";

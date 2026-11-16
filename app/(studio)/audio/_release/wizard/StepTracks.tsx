@@ -60,7 +60,6 @@ function TrackRow({ t, i, n, props }: { readonly t: ReleaseTrack; readonly i: nu
           {take !== undefined && take.truePeakDb !== null && <span className={s.num}>{db(take.truePeakDb)} dBTP</span>}
           {t.rights.vendor !== null && <Chip label={t.rights.vendor} casing="lower" />}
           {t.audioHref === null && <Chip label="no audio" ghost />}
-          <Chip label={t.master.state === "done" ? "mastered" : t.master.state === "running" ? "mastering" : "unmastered"} tone={t.master.state === "done" ? "emerald" : t.master.state === "running" ? "cyan" : "neutral"} />
         </div>
         <Problems problems={problemsOnTrack(problems, "tracks", i)} label={`track ${i + 1} problems`} />
       </div>

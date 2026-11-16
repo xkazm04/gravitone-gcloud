@@ -165,6 +165,8 @@ export interface Release {
   readonly upc: string | null;
   readonly tracks: readonly ReleaseTrack[];
   readonly sleeve: Sleeve | null;
+  /** What the sleeve's takes are generated from; null until someone writes or accepts one. */
+  readonly sleevePrompt: string | null;
   readonly channels: readonly ReleaseChannelId[];
   readonly splits: readonly Split[];
   readonly status: ReleaseStatus;

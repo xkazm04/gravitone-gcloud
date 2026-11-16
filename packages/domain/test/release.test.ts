@@ -5,7 +5,7 @@ import { releaseProblems, releaseReady, rightsWarnings } from "../src/release.pr
 import { parseRelease } from "../src/release.schema.ts";
 
 // Spark audio-distribution S1: the validator every layout's review draws, the release-kind rule and
-// the record door. Warnings (rights, master) never block - the owner's wave-2 ruling.
+// the record door. Warnings (rights) never block - the owner's wave-2 ruling.
 
 const track = (over: Partial<ReleaseTrack> = {}): ReleaseTrack => ({
   takeId: "take-1",
@@ -36,6 +36,7 @@ const release = (over: Partial<Release> = {}): Release => ({
   upc: null,
   tracks: [track()],
   sleeve: { source: "upload", href: null, widthPx: 3000, heightPx: 3000, rgb: true },
+  sleevePrompt: null,
   channels: ["youtube"],
   splits: [],
   status: "draft",
@@ -69,11 +70,9 @@ describe("releaseProblems", () => {
     expect(releaseReady(ps)).toBe(true);
   });
 
-  it("an unmastered track warns; a master off the target warns", () => {
+  it("mastering is not a release problem any more", () => {
     const none = track({ master: { state: "none", recipe: null, takeId: null, audioHref: null, before: null, after: null, error: null } });
-    expect(releaseProblems(release({ tracks: [none] }))).toEqual([{ code: "unmastered", severity: "warn", at: "track:1" }]);
-    const hot = track({ master: { ...track().master, after: { lufs: -11, truePeakDb: -0.2, lra: 3 } } });
-    expect(codes(release({ tracks: [hot] }))).toEqual(["track:1:master-off-target"]);
+    expect(releaseProblems(release({ tracks: [none] }))).toEqual([]);
   });
 
   it("the sleeve must be square and RGB; under 3000 px only warns", () => {
