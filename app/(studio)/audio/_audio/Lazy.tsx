@@ -19,6 +19,7 @@ import type { BatchDesk as BatchT } from "../_insight/Batch.tsx";
 import type { RubricDesk as RubricT } from "../_insight/Rubric.tsx";
 import type { StrengthsDesk as StrengthsT } from "../_insight/Strengths.tsx";
 import type { SongLab as SongLabT } from "../_songlab/SongLab.tsx";
+import type { Release as ReleaseT } from "../_release/Release.tsx";
 
 
 const held = (label: string) => <Ghost count={3} label={label} />;
@@ -28,6 +29,7 @@ const HuntIsland = lazy(() => import("../_hunt/Hunt.tsx").then((m) => ({ default
 const BatchIsland = lazy(() => import("../_insight/Batch.tsx").then((m) => ({ default: m.BatchDesk })));
 const RubricIsland = lazy(() => import("../_insight/Rubric.tsx").then((m) => ({ default: m.RubricDesk })));
 const StrengthsIsland = lazy(() => import("../_insight/Strengths.tsx").then((m) => ({ default: m.StrengthsDesk })));
+const ReleaseIsland = lazy(() => import("../_release/Release.tsx").then((m) => ({ default: m.Release })));
 const SongLabIsland = lazy(() => import("../_songlab/SongLab.tsx").then((m) => ({ default: m.SongLab })));
 
 export const LazyArrange = (p: ComponentProps<typeof ArrangeT>) => (
@@ -58,5 +60,10 @@ export const LazyStrengths = (p: ComponentProps<typeof StrengthsT>) => (
 export const LazySongLab = (p: ComponentProps<typeof SongLabT>) => (
   <Suspense fallback={held("song lab loading")}>
     <SongLabIsland {...p} />
+  </Suspense>
+);
+export const LazyRelease = (p: ComponentProps<typeof ReleaseT>) => (
+  <Suspense fallback={held("release loading")}>
+    <ReleaseIsland {...p} />
   </Suspense>
 );

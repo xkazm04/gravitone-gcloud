@@ -19,6 +19,8 @@ export const SECTIONS = [
   { id: "batch", label: "batch" },
   // spark yue2-song-lab S2: the knockout (../_songlab/) - the agent seeds a bracket, the owner's ear judges it.
   { id: "songlab", label: "song lab" },
+  // spark audio-distribution S1: a release from kept takes - metadata, rights, sleeve, master, channels (../_release/).
+  { id: "release", label: "release" },
 ] as const;
 export type Section = (typeof SECTIONS)[number]["id"];
 

@@ -158,5 +158,9 @@ export const SCREENS = {
   "audio-songlab": { url: "/audio?s=songlab&source=fixture" },
   "audio-songlab-match": { url: "/audio?s=songlab&source=fixture&d=037e2bd84636&m=QF-2" },
   "audio-songlab-field": { url: "/audio?s=songlab&source=fixture&f=1" },
+  // Spark audio-distribution S1: the release tab on its fixture, one id per layout under test.
+  "audio-release": { url: "/audio?s=release" },
+  "audio-release-wizard": { url: "/audio?s=release&v=wizard" },
+  "audio-release-board": { url: "/audio?s=release&v=board" },
   "kit-songlab": { url: "/kit#songlab" },
 };

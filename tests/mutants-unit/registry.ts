@@ -5570,6 +5570,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "The record door refuses a cancelled slot that keeps its failure, so every cancel of a failed slot either fails or must erase the error - the Calendar loses the reason it draws dim.",
   },
   {
+    id: "release-rights-warn-not-block",
+    test: "packages/domain/test/release.test.ts",
+    file: "packages/domain/src/release.problems.ts",
+    find: "  \"rights-nc-licence\": \"warn\",",
+    replace: "  \"rights-nc-licence\": \"block\",",
+    why: "A CC BY-NC take blocks the release, against the owner's wave-2 ruling that rights gaps warn and never block (spark audio-distribution).",
+  },
+  {
     id: "metrics-first-delta-not-null",
     test: "packages/domain/test/publication.test.ts",
     file: "packages/domain/src/publication.ts",

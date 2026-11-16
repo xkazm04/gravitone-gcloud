@@ -18,7 +18,9 @@
 //   batch     N identical briefs priced through a receipt, to measure a provider's spread;
 //   song lab  the YuE2 knockout (spark yue2-song-lab S2): the agent seeds a bracket of lyric-gate
 //             passers and books every match, the owner judges blind matches and keeps or removes
-//             the agent's proposals (./_songlab); music only, so the kind rail is not drawn.
+//             the agent's proposals (./_songlab); music only, so the kind rail is not drawn;
+//   release   kept takes gathered into a single, EP or album with a distributor's metadata, rights,
+//             sleeve, one-click master and channels (spark audio-distribution S1, ./_release).
 // What the desk does not do is judge: keep and reject belong to the Board's audio triage.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -30,7 +32,7 @@ import { warmWorkers } from "../../../lib/audio/renderWorker.ts";
 import { editRows, moveCard } from "./_audio/arrangeActs.ts";
 import { deskEngines, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
 import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
-import { LazyArrange, LazyBatch, LazyHunt, LazyRubric, LazyStrengths } from "./_audio/Lazy.tsx";
+import { LazyArrange, LazyBatch, LazyHunt, LazyRelease, LazyRubric, LazyStrengths } from "./_audio/Lazy.tsx";
 import { audioNow } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
 import { readHunt } from "./_hunt/read.ts";
@@ -44,6 +46,8 @@ import { readCoverDesk } from "./_cover/read.ts";
 import { fileSunoCoverAct, sendSunoCoverAct } from "./_cover/sunoActs.ts";
 import { batchConfirm, batchReceipt, scoreTake } from "./_insight/acts.ts";
 import { readBatch, readRubricPile, readStrengths, unscoredCount } from "./_insight/read.ts";
+import { readRelease } from "./_release/read.ts";
+import { parseReleaseUrl } from "./_release/url.ts";
 import { openMatches } from "./_songlab/read.ts";
 import { SongLabSection } from "./_songlab/Section.tsx";
 import { parseSongLabUrl } from "./_songlab/url.ts";
@@ -78,6 +82,10 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   else if (url.section === "strengths") body = <LazyStrengths key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <LazyRubric key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
   else if (url.section === "songlab") body = <SongLabSection url={lab} />;
+  else if (url.section === "release") {
+    const rel = parseReleaseUrl(q);
+    body = <LazyRelease read={await readRelease(rel)} url={rel} />;
+  }
   else if (url.section === "batch") body = <LazyBatch key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
   else {
     // The studio: one way in to composing. Its candidates are auditioned on this machine's samples,
@@ -89,7 +97,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
     <div className={s.desk}>
       <div className={s.bar}>
         <TabRail label="audio desk" mode="audio" tabs={tabs} current={url.section} />
-        {url.section !== "compose" && url.section !== "cover" && url.section !== "songlab" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
+        {url.section !== "compose" && url.section !== "cover" && url.section !== "songlab" && url.section !== "release" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
       </div>
       {body}
     </div>
