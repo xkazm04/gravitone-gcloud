@@ -21,7 +21,7 @@
 .col_scheduled{--col-hue:var(--violet)}
 .col_published{--col-hue:var(--muted)}
 .colHead{margin:0;display:flex;align-items:center;gap:var(--sp-3);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--col-hue)}
-.colEmpty{min-height:calc(var(--w-lib-tile-s) * .66);display:grid;border:1px dashed var(--hair-3);border-radius:var(--r-tile)}
+.colEmpty{min-height:calc(var(--w-lib-tile-s) * .66);display:grid;border:1px dashed var(--muted);border-radius:var(--r-tile)}
 
 /* The shelf: rows of sleeves standing on a ledge, each row closed by a hairline lip. */
 .cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-7) var(--sp-6)}
