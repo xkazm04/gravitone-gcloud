@@ -17,7 +17,8 @@ import { MASTER_TARGET } from "@gt/domain/release";
 
 import { measureFile, SIDECAR_SCRIPT } from "../../lib/audio/sidecar.ts";
 import { masterFile } from "../../lib/audio/sidecarMaster.ts";
-import { adoptMaster, judge, listenPage, matchTake, masterName } from "../../lib/audio/masterTrial.ts";
+import { comparePage, matchedVolume } from "../../lib/audio/masterCompare.ts";
+import { adoptMaster, judge, matchTake, masterName } from "../../lib/audio/masterTrial.ts";
 
 const PY = process.env["PYTHON"] ?? (process.platform === "win32" ? "python" : "python3");
 function probeSidecar(): string | null {
@@ -169,35 +170,42 @@ describe.skipIf(NOT_READY !== null)("master uni-1", () => {
   });
 });
 
-describe("listen page", () => {
-  it("turns the louder side down by the loudness difference and loads nothing from the network", () => {
-    const measure = { lufs: -10, truePeakDb: -0.2, lra: 4 };
-    const page = listenPage(
+describe("comparison page", () => {
+  it("plays the original and every recipe side by side, matched to the quietest, from disk only", () => {
+    const before = { lufs: -16, truePeakDb: -3, lra: 8 };
+    const row = (recipe: "uni-1" | "uni-2", lufs: number) => ({
+      title: "Song <1>",
+      input: path.join(tmpdir(), "src", "Song.wav"),
+      output: path.join(tmpdir(), "out", `Song.${recipe}.wav`),
+      master: { recipe, input: "i", output: "o", before, after: { lufs, truePeakDb: -1.2, lra: 6 }, ms: 1, limitDb: 0, passes: 1 },
+      remeasure: { integratedLufs: lufs, truePeakDb: -1.2, lra: 6, clippedSamples: 0 },
+      gainDb: lufs - before.lufs,
+      pass: true,
+      error: null,
+      adopt: null,
+    });
+    const page = comparePage(
       {
-        recipe: "uni-1",
         at: "2026-11-16T00:00:00Z",
         target: { lufs: -14, truePeakDb: -1, tolLu: 0.5 },
+        recipes: ["uni-1", "uni-2"],
         totalMs: 1,
-        rows: [
-          {
-            title: "Song <1>",
-            input: path.join(tmpdir(), "src", "Song.wav"),
-            output: path.join(tmpdir(), "out", "Song.uni-1.wav"),
-            master: { recipe: "uni-1", input: "i", output: "o", before: measure, after: { lufs: -14, truePeakDb: -1.2, lra: 3.5 }, ms: 1, limitDb: 0, passes: 1 },
-            remeasure: { integratedLufs: -14, truePeakDb: -1.2, lra: 3.5, clippedSamples: 0 },
-            gainDb: -4,
-            pass: true,
-            error: null,
-            adopt: null,
-          },
-        ],
+        tracks: [{ title: "Song <1>", input: path.join(tmpdir(), "src", "Song.wav"), before, versions: [{ recipe: "uni-1", row: row("uni-1", -14) }, { recipe: "uni-2", row: row("uni-2", -14) }] }],
       },
       path.join(tmpdir(), "out"),
     );
-    expect(page).toContain(`data-vol="${(10 ** (-4 / 20)).toFixed(4)}"`);
-    expect(page).toContain('src="Song.uni-1.wav" data-vol="1.0000"');
-    expect(page).toContain("file:///");
+    // the original (-16) is the quietest: it plays at 1, each -14 master is turned down 2 dB
+    expect(page).toContain('src="Song.uni-1.wav" data-matched="' + (10 ** (-2 / 20)).toFixed(4) + '"');
+    expect(page).toContain('src="Song.uni-2.wav"');
+    expect(page).toMatch(/src="file:\/\/\/[^"]*Song\.wav" data-matched="1\.0000"/);
     expect(page).toContain("Song &#60;1&#62;");
+    expect(page).toContain('value="delivered"');
     expect(page).not.toMatch(/https?:\/\//);
+  });
+
+  it("never turns a version up, and leaves an unmeasured one alone", () => {
+    expect(matchedVolume(-14, -16)).toBeCloseTo(10 ** (-2 / 20), 6);
+    expect(matchedVolume(-16, -16)).toBe(1);
+    expect(matchedVolume(null, -16)).toBe(1);
   });
 });

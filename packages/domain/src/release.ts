@@ -90,7 +90,7 @@ export interface RightsRecord {
 }
 
 /** The one universal master recipe (owner, wave 2: one click, no parameters). Append-only. */
-export const MASTER_RECIPES = ["uni-1"] as const;
+export const MASTER_RECIPES = ["uni-1", "uni-2", "uni-3"] as const;
 export type MasterRecipe = (typeof MASTER_RECIPES)[number];
 export const MASTER_STATES = ["none", "running", "done", "failed"] as const;
 export type MasterState = (typeof MASTER_STATES)[number];

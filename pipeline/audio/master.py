@@ -62,6 +62,59 @@ RECIPES = {
         "tolLu": 0.1,              # how close to the target a pass must land
         "maxPasses": 8,
     },
+    # 2026-11-16, after the owner's listen: uni-1 is "minimal", far from Mixea's clarity and depth "on both
+    # ears". uni-2 runs master_wide.py's chain (mid/side width + mono low end, mud cut, presence and air,
+    # 3-band compression that keeps the tone, an exciter) into the same loudness-and-limit stage.
+    "uni-2": {
+        "chain": "wide",
+        "refLufs": -18.0,
+        "highpassHz": 25.0,
+        "monoBelowHz": 120.0,                       # side high-passed: the low end sits in the middle
+        "sideAirHz": 2500.0, "sideAirDb": 3.0,      # width on both ears: the side channel's highs
+        "mudHz": 300.0, "mudDb": -2.0, "mudQ": 1.0,  # low-mid congestion (mid only)
+        "presenceHz": 3000.0, "presenceDb": 1.5, "presenceQ": 0.9,
+        "depthHz": 70.0, "depthDb": 2.0,             # low shelf: weight
+        "airHz": 12000.0, "airDb": 2.0,              # high shelf: air
+        "xoverLowHz": 150.0, "xoverHighHz": 5000.0,
+        # per band: threshold dB, ratio, attack ms, release ms (each band keeps its pre-compression RMS)
+        "bandLow": [-24.0, 3.0, 30.0, 200.0],
+        "bandMid": [-22.0, 2.0, 15.0, 150.0],
+        "bandHigh": [-26.0, 2.5, 5.0, 80.0],
+        "exciteHz": 3500.0, "exciteDrive": 8.0, "exciteMix": 0.12,
+        "glue": [-16.0, 1.5, 30.0, 300.0],
+        "targetLufs": -14.0,
+        "ceilingDbtp": -1.0,
+        "limitStartDbtp": -1.3,
+        "limitWindowS": 0.05,
+        "tolLu": 0.1,
+        "maxPasses": 8,
+    },
+    # The same chain pushed ~1.5-2x on every move, so the owner's ear has a ladder (uni-1 < uni-2 < uni-3)
+    # instead of one guess. Measured on Dancing in the Static at matched loudness, uni-2 moved the side/mid
+    # ratio above 2.5 kHz by +1.1..+2.6 dB and the low end to mono; uni-3 goes past it.
+    "uni-3": {
+        "chain": "wide",
+        "refLufs": -18.0,
+        "highpassHz": 25.0,
+        "monoBelowHz": 140.0,
+        "sideAirHz": 2000.0, "sideAirDb": 5.0,
+        "mudHz": 300.0, "mudDb": -3.0, "mudQ": 0.9,
+        "presenceHz": 3000.0, "presenceDb": 2.5, "presenceQ": 0.8,
+        "depthHz": 65.0, "depthDb": 3.0,
+        "airHz": 11000.0, "airDb": 3.5,
+        "xoverLowHz": 150.0, "xoverHighHz": 5000.0,
+        "bandLow": [-26.0, 4.0, 25.0, 180.0],
+        "bandMid": [-24.0, 2.5, 12.0, 140.0],
+        "bandHigh": [-28.0, 3.0, 4.0, 70.0],
+        "exciteHz": 3000.0, "exciteDrive": 10.0, "exciteMix": 0.2,
+        "glue": [-18.0, 2.0, 25.0, 250.0],
+        "targetLufs": -14.0,
+        "ceilingDbtp": -1.0,
+        "limitStartDbtp": -1.3,
+        "limitWindowS": 0.05,
+        "tolLu": 0.1,
+        "maxPasses": 8,
+    },
 }
 
 _CHUNK = 1 << 18
@@ -132,6 +185,10 @@ def _measure3(x, rate):
 
 def pre_chain(x, rate, row):
     """Steps 2-3: reference gain, then the pedalboard chain. x (frames, channels) float32."""
+    if row.get("chain") == "wide":
+        import master_wide
+
+        return master_wide.pre_chain(x, rate, row, _db_to_lin)
     import pedalboard as pb
 
     ref = loudness.integrated_lufs(x, rate)

@@ -168,6 +168,28 @@ minimum filter over the window and two box filters of half its width over that: 
 above what any frame needs, starts moving half a window before a peak and recovers over the other
 half, in O(n) with no recursion.
 
+`uni-2` and `uni-3` (2026-11-16) exist because the owner heard `uni-1` as "minimal", far from the
+clarity and the depth "on both ears" Mixea gives; measured at matched loudness, `uni-1` moved every
+band by under 1 dB. Both run `pipeline/audio/master_wide.py` (`"chain": "wide"` in the row) into the
+same loudness-and-limit stage; `uni-3` is the same chain pushed about 1.5-2x, so the ear has a ladder:
+
+| Step | `uni-2` | `uni-3` | Why |
+| --- | --- | --- | --- |
+| high-pass | 25 Hz | 25 Hz | sub rumble |
+| side high-pass (Linkwitz-Riley 4) | 120 Hz | 140 Hz | the low end in the middle: depth reads as weight, not smear |
+| side high shelf | +3 dB at 2.5 kHz | +5 dB at 2 kHz | width on both ears lives in the side channel's highs |
+| mid peak cut | -2 dB at 300 Hz, Q 1 | -3 dB at 300 Hz, Q 0.9 | low-mid congestion |
+| mid peak lift | +1.5 dB at 3 kHz, Q 0.9 | +2.5 dB at 3 kHz, Q 0.8 | presence |
+| low / high shelf | +2 dB at 70 Hz, +2 dB at 12 kHz | +3 dB at 65 Hz, +3.5 dB at 11 kHz | weight and air |
+| 3-band compression, split 150 Hz / 5 kHz | low -24 dB 3:1, mid -22 dB 2:1, high -26 dB 2.5:1 | low -26 dB 4:1, mid -24 dB 2.5:1, high -28 dB 3:1 | density; each band gets its pre-compression RMS back, so the tone set above survives |
+| exciter | highs above 3.5 kHz, tanh drive 8, 12 % | above 3 kHz, drive 10, 20 % | harmonics where clarity is heard |
+| glue | -16 dB 1.5:1 | -18 dB 2:1 | the whole held together |
+
+Measured on Dancing in the Static (one minute from 1:00, level-matched), against the original:
+`uni-2` moved the side/mid ratio below 120 Hz from -12.8 to -23.1 dB (mono), above 2.5 kHz by +1.1
+to +2.6 dB, and the highs up ~1.7 dB; `uni-3` +2.3 to +4.0 dB of width above 2.5 kHz and +2.2 to
++3.5 dB of highs. Loudness range 12.5 LU at the source: 9.7 (`uni-1`), 8.4 (`uni-2`), 6.4 (`uni-3`).
+
 **Why -14 LUFS and -1 dBTP.** -14 LUFS integrated is Spotify's published normalisation level (the
 other streaming stores sit near it), so a master there is played at the level it was made at, not
 turned down or up by the store; -1 dBTP is the true-peak ceiling below which a lossy encode does
@@ -175,13 +197,17 @@ not clip on decoding (registry: media-generation `generated-music-acceptance` /
 `loudness-and-peak-acceptance`, which also notes -2 dBTP as the more cautious ceiling for a
 destination that transcodes). Both are `MASTER_TARGET` in `release.ts`.
 
-**The trial.** `npx tsx pipeline/master-trial.mts --dir <folder> --out <dir> [--limit N] [--adopt]`
-masters every `.wav` one at a time into `<out>/<stem>.uni-1.wav`, re-measures each written file with
-`measure` (acceptance is that reading: -14 +/- 0.5 LUFS, <= -1 dBTP, 0 clipped samples), and writes
-`<out>/trial.json` and `<out>/listen.html` - a page that opens from disk and plays original (A) and
-master (B) at matched loudness: the louder side's media-element volume is lowered by the LUFS
-difference, so the switch compares tone, not level. (A WebAudio gain would be silent from disk:
-Chrome feeds a `MediaElementSource` zeroes for a `file://` source.) `--adopt` files each passing
+**The trial.** `npx tsx pipeline/master-trial.mts --dir <folder> --out <dir> [--recipes uni-1,uni-2]
+[--limit N] [--reuse] [--adopt]` masters every `.wav` one at a time under each recipe (default: every
+recipe) into `<out>/<stem>.<recipe>.wav`, re-measures each written file with `measure` (acceptance is
+that reading: -14 +/- 0.5 LUFS, <= -1 dBTP, 0 clipped samples), and writes `<out>/compare.json` and
+`<out>/listen.html` (`lib/audio/masterCompare.ts`) - a page that opens from disk with one row per
+song: the original and every recipe side by side, a switch keeping the position, keys 1-N to switch.
+MATCHED LOUDNESS (default) lowers every version's media-element volume to the quietest one's
+integrated loudness, so a switch compares tone and image, not level; AS DELIVERED plays each at its
+own level. (A WebAudio gain would be silent from disk: Chrome feeds a `MediaElementSource` zeroes for
+a `file://` source.) `--reuse` keeps a master already in `<out>` (re-measured, not re-rendered), so a
+new recipe renders only itself. `--adopt` files each passing
 master as a kept `remaster` child take of the take whose stored file, upload name or title equals
 the source's stem (`lib/sound/takes.ts` `createTake`); a take is capped at 60 MB, which a 24-bit
 48 kHz stereo master passes at about 3 min 38 s.
