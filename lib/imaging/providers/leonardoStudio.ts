@@ -148,7 +148,7 @@ function toImagingError(e: unknown): ImagingError {
   const message = errorMessage(e);
   if (!(e instanceof StudioError)) return new ImagingError(message, "failed", "leonardo-studio");
   const kind =
-    e.kind === "refused" ? "refused" : e.kind === "timeout" ? "timeout" : e.kind === "unreachable" || e.kind === "signed-out" ? "no-key" : "failed";
+    e.kind === "refused" ? "refused" : e.kind === "no-credits" ? "account-blocked" : e.kind === "timeout" ? "timeout" : e.kind === "unreachable" || e.kind === "signed-out" ? "no-key" : "failed";
   const err = new ImagingError(message, kind, "leonardo-studio");
   err.dispatched = e.spent;
   return err;

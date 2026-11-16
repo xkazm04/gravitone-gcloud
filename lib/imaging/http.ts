@@ -22,7 +22,7 @@
 // ladder: a repeated GET or DELETE starts no new work.
 
 import { sleep } from "../sleep";
-import { ImagingError, presumedBilled, type ImagingErrorKind } from "./errors";
+import { classifyStop, ImagingError, presumedBilled, type ImagingErrorKind } from "./errors";
 import { BlockedUrlError, safeFetch, type Resolver } from "./safeUrl";
 import type { ProviderId } from "./types";
 
@@ -38,8 +38,11 @@ export interface RequestOptions {
   billable?: boolean;
 }
 
-function kindForStatus(status: number): ImagingErrorKind {
+function kindForStatus(status: number, body: string): ImagingErrorKind {
   if (status === 429) return "rate-limited";
+  // A 403 that names an account-level reason is not a missing key: walking past
+  // it as `no-key` would hide a suspended account from the operator (errors.ts).
+  if ((status === 401 || status === 403) && classifyStop(body)?.kind === "account-blocked") return "account-blocked";
   if (status === 401 || status === 403) return "no-key";
   return "failed";
 }
@@ -70,9 +73,11 @@ export async function requestJson<T>(
 
       const text = await res.text();
       if (!res.ok) {
+        const kind = kindForStatus(res.status, text);
         const err = new ImagingError(
-          `${provider} returned ${res.status} for ${method} ${redact(url)}.`,
-          kindForStatus(res.status),
+          `${provider} returned ${res.status} for ${method} ${redact(url)}.` +
+            (kind === "account-blocked" ? " The vendor stopped the account; it needs an operator." : ""),
+          kind,
           provider,
           text.slice(0, 600),
         );

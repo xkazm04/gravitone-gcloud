@@ -18,7 +18,7 @@
 
 // Type-only, and it must stay that way: errors.ts imports this file back, so a
 // value import here would be a runtime cycle. `import type` is erased.
-import type { ImagingErrorKind } from "./errors";
+import type { ImagingErrorKind, StopStage } from "./errors";
 
 /* ── Aspect: a project-level contract, never a vendor default ─────────────── */
 
@@ -117,6 +117,8 @@ export interface RerouteStep {
   /** The error it raised, or `constraint` when the request itself ruled the
    *  vendor out — a field it cannot honour — before it was ever called. */
   why: ImagingErrorKind | "constraint";
+  /** The stage the vendor said blocked, when it named one (errors.ts StopStage). */
+  stage?: StopStage;
 }
 
 /**

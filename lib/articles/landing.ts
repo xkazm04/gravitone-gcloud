@@ -17,7 +17,7 @@ import { LandingError, landRun } from "./registryWrite";
 import { appendLead } from "./trial/leads";
 import { trialLead } from "./trial/registryRecord";
 import { readTrialDetail } from "./trial/store";
-import type { ArticleRun, PostMeta } from "./types";
+import type { ArticleLanding, ArticleRun, PostMeta } from "./types";
 import type { EngineDeps } from "./engine";
 
 /* ── landing ───────────────────────────────────────────────────────────────── */
@@ -25,6 +25,7 @@ import type { EngineDeps } from "./engine";
 export async function land(id: string, deps: EngineDeps): Promise<void> {
   const run = await readRun(id);
   const dir = runDir(id);
+  let unrendered: readonly string[] = [];
   try {
     if (!run.approval) throw new ArticleError("a run with no recorded approval cannot land", 409, "not-approved");
     const patches = (await readPatches(id)).filter((p) => p.required || run.approval!.patches.includes(p.id));
@@ -32,17 +33,18 @@ export async function land(id: string, deps: EngineDeps): Promise<void> {
     if (!meta) throw new ArticleError("the post has no meta.json", 409, "no-post");
     await rm(path.join(dir, "medium"), { recursive: true, force: true });
     const pkg = await buildMediumPackage(dir, meta);
-    if (pkg.failedFigures.length) console.error(`[articles] ${id}: figures that did not render to PNG: ${pkg.failedFigures.join(", ")}`);
+    unrendered = pkg.failedFigures;
+    if (unrendered.length) console.error(`[articles] ${id}: figures that did not render to PNG: ${unrendered.join(", ")}`);
     const landing = await landRun({
       runDir: dir,
       run,
       approvedPatches: patches,
       ...(deps.registry ? { registry: deps.registry } : {}),
       now: deps.now,
-      progress: (l) => updateRun(id, (r) => ({ ...r, landing: { ...l, medium: "medium" } }), deps.now).then(() => undefined),
+      progress: (l) => updateRun(id, (r) => ({ ...r, landing: landingRecord(l, unrendered) }), deps.now).then(() => undefined),
     });
     // The ONE write of landedAt: the event time the canvas's 7-day expiry reads (types.ts).
-    const landed = await updateRun(id, (r) => ({ ...r, status: "landed", landedAt: deps.now().toISOString(), landing: { ...landing, medium: "medium" } }), deps.now);
+    const landed = await updateRun(id, (r) => ({ ...r, status: "landed", landedAt: deps.now().toISOString(), landing: landingRecord(landing, unrendered) }), deps.now);
     if (landed.trial && landed.trial.verdict !== "upheld") await leadForLandedTrial(landed, deps.now());
   } catch (e) {
     const err = e as Error;
@@ -51,12 +53,19 @@ export async function land(id: string, deps: EngineDeps): Promise<void> {
       id,
       (r) => {
         const out: ArticleRun = { ...r, status: "failed", error: `landing: ${err.message}` };
-        if (e instanceof LandingError && e.landing.branch) out.landing = { ...e.landing, medium: "medium" };
+        if (e instanceof LandingError && e.landing.branch) out.landing = landingRecord(e.landing, unrendered);
         return out;
       },
       deps.now,
     );
   }
+}
+
+/** The landing as run.json keeps it: the registry write-back's record, where the Medium
+ *  package is, and every figure that did not render to PNG for it. A figure lost at landing
+ *  does not stop the landing, so this record is the only place the loss stays visible. */
+export function landingRecord(landing: ArticleLanding, unrendered: readonly string[]): ArticleLanding {
+  return { ...landing, medium: "medium", ...(unrendered.length ? { unrenderedFigures: [...unrendered] } : {}) };
 }
 
 /** The run has landed; a lead that cannot be written is logged, never a reason to fail it. */

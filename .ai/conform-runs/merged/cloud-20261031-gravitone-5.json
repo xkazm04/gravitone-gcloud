@@ -1,0 +1,156 @@
+{
+  "worker": "cloud-20261031-gravitone-5",
+  "evaluatedAt": "2026-10-31",
+  "pairs": [
+    {
+      "context": "14632859-df56-4340-9e16-c420ff681ee3",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/articles/agentSteps.ts:36 every writer step gets a fresh uniquely-named tmp workspace and receives only staged run files (topic, sources.json, claims.json, outline, and for a rework the previous post plus one operator note), so no store of beliefs or episodes is carried across runs or recalled into a later agent turn; the standard's precondition (a long-lived agent whose history outgrows its budget) is absent. Grepped lib/articles for memory|recall|remember|episod|lesson|learn|history|carry and for listRuns/readdir of other runs: no cross-run read into a prompt.",
+      "techniques": [
+        { "technique": "working-memory", "verdict": "not-applicable", "evidence": "lib/articles/agentSteps.ts:3 each step is stage inputs, one agent turn, ingest out/: per-step state is files on disk, not session working memory carried by a long-lived agent" },
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/articles/agentSteps.ts:36 the workspace is created empty per step under os.tmpdir(); nothing is recalled from a durable store into it" }
+      ]
+    },
+    {
+      "context": "3fa7a830-b03c-4d82-87ef-fba8e753d390",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/board/_board/Board.tsx:8 the Board is a human decision desk whose verdicts, picks, undos and commits all go through BoardPort Server Actions; no agent reads or writes a memory here. Grepped app/(studio)/board for memory|recall|llm|prompt|model|agent|claude: hits are only fixture display strings (fixtureData.ts) and an in-memory fixture port.",
+      "techniques": []
+    },
+    {
+      "context": "e481098a-3532-46d9-bdc9-de84fbc2ce01",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/store.ts:4 the forge disk layer is the app's read path and the human cull's only write path over generated image runs; the style catalogue it fronts feeds image-generation recipes, not a long-lived agent's recalled beliefs. Grepped the 10 files for memory|recall|lesson|prompt|llm|agent|claude|feedback: hits are grader-digest stamps (calibration.ts, types.ts) and a style `prompt` field.",
+      "techniques": []
+    },
+    {
+      "context": "fb6d9704-d95c-46bc-b440-c6599e487cff",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evidence": "lib/foundry/training/store.ts:13 the git-tracked training-ledger.json is the channel to an autonomous procedure-revision loop on another machine (a row with reflected:false is its work queue), so rejected-revision-leaves-its-evidence now applies; the gate writes the row after the human verdict with outcome (store.ts:377 human) and score-with-predicate (store.ts:379 judge_pick_rate, plus pairs_n/basis), but the DIFF (types.ts:51 challenger_recipe) is not on the synced row and no improvement id is either, only cycle + technique (store.ts:376); whether the loop machine keeps its own cycle.json to join against cannot be seen from this repo, so conformant vs deviation is undecidable here. Strips (lib/foundry/strips/author.ts:1) remain one isolated agent turn with in-run fix feedback only.",
+      "techniques": [
+        { "technique": "rejected-revision-leaves-its-evidence", "verdict": "unread", "evidence": "lib/foundry/training/store.ts:376 the row records `technique: imp.technique` with verdict and pick rates but not the recipe diff held at lib/foundry/training/types.ts:51; the reviser's side of the join lives on the GPU machine, outside this repo" },
+        { "technique": "recall-injection", "verdict": "not-applicable", "evidence": "lib/foundry/strips/author.ts:1 strip authoring is one agent turn in an isolated workspace; only the current run's fix feedback is staged" }
+      ]
+    },
+    {
+      "context": "d067e4e3-6739-4666-9103-06dac7f825ac",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/library/project.ts:14 the Library projection reads each feed, ingests media into blobs and upserts items into the kernel's Library index: a catalogue of produced artefacts, not an agent's episodic or consolidated memory (agents may query it on demand through the MCP `library` read op, app/_server/mcp/tools/read.ts, which is tool access to data, not carried belief). Grepped lib/library for memory|recall|llm|agent|claude|model|prompt|embedding|retriev: only stored generation prompts and a `model` (glTF) kind.",
+      "techniques": []
+    },
+    {
+      "context": "c425f431-c0d1-4f34-b736-1a5d70683ef4",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/notebook/validate.ts:1 the context is a runtime door deciding whether one research run's answer counts as a notebook; it holds no store an agent carries forward. Grepped lib/notebook for memory|recall|remember|episod|history|persist|store: hits are notebook content and the retrieval cross-check of fetched vs recalled citations (retrieval.ts), which is output provenance, not agent memory.",
+      "techniques": []
+    },
+    {
+      "context": "e2f6231a-d39f-4d39-9465-0a48436cae92",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/steps/index.ts:8 an IndexedDB object store of per-project UI step content keyed by project and phase; no agent reads it as memory. Grepped lib/steps for llm|prompt|agent|model|claude|recall|memory: no hits.",
+      "techniques": []
+    },
+    {
+      "context": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/script/compose.ts:2 the script producer runs one compose turn with one prompt assembly from the current notebook; history.ts/versions.ts keep user-facing script versions (restore mints a new version), never recalled into a later model turn. Grepped lib/script for memory|recall|lesson|episod: no agent memory store.",
+      "techniques": []
+    },
+    {
+      "context": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/ui/src/components/audio/recipe.ts:91 the only 'prompt' built here is a music-vendor input (a Suno style/exclude form held to 200 characters, or an ElevenLabs one-sentence sfx line), not a language-model context with identity/policy/capability/context/task layers, a transcript or a token budget. Grepped the context's files for llm|claude|gemini|token|system prompt|messages|context window|anthropic|openai: one hit, a DraftList.tsx:36 comment naming drafts produced elsewhere. Note: context-map lists SeedComposer.tsx and TermRail.tsx, which do not exist.",
+      "techniques": [
+        { "technique": "layered-composition", "verdict": "not-applicable", "evidence": "packages/ui/src/components/audio/recipe.ts:1 one pure model shared by composer, kit and server door (the one-assembler habit holds), but there are no prompt layers to own" }
+      ],
+      "registryProposal": "prompt-assembly scopes itself to 'a call to a language model' but gives no ruling on text prompts to non-LLM generative vendors (text-to-music style lines, text-to-image recipes). Here two of its rules carry over cleanly (one assembler per family: recipe.ts:1; truncation counted and surfaced: sunoCut) while the layer/budget/transcript machinery does not. A one-line scope note would stop each judge deciding this differently."
+    },
+    {
+      "context": "f770abb6-6609-4c9f-959f-a31407dc501f",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/domain/src/steps/still.ts:22 the only 'prompt' in the context is a stored string field on a still take's record; the context is run/job state machines, lanes, plans and estimates. Grepped the 19 files for prompt|llm|claude|token|system|messages: hits are this field, a fencing token, and unit-name comments.",
+      "techniques": []
+    },
+    {
+      "context": "0335f0dc-2987-4b19-96e1-58941a70c9d5",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/extract/performGroup.ts:64 after the synthesis prompt is sent (line 63), only its cost is booked and the reasoner's model name stored, so a live extract run records no digest or size of any prompt it sent; the kernel mints a payload digest only for dry runs (packages/kernel/src/dryrun.ts:181), so 'did that run see the new instruction?' is unanswerable for every paid run.",
+      "techniques": [
+        { "technique": "layered-composition", "verdict": "realized", "evidence": "lib/foundry/extract/prompts.ts:1 every instruction the Extract module sends lives in one file, so a prompt change is a diff there rather than a hunt through call sites" },
+        { "technique": "fingerprinting-and-cache-keys", "verdict": "deviation", "evidence": "lib/foundry/extract/performGroup.ts:64 send site books cost only; the payloadDigest at packages/kernel/src/dryrun.ts:181 is written on the dry path alone, never for a live send" }
+      ]
+    },
+    {
+      "context": "d067e4e3-6739-4666-9103-06dac7f825ac",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/library/feeds/types.ts:9 a feed is a reader and a pure mapping over v1 stores into library items; no model call is assembled or sent. Grepped lib/library for llm|claude|reason(|prompt|messages: 'prompt' appears only as stored generation metadata copied into extras and as a fixture trial subject.",
+      "techniques": []
+    },
+    {
+      "context": "a91965bd-84cb-42b6-978f-29ca7258f718",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/projects/[id]/[part]/page.tsx:38 the context is the part editors reading and writing through PART_PORT; no editor assembles or sends a model prompt. Grepped the editors for llm|claude|reason(|messages|prompt: the only hits are Notebook.tsx queuing a follow-up as a typed op {op, prompt, cardId} to the port, which hands raw input to an assembler elsewhere, the shape the standard asks of a call site.",
+      "techniques": []
+    },
+    {
+      "context": "7226db68-4ca8-41ee-a2f8-3012d05e4acd",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/producers/src/publish/publish.ts:21 the context publishes claimed slots to channels through an adapter and collects stats; it makes no model call. Grepped packages/producers/src/publish for llm|claude|prompt|messages|reason(: no hits.",
+      "techniques": []
+    },
+    {
+      "context": "f8036604-75f5-4f7d-898c-734511ac5e86",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/script/compose.ts:186 the capability section for the qualifying engines is cut out of ENGINES.md by matching each engine's model-written notebook label against '## ' headings (engineSections, line 57), and a label that matches no heading leaves that engine's capability text silently absent with no notice in the prompt, so the model is told it may use an engine whose contract it is never shown.",
+      "techniques": [
+        { "technique": "layered-composition", "verdict": "realized", "evidence": "lib/script/compose.ts:162 composePrompt is the one assembler for the compose family, stacking the standing prompt doc, format, engines, notebook, scope and cards in a fixed order" },
+        { "technique": "context-budgeting", "verdict": "realized", "evidence": "lib/script/compose.ts:102 MAX_COMPOSE_CHARS is a hard ceiling enforced before pricing, and composeTooLarge refuses with the size and the largest field named rather than letting the provider truncate" },
+        { "technique": "capability-documentation", "verdict": "deviation", "evidence": "lib/script/compose.ts:57 engineSections filters by free-text label inclusion and returns whatever matched, including nothing, with no check that every allowed engine got its section" },
+        { "technique": "fingerprinting-and-cache-keys", "verdict": "deviation", "evidence": "lib/producers/research.ts:121 the compose turn's send passes the prompt as payload to the meter, whose digest is minted only on the dry path (packages/kernel/src/dryrun.ts:181); a live send records no prompt digest or size" }
+      ]
+    },
+    {
+      "context": "f2b24d86-7201-4945-837d-0c6343e1273b",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/_shell/facts.ts:1 the shell computes header numbers, toasts, a bell and a live feed from kernel events; it sends no model prompt. Grepped app/(studio)/_shell for prompt|llm|claude|reason(|messages: no hits.",
+      "techniques": []
+    }
+  ],
+  "declined": [],
+  "consults": [
+    { "ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["agent-memory"], "techniques": ["working-memory", "recall-injection", "rejected-revision-leaves-its-evidence"], "deviations": 0 },
+    { "ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["prompt-assembly"], "techniques": ["layered-composition", "context-budgeting", "capability-documentation", "fingerprinting-and-cache-keys"], "deviations": 2 }
+  ]
+}
