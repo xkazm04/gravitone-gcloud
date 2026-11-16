@@ -1,4 +1,78 @@
-/* Packaging layout "split" (spark studio-to-release): the conversation narrowed | the release step. */
-.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:var(--sp-4);padding:var(--sp-4) var(--sp-loose) var(--sp-page-end);min-width:0}
-.thread{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column}
-.step{min-width:0;min-height:0;overflow:auto}
+/* Packaging layout "split" (spark studio-to-release, WP5): the conversation | the seam | the release step. Each side
+   scrolls on its own; the conversation's share comes from Split.tsx as --split-share, held between a floor that keeps
+   its cards legible and a ceiling that leaves the step its room. Tokens only. */
+.layout{
+  --split-share:36%;
+  --thread-floor:calc(var(--w-next) + var(--w-pile));
+  --step-floor:calc(var(--w-next) + var(--w-detail));
+  flex:1;min-height:0;min-width:0;display:grid;
+  grid-template-columns:clamp(var(--thread-floor),var(--split-share),min(64%,calc(100% - var(--step-floor)))) auto minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  padding:var(--sp-4) var(--sp-loose) var(--sp-loose)
+}
+.layout[data-folded]{grid-template-columns:auto minmax(0,1fr)}
+.layout[data-folded] .thread{display:none}
+.layout[data-dragging]{cursor:col-resize;user-select:none}
+
+.thread{container:thread / inline-size;min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:var(--r-lg);background:var(--panel-ground);overflow:hidden}
+.step{container:step / inline-size;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;padding:var(--sp-1) var(--sp-2) var(--sp-7) var(--sp-3)}
+
+/* the seam: the fold toggle over the grip */
+.seam{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);width:var(--w-grab);min-height:0}
+.fold{display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);flex:none;min-width:var(--h-control-sm);min-height:var(--h-control-sm);padding:var(--sp-2);border:1px solid var(--hair-2);border-radius:var(--r-control);background:var(--ink-1);color:var(--muted);cursor:pointer;transition:color var(--dur-fast),border-color var(--dur-fast)}
+.fold:hover{color:var(--ink-bright);border-color:var(--hair-3)}
+.fold:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.layout[data-folded] .fold{flex:1;padding:var(--sp-4) var(--sp-2);color:var(--text)}
+.chev{width:var(--size-glyph-sm);height:var(--size-glyph-sm);flex:none}
+.chev[data-folded]{transform:scaleX(-1)}
+.foldName{writing-mode:vertical-rl;font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+
+.grip{position:relative;flex:1;align-self:stretch;display:grid;place-items:center;cursor:col-resize;touch-action:none;border-radius:var(--r-control)}
+.grip::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--hair-2);transition:background var(--dur-fast),width var(--dur-fast)}
+.knob{position:relative;width:var(--sp-2);height:var(--h-control);border-radius:var(--r-chip);border:1px solid var(--muted);background:var(--ink-3);transition:border-color var(--dur-fast),background var(--dur-fast)}
+.grip:hover::before,.layout[data-dragging] .grip::before{width:var(--stroke-mark);background:var(--focus-line)}
+.grip:hover .knob,.layout[data-dragging] .knob{border-color:var(--cyan)}
+.grip:focus-visible{outline:none}
+.grip:focus-visible::before{width:var(--stroke-mark);background:var(--cyan)}
+.grip:focus-visible .knob{border-color:var(--cyan);background:var(--ink-4);box-shadow:0 0 0 var(--ring-halo) var(--focus-line)}
+
+/* THE CONVERSATION AT A COLUMN'S WIDTH. The studio view (../../_view/view.module.css) re-flows on the viewport: a
+   1920 window lays its three columns into a 600-pixel pane. Restated here on the pane: from 900 wide the versions
+   wrap over the cards with next steps beside them; under that, one column - versions, the cards, next steps - that
+   scrolls as one. The dock keeps its line in on screen: more height than the page dock (the pane is tall and narrow,
+   so its verdict row wraps), and the send line pinned to its foot if that still overflows. Delete this block when
+   the view keys its breakpoints on a container. */
+@container thread (min-width:900px){
+  .thread :global([data-view="studio"]){height:100%;grid-template-columns:minmax(0,1fr) var(--w-next);grid-template-rows:auto minmax(0,1fr);gap:var(--sp-5) var(--sp-6)}
+  .thread :global([data-view="studio"] > *){overflow:auto}
+  .thread :global([data-view="studio"] > nav){grid-column:1 / -1;overflow:visible}
+  .thread :global([data-view="studio"] > nav ol){display:flex;flex-wrap:wrap}
+}
+@container thread (max-width:899.98px){
+  .thread :global([data-view="studio"]){height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;gap:var(--sp-6)}
+  .thread :global([data-view="studio"] > *){overflow:visible}
+  .thread :global([data-view="studio"] > nav){grid-column:auto}
+  .thread :global([data-view="studio"] > nav ol){display:flex;flex-wrap:wrap}
+}
+/* a card's timeline: the lane heads' column (--lane-side, ../../_view/lanes.module.css) gives the sections room */
+@container thread (max-width:699.98px){
+  .thread :global([data-view="studio"] [data-playing]:not([data-compact])){--lane-side:calc(var(--w-desk-side) * .6)}
+  .thread :global([data-view="studio"] [data-playing][data-compact]){--lane-side:calc(var(--w-desk-side) * .75)}
+}
+.thread :global(section[data-dock]){max-height:calc(var(--h-dock) * 2)}
+.thread :global(section[data-dock] > form){position:sticky;bottom:calc(var(--sp-4) * -1);padding-bottom:var(--sp-4);margin-bottom:calc(var(--sp-4) * -1);background:var(--ink-1)}
+
+/* THE STEP AT A COLUMN'S WIDTH. The wizard (../../../_release/wizard/*.module.css) folds its rail at a 1100 window
+   and its two-column steps at 1300; beside the conversation the step is that narrow at any window. Restated on the
+   step's pane, through the wizard's own accessible names. Delete when the wizard keys on a container. */
+@container step (max-width:1040px){
+  .step :global([data-variant-body="wizard"] > div:has(> nav[aria-label="release steps"])){grid-template-columns:minmax(0,1fr);gap:var(--sp-6)}
+  .step :global(nav[aria-label="release steps"]){position:static}
+  .step :global(nav[aria-label="release steps"] > ol){flex-direction:row;flex-wrap:wrap}
+  .step :global(nav[aria-label="release steps"] > ol::before){display:none}
+}
+@container step (max-width:1340px){
+  .step :global(div:has(> section[aria-label="rights record"])){grid-template-columns:minmax(0,1fr)}
+  .step :global(div:has(> aside[aria-label="what Schedule commits"])){grid-template-columns:minmax(0,1fr)}
+  .step :global(aside[aria-label="what Schedule commits"]){position:static}
+}
