@@ -8,12 +8,18 @@
 // store's own sentence. Accept sets the proposal's value on the page at once (./applyLocal.ts, zod-free) - the store
 // re-checks it through the release door. The model is pure (./sessionModel.ts); this component only sends.
 // On the fixture (`acts === null`) nothing leaves the page.
+//
+// A later `read` (the studio refreshes its server components when the agent posts a turn) is merged by the model's
+// `read` event, sent while rendering when the read's records are a new array - the model keeps the one it last merged,
+// so the comparison is pure and settles in one extra render, with no effect. When a release made here takes the
+// store's id while it is open, the address's `r` is replaced (no navigation) so a reload lands on it.
 import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
 
 import type { ReleaseRead } from "./_port/port.ts";
 import type { ReleaseAct, ReleaseActs } from "./act.ts";
 import { isReleaseEdit, type DraftEvent } from "./draft.ts";
 import { createIn, initialSession, pendingOf, pump, reduceSession, savingOf, viewOf } from "./sessionModel.ts";
+import { releaseHref } from "./swap.ts";
 import type { ReleaseSessionApi } from "./session.ts";
 
 export interface ReleaseSessionProps {
@@ -29,10 +35,16 @@ export function ReleaseSession({ read, openId, acts, children }: ReleaseSessionP
   const [model, send] = useReducer(reduceSession, undefined, () => initialSession(read.records, openId));
   /** `<id>:<seq>` already handed to the store - a re-run effect (Strict Mode, a re-render) never sends twice. */
   const leaving = useRef(new Set<string>());
+  if (model.source !== read.records) send({ type: "read", records: read.records });
 
   useEffect(() => {
     if (acts !== null) pump(model, acts, send, leaving.current);
   }, [model, acts]);
+
+  const swapped = model.swapped;
+  useEffect(() => {
+    if (swapped !== null) window.history.replaceState(null, "", releaseHref(window.location.href, swapped.to));
+  }, [swapped]);
 
   const act = useCallback((id: string, a: ReleaseAct) => send(acts === null ? { type: "local", id, act: a } : { type: "enqueue", id, act: a }), [acts]);
 

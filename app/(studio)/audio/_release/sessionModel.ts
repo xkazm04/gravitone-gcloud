@@ -8,6 +8,12 @@
 // answer or a refusal empties that release's queue: the page shows the store's record, and the acts made on top of the
 // refused one are not replayed on a version their author never saw.
 //
+// A LATER READ (the studio refreshes its server components when the agent posts a turn) is merged, never swapped in:
+// a record the store has moved past is taken whole when nothing of that release is queued; while acts are queued only
+// its proposals are taken, and the queue's own answer re-bases the release (an agent's write in between makes that
+// answer stale, which shows the stored record). A release missing from the read stays only while it is open, its
+// create is on its way or acts of it are still queued.
+//
 // On the fixture (`local`), the acts are applied to `records` at once and nothing is queued.
 import type { ShelfTake } from "@gt/domain/release";
 import type { ReleaseProposal, ReleaseRecord } from "@gt/domain/release.record";
@@ -32,6 +38,10 @@ export interface SessionModel {
   readonly creating: readonly string[];
   readonly notice: string | null;
   readonly seq: number;
+  /** The read's records this model last merged, by identity: a new array is a new read. */
+  readonly source: readonly ReleaseRecord[];
+  /** The open release's page id and the store's id it took when its create was answered; else null. */
+  readonly swapped: { readonly from: string; readonly to: string } | null;
 }
 
 export type SessionEvent =
@@ -43,7 +53,9 @@ export type SessionEvent =
   | { readonly type: "answer"; readonly id: string; readonly seq: number; readonly answer: ReleaseAnswer }
   /** A release made on this page; `stored` false while the store's create is on its way. */
   | { readonly type: "create"; readonly id: string; readonly artist: string; readonly takes: readonly ShelfTake[]; readonly at: string; readonly stored: boolean }
-  | { readonly type: "created"; readonly localId: string; readonly answer: ReleaseAnswer };
+  | { readonly type: "created"; readonly localId: string; readonly answer: ReleaseAnswer }
+  /** The server read again: its records, merged by `mergeRead`. */
+  | { readonly type: "read"; readonly records: readonly ReleaseRecord[] };
 
 export const initialSession = (records: readonly ReleaseRecord[], openId: string | null): SessionModel => ({
   records,
@@ -53,6 +65,8 @@ export const initialSession = (records: readonly ReleaseRecord[], openId: string
   creating: [],
   notice: null,
   seq: 0,
+  source: records,
+  swapped: null,
 });
 
 /** The notice a stale answer leaves: nothing was written, the stored version is shown. */
@@ -118,7 +132,23 @@ function created(m: SessionModel, localId: string, a: ReleaseAnswer): SessionMod
   const id = stored.release.id;
   const q = m.queues[localId];
   const queues = q === undefined ? without(m.queues, localId) : { ...without(m.queues, localId), [id]: q };
-  return { ...m, creating, records: replace(m.records, localId, stored), queues, openId: m.openId === localId ? id : m.openId };
+  const open = m.openId === localId;
+  return { ...m, creating, records: replace(m.records, localId, stored), queues, openId: open ? id : m.openId, swapped: open ? { from: localId, to: id } : null };
+}
+
+/** A later read merged into the page's records (the rules are this file's header). */
+export function mergeRead(m: SessionModel, incoming: readonly ReleaseRecord[]): SessionModel {
+  const byId = new Map(m.records.map((r) => [r.release.id, r]));
+  const ids = new Set(incoming.map((r) => r.release.id));
+  const stays = (id: string): boolean => id === m.openId || m.creating.includes(id) || (m.queues[id] ?? []).length > 0;
+  const kept = m.records.filter((r) => !ids.has(r.release.id) && stays(r.release.id));
+  const merged = incoming.map((r) => {
+    const page = byId.get(r.release.id);
+    if (page === undefined) return r;
+    if (r.version <= page.version) return page;
+    return (m.queues[r.release.id] ?? []).length === 0 ? r : { ...page, pending: r.pending };
+  });
+  return { ...m, source: incoming, records: [...kept, ...merged] };
 }
 
 export function reduceSession(m: SessionModel, e: SessionEvent): SessionModel {
@@ -141,6 +171,8 @@ export function reduceSession(m: SessionModel, e: SessionEvent): SessionModel {
     }
     case "created":
       return created(m, e.localId, e.answer);
+    case "read":
+      return e.records === m.source ? m : mergeRead(m, e.records);
   }
 }
 

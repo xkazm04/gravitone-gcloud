@@ -21,6 +21,7 @@ import { releaseKind, type Release } from "@gt/domain/release";
 import { releaseProblems } from "@gt/domain/release.problems";
 
 import { pendingIn } from "../pending.ts";
+import { isPageMade, isSwap } from "../swap.ts";
 import type { WizardProps } from "./props.ts";
 import { clock, day, KIND_LABEL } from "./fmt.ts";
 import { Picker } from "./Picker.tsx";
@@ -50,6 +51,9 @@ interface Walk {
   readonly id: string | null;
   readonly step: StepId;
   readonly track: number;
+  /** The id the walk began on: a step's body is keyed by it, so a swap to the store's id does not remount a field
+   *  the operator is typing in. */
+  readonly began: string | null;
 }
 
 function Identity({ r, saving, onLeave }: { readonly r: Release; readonly saving: boolean; readonly onLeave: () => void }) {
@@ -75,14 +79,22 @@ export function Wizard({ read, session, newId, startStep }: WizardProps) {
   const { state, dispatch } = session;
   const release = state.releases.find((r) => r.id === state.openId) ?? null;
   const problems = useMemo(() => (release === null ? [] : releaseProblems(release)), [release]);
-  const [fresh, setFresh] = useState<string | null>(null);
-  const [walk, setWalk] = useState<Walk>(() => ({ id: release?.id ?? null, step: release === null ? "tracks" : (startStep ?? entryStep(problems, false)), track: 0 }));
+  const [walk, setWalk] = useState<Walk>(() => ({ id: release?.id ?? null, step: release === null ? "tracks" : (startStep ?? entryStep(problems, isPageMade(release.id, read.records))), track: 0, began: release?.id ?? null }));
   const [visited, setVisited] = useState<Readonly<Record<string, readonly StepId[]>>>({});
   const heading = useRef<HTMLHeadingElement | null>(null);
   const moved = useRef(false);
 
-  // A release opened from anywhere (this picker, a create, another layout, the URL) starts its walk.
-  if ((release?.id ?? null) !== walk.id) setWalk({ id: release?.id ?? null, step: release === null ? "tracks" : entryStep(problems, fresh === release.id), track: 0 });
+  // A release opened from anywhere (this picker, a create, another layout, the URL) starts its walk - a release made on
+  // this page at its first step. A page-made release taking the store's id (../swap.ts) is the same release: its walk
+  // and visited steps carry over to the new id.
+  if ((release?.id ?? null) !== walk.id) {
+    const next = release?.id ?? null;
+    if (next !== null && isSwap(walk.id, next, state.releases.map((r) => r.id))) {
+      const from = walk.id ?? "";
+      setWalk((w) => ({ ...w, id: next }));
+      setVisited((v) => ({ ...v, [next]: v[from] ?? [] }));
+    } else setWalk({ id: next, step: release === null ? "tracks" : entryStep(problems, isPageMade(release.id, read.records)), track: 0, began: next });
+  }
 
   useEffect(() => {
     if (!moved.current) return;
@@ -103,7 +115,6 @@ export function Wizard({ read, session, newId, startStep }: WizardProps) {
           onCreate={(takes) => {
             const id = newId();
             moved.current = true;
-            setFresh(id);
             dispatch({ type: "create", id, artist: read.artist, takes });
           }}
         />
@@ -157,7 +168,7 @@ export function Wizard({ read, session, newId, startStep }: WizardProps) {
             {`Step ${at + 1} of ${STEPS.length}, ${STEP_LABEL[step]}`}
           </p>
           <div className={s.body}>
-            <Body key={`${release.id}:${step}`} {...props} />
+            <Body key={`${walk.began ?? release.id}:${step}`} {...props} />
           </div>
           <footer className={s.foot}>
             {prev !== undefined ? <Button label={`Back · ${STEP_LABEL[prev]}`} onPress={() => go(prev)} /> : <span />}

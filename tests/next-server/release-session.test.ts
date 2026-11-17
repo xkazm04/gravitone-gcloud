@@ -16,6 +16,7 @@ import type { ReleaseAct, ReleaseActs, ReleaseAnswer } from "../../app/(studio)/
 import { applyLocal } from "../../app/(studio)/audio/_release/applyLocal.ts";
 import { applyEdit, releaseOf, type ReleaseEdit } from "../../app/(studio)/audio/_release/draft.ts";
 import { initialSession, pump, reduceSession, staleNotice, viewOf, type SessionEvent, type SessionModel } from "../../app/(studio)/audio/_release/sessionModel.ts";
+import { isPageMade, isSwap, releaseHref } from "../../app/(studio)/audio/_release/swap.ts";
 
 const take = (n: number): ShelfTake => ({ takeId: `take-${n}`, title: `Take ${n}`, durationS: 200, audioHref: null, provider: "suno", label: null, lufs: null, truePeakDb: null });
 const ID = "rel-00000000aa01";
@@ -215,5 +216,81 @@ describe("the release session's queue", () => {
     h.send({ type: "created", localId: local, answer: { ok: true, value: { record: record(releaseOf(storedId, "MiSu", [take(5)]), 1), stale: false } } });
     expect(h.model().openId).toBe(storedId);
     expect(h.store.calls[0]?.input).toEqual({ id: storedId, version: 1, act: { kind: "edit", edit: { type: "patch", id: storedId, fields: { title: "New" } } } });
+  });
+});
+
+describe("a later read", () => {
+  const OTHER = "rel-00000000dd04";
+  const other = record(releaseOf(OTHER, "MiSu", [take(3)]), 2);
+
+  it("takes a record the store moved past, release and proposals, when nothing of it is queued", () => {
+    let m = initialSession([record(base, 3)], ID);
+    const agent = record({ ...base, label: "Gravitone" }, 4, [P_GENRE]);
+    m = reduceSession(m, { type: "read", records: [agent] });
+    expect(viewOf(m)[0]).toEqual(agent);
+  });
+
+  it("while acts are queued takes only the proposals, and the queue's answer re-bases the release", async () => {
+    const h = harness([record(base, 3)]);
+    h.send(edit({ type: "patch", id: ID, fields: { title: "mine" } }));
+    const agent = record({ ...base, label: "Gravitone" }, 4, [P_GENRE]);
+    h.send({ type: "read", records: [agent] });
+    expect(h.view()?.release.title).toBe("mine");
+    expect(h.view()?.release.label).toBeNull();
+    expect(h.view()?.pending).toEqual([P_GENRE]);
+    expect(h.view()?.version).toBe(3);
+    // the agent wrote in between: the store answers stale, and the page shows its record
+    h.store.calls[0]?.answer({ ok: true, value: { record: agent, stale: true } });
+    await settle();
+    expect(h.view()).toEqual(agent);
+  });
+
+  it("keeps the page's record when the read is not newer (the fixture's edits survive a refresh)", () => {
+    let m = initialSession([record(base, 3)], ID);
+    m = reduceSession(m, { type: "local", id: ID, act: { kind: "edit", edit: { type: "patch", id: ID, fields: { title: "typed" } } } });
+    m = reduceSession(m, { type: "read", records: [record(base, 3)] });
+    expect(viewOf(m)[0]?.release.title).toBe("typed");
+  });
+
+  it("adds a new release and drops one gone from the read unless it is open or being created", () => {
+    let m = initialSession([record(base, 3), other], null);
+    m = reduceSession(m, { type: "create", id: "rel-00000000ee05", artist: "MiSu", takes: [take(4)], at: AT, stored: false });
+    m = reduceSession(m, { type: "open", id: ID });
+    const fresh = record(releaseOf("rel-00000000ff06", "MiSu", [take(6)]), 1);
+    m = reduceSession(m, { type: "read", records: [fresh] });
+    expect(viewOf(m).map((r) => r.release.id).sort()).toEqual([ID, "rel-00000000ee05", "rel-00000000ff06"].sort());
+  });
+
+  it("the same read twice is one merge: the model is returned as it was", () => {
+    const records = [record(base, 3)];
+    const m = initialSession(records, ID);
+    expect(reduceSession(m, { type: "read", records })).toBe(m);
+  });
+});
+
+describe("a release made on the page takes the store's id", () => {
+  it("the swap is recorded only when that release is open", () => {
+    const local = "rel-00000000bb02";
+    const stored = record(releaseOf("rel-00000000cc03", "MiSu", [take(5)]), 1);
+    let m = initialSession([], null);
+    m = reduceSession(m, { type: "create", id: local, artist: "MiSu", takes: [take(5)], at: AT, stored: false });
+    expect(reduceSession(m, { type: "created", localId: local, answer: { ok: true, value: { record: stored, stale: false } } }).swapped).toEqual({ from: local, to: "rel-00000000cc03" });
+    m = reduceSession(m, { type: "open", id: null });
+    expect(reduceSession(m, { type: "created", localId: local, answer: { ok: true, value: { record: stored, stale: false } } }).swapped).toBeNull();
+  });
+
+  it("the walk reads it as the same release, and a page-made release starts fresh", () => {
+    expect(isSwap("rel-00000000bb02", "rel-00000000cc03", ["rel-00000000cc03"])).toBe(true);
+    // opening another release while the first still exists is not a swap
+    expect(isSwap("rel-00000000bb02", "rel-00000000cc03", ["rel-00000000bb02", "rel-00000000cc03"])).toBe(false);
+    expect(isSwap("rel-00000000bb02", null, [])).toBe(false);
+    expect(isPageMade("rel-00000000cc03", [record(base, 3)])).toBe(true);
+    expect(isPageMade(ID, [record(base, 3)])).toBe(false);
+  });
+
+  it("the address names the stored id and keeps everything else", () => {
+    const href = "http://localhost:3000/audio?s=studio&session=night-drive&stage=package&r=rel-00000000bb02&pv=dock";
+    expect(releaseHref(href, "rel-00000000cc03")).toBe("http://localhost:3000/audio?s=studio&session=night-drive&stage=package&r=rel-00000000cc03&pv=dock");
+    expect(releaseHref("http://localhost:3000/audio?s=release", "rel-00000000cc03")).toBe("http://localhost:3000/audio?s=release&r=rel-00000000cc03");
   });
 });
