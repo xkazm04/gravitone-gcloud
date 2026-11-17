@@ -102,16 +102,19 @@ function spreadFrames(raw: readonly number[], budget: number): number[] {
 
 /**
  * The plan for one cut of one table. Deterministic and timestamp-free, so the data block that carries it has a
- * stable hash. Throws ReelError on a table too short to plan.
+ * stable hash. `totalFrames` is the length of the track the cut is planned to; absent, the table sets the length
+ * inside the cut's clamp. Throws ReelError on a table too short to plan.
  */
-export function computeTimingPlan(table: ReelTable, cut: ReelCut, topN: number = 10): TimingPlan {
+export function computeTimingPlan(table: ReelTable, cut: ReelCut, topN: number = 10, totalFrames?: number): TimingPlan {
   const spec = CUTS[cut];
   const P = table.periods.length;
   if (P < 2) throw new ReelError("a timing plan needs at least 2 periods");
   const orders = viewerOrders(table);
   const raw = changeScores(table, orders, topN);
 
-  const timeline = clamp(P * spec.framesPerPeriod, spec.minTimeline, spec.maxTimeline);
+  // A cut planned to a track is exactly as long as the track: the whole bed plays, nothing is trimmed or looped.
+  const timeline = totalFrames === undefined ? clamp(P * spec.framesPerPeriod, spec.minTimeline, spec.maxTimeline) : totalFrames - spec.hookFrames - spec.endFrames;
+  if (timeline < 300) throw new ReelError(`a ${cut} cut of ${totalFrames} frames leaves ${timeline} for the data; it needs at least 300`);
   const events = table.events;
   // Dwell is a hold the viewer reads a card in; together it may not eat the motion it annotates.
   const dwell = events.length === 0 ? 0 : Math.min(DWELL[cut], Math.floor((timeline * DWELL_SHARE) / events.length));

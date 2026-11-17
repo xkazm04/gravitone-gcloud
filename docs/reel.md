@@ -60,14 +60,60 @@ carries its own table), the OPA publish gate.
   `proof` now draws two frames cold and warm and refuses a page where they differ, in about a minute
   (`pipeline/strips/render.mts` `renderWalk`); with rows laid out by `top` the two are byte-identical.
 
+## The GPU, three.js and a look before the render (2026-11-17)
+
+- Frames are drawn on the GPU: `pipeline/reel/gpu.mts` launches Chromium over ANGLE/Direct3D 11, reads the
+  renderer string back, and falls to the strips' CPU launch when it is software (`--cpu` forces it). On this
+  box `proof` printed `ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 ...)` and the F1 page's cold and warm frames were
+  still byte-identical. `/scout` and the strips harness keep the CPU launch.
+- three.js r149 arrives through an empty `<script id="vendor-three">` block that `pipeline/reel/page.mts`
+  fills from `pipeline/strips/vendor/`. The frame-purity lint reads the author's code only; the vendor block
+  is first proven to be the pinned file.
+- `shot` encodes a few seconds from the middle (`pipeline/reel/span.mts`): no gate, no stage. 180 frames of
+  the F1 page took 24 s.
+
+## Sound
+
+`track <folder> <cut> --file <audio>` attaches one bed before planning; the cut is then planned to the
+track's whole length (`lib/reel/state.ts` `withTrack`, `trackFrames`; `computeTimingPlan`'s `totalFrames`),
+and `cut` lays it under the picture as `render/final.mp4` at -14 LUFS. The ten lofi directions for Suno are in
+`knowledge/reel/sound-prompts.md`; none has been generated yet.
+
+## The Board and the Calendar (2026-11-17)
+
+Each stop is a Board packet, one per stop because a packet's items are frozen when it opens:
+`pkt:reel:<slug>:data`, `pkt:reel:<slug>:<cut>:proof`, `pkt:reel:<slug>:<cut>:cut` (a subject made again opens
+`...:2`). Source `reel` in `packages/domain/src/source.ts`; adapter `lib/decision/v1/sources/reel.ts`; folder
+store `lib/reel/store.ts` (`REELS_STORE_DIR`, else `foundry-out/reels`).
+
+| Stop | The cell's media | Written by |
+|---|---|---|
+| data | `data-card.png`: the measured numbers, the leaders, source and licence | `data` (`pipeline/reel/card.mts`) |
+| proof | `<cut>/proof/sheet.png`: the twelve frames tiled | `proof` (`pipeline/reel/stops.mts`) |
+| cut | `<cut>/render/final.mp4`, else `strip.mp4`; the gate lines as meta | `cut` |
+
+- A reject needs a reason; a keep is the operator's only (an agent's keep is refused at preview and at apply).
+- Verdicts land in `<folder>/verdicts.json`, written by the adapter's `apply` alone, each with the sha256 of the
+  file judged. `cut` refuses a cut whose proof was rejected; a missing verdict blocks nothing, so the CLI runs
+  without the app.
+- **A kept cut goes to the Calendar** (`lib/producers/reelActs.ts`): the judged file is copied into the exports
+  root as `reel-<slug>-<cut>.mp4` (refused if the bytes are no longer the ones kept) and a youtube slot
+  `sl-reel-<slug>-<cut>` is made with the title, description and tags of `<cut>/publish.json`. The time is the
+  keep's `calendar: youtube <ISO>` note; **a keep with no note is slotted for the next day at 08:00 UTC**, as an
+  article is, and the preview says so before the commit. Uploading to YouTube is the publish worker's and is
+  not part of this.
+
+Not exercised in a browser: the Board's rendering of these packets. The headless path (`pipeline/decide.mts`
+show, verdict, preview, commit) was run end to end on a temp copy of the F1 reel.
+
 ## Not built yet
 
-- **Sound.** Cuts are silent, so nothing here is publishable as it stands.
-- **Publishing.** A reel cannot reach the Calendar or YouTube; `lib/publish/exports.ts` does not list reel
-  folders.
-- **The Board.** A reel's stops are in the session, not a Board packet.
-- **three.js.** The harness runs Chromium with the GPU off (`pipeline/strips/render.mts`); a WebGL page
-  renders black. `lib/music-clip/gpuShot.ts` is the GPU path a later form would use.
+- **A schedule control on the Board.** The cull desk has none, so a time is typed as a `calendar:` note.
+- **A guard on silent cuts.** A cut with no bed can be kept and slotted; only the operator's `sound` reject
+  stops it.
+- **Byte-stable WebGL.** Antialiased three.js frames on this GPU differ by a few pixels at one level in 1-3% of
+  identical cold draws (measured by two builders). `proof` and the render's seek gate both allow 0.05% of
+  pixels more than two levels apart, which these pass; a page that needs exact frames turns antialias off.
 - **A stronger motion gate.** The inherited gate asks for motion in 3 seconds of the whole cut, which a 60 s
   reel passes trivially.
 - **Scout's continuity record.** `/scout` reels still record no steps, lead changes or event plan (registry

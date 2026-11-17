@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { liveFinalPiles } from "../../../lib/decision/v1/sources/final.ts";
 import { liveProofPiles } from "../../../lib/decision/v1/sources/proof.ts";
+import { liveReelPiles } from "../../../lib/decision/v1/sources/reel.ts";
 import { liveSpendPiles } from "../../../lib/decision/v1/sources/spend.ts";
 import { liveNow, type LiveRead } from "../../../lib/ledger/v1/sync.ts";
 
@@ -19,12 +20,15 @@ import { liveNow, type LiveRead } from "../../../lib/ledger/v1/sync.ts";
 // would demand a v1 predicate for). A store that cannot be read is a named gap, as a v1 one is.
 // An agent's spend requests (spark athena-control-mcp) are the same kind of pile: one per day with a
 // request waiting, `pkt:spend:<day>`, read from the kernel's spend-request store beside the proofs.
+// A stat reel's stops (pipeline/reel.mts) are read the same way from the reel folders: `pkt:reel:<slug>:<stop>`
+// for each card, sheet or cut nobody has judged yet. A stop is a look, not a job, so the ledger has no source for it.
 async function liveWithProofs(): Promise<LiveRead> {
-  const live = await liveNow();
+  const [live, reels] = await Promise.all([liveNow(), liveReelPiles()]);
   const kernelPiles = [
     { source: "proof", piles: liveProofPiles() },
     { source: "spend", piles: liveSpendPiles() },
     { source: "final", piles: liveFinalPiles() },
+    { source: "reel", piles: reels },
   ];
   return kernelPiles.reduce<LiveRead>(
     (acc, { source, piles }) => (piles.ok ? { ...acc, weir: [...acc.weir, ...piles.value] } : { ...acc, failures: [...acc.failures, { source, error: `${piles.error.code}: ${piles.error.message}` }] }),

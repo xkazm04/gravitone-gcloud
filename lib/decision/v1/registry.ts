@@ -16,6 +16,7 @@ import { seedsAdapter } from "./sources/seeds.ts";
 import { spendAdapter } from "./sources/spend.ts";
 import { sunoAdapter } from "./sources/suno.ts";
 import { finalAdapter } from "./sources/final.ts";
+import { reelAdapter } from "./sources/reel.ts";
 import type { DecisionAdapter } from "./types.ts";
 import { stepAdapter } from "@/lib/parts/gates";
 
@@ -62,6 +63,8 @@ export const DECISION_ADAPTERS = {
   spend: adapter(spendAdapter),
   // spark concept-casting-stages S5: a production's final cut, kept (done) or returned (./sources/final.ts).
   final: adapter(finalAdapter),
+  // /reel's three operator stops (the table, the proof frames, the cut), one packet each (./sources/reel.ts).
+  reel: adapter(reelAdapter),
 } as const satisfies { readonly [S in PacketSource]: AdapterEntry };
 
 /** The adapter that decides `source`, or `refused` with the reason none does. */

@@ -1,10 +1,10 @@
 ---
 name: reel
-version: 0.1.0
+version: 0.2.0
 memory: none
 category: Content
-description: Take one stat reel from an idea to its final cuts with web technology only - a narration-free data video (a race, a line race, a share stream) drawn by a page this session writes in html, css and js, from a table of real observations. No image model, no video model and no model call at render time - the text model writes the page, and the page may show only the numbers the CLI issued to it. Stop-and-resume stages - idea (a question and a reason to keep watching), data (a sourced, licensed table, MEASURED against the continuity gate - steps, entities on screen, lead changes, overtakes, dated events), plan (a timing plan warped so change per second stays even, for a 30-60 s vertical Short and a 2-4 min landscape cut), brief, the authored page, proof (lint plus twelve frames for the eye) and cut (the full render with its seek, legibility and motion gates enforced). Silent for now. Wraps pipeline/reel.mts. Invoke with /reel <folder> [verb], or /reel ideas for the backlog.
-argument-hint: "<folder> [new|data|plan|brief short|long|proof short|long|cut short|long|status] | ideas"
+description: Take one stat reel from an idea to its final cuts with web technology only - a narration-free data video (a race, a line race, a share stream) drawn by a page this session writes in html, css and js, from a table of real observations. No image model, no video model and no model call at render time - the text model writes the page, and the page may show only the numbers the CLI issued to it. Stop-and-resume stages - idea (a question and a reason to keep watching), data (a sourced, licensed table, MEASURED against the continuity gate - steps, entities on screen, lead changes, overtakes, dated events), plan (a timing plan warped so change per second stays even, for a 30-60 s vertical Short and a 2-4 min landscape cut), brief, the authored page, proof (lint plus twelve frames for the eye) shot (a few seconds from the middle, for a look) and cut (the full render with its seek, legibility and motion gates enforced). Frames are drawn on the GPU, three.js included. A Suno bed attached with track is played whole, and the cut is planned to its length. Wraps pipeline/reel.mts. Invoke with /reel <folder> [verb], or /reel ideas for the backlog.
+argument-hint: "<folder> [new|data|track short|long|plan|brief short|long|proof short|long|shot short|long|cut short|long|status] | ideas"
 allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, WebSearch, WebFetch
 ---
 
@@ -46,6 +46,14 @@ It prints the stage and the one verb to run next. A reel lives in one folder, by
 
 **A stop is a stop.** Say what was made, show where to look, and end the turn. Do not run the next verb
 because the previous one passed.
+
+**Each stop is also a Board packet** the operator can decide on in the app: `pkt:reel:<slug>:data`,
+`pkt:reel:<slug>:<cut>:proof`, `pkt:reel:<slug>:<cut>:cut`. The verdict is never yours: you do not keep, reject
+or commit a reel packet, and you never write `verdicts.json`. `status` prints the verdicts recorded so far;
+`cut` refuses a cut whose proof the operator rejected. Keeping a cut packet puts the cut on the Calendar as a
+youtube slot (at the time in the keep's `calendar: youtube <ISO>` note, or the next day at 08:00 UTC when
+there is none), so say plainly at STOP 3 when a cut is silent or its table is proof-only: the keep is what
+schedules it.
 
 ## 1. The idea - `new`
 
@@ -98,7 +106,19 @@ takes a table forward under a floor, and the reason is **the operator's words**,
 the source and its licence as read, and whether this table may be published. The operator decides whether
 it earns a page.
 
-## 3. The clock - `plan`, then `brief <cut>`
+## 3. The bed - `track` (optional, before `plan`)
+
+```bash
+npx tsx pipeline/reel.mts track <folder> short --file bed.mp3
+```
+
+A reel's sound is one instrumental bed, played whole: the cut is planned to the track's real length, so a
+track must sit inside the cut's range (30-60 s, 120-240 s) or it is refused. The ten lofi directions and the
+Suno call for them are in `knowledge/reel/sound-prompts.md`. **Making a track spends the operator's Suno
+credits: say the spend and get a yes first, every batch.** Attaching a different track restarts that cut,
+because its clock changed. With no track the cut is silent and as long as its table asks.
+
+## 4. The clock - `plan`, then `brief <cut>`
 
 ```bash
 npx tsx pipeline/reel.mts plan <folder>
@@ -109,7 +129,7 @@ npx tsx pipeline/reel.mts brief <folder> short      # then, later, long
 around each event. `brief` writes `<cut>/inputs/`. Make the Short first: it is the cheap test of whether
 anyone watches. The long cut is the one that earns watch hours.
 
-## 4. The page - STOP 2 after `proof`
+## 5. The page - STOP 2 after `proof`
 
 Read `<cut>/inputs/CONTRACT.md`, `REEL.md`, `CUT.md`, `brief.json` and `data.sample.json` (the shape; the
 real block is hundreds of kilobytes, do not read it). Write `<cut>/out/strip.html`:
@@ -122,7 +142,8 @@ real block is hundreds of kilobytes, do not read it). Write `<cut>/out/strip.htm
 - Choose the chart form the story needs (a ranking is a bar race, a crossing is a line race, shares are a
   stream). A second reel in the same form must not look like a recolour of the first: change the device,
   not only the palette.
-- SVG, canvas 2D, DOM or CSS 3D. The harness has no GPU, so WebGL and three.js are not available yet.
+- SVG, canvas 2D, DOM, CSS 3D or WebGL. Frames are drawn on the GPU; three.js arrives through one empty
+  `<script id="vendor-three"></script>` block that `proof` fills (`CUT.md` has the WebGL rules).
 
 ```bash
 npx tsx pipeline/reel.mts proof <folder> short
@@ -136,9 +157,13 @@ Then **open the twelve PNGs in `<cut>/proof/` and look at them** (Read each one 
 gate can: is the leader obvious, is every card on screen near its own date, does anything overlap, is the
 bottom of a vertical frame free. Fix the page and run `proof` again until the frames are right.
 
+For a look at the motion before a full render, `shot <folder> short [--at <frame>] [--seconds <n>]` encodes
+a few seconds from the middle to `<cut>/shot/shot.mp4` with one `still.png`. It runs no gate and moves no
+stage.
+
 **STOP 2.** Show the operator the proof folder and say what you checked and what you are unsure of.
 
-## 5. The cut - STOP 3
+## 6. The cut - STOP 3
 
 ```bash
 npx tsx pipeline/reel.mts cut <folder> short
@@ -152,14 +177,14 @@ The gates are **enforced**: frames re-rendered cold and out of order must match 
 the legibility floor inside the safe box, and the picture must move. A failed gate leaves the files in
 `<cut>/render/` to look at, exits 1 and does not mark the cut made. Fix the page; never loosen a gate.
 
-**STOP 3.** Report `<cut>/render/strip.mp4`, the contact sheet, the gate lines and the render time. The cut
-is silent: it is not publishable until the operator adds sound. Keeping, publishing and scheduling are the
-operator's acts.
+**STOP 3.** Report `<cut>/render/strip.mp4` (and `final.mp4`, the cut with its bed, when a track is
+attached), the contact sheet, the gate lines, the renderer and the render time. A cut with no track is silent
+and not publishable. Keeping, publishing and scheduling are the operator's acts.
 
 ## Rules
 
-- **No generation.** No image model, no video model, no vendor call, no spend. If a reel seems to need a
-  picture, it needs a different chart form.
+- **No generation in the picture.** No image model, no video model. If a reel seems to need a picture, it
+  needs a different chart form. The only vendor a reel may touch is Suno for its bed, on the operator's yes.
 - **No number from memory.** Not in the table, not in an event, not in a title.
 - **No logos, flags drawn from memory, or likenesses of real people.** Names as type, colour by entity.
 - **Speculation is labelled.** A what-if shows the real line beside a line marked FICTION for its whole

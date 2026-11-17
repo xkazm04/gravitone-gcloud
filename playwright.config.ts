@@ -75,7 +75,7 @@ process.env.GRAVITONE_STORE_PATH ??= path.join(mkdtempSync(path.join(tmpdir(), "
 // falls back to foundry-out/<store>. Each name in STORE_DIR_NAMES gets its own temp directory here (`??=`: a
 // probe that sets its own keeps winning). store-dir-isolation.probe.spec.ts scans lib/ and fails with the
 // name of any `*_STORE_DIR` that is in neither list.
-export const STORE_DIR_NAMES = ["IDEA_LOOP_STORE_DIR", "MESH_STORE_DIR", "SCOUT_MUSE_STORE_DIR", "SPEND_STORE_DIR"] as const;
+export const STORE_DIR_NAMES = ["IDEA_LOOP_STORE_DIR", "MESH_STORE_DIR", "REELS_STORE_DIR", "SCOUT_MUSE_STORE_DIR", "SPEND_STORE_DIR"] as const;
 for (const name of STORE_DIR_NAMES) process.env[name] ??= mkdtempSync(path.join(tmpdir(), `${name.toLowerCase().replaceAll("_", "-")}-pw-`));
 
 // NAMED EXEMPTIONS - measured 2026-11-09: setting the name centrally turns the listed probes red, because they

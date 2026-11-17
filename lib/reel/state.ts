@@ -8,7 +8,7 @@
 //     and `cut` refuse a page whose block is anything else.
 //   - STAGES ONLY MOVE FORWARD, except by a new table or a new brief.
 
-import { ReelError, type CutRecord, type CutStage, type ReelCut, type ReelIdea, type ReelStage, type ReelState } from "./types";
+import { CUT_SECONDS, REEL_FPS, ReelError, type CutRecord, type CutStage, type ReelCut, type ReelIdea, type ReelStage, type ReelState, type TrackRecord } from "./types";
 
 export const STAGES: readonly ReelStage[] = ["idea", "data", "planned"];
 export const CUT_STAGES: readonly CutStage[] = ["briefed", "proofed", "cut"];
@@ -51,6 +51,28 @@ export function withTable(state: ReelState, tableSha: string, now: string): { st
   const reset = state.tableSha !== undefined;
   return { state: { v: 1, slug: state.slug, stage: "data", idea: state.idea, tableSha, cuts: {}, updatedAt: now }, reset };
 }
+
+/**
+ * A track was attached to a cut. The cut is planned to the WHOLE track, so a track outside the cut's length is
+ * refused with the length to ask for. A different track forgets that cut (its clock changed); the same one
+ * changes nothing.
+ */
+export function withTrack(state: ReelState, cut: ReelCut, track: TrackRecord, now: string): ReelState {
+  const [min, max] = CUT_SECONDS[cut];
+  if (track.seconds < min || track.seconds > max + 0.5) {
+    throw new ReelError(`the track is ${track.seconds.toFixed(1)} s and a ${cut} cut is ${min} to ${max} s: make a track with a duration inside it`);
+  }
+  if (state.tracks?.[cut]?.sha === track.sha) return state;
+  const cuts = { ...state.cuts };
+  delete cuts[cut];
+  return { ...state, tracks: { ...state.tracks, [cut]: track }, cuts, updatedAt: now };
+}
+
+/** The frames a cut runs: its track's whole length, or undefined when the table decides. */
+export const trackFrames = (state: ReelState, cut: ReelCut): number | undefined => {
+  const t = state.tracks?.[cut];
+  return t === undefined ? undefined : Math.round(t.seconds * REEL_FPS);
+};
 
 export function withPlan(state: ReelState, now: string): ReelState {
   if (state.tableSha === undefined) throw new ReelError("no table yet: run `data` first");

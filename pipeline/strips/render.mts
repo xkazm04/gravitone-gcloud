@@ -55,7 +55,7 @@ export interface RenderResult {
   error?: string;
 }
 
-async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, frames?: number): Promise<Page> {
+export async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, frames?: number): Promise<Page> {
   const { width, height } = STRIP_SIZE[lane];
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await page.route("**/*", (route) => {
@@ -133,7 +133,7 @@ const guard = <T,>(page: Page, ms: number, what: string, fn: () => Promise<T>): 
   return browser === null ? fn() : bounded(browser, ms, what, fn);
 };
 
-const drawFrame = (page: Page, i: number): Promise<void> => guard(page, BUDGET.frame, `renderFrameAt(${i})`, () => drawFrameIn(page, i));
+export const drawFrame = (page: Page, i: number): Promise<void> => guard(page, BUDGET.frame, `renderFrameAt(${i})`, () => drawFrameIn(page, i));
 
 async function drawFrameIn(page: Page, i: number): Promise<void> {
   await page.evaluate(
@@ -148,10 +148,10 @@ async function drawFrameIn(page: Page, i: number): Promise<void> {
   );
 }
 
-const shot = (page: Page) => guard(page, BUDGET.still, "the screenshot", () => page.screenshot({ type: "png", animations: "disabled", caret: "hide" }));
+export const shot = (page: Page) => guard(page, BUDGET.still, "the screenshot", () => page.screenshot({ type: "png", animations: "disabled", caret: "hide" }));
 
 /** Pixel comparison and motion statistics, computed in a blank page. */
-async function imageLab(browser: Browser) {
+export async function imageLab(browser: Browser) {
   const page = await browser.newPage();
   await page.setContent("<!doctype html><body></body>");
   await page.evaluate(KEEP_NAMES_SHIM);

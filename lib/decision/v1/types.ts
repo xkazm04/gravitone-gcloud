@@ -243,7 +243,7 @@ export async function mediaRefs(files: readonly { readonly key: string; readonly
 }
 
 /** v1's file route for a run file (app/api/foundry/file). No credential: the browser's own `withAccess` adds it. */
-export function foundryFileUrl(run: string, rel: string, kind?: "extract" | "training" | "strips"): string {
+export function foundryFileUrl(run: string, rel: string, kind?: "extract" | "training" | "strips" | "reel"): string {
   const q = new URLSearchParams({ run, path: rel, ...(kind === undefined ? {} : { kind }) });
   return `/api/foundry/file?${q.toString()}`;
 }

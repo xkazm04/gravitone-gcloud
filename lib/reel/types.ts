@@ -83,6 +83,9 @@ export interface CutSpec {
 
 export const REEL_FPS = 30;
 
+/** The length a cut may be, in seconds. A track outside it was made for another cut. */
+export const CUT_SECONDS: Readonly<Record<ReelCut, readonly [number, number]>> = { short: [30, 60], long: [120, 240] };
+
 /** 30-60 s vertical and 2-4 min landscape, at 30 fps. The timeline grows with the table inside its clamp. */
 export const CUTS: Readonly<Record<ReelCut, CutSpec>> = {
   short: { lane: "stat", width: 1080, height: 1920, hookFrames: 60, endFrames: 90, framesPerPeriod: 4, minTimeline: 750, maxTimeline: 1650 },
@@ -140,12 +143,22 @@ export interface ReelIdea {
   readonly path: string;
 }
 
+/** The music bed a cut is planned to: the whole track plays, so the cut is as long as the track. */
+export interface TrackRecord {
+  /** File name inside the cut's folder. */
+  readonly file: string;
+  readonly seconds: number;
+  readonly sha: string;
+}
+
 export interface ReelState {
   readonly v: 1;
   readonly slug: string;
   readonly stage: ReelStage;
   readonly idea: ReelIdea;
   readonly tableSha?: string;
+  /** A track attached to a cut before it is planned. Absent: the cut is silent and as long as its table asks. */
+  readonly tracks?: Partial<Record<ReelCut, TrackRecord>>;
   readonly cuts: Partial<Record<ReelCut, CutRecord>>;
   readonly updatedAt: string;
 }

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { stripDataEquals } from "../../lib/foundry/strips/lint.ts";
 import { FLOORS, measureContinuity } from "../../lib/reel/continuity.ts";
 import { stickyOrders } from "../../lib/reel/order.ts";
-import { advanceCut, newReel, nextVerb, parseIdea, withBrief, withPlan, withTable } from "../../lib/reel/state.ts";
+import { advanceCut, newReel, nextVerb, parseIdea, trackFrames, withBrief, withPlan, withTable, withTrack } from "../../lib/reel/state.ts";
 import { canonical, parseTable } from "../../lib/reel/table.ts";
 import { makeTimeMap } from "../../lib/reel/timeMap.ts";
 import { computeTimingPlan } from "../../lib/reel/timing.ts";
@@ -171,6 +171,39 @@ describe("the stage machine", () => {
     let s = withPlan(withTable(newReel("a-race", idea, NOW), "sha-1", NOW).state, NOW);
     s = advanceCut(withBrief(s, "short", 900, "block-1", NOW), "short", "cut", NOW);
     expect(advanceCut(s, "short", "proofed", NOW)).toBe(s);
+  });
+});
+
+describe("a cut is planned to its track: the whole bed plays", () => {
+  const idea = { title: "A race", hook: "Who ends on top?", path: "The lead passes from Entity 0 to Entity 7, one slice of the timeline at a time." };
+  const NOW = "2026-11-17T00:00:00.000Z";
+  const planned = () => withBrief(withPlan(withTable(newReel("a-race", idea, NOW), "sha-1", NOW).state, NOW), "short", 900, "block-1", NOW);
+  const track = (seconds: number, sha = "t1") => ({ file: "track.mp3", seconds, sha });
+
+  it("the plan is exactly as long as the track", () => {
+    const plan = computeTimingPlan(table(race(120, 8)), "short", undefined, Math.round(47.2 * 30));
+    expect(plan.sections.total).toBe(1416);
+    expect(plan.knots[plan.knots.length - 1]?.[0]).toBe(plan.sections.timelineEnd);
+    expect(plan.sections.timelineEnd).toBe(1416 - CUTS.short.endFrames);
+  });
+
+  it("a track outside the cut's length is refused with the length to ask for", () => {
+    expect(() => withTrack(planned(), "short", track(75), NOW)).toThrow(/75\.0 s and a short cut is 30 to 60 s/);
+    expect(() => withTrack(planned(), "long", track(58), NOW)).toThrow(/a long cut is 120 to 240 s/);
+  });
+
+  it("a new track forgets that cut and no other; the same track changes nothing", () => {
+    const s = withBrief(planned(), "long", 3600, "block-2", NOW);
+    const withBed = withTrack(s, "short", track(58.4), NOW);
+    expect(withBed.cuts.short).toBeUndefined();
+    expect(withBed.cuts.long?.dataSha).toBe("block-2");
+    expect(trackFrames(withBed, "short")).toBe(1752);
+    expect(trackFrames(withBed, "long")).toBeUndefined();
+    expect(withTrack(withBed, "short", track(58.4), NOW)).toBe(withBed);
+  });
+
+  it("a cut too short to carry the data is refused", () => {
+    expect(() => computeTimingPlan(table(race(120, 8)), "long", undefined, 500)).toThrow(/leaves 200 for the data/);
   });
 });
 

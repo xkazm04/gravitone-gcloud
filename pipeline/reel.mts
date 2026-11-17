@@ -4,57 +4,76 @@
 //
 //   npx tsx pipeline/reel.mts new <dir> --idea <file.json>
 //   npx tsx pipeline/reel.mts data <dir> --table <file.json> [--thin "<the operator's reason>"]
+//   npx tsx pipeline/reel.mts track <dir> short|long --file <audio>
 //   npx tsx pipeline/reel.mts plan <dir>
 //   npx tsx pipeline/reel.mts brief <dir> short|long
-//   npx tsx pipeline/reel.mts proof <dir> short|long
-//   npx tsx pipeline/reel.mts cut <dir> short|long
+//   npx tsx pipeline/reel.mts proof <dir> short|long [--cpu]
+//   npx tsx pipeline/reel.mts shot <dir> short|long [--at <frame>] [--seconds <n>] [--cpu]
+//   npx tsx pipeline/reel.mts cut <dir> short|long [--cpu]
 //   npx tsx pipeline/reel.mts status <dir>
 //
 //   new     record the idea: {title, hook, path}. The hook is a question; the path says why someone keeps watching.
 //   data    the table door (lib/reel/table.ts) and the continuity gate, MEASURED on the rows (lib/reel/
-//           continuity.ts): steps, entities on screen, lead changes, overtakes, dated events. Under a floor it
-//           refuses and says which; --thin records the operator's reason for going on anyway. A different table
-//           forgets the plan and every cut.
-//   plan    the timing plan of both cuts (lib/reel/timing.ts): a 30-60 s vertical Short and a 2-4 min landscape
-//           cut, each warped so change per second stays even.
-//   brief   issue one cut's inputs: the strip contract, the reel addendum, CUT.md, brief.json, data.json (the
-//           table and its plan, the ONLY numbers the page may hold) and data.sample.json (the same shape, cut
-//           down to a few rows, for the author to read).
-//   proof   put the issued block into the page's empty strip-data block (the author never types a number),
-//           lint it (frame purity; the block is the issued block, unchanged), then photograph twelve cold
-//           frames to <cut>/proof/ for the eye, and re-draw two of them warm (after the forty frames before
-//           each): a frame that depends on its predecessors is refused here, in a minute, not after a full
-//           render. No encode.
-//   cut     the full render with its four gates ENFORCED: a failed seek, legibility or motion gate leaves the
-//           files to look at and exits 1; the cut is not marked made.
+//           continuity.ts). Under a floor it refuses and says which; --thin records the operator's reason for
+//           going on anyway. A different table forgets the plan and every cut.
+//   track   attach a music bed to a cut BEFORE it is planned. The whole track plays, so the cut is planned to
+//           the track's length; a track outside the cut's range (30-60 s, 120-240 s) is refused.
+//   plan    the timing plan of both cuts (lib/reel/timing.ts), each warped so change per second stays even.
+//   brief   issue one cut's inputs: the contracts, brief.json, data.json (the table and its plan, the ONLY
+//           numbers the page may hold) and data.sample.json (the same shape, a few rows, for the author).
+//   proof   fill the page's empty blocks (pipeline/reel/page.mts), lint it, photograph twelve cold frames to
+//           <cut>/proof/, and re-draw two of them warm: a frame that depends on its predecessors is refused
+//           here, in a minute, not after a full render. No encode.
+//   shot    a few seconds from the middle of the video, encoded, with one still: a look before a full render.
+//           No gate, no stage.
+//   cut     the full render with its four gates ENFORCED: a failed gate leaves the files to look at and exits
+//           1. With a track attached, the bed is laid under the picture as render/final.mp4.
 //
-//   --json on any verb: one JSON document on stdout. Exit 0 ok, 1 refused or failed (one line), 2 usage.
+//   THREE STOPS ARE THE OPERATOR'S, and each leaves one thing to judge on the Board (pkt:reel:<slug>:data,
+//   :<cut>:proof, :<cut>:cut): `data` draws data-card.png, `proof` tiles its frames as proof/sheet.png, `cut`
+//   writes <cut>/publish.json once (title, description, tags: the operator's to edit). The verdicts come back as
+//   verdicts.json, which this CLI only reads: `status` prints them and `cut` refuses a proof that was rejected.
+//
+//   Frames are drawn on the GPU (pipeline/reel/gpu.mts) and on the CPU when there is none or with --cpu; the
+//   renderer that drew them is printed. --json on any verb: one JSON document on stdout. Exit 0 ok, 1 refused
+//   or failed (one line), 2 usage.
 //
 // SPEND: none. No vendor, no model call, no store: this CLI reads and writes one folder. The only generated
-// thing in a reel is the page's code, written by the session that runs the skill.
+// thing in a reel's picture is the page's code, written by the session that runs the skill.
 
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
-import { formatLint, lintStrip, stripDataEquals, stripDataRule } from "../lib/foundry/strips/lint";
 import { measureContinuity } from "../lib/reel/continuity";
-import { advanceCut, CUT_NAMES, cutOf, newReel, nextVerb, parseIdea, parseState, withBrief, withPlan, withTable } from "../lib/reel/state";
+import { advanceCut, CUT_NAMES, cutOf, newReel, nextVerb, parseIdea, parseState, trackFrames, withBrief, withPlan, withTable, withTrack } from "../lib/reel/state";
 import { canonical, parseTable } from "../lib/reel/table";
 import { computeTimingPlan } from "../lib/reel/timing";
 import { CUTS, REEL_FPS, ReelError, type ReelCut, type ReelState, type ReelTable } from "../lib/reel/types";
-import { launchHeadless, renderFrame, renderStrip, renderWalk } from "./strips/render.mts";
+import { drawDataCard } from "./reel/card.mts";
+import { launchReelBrowser } from "./reel/gpu.mts";
+import { lintPage, prepare, sampleOf, type Block } from "./reel/page.mts";
+import { renderSpan } from "./reel/span.mts";
+import { dropSheet, ensurePublish, proofSheet, recordedVerdicts, refuseRejectedProof } from "./reel/stops.mts";
+import { ffmpegTo } from "./strips/deadline.mts";
+import { imageLab, renderFrame, renderStrip, renderWalk } from "./strips/render.mts";
 
 const HERE = import.meta.dirname;
-const DATA_ID = "strip-data";
 const PROOF_FRAMES = 12;
 /** The proof frames re-drawn warm, and how many frames lead up to each. */
 const SEEK_AT = [3, 8];
 const SEEK_WALK = 40;
+/** The share of pixels that may differ between a frame drawn cold and warm: the seek gate's bar (render.mts). */
+const SEEK_BAR = 0.0005;
 const THIN_MIN = 20;
+const SHOT_SECONDS = 6;
+const SHOT_MAX_SECONDS = 12;
 
-const sha = (s: string): string => createHash("sha256").update(s).digest("hex");
+const run = promisify(execFile);
+const sha = (s: string | Buffer): string => createHash("sha256").update(s).digest("hex");
 const now = (): string => new Date().toISOString();
 const readJson = async (file: string): Promise<unknown> => {
   if (!existsSync(file)) throw new ReelError(`${file} does not exist`);
@@ -87,41 +106,14 @@ const cutArg = (x: string | undefined): ReelCut => {
   throw new ReelError(`name the cut: ${CUT_NAMES.join(" or ")}`, "usage");
 };
 
-/** The block a cut's page must hold: the table and that cut's plan, issued whole. */
-const blockOf = (table: ReelTable, cut: ReelCut): { table: ReelTable; plan: ReturnType<typeof computeTimingPlan> } => ({ table, plan: computeTimingPlan(table, cut) });
-
-/** The block cut down to a few rows: the shape an author reads, small enough to read. Never rendered. */
-function sampleOf(block: ReturnType<typeof blockOf>): unknown {
-  const P = 4;
-  const { table, plan } = block;
-  return {
-    note: `SHAPE ONLY: ${table.periods.length} periods, ${table.entities.length} entities, ${table.events.length} events, ${plan.knots.length} knots in the real block. The CLI injects the real one.`,
-    table: { ...table, periods: table.periods.slice(0, P), entities: table.entities.slice(0, 3).map((e) => ({ ...e, values: e.values.slice(0, P) })), events: table.events.slice(0, 2) },
-    plan: { ...plan, knots: plan.knots.slice(0, P), orders: plan.orders.slice(0, P), events: plan.events.slice(0, 2) },
-  };
-}
-
-const BLOCK_RE = /(<script\b[^>]*\bid\s*=\s*["']strip-data["'][^>]*>)([\s\S]*?)(<\/script>)/gi;
-
-/**
- * THE AUTHOR NEVER TYPES A NUMBER. The page carries one empty strip-data block and the CLI writes the issued
- * block into it, so a reel's numbers cannot be rounded, dropped or invented on the way to the screen. A page
- * with no block, or more than one, is left alone for the lint to name.
- */
-function inject(html: string, block: unknown): string {
-  const found = [...html.matchAll(BLOCK_RE)];
-  if (found.length !== 1) return html;
-  // "<" is escaped so no value can close the script element early.
-  const body = JSON.stringify(block).replace(/</g, "\\u003c");
-  return html.replace(BLOCK_RE, (_m, open: string, _old: string, close: string) => `${open}${body}${close}`);
-}
+/** The block a cut's page must hold: the table and that cut's plan (as long as its track, when it has one). */
+const blockOf = (table: ReelTable, state: ReelState, cut: ReelCut): Block => ({ table, plan: computeTimingPlan(table, cut, undefined, trackFrames(state, cut)) });
 
 /* ── The verbs ────────────────────────────────────────────────────────────── */
 
 async function verbNew(dir: string, flags: Flags): Promise<unknown> {
-  const file = flags.idea;
-  if (file === undefined) throw new ReelError("new needs --idea <file.json> holding {title, hook, path}", "usage");
-  const idea = parseIdea(await readJson(file));
+  if (flags.idea === undefined) throw new ReelError("new needs --idea <file.json> holding {title, hook, path}", "usage");
+  const idea = parseIdea(await readJson(flags.idea));
   if (typeof idea === "string") throw new ReelError(`idea: ${idea}`);
   await mkdir(dir, { recursive: true });
   const had = existsSync(path.join(dir, "reel.json")) ? await loadState(dir) : undefined;
@@ -145,7 +137,23 @@ async function verbData(dir: string, flags: Flags): Promise<unknown> {
   await writeJson(path.join(dir, "continuity.json"), continuity.ok ? continuity : { ...continuity, accepted: thin });
   const moved = withTable(state, sha(canonical(table)), now());
   await saveState(dir, moved.state);
-  return { stage: moved.state.stage, reset: moved.reset, continuity, source: table.source, next: nextVerb(moved.state, dir) };
+  // The first stop's picture. A card that could not be drawn never refuses a table that passed its door.
+  const card = await drawDataCard(dir, state.idea, table, continuity, continuity.ok ? undefined : thin).catch((e: unknown) => `not drawn: ${e instanceof Error ? e.message : String(e)}`);
+  return { stage: moved.state.stage, reset: moved.reset, continuity, source: table.source, card, next: nextVerb(moved.state, dir) };
+}
+
+async function verbTrack(dir: string, cut: ReelCut, flags: Flags): Promise<unknown> {
+  const state = await loadState(dir);
+  if (flags.file === undefined || !existsSync(flags.file)) throw new ReelError("track needs --file <audio> that exists", "usage");
+  const { stdout } = await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", flags.file]);
+  const seconds = Number(stdout.trim());
+  if (!Number.isFinite(seconds) || seconds <= 0) throw new ReelError(`ffprobe read no duration from ${flags.file}`);
+  const name = `track${path.extname(flags.file).toLowerCase()}`;
+  const moved = withTrack(state, cut, { file: name, seconds, sha: sha(await readFile(flags.file)) }, now());
+  await mkdir(path.join(dir, cut), { recursive: true });
+  await copyFile(flags.file, path.join(dir, cut, name));
+  await saveState(dir, moved);
+  return { cut, track: name, seconds, frames: trackFrames(moved, cut), replanned: moved !== state, next: nextVerb(moved, dir) };
 }
 
 async function verbPlan(dir: string): Promise<unknown> {
@@ -154,9 +162,9 @@ async function verbPlan(dir: string): Promise<unknown> {
   const table = await loadTable(dir, state);
   const out: Record<string, unknown> = {};
   for (const cut of CUT_NAMES) {
-    const plan = computeTimingPlan(table, cut);
+    const { plan } = blockOf(table, state, cut);
     await writeJson(path.join(dir, `plan-${cut}.json`), plan);
-    out[cut] = { frames: plan.sections.total, seconds: Math.round(plan.sections.total / REEL_FPS), evenness: plan.evenness, events: plan.events.length };
+    out[cut] = { frames: plan.sections.total, seconds: Math.round(plan.sections.total / REEL_FPS), to: state.tracks?.[cut] === undefined ? "the table" : "its track", evenness: plan.evenness, events: plan.events.length };
   }
   const moved = withPlan(state, now());
   await saveState(dir, moved);
@@ -167,7 +175,7 @@ async function verbBrief(dir: string, cut: ReelCut): Promise<unknown> {
   const state = await loadState(dir);
   if (state.stage !== "planned") throw new ReelError("no plan yet: run `plan` first");
   const table = await loadTable(dir, state);
-  const block = blockOf(table, cut);
+  const block = blockOf(table, state, cut);
   const spec = CUTS[cut];
   const frames = block.plan.sections.total;
   const inputs = path.join(dir, cut, "inputs");
@@ -176,8 +184,7 @@ async function verbBrief(dir: string, cut: ReelCut): Promise<unknown> {
   await copyFile(path.join(HERE, "strips", "CONTRACT.md"), path.join(inputs, "CONTRACT.md"));
   await copyFile(path.join(HERE, "strips", "REEL.md"), path.join(inputs, "REEL.md"));
   await copyFile(path.join(HERE, "reel", "CUT.md"), path.join(inputs, "CUT.md"));
-  await writeFile(path.join(inputs, "data.json"), `${JSON.stringify(block)}
-`);
+  await writeFile(path.join(inputs, "data.json"), `${JSON.stringify(block)}\n`);
   await writeJson(path.join(inputs, "data.sample.json"), sampleOf(block));
   await writeJson(path.join(inputs, "brief.json"), {
     case: state.slug,
@@ -199,109 +206,147 @@ async function verbBrief(dir: string, cut: ReelCut): Promise<unknown> {
   return { cut, frames, seconds: Math.round(frames / REEL_FPS), size: `${spec.width}x${spec.height}`, inputs, page: path.join(dir, cut, "out", "strip.html"), next: nextVerb(moved, dir) };
 }
 
-/** The page, linted against the block this cut was issued. Refuses with every finding in one line. */
+/** The page, its blocks filled and linted against what this cut was issued. Refuses with every finding in one line. */
 async function lintedPage(dir: string, state: ReelState, cut: ReelCut): Promise<{ page: string; frames: number }> {
   const rec = cutOf(state, cut);
   const page = path.join(dir, cut, "out", "strip.html");
   if (!existsSync(page)) throw new ReelError(`${page} is not written yet: read ${path.join(dir, cut, "inputs")} and author it`);
-  const block = blockOf(await loadTable(dir, state), cut);
-  if (sha(canonical(block)) !== rec.dataSha) throw new ReelError(`the ${cut} cut was briefed on an older table or plan: run \`brief ${dir} ${cut}\` again`);
+  const block = blockOf(await loadTable(dir, state), state, cut);
+  if (sha(canonical(block)) !== rec.dataSha) throw new ReelError(`the ${cut} cut was briefed on an older table, plan or track: run \`brief ${dir} ${cut}\` again`);
   const authored = await readFile(page, "utf8");
-  const html = inject(authored, block);
+  const html = await prepare(authored, block);
   if (html !== authored) await writeFile(page, html);
-  const findings = formatLint([...lintStrip(html, { frames: rec.frames }), ...stripDataRule(html, DATA_ID), ...stripDataEquals(html, block, DATA_ID)]);
+  const findings = await lintPage(html, block, rec.frames);
   if (findings.length > 0) throw new ReelError(`lint: ${findings.join(" | ")}`);
   return { page, frames: rec.frames };
 }
 
-async function verbProof(dir: string, cut: ReelCut): Promise<unknown> {
+async function verbProof(dir: string, cut: ReelCut, flags: Flags): Promise<unknown> {
   const state = await loadState(dir);
   const { page, frames } = await lintedPage(dir, state, cut);
   const out = path.join(dir, cut, "proof");
   await mkdir(out, { recursive: true });
+  await dropSheet(dir, cut);
   const at = Array.from({ length: PROOF_FRAMES }, (_, k) => Math.min(frames - 1, Math.round((k * (frames - 1)) / (PROOF_FRAMES - 1))));
-  const browser = await launchHeadless();
+  const { browser, renderer } = await launchReelBrowser(flags.cpu ? "cpu" : "gpu");
+  const lane = CUTS[cut].lane;
   const files: string[] = [];
   const drifted: number[] = [];
   try {
     const cold = new Map<number, Buffer>();
     for (const i of at) {
       const file = path.join(out, `f-${String(i).padStart(5, "0")}.png`);
-      const png = await renderFrame({ browser, htmlPath: page, lane: CUTS[cut].lane, i });
+      const png = await renderFrame({ browser, htmlPath: page, lane, i });
       cold.set(i, png);
       await writeFile(file, png);
       files.push(file);
     }
-    // The seek gate in miniature: the same frame, reached through the frames before it, is the same picture.
+    // The seek gate in miniature: the same frame, reached through the frames before it, is the same picture -
+    // by the full render's own measure (pixels more than two levels apart, bar 0.05%), not byte equality:
+    // antialiased WebGL on this GPU is not byte-stable (measured 2026-11-17: 1-3% of identical cold draws
+    // differ by a few pixels at one level), and a check stricter than the gate refuses pages the gate passes.
+    const lab = await imageLab(browser);
     for (const k of SEEK_AT) {
       const i = at[k] as number;
-      const warm = await renderWalk({ browser, htmlPath: page, lane: CUTS[cut].lane, from: i - SEEK_WALK, to: i });
-      if (!warm.equals(cold.get(i) as Buffer)) {
+      const warm = await renderWalk({ browser, htmlPath: page, lane, from: i - SEEK_WALK, to: i });
+      if ((await lab.diffFraction(warm, cold.get(i) as Buffer)) > SEEK_BAR) {
         drifted.push(i);
         await writeFile(path.join(out, `warm-${String(i).padStart(5, "0")}.png`), warm);
       }
     }
+    await lab.close();
   } finally {
     await browser.close().catch(() => {});
   }
   if (drifted.length > 0) {
-    throw new ReelError(`seek: frame ${drifted.join(", ")} drawn after the ${SEEK_WALK} frames before it is not the frame drawn cold (compare f-*.png with warm-*.png in ${out}). The page carries something from one frame to the next: state kept between calls, a property set only on some frames, or a composited layer (will-change, a fractional transform on text)`);
+    throw new ReelError(`seek (${renderer}): frame ${drifted.join(", ")} drawn after the ${SEEK_WALK} frames before it is not the frame drawn cold (compare f-*.png with warm-*.png in ${out}). The page carries something from one frame to the next: state kept between calls, a property set only on some frames, or a composited layer (will-change, a fractional transform on text)`);
   }
+  const sheet = await proofSheet(dir, cut, files, lane).catch((e: unknown) => `not tiled: ${e instanceof Error ? e.message : String(e)}`);
   const moved = advanceCut(state, cut, "proofed", now());
   await saveState(dir, moved);
-  return { cut, lint: "clean", seek: `frames ${SEEK_AT.map((k) => at[k]).join(", ")} match cold and warm`, frames: files, next: nextVerb(moved, dir) };
+  return { cut, lint: "clean", renderer, seek: `frames ${SEEK_AT.map((k) => at[k]).join(", ")} match cold and warm`, frames: files, sheet, next: nextVerb(moved, dir) };
 }
 
-async function verbCut(dir: string, cut: ReelCut): Promise<unknown> {
+async function verbShot(dir: string, cut: ReelCut, flags: Flags): Promise<unknown> {
+  const state = await loadState(dir);
+  const { page, frames } = await lintedPage(dir, state, cut);
+  const seconds = flags.seconds === undefined ? SHOT_SECONDS : Number(flags.seconds);
+  if (!Number.isFinite(seconds) || seconds < 1 || seconds > SHOT_MAX_SECONDS) throw new ReelError(`--seconds is 1 to ${SHOT_MAX_SECONDS}`, "usage");
+  const count = Math.min(frames, Math.round(seconds * REEL_FPS));
+  const wanted = flags.at === undefined ? (frames >> 1) - (count >> 1) : Number(flags.at);
+  if (!Number.isInteger(wanted)) throw new ReelError("--at is a whole frame number", "usage");
+  const from = Math.max(0, Math.min(frames - count, wanted));
+  const { browser, renderer } = await launchReelBrowser(flags.cpu ? "cpu" : "gpu");
+  try {
+    const span = await renderSpan({ browser, htmlPath: page, lane: CUTS[cut].lane, from, count, outDir: path.join(dir, cut, "shot") });
+    return { cut, renderer, ...span, of: frames };
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
+async function verbCut(dir: string, cut: ReelCut, flags: Flags): Promise<unknown> {
   const state = await loadState(dir);
   if (cutOf(state, cut).stage === "briefed") throw new ReelError(`the ${cut} cut has no proof: run \`proof ${dir} ${cut}\` and look at the frames first`);
+  await refuseRejectedProof(dir, cut);
   const { page, frames } = await lintedPage(dir, state, cut);
   const outDir = path.join(dir, cut, "render");
-  const browser = await launchHeadless();
+  const { browser, renderer } = await launchReelBrowser(flags.cpu ? "cpu" : "gpu");
   let result: Awaited<ReturnType<typeof renderStrip>>;
   try {
     result = await renderStrip({ browser, htmlPath: page, outDir, lane: CUTS[cut].lane, frames });
   } finally {
     await browser.close().catch(() => {});
   }
-  if (!result.ok || result.gates === undefined) throw new ReelError(`render failed: ${result.error ?? "no gates recorded"}`);
-  await writeJson(path.join(outDir, "gates.json"), { ...result.gates, renderMs: result.renderMs });
+  if (!result.ok || result.gates === undefined) throw new ReelError(`render failed (${renderer}): ${result.error ?? "no gates recorded"}`);
+  await writeJson(path.join(outDir, "gates.json"), { ...result.gates, renderer, renderMs: result.renderMs });
   const failed = Object.entries(result.gates).filter(([, g]) => !g.ok).map(([name, g]) => `${name}: ${g.detail}`);
-  if (failed.length > 0) throw new ReelError(`the render is in ${outDir} but a gate failed, so the cut is not made - ${failed.join(" | ")}`);
+  if (failed.length > 0) throw new ReelError(`the render is in ${outDir} but a gate failed, so the cut is not made (${renderer}) - ${failed.join(" | ")}`);
+  const video = path.join(outDir, "strip.mp4");
+  const track = state.tracks?.[cut];
+  let final: string | undefined;
+  if (track !== undefined) {
+    // The whole bed under the picture, levelled to the streaming target, with a short tail fade.
+    final = path.join(outDir, "final.mp4");
+    const fade = Math.max(0, track.seconds - 1.2).toFixed(2);
+    await ffmpegTo(["-i", video, "-i", path.join(dir, cut, track.file), "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-af", `loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=out:st=${fade}:d=1.2`, "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart"], final, 120_000 + frames * 100);
+  }
   const moved = advanceCut(state, cut, "cut", now());
   await saveState(dir, moved);
-  return { cut, video: path.join(outDir, "strip.mp4"), sheet: path.join(outDir, "sheet.png"), seconds: Math.round(frames / REEL_FPS), renderMs: result.renderMs, gates: result.gates, next: nextVerb(moved, dir) };
+  const publish = await ensurePublish(dir, cut, state.idea, await loadTable(dir, state));
+  return { cut, renderer, video, ...(final === undefined ? { sound: "none: silent cut" } : { final }), sheet: path.join(outDir, "sheet.png"), publish, seconds: Math.round(frames / REEL_FPS), renderMs: result.renderMs, gates: result.gates, next: nextVerb(moved, dir) };
 }
 
 async function verbStatus(dir: string): Promise<unknown> {
   const state = await loadState(dir);
-  return { slug: state.slug, stage: state.stage, idea: state.idea, cuts: state.cuts, next: nextVerb(state, dir) };
+  return { slug: state.slug, stage: state.stage, idea: state.idea, tracks: state.tracks ?? {}, cuts: state.cuts, verdicts: await recordedVerdicts(dir), next: nextVerb(state, dir) };
 }
 
 /* ── The command line ─────────────────────────────────────────────────────── */
 
-interface Flags {
-  idea?: string;
-  table?: string;
-  thin?: string;
-  json: boolean;
-}
+const VALUE_FLAGS = ["idea", "table", "thin", "file", "at", "seconds"] as const;
+type ValueFlag = (typeof VALUE_FLAGS)[number];
+type Flags = Partial<Record<ValueFlag, string>> & { json: boolean; cpu: boolean };
 
 function parseArgs(argv: readonly string[]): { verb: string; rest: string[]; flags: Flags } {
-  const flags: Flags = { json: false };
+  const flags: Flags = { json: false, cpu: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] as string;
+    const name = a.slice(2) as ValueFlag;
     if (a === "--json") flags.json = true;
-    else if (a === "--idea" || a === "--table" || a === "--thin") {
+    else if (a === "--cpu") flags.cpu = true;
+    else if (a.startsWith("--") && VALUE_FLAGS.includes(name)) {
       const v = argv[++i];
       if (v === undefined) throw new ReelError(`${a} needs a value`, "usage");
-      flags[a.slice(2) as "idea" | "table" | "thin"] = v;
+      flags[name] = v;
     } else if (a.startsWith("--")) throw new ReelError(`unknown flag ${a}`, "usage");
     else rest.push(a);
   }
   return { verb: rest[0] ?? "", rest: rest.slice(1), flags };
 }
+
+const VERBS = "new, data, track, plan, brief, proof, shot, cut, status";
 
 async function main(): Promise<number> {
   let json = false;
@@ -309,16 +354,18 @@ async function main(): Promise<number> {
     const { verb, rest, flags } = parseArgs(process.argv.slice(2));
     json = flags.json;
     const dir = rest[0];
-    if (dir === undefined) throw new ReelError("usage: reel.mts new|data|plan|brief|proof|cut|status <dir> ...", "usage");
+    if (dir === undefined) throw new ReelError(`usage: reel.mts <verb> <dir> ... (${VERBS})`, "usage");
     let out: unknown;
     if (verb === "new") out = await verbNew(dir, flags);
     else if (verb === "data") out = await verbData(dir, flags);
+    else if (verb === "track") out = await verbTrack(dir, cutArg(rest[1]), flags);
     else if (verb === "plan") out = await verbPlan(dir);
     else if (verb === "brief") out = await verbBrief(dir, cutArg(rest[1]));
-    else if (verb === "proof") out = await verbProof(dir, cutArg(rest[1]));
-    else if (verb === "cut") out = await verbCut(dir, cutArg(rest[1]));
+    else if (verb === "proof") out = await verbProof(dir, cutArg(rest[1]), flags);
+    else if (verb === "shot") out = await verbShot(dir, cutArg(rest[1]), flags);
+    else if (verb === "cut") out = await verbCut(dir, cutArg(rest[1]), flags);
     else if (verb === "status") out = await verbStatus(dir);
-    else throw new ReelError(`unknown verb "${verb}": new, data, plan, brief, proof, cut, status`, "usage");
+    else throw new ReelError(`unknown verb "${verb}": ${VERBS}`, "usage");
     process.stdout.write(`${JSON.stringify(out, null, json ? 0 : 2)}\n`);
     return 0;
   } catch (e) {

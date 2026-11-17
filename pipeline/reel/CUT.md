@@ -81,9 +81,41 @@ Do not letterbox one cut into the other. Lay each out for its own frame.
 
 ## What draws the frame
 
-SVG, canvas 2D, DOM or CSS 3D. The harness runs Chromium with the GPU off, so
-a WebGL canvas renders black. A form that needs three.js is not available to
-this cut yet.
+SVG, canvas 2D, DOM, CSS 3D, or WebGL. `/reel` draws on the GPU (ANGLE over
+Direct3D 11) and falls back to the CPU only when there is none; the CLI prints
+the renderer that drew the frames. This overrides REEL.md's "No WebGL".
+
+**three.js** (r149, the classic build that defines a global `THREE`) is
+available without typing it: put one empty `<script id="vendor-three"></script>`
+BEFORE your own script, and `proof` fills it with the pinned library. Nothing
+else may be loaded. A WebGL page must also:
+
+- create the renderer with `preserveDrawingBuffer: true`, a fixed size equal
+  to the frame, `setPixelRatio(1)` and `antialias: true`;
+- call `renderer.render(scene, camera)` exactly once per `renderFrameAt(i)`,
+  synchronously, and never use `setAnimationLoop`, `THREE.Clock` or a mixer
+  that advances by delta: every position, rotation, colour and camera move is
+  computed from `i`;
+- keep ALL text in DOM or SVG layered over the canvas. Text inside a WebGL
+  scene is not measured by the legibility gate and shimmers when it moves;
+- seed any randomness (particle fields, noise) from a constant, once, at
+  setup, or as a closed form of the index. `Math.random` is refused by the
+  lint;
+- render with the empty blocks too: when `THREE` is undefined (before `proof`
+  has filled the block) draw the title and stop;
+- make the frame finish before it is photographed: after `renderer.render`,
+  read one pixel back (`gl.readPixels(0, 0, 1, 1, ...)`), which blocks until
+  the GPU has drawn. Leave geometry buffers at their default usage, not
+  `DynamicDrawUsage`. Measured 2026-11-17: without these, a frame was read
+  before it was complete and the seek check failed on a handful of pixels;
+- prefer `MeshLambertMaterial` and plain colours to `MeshStandardMaterial`
+  and shader `pow`/`exp`: antialiased edges under the heavier material came
+  out one level different in about 8% of identical draws, against 1 to 3%.
+
+3D is a device, not a decoration: use it when depth carries something the
+flat frame cannot (a globe for launches, a terrain for a stream, a camera that
+follows the leader). The numbers still have to be readable at a glance on a
+phone.
 
 ## Move things by layout, not by layer
 
