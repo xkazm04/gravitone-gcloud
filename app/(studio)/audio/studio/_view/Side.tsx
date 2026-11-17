@@ -15,6 +15,7 @@ import { Button } from "@gt/ui/components/button/Button.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { EarButton } from "@gt/ui/components/audio/EarButton.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
 import type { MixTransport } from "@gt/ui/components/audio/useMix.ts";
 import { rowMix } from "@gt/ui/components/studio-desk/desk.ts";
@@ -109,7 +110,7 @@ export function NextSteps({ visible, turns, transport, dispatch, blocked, taste 
         {/* An offline dock is said by its pill; what still works here is each step's own chip
             ("plays here" / "asks the agent") and a blocked ask carries its reason on its row. */}
         {turn === null || actions.length === 0 ? (
-          <p className={s.empty}>{turn === null ? "no answer yet" : "nothing suggested this turn"}</p>
+          <Empty compact label={turn === null ? "no answer yet" : "nothing suggested this turn"} />
         ) : (
           <ul className={s.list}>
             {actions.map((a) => {

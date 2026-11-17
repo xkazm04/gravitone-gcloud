@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Select } from "@gt/ui/components/field/Field.tsx";
 import { SourceTag } from "@gt/ui/components/source/SourceTag.tsx";
@@ -92,7 +93,7 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts,
         </div>
       )}
       {session === undefined ? (
-        <p className={s.empty}>No scripted session to show.</p>
+        <Empty label="no scripted session" />
       ) : live ? (
         <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} connection={connection} acts={acts} onSession={(id) => go({ ...url, session: id })} />
       ) : (

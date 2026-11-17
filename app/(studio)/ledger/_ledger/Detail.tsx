@@ -15,6 +15,7 @@ import { errorMessage } from "@gt/domain/errors";
 import type { Event } from "@gt/domain/event";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Facts } from "@gt/ui/components/facts/Facts.tsx";
@@ -87,7 +88,7 @@ export function Detail({ event: e, missing, nowMs, related, onSelect, onQuery, o
       <aside className={s.detail} aria-label="event detail">
         {head}
         {missing === undefined ? (
-          <div className={s.dtEmpty}>0 selected</div>
+          <Empty label="0 selected" />
         ) : (
           // The words actions.ts relatedEvents answers for the same seq.
           <div className={s.dt}>

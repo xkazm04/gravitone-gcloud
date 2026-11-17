@@ -5,4 +5,3 @@
 .grow{flex:1}
 .banner{flex:none;padding:var(--sp-3) var(--sp-loose) 0}
 .frame{flex:1;min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-6)}
-.empty{margin:var(--sp-6) var(--sp-loose);color:var(--muted);font-size:var(--fs-ui)}
