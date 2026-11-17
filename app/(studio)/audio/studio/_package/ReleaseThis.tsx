@@ -11,8 +11,6 @@ import { useState } from "react";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
-import { releaseThisAct } from "../../_release/acts.ts";
-
 /** The fixture's release for the scripted sessions (../../_release/_port/fixture.ts, the draft single). */
 const FIXTURE_RELEASE = "rel-0000000000a1";
 
@@ -32,6 +30,8 @@ export function ReleaseThis({ takeId }: { readonly takeId: string }) {
     if (q.get("source") === "fixture") return router.push(to("package", FIXTURE_RELEASE));
     setBusy(true);
     setError(null);
+    // Imported on press, not at the top: acts.ts reaches its zod door, which must stay out of this client chunk.
+    const { releaseThisAct } = await import("../../_release/acts.ts");
     const r = await releaseThisAct({ takeId, sessionId: q.get("session") });
     setBusy(false);
     if (!r.ok) return setError(r.error.error);

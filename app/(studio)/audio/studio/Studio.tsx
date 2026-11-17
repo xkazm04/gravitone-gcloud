@@ -14,6 +14,7 @@ import { readPresence } from "./_live/presence.ts";
 import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
 import { readRelease } from "../_release/read.ts";
+import { applyReleaseAct, createReleaseAct, releaseThisAct } from "../_release/acts.ts";
 import { LazyPackaging } from "./_package/LazyPackaging.tsx";
 
 export async function StudioSection({ url, port }: { readonly url: StudioUrl; readonly port?: StudioPort }) {
@@ -39,5 +40,6 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
   // Spark studio-to-release: in package and release the conversation stays, beside the release's steps.
   if (url.stage === undefined || url.stage === "make") return host;
   const release = await readRelease({ source: url.source === "fixture" ? "fixture" : "real", release: url.release ?? null });
-  return <LazyPackaging url={url} read={release} thread={host} />;
+  const acts = url.source === "fixture" ? null : { releaseThis: releaseThisAct, create: createReleaseAct, apply: applyReleaseAct };
+  return <LazyPackaging url={url} read={release} thread={host} acts={acts} />;
 }
