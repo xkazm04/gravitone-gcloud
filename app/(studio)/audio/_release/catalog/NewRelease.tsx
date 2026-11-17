@@ -11,7 +11,7 @@ import { clock, KIND_LABEL } from "../wizard/fmt.ts";
 import { Shelf } from "../wizard/Shelf.tsx";
 import s from "./catalog.module.css";
 
-export function NewRelease({ shelf, onStart }: { readonly shelf: readonly ShelfTake[]; readonly onStart: (takes: readonly ShelfTake[]) => void }) {
+export function NewRelease({ shelf, fixture, onStart }: { readonly shelf: readonly ShelfTake[]; readonly fixture: boolean; readonly onStart: (takes: readonly ShelfTake[]) => void }) {
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const toggle = (id: string) =>
     setPicked((p) => {
@@ -34,7 +34,7 @@ export function NewRelease({ shelf, onStart }: { readonly shelf: readonly ShelfT
         />
         {picked.size > 0 && <Button label="Clear" size="sm" onPress={() => setPicked(new Set())} />}
       </div>
-      <Shelf takes={shelf} label="shelf" mode={{ kind: "pick", picked, onToggle: toggle }} />
+      <Shelf takes={shelf} label="shelf" mode={{ kind: "pick", picked, onToggle: toggle }} importing={{ fixture }} />
     </section>
   );
 }

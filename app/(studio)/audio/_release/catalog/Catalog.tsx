@@ -60,6 +60,7 @@ export function Catalog({ read, session, newId }: { readonly read: ReleaseRead; 
       {making && (
         <NewRelease
           shelf={read.shelf}
+          fixture={read.source === "fixture"}
           onStart={(takes) => {
             setMaking(false);
             session.dispatch({ type: "create", id: newId(), artist: read.artist, takes });
