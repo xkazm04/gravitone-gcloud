@@ -1,0 +1,13 @@
+/* The margin (direction "sleeve"): a ruled margin line, and the agent's notes in a pencil hand beside it - a dashed
+   violet stroke (the agent's colour), the field in mono caps, the value in the reading serif's italic. Tokens only. */
+.margin{display:flex;flex-direction:column;gap:var(--sp-5);min-width:0;padding-left:var(--sp-6);border-left:1px dashed color-mix(in srgb, var(--actor-agent) 55%, transparent)}
+.margin[data-empty]{display:none}
+.head{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-3)}
+.headWord{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--actor-agent)}
+.head > :last-child:not(:nth-child(3)){margin-left:auto}
+.notes{display:flex;flex-direction:column;gap:var(--sp-5);margin:0;padding:0;list-style:none}
+.note{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5);border-left:var(--stroke-mark) dashed var(--actor-agent);background:linear-gradient(90deg, var(--violet-a), transparent 85%);transform-origin:0 50%}
+.field{font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hand{font:italic 400 var(--fs-read)/1.4 var(--serif);color:color-mix(in oklch, var(--reading) 82%, var(--violet));overflow-wrap:anywhere}
+.facts{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.acts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2)}

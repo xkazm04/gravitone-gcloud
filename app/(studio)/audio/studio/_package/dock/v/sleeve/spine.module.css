@@ -1,0 +1,23 @@
+/* The spine (direction "sleeve"): a narrow strip of card folded against the sleeve - a darker crease down each edge,
+   the sides as rows with their catalogue marker, a lit cream edge on the side in hand. Marks are toned counts. */
+.spine{display:flex;flex-direction:column;gap:var(--sp-6);padding:var(--sp-5) var(--sp-2);border:1px solid var(--hair-2);border-radius:var(--r-xs);background:linear-gradient(90deg, var(--ink-1), color-mix(in oklch, var(--ink-3) 85%, var(--paper)) 45%, var(--ink-2) 70%, var(--ink-1));box-shadow:0 var(--sp-6) calc(var(--sp-7) * 2) var(--shadow),inset 0 1px 0 var(--hair)}
+.group{display:flex;flex-direction:column;gap:var(--sp-2)}
+.groupName{padding:0 var(--sp-4);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:var(--sp-1);margin:0;padding:0;list-style:none}
+.side{position:relative;display:grid;grid-template-columns:calc(var(--sp-7) + var(--sp-2)) minmax(0, 1fr);grid-template-areas:"marker label" ". marks";align-items:center;gap:var(--sp-1) var(--sp-2);width:100%;min-height:var(--h-control);padding:var(--sp-3) var(--sp-4);border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);text-align:left;cursor:pointer;transition:background var(--dur-fast),color var(--dur-fast)}
+.side:hover{background:var(--wash-hi);color:var(--ink-bright)}
+.side[aria-current="step"]{background:color-mix(in srgb, var(--reading) 9%, transparent);color:var(--reading-bright)}
+.side:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:calc(var(--sp-nudge) * -1)}
+.edge{position:absolute;left:0;top:var(--sp-3);bottom:var(--sp-3);width:var(--stroke-mark);border-radius:var(--r-meter);background:var(--reading)}
+.marker{grid-area:marker;font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;color:var(--muted)}
+.side[aria-current="step"] .marker{color:var(--reading)}
+.label{grid-area:label;font:500 var(--fs-ui)/1.2 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.marks{grid-area:marks;display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.marks:empty{display:none}
+.count{display:inline-flex;align-items:center;gap:var(--sp-1);height:var(--h-tag);padding:0 var(--sp-2);border-radius:var(--r-chip);font:700 var(--fs-micro)/1 var(--mono)}
+.count[data-level="block"]{color:var(--rose);background:var(--rose-a)}
+.count[data-level="warn"]{color:var(--amber);background:var(--amber-a)}
+.count[data-level="pencil"]{color:var(--actor-agent);background:var(--violet-a)}
+.count[data-level="pencil"] > span{width:var(--size-glyph-xs);height:var(--size-glyph-xs)}
+
+@media (prefers-reduced-motion:reduce){.side{transition:none}}

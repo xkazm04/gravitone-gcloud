@@ -1,0 +1,21 @@
+/* The sleeve and its light (direction "sleeve"). The face is a square of card with depth (a long ink shadow, a hair
+   edge, a sheen across one corner); the blank is paper stock printed in paper ink, sized off its own width (container
+   units), with a label disc where the record would show. The wash is the sleeve blurred far back under an ink
+   vignette; with no sleeve, a paper glow over the future hatch. Tokens only. */
+.face{position:relative;container-type:inline-size;aspect-ratio:1;width:100%;border-radius:var(--r-xs);overflow:hidden;background:var(--ink-2);box-shadow:0 var(--sp-7) calc(var(--sp-7) * 2.5) var(--shadow),0 0 0 1px var(--hair-2)}
+.face::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg, var(--hair-2), transparent 38%),linear-gradient(315deg, color-mix(in srgb, var(--ink) 30%, transparent), transparent 30%)}
+.art{display:block;width:100%;height:100%;object-fit:cover}
+
+.blank{--paper-quiet:color-mix(in srgb, var(--paper-faint) 72%, var(--paper-ink));position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:8cqi;background:repeating-linear-gradient(135deg, color-mix(in srgb, var(--paper-ink) 5%, transparent) 0 var(--sp-nudge), transparent var(--sp-nudge) var(--sp-2)),var(--paper);color:var(--paper-ink)}
+.blankTitle{position:relative;z-index:1;font:400 9cqi/1.05 var(--serif);letter-spacing:-.005em;overflow-wrap:anywhere}
+.disc{position:absolute;left:50%;top:54%;width:36cqi;height:36cqi;border-radius:50%;border:1px solid var(--paper-faint);transform:translate(-50%, -50%);background:radial-gradient(circle, var(--paper-ink) 0 3.5cqi, transparent 3.5cqi 100%)}
+.blankFoot{position:relative;z-index:1;display:flex;justify-content:space-between;gap:4cqi;font:600 3.6cqi/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--paper-quiet)}
+.blankFoot > :last-child{text-align:right}
+
+.pocket{background:var(--hatch-future);box-shadow:inset 0 0 0 1px var(--muted);opacity:.6}
+.pocket::after{display:none}
+
+.wash{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(70% 55% at 18% 12%, color-mix(in srgb, var(--paper) 5%, transparent), transparent 70%),var(--hatch-future),var(--ink-1)}
+.wash[data-art]{background:var(--ink)}
+.washArt{position:absolute;inset:-20%;width:140%;height:140%;max-width:none;object-fit:cover;filter:blur(calc(var(--sp-7) * 3)) saturate(1.3);opacity:.6}
+.vignette{position:absolute;inset:0;background:radial-gradient(110% 90% at 20% 14%, color-mix(in srgb, var(--ink) 30%, transparent), color-mix(in srgb, var(--ink) 78%, transparent) 62%, var(--ink) 100%)}

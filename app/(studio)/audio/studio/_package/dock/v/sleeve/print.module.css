@@ -1,0 +1,29 @@
+/* The printed marks (direction "sleeve"): values in the reading serif, codes in mono, a dashed write-in line where
+   nothing is printed yet (a mark: --muted holds 3:1 on the card), the severity dots and the agent's pencil. */
+/* --print-ink / --print-rule: what a value is printed in and a blank is ruled in; a paper stock sets both. */
+.paperStock{--print-ink:var(--paper-ink);--print-rule:color-mix(in srgb, var(--paper-faint) 72%, var(--paper-ink))}
+.printed{color:var(--print-ink, var(--reading));min-width:0;overflow-wrap:anywhere}
+.printed[data-face="serif"]{font-family:var(--serif)}
+.printed[data-face="mono"]{font-family:var(--mono);font-size:var(--fs-meta);letter-spacing:.02em}
+.printed[data-face="sans"]{font-family:var(--sans)}
+.printed[data-strong]{color:var(--print-ink, var(--reading-bright))}
+
+.writeIn{display:inline-block;width:calc(var(--sp-7) * 3);max-width:100%;height:1em;border-bottom:1px dashed var(--print-rule, var(--muted));vertical-align:baseline}
+
+.dot{flex:none;display:inline-block;width:var(--size-dot);height:var(--size-dot);border-radius:50%}
+.dot[data-level="block"]{background:var(--rose);box-shadow:0 0 0 var(--ring-halo) var(--rose-a)}
+.dot[data-level="warn"]{background:var(--amber);box-shadow:0 0 0 var(--ring-halo) var(--amber-a)}
+
+.pencil{flex:none;display:inline-grid;place-items:center;width:var(--size-glyph);height:var(--size-glyph);color:var(--actor-agent)}
+.pencil svg{width:100%;height:100%}
+
+.errata{display:flex;flex-direction:column;margin:0;padding:0;list-style:none;border-top:1px solid var(--hair-2)}
+.erratum{display:grid;grid-template-columns:auto minmax(0, 1fr) auto;align-items:center;gap:var(--sp-4);width:100%;padding:var(--sp-4) var(--sp-2);border:0;border-bottom:1px solid var(--hair);background:transparent;color:var(--text);font:400 var(--fs-ui)/1.4 var(--sans);text-align:left}
+.erratum[data-door]{cursor:pointer;transition:background var(--dur-fast)}
+.erratum[data-door]:hover{background:var(--wash-hi)}
+.erratum[data-door]:hover .where{color:var(--ink-bright)}
+.erratum:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:calc(var(--sp-nudge) * -1)}
+.rule{color:var(--text)}
+.where{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){.erratum[data-door]{transition:none}}
