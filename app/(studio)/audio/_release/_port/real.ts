@@ -1,14 +1,17 @@
 import "server-only";
 
-// THE RELEASE TAB'S REAL SIDE (spark audio-distribution, S1): the shelf is the kept takes in the sound
-// store (finalized first), the channel rows are the publish readiness the Calendar reads, and there
-// are no releases yet - S1 persists none (S2 adds the store and the `release:<id>` Calendar slots).
-// Only YouTube has an adapter today; the four other direct channels are rows with that sentence, and
-// the five DSPs are `not-reachable` until a licensed delivery partner is researched (wave 1).
+// THE RELEASE TAB'S REAL SIDE (spark audio-distribution, S1; the store since spark studio-to-release WP1): the shelf is
+// the kept takes in the sound store (finalized first), the channel rows are the publish readiness the Calendar reads,
+// and the releases are the kernel store's records (lib/release/store.ts), newest first. A store that cannot be read
+// is said, not shown as an empty catalog. Only YouTube has an adapter today; the four other direct channels are rows
+// with that sentence, and the five DSPs are `not-reachable` until a licensed delivery partner is researched (wave 1).
 import type { ChannelRow, ShelfTake } from "@gt/domain/release";
 
+import type { ReleaseRecord } from "@gt/domain/release.record";
+
 import { channelReadiness } from "../../../../../lib/publish/channels.ts";
-import { takeFileHref } from "../../../../../lib/sound/takeHref.ts";
+import { shelfTakeOf } from "../../../../../lib/release/shelf.ts";
+import { listReleases } from "../../../../../lib/release/store.ts";
 import { listTakes } from "../../../../../lib/sound/takes.ts";
 import type { ReleasePort, ReleaseRead } from "./port.ts";
 
@@ -18,16 +21,7 @@ async function shelf(): Promise<ShelfTake[]> {
   return [...kept]
     .filter((t) => t.kind === "music")
     .sort((a, b) => rank(a.stage) - rank(b.stage))
-    .map((t) => ({
-      takeId: t.id,
-      title: t.label ?? t.title,
-      durationS: t.measured?.durationS ?? t.durationS ?? 0,
-      audioHref: t.file === null ? null : takeFileHref(t.id),
-      provider: t.provider,
-      label: t.label,
-      lufs: t.measured?.lufs ?? null,
-      truePeakDb: t.measured?.truePeakDb ?? null,
-    }));
+    .map(shelfTakeOf);
 }
 
 function channels(): ChannelRow[] {
@@ -44,5 +38,10 @@ function channels(): ChannelRow[] {
 }
 
 export const realPort: ReleasePort = {
-  read: async (): Promise<ReleaseRead> => ({ source: "real", artist: "", shelf: await shelf(), records: [], channels: channels(), mvLooks: [] }),
+  read: async (): Promise<ReleaseRead> => {
+    const stored = await listReleases();
+    if (!stored.ok) throw stored.error;
+    const records: readonly ReleaseRecord[] = stored.value;
+    return { source: "real", artist: "", shelf: await shelf(), records, channels: channels(), mvLooks: [] };
+  },
 };
