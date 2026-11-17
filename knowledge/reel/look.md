@@ -71,3 +71,32 @@ for the 3D reels, canvas 2D for the flat ones, real OFL web fonts vendored besid
 `/reel`'s own harness (`pipeline/reel.mts`) still inlines a 2023 three.js build into a file page with system
 fonts. Moving it onto this stack is the next change to the pipeline; until then a reel at this standard is
 made the way the contest made them.
+
+## Round two picks (2026-11-17, `reel-look-2` and the trend prototype)
+
+Taken: **B/2 Legal Tender** (Fable: rates engraved as a banknote), **C/3 The Strait** (Opus: exporters as
+container ships, lane = rank), and four trend reels, **Silicon Crown** (Nvidia), **Ballot Night** (midterms
+against gas), **Checkout Lane** (grocery prices), **Hormuz Heat Price** (energy in four markets). Dropped: both
+boxing reels, both Germany what-ifs, both GDP projections, B/3, C/2, and the crypto-theft reel.
+
+The owner's words, verbatim:
+
+- On C/1 The Ring Turns (boxing): "Overanimated and hectical. Web search and use posters of the fighters as
+  background images to each half, redesign and animate elements on top rather"
+- On C/4 Blueprint (Germany what-if): "It is unclear what is the goal of the video. The outcome of whatif
+  scenario are raw numbers, not impact"
+- On B/5 The Long Throw and C/5 Projector (GDP projection): "Overpopulated with elements"
+- Then: "many items do share high similarity instead of following high level philosophy of high quality design"
+
+What this adds to the standard *(host's reading)*:
+
+8. **Calm beats busy.** Over-animation and too many elements were the named faults. One moving idea per frame.
+9. **A what-if ends in an impact a person can feel** (homes powered, tonnes, lives, money per person), not in a
+   second set of raw series.
+10. **Convergence is a defect.** Two seats arrived at the same dark ground, bloom, glowing lines, gold accent
+    and condensed sans for different subjects. The house standard is a level of craft, not a look: each reel
+    gets its own art direction, and a reel that looks like a sibling has failed the brief.
+11. **Open question, not yet resolved:** the owner asked for fighters' posters as backgrounds to the boxing
+    halves. Fight posters are copyrighted artwork and show real people's likenesses; this conflicts with the
+    no-likeness and no-scraped-artwork rules. It needs the owner's decision (licensed or press-kit imagery,
+    or a drawn poster style that resembles nobody) before the boxing reel is redone.
