@@ -5,7 +5,7 @@
 
 export const STUDIO_TURN_VERSION = 1;
 
-export const STUDIO_NODE_KINDS = ["track", "stems", "sections", "candidates", "heard", "pull", "duel", "measures", "suno_prompt", "taste"] as const;
+export const STUDIO_NODE_KINDS = ["track", "stems", "sections", "candidates", "heard", "pull", "duel", "measures", "suno_prompt", "taste", "release"] as const;
 export type StudioNodeKind = (typeof STUDIO_NODE_KINDS)[number];
 
 export const STUDIO_ACTION_KINDS = ["play", "hear", "use_candidate", "swap_stem", "mute", "solo", "level", "pan", "settle_pull", "pick", "render", "say"] as const;

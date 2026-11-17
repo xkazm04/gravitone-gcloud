@@ -4,14 +4,20 @@
 // marked carried; choices and readings belong only to their turn), eight parts draw compact, a
 // proposal says what it does from its resolved target, the ask gate tells the offline preview from
 // nobody-listening-yet, and the registry covers the closed vocabulary's every kind.
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
 import { STUDIO_NODE_KINDS } from "@gt/domain/audio.studio.kinds";
+import { releaseProblems } from "@gt/domain/release.problems";
+import { fixturePort } from "../../app/(studio)/audio/_release/_port/fixture.ts";
 import { readFixture } from "../../app/(studio)/audio/studio/_port/fixture.ts";
 import { askBlockedWords, CARRY, cardPieces, cardsOf, cardTitle, compactLanes, doesWords, hasTimeline, resolverOf, stemLabel } from "../../app/(studio)/audio/studio/_view/model.ts";
-import { VIEW_REGISTRY } from "../../app/(studio)/audio/studio/_view/registry.tsx";
+import type { CardCtx } from "../../app/(studio)/audio/studio/_view/ctx.ts";
+import { ReleaseCard, releaseHref } from "../../app/(studio)/audio/studio/_view/Release.tsx";
+import { SINGLE, VIEW_REGISTRY } from "../../app/(studio)/audio/studio/_view/registry.tsx";
 
 const TAKES = { calm: "st-calm", "calm-vital-bass": "st-cvb", hiphop: "st-hh", "hiphop-felt-piano": "st-hfp", synth: "st-syn" };
 const sessions = readFixture({ takes: TAKES }).sessions;
@@ -147,5 +153,47 @@ describe("the registry", () => {
   it("realizes every kind of the closed vocabulary, each in a place", () => {
     expect(Object.keys(VIEW_REGISTRY).sort()).toEqual([...STUDIO_NODE_KINDS].sort());
     for (const k of STUDIO_NODE_KINDS) expect(typeof VIEW_REGISTRY[k].View).toBe("function");
+  });
+});
+
+describe("the release piece (spark studio-to-release)", () => {
+  const turns = session("night-drive").turns;
+  const card = (id: string) => cardPieces(turns, id).release;
+
+  it("is drawn once per card, belongs to its own answer, and never carries into a later one", () => {
+    expect(SINGLE.has("release")).toBe(true);
+    expect(CARRY.release).toBe(false);
+    expect(ids(card("nd-a4"))).toEqual([["release", "nd-a4", false]]);
+    expect(card("nd-a3")).toEqual([]);
+  });
+
+  it("opens the same conversation's package stage on its release", () => {
+    expect(releaseHref({ releaseId: "rel-0000000000a1" }, { id: "night-drive", source: "fixture" })).toBe("/audio?s=studio&session=night-drive&source=fixture&stage=package&r=rel-0000000000a1");
+    expect(releaseHref({ releaseId: "rel-0000000000a1" }, { id: "night-drive", source: "live" })).toBe("/audio?s=studio&session=night-drive&stage=package&r=rel-0000000000a1");
+  });
+
+  it("draws the title, kind, status and the three counts with spoken names, and the door to the package stage", () => {
+    const placed = card("nd-a4")[0];
+    if (placed === undefined) throw new Error("no release piece");
+    const ctx = { v: { session: { id: "night-drive", source: "fixture" } } } as unknown as CardCtx;
+    const html = renderToStaticMarkup(h(ReleaseCard, { placed, ctx }));
+    expect(html).toContain('aria-label="release Dancing in the Static, pre-flight review"');
+    for (const said of ["single", "Dancing in the Static", "draft", 'aria-label="2 blocks"', 'aria-label="2 warnings"', 'aria-label="4 pending proposals"']) expect(html).toContain(said);
+    expect(html).toContain('href="/audio?s=studio&amp;session=night-drive&amp;source=fixture&amp;stage=package&amp;r=rel-0000000000a1"');
+  });
+
+  it("the scripted pre-flight card says what the release fixture holds: title, status, live problems and pending", async () => {
+    const node = card("nd-a4")[0]?.node;
+    const rec = (await fixturePort.read()).records.find((r) => r.release.id === node?.releaseId);
+    if (node === undefined || rec === undefined) throw new Error("fixture changed");
+    const problems = releaseProblems(rec.release);
+    expect(rec.sessionId).toBe("night-drive");
+    expect({ title: node.title, status: node.status, blocks: node.blocks, warns: node.warns, pending: node.pending }).toEqual({
+      title: rec.release.title,
+      status: rec.release.status,
+      blocks: problems.filter((x) => x.severity === "block").length,
+      warns: problems.filter((x) => x.severity === "warn").length,
+      pending: rec.pending.length,
+    });
   });
 });

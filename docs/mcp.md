@@ -148,6 +148,8 @@ results and the ledger events are identical.
 | job | `move` | `jobId`, `dir` (earlier, later) | yes |
 | job | `reroute` | `jobId`, `option`, `token?` | yes |
 | job | `ack_lane` | `lane` | yes |
+| job | `release_read` | `id?` (`rel-` + 12 hex) or `session?` | |
+| job | `release_propose` | `id`, `version`, `proposals` (1..40 `{path, value, source}`), `turnId?` | yes |
 | spend | `list` | `state?`, `day?`, `limit<=100` (this token's own requests) | |
 | spend | `get` | `id` (`sr_` + 12 hex; any state, with reasons, note, jobIds, failure) | |
 
@@ -240,6 +242,50 @@ mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
   (`app/(studio)/audio/studio/_live/sunoActs.ts`). A listen is a priced `suno-listen` text turn
   (`lib/sound/suno/listen.ts`) with a kernel receipt, and `GRAVITONE_DRY_ONLY=1` makes it a stand-in.
 
+### Releases (spark studio-to-release)
+
+The studio has three stages: make, package and release (`stage=` and `r=` in the studio URL). The operator's
+"Release this" on a studio track keeps the take and creates a release in one act. The agent cannot keep, release
+or schedule. It reads the release and PROPOSES field values, and each proposal waits on the field until the
+operator accepts or dismisses it. The ops live in `app/_server/mcp/tools/release.ts` and go through the one
+release store (`lib/release/store.ts`), which writes the kernel's `releases` table.
+
+- **The family is `job` for now.** The `read` and `launch` family descriptions are at 238 and 240 of the
+  240-character cap, so neither can name another op. `RELEASE_OPS_FAMILY` holds the choice in one place until
+  a `release` family exists. Call `gt_job {op: "release_read", ...}`, or `gt_job_release_read` in the
+  operation projection.
+- `release_read` takes `id` (one release) or `session` (that conversation's releases). With neither, it
+  answers the newest 10. Each release comes back as `{id, version, sessionId, kind, release, problems, blocks,
+  warns, pending, empty, draftFrom, card, view}`:
+  - `problems` are the release's live problems (`releaseProblems`). Each carries its `rule` in the store's
+    words (`PROBLEM_TEXT`).
+  - `pending` is the proposals nobody has decided yet.
+  - `empty` lists the proposal paths whose field is null, blank or an empty list.
+  - `draftFrom` is what the conversation knows: its Suno prompt cards (`prompts`, the newest 8, each with the
+    `turnId` that showed it), the prompts the person kept (`keptPrompts`, from verdicts with `keep: true`), and
+    the facts of the release's takes and of the takes the person uploaded (`takes`, with `takesNote` when they
+    could not be read).
+  - `card` is the `release` piece for the pre-flight review. `view` is the release's package stage.
+  - `next` says what the agent may do next. With no release, `said` says the operator makes one.
+- `release_propose` sends `{id, version, proposals: [{path, value, source}], turnId?}` against the version
+  `release_read` gave. A `path` is a release field (`title`, `version`, `artist`, `label`, `releaseDate`,
+  `language`, `genre.primary`, `genre.secondary`, `upc`, `sleevePrompt`) or a track's field,
+  `track:<n>.<field>` with n counted from 1 (`title`, `version`, `isrc`, `explicit`, `lyrics`,
+  `songwriters`, `credits`, `ai`, `rights`). Any other path is refused at the op's door. `source` says
+  where the value came from.
+  - Each value is applied to the release and the whole release is re-read through the release door
+    (`applyProposal`). A value the door refuses refuses the whole call with the door's sentence, and nothing is
+    written.
+  - A stale `version` writes nothing and is answered in-band: `{stale: true, written: 0, version}` and a
+    sentence that says to read again.
+  - Otherwise the answer is `{stale: false, written, version, pending}`. The proposals wait on the operator's
+    accept or dismiss. It needs the `act` scope, and it spends nothing.
+- **The `release` piece** is the pre-flight review card: `{id, kind: "release", releaseId, title, releaseKind
+  ("single" | "ep" | "album"), blocks, warns, status ("draft" | "ready" | "scheduled" | "published"), pending}`,
+  with whole counts. It belongs to its own answer and does not carry into later cards. The card shows the
+  title, the kind, the status and the counts, and opens the release's package stage in the same conversation.
+  The agent posts it with `audio_turn`; there is no review op.
+
 ## Tests
 
 - `tests/next-server/mcp-audio.test.ts`: every audio op through the JSON-RPC layer over an in-memory kernel, with
@@ -249,6 +295,11 @@ mp3 they downloaded. The skill's "Suno advisor mode" is the agent's side.
   `tests/next-server/suno-listen.test.ts` covers the listener (quote, unpriced refusal, dry stand-in, a valid and
   an invalid read from a fake provider, the receipt, the inline audio part, the CRLF prompt), and
   `tests/next-server/studio-taste.test.ts` covers the taste writes.
+- `tests/next-server/mcp-release.test.ts`: both release ops through the JSON-RPC layer, with the release store
+  faked at its module seam (compare-and-swap and the real release door). It covers the read (problems with their
+  rule, empty fields, prompts and kept prompts from the conversation, a card the studio door shows as is), a read
+  token refused, a stale version answered in-band, a door-refused value refused with the door's sentence, and a
+  path no proposal may set.
 - `tests/next-server/mcp-registry.test.ts`: the registry's rules and both projections.
 - `tests/next-server/mcp-door.test.ts`: the envelope, who may call, scope, the live rule (with seeded
   receipts at the handler seam), the job refusals, cancel's ledger actor, and byte-identical results

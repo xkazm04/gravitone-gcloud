@@ -184,6 +184,15 @@ const nightDrive: FixtureSession = {
     agent("nd-a3", 6, "Kept. Three things you seem to like and dislike; keep the ones that should carry into the next song.", [
       { id: "taste", kind: "taste", rows: [{ id: "t3", line: "clear upfront female vocal", lean: "like" }, { id: "t4", line: "half-time synthwave drums", lean: "like" }, { id: "t5", line: "breathy whisper vocals", lean: "dislike" }] },
     ], []),
+    // Spark studio-to-release: the operator pressed "Release this" and asked for a pre-flight review; the agent read
+    // the release (release_read) and posts its readiness. The counts are rel-0000000000a1 as the release fixture
+    // holds it (app/(studio)/audio/_release/_port/fixture.ts; tests/next-server/studio-view.test.ts holds them equal).
+    user("nd-u4", 7, "I released the kept one. What is still missing before it can go out?"),
+    agent("nd-a4", 8, "Two things block it: there is no cover art yet, and the release has to say whether the artist is a person or an AI persona. The licence and the Suno plan tier at generation are unknown; those only warn. Four proposals wait on you: the persona, a second genre, the plan tier from the Suno account the take came from, and a sleeve prompt.", [
+      { id: "release", kind: "release", releaseId: "rel-0000000000a1", title: "Dancing in the Static", releaseKind: "single", blocks: 2, warns: 2, status: "draft", pending: 4 },
+    ], [
+      { id: "nd-p4", kind: "say", label: "draft a sleeve", text: "write me another sleeve prompt from the lyrics", why: "the cover art is the first block" },
+    ]),
   ],
 };
 

@@ -26,6 +26,7 @@ const full = () => ({
       changes: [{ field: "style", was: "synthwave, 120 bpm", now: "synthwave, 96 bpm", why: "the verdict said too fast" }], because: "too fast, vocals buried",
     },
     { id: "taste", kind: "taste", rows: [{ id: "t1", line: "dry male vocals", lean: "like" }, { id: "t2", line: "trap hats", lean: "dislike" }] },
+    { id: "release", kind: "release", releaseId: "rel-0000000000a1", title: "Night drive", releaseKind: "single", blocks: 2, warns: 1, status: "draft", pending: 3 },
   ],
   actions: [
     { id: "a1", kind: "play", label: "play", node: "track" },
@@ -49,7 +50,7 @@ describe("parseStudioTurn", () => {
   it("passes a turn that uses every node kind, untouched", () => {
     const { turn, dropped } = parsed(full());
     expect(dropped).toEqual([]);
-    expect(turn.show.map((n) => n.kind)).toEqual(["track", "sections", "stems", "candidates", "heard", "pull", "duel", "measures", "suno_prompt", "taste"]);
+    expect(turn.show.map((n) => n.kind)).toEqual(["track", "sections", "stems", "candidates", "heard", "pull", "duel", "measures", "suno_prompt", "taste", "release"]);
     expect(turn.actions).toHaveLength(8);
   });
 
@@ -63,7 +64,7 @@ describe("parseStudioTurn", () => {
     t.show.splice(1, 0, { id: "x", kind: "spectrogram" } as never);
     const { turn, dropped } = parsed(t);
     expect(dropped).toEqual([{ at: "show[1]", kind: "spectrogram", reason: 'unknown kind "spectrogram"' }]);
-    expect(turn.show).toHaveLength(10);
+    expect(turn.show).toHaveLength(11);
   });
 
   it("drops a node with a bad field, naming its path", () => {
@@ -126,7 +127,7 @@ describe("parseStudioTurn", () => {
     for (let i = 0; i < 4; i++) t.show.push({ id: `m${i}`, kind: "measures", rows: [{ label: "a", value: "b" }] } as never);
     const { turn, dropped } = parsed(t);
     expect(turn.show).toHaveLength(12);
-    expect(dropped.filter((d) => d.reason === "past the 12-piece cap")).toHaveLength(2);
+    expect(dropped.filter((d) => d.reason === "past the 12-piece cap")).toHaveLength(3);
   });
 
   it("lets a user turn show nothing", () => {
@@ -163,6 +164,7 @@ describe("parseStudioTurn", () => {
 
   it("holds a Suno prompt to its lineage and its field limits, and taste lines to unique ids", () => {
     const t = full();
+    t.show = t.show.filter((n) => n.kind !== "release");
     const prompt = t.show[8] as Record<string, unknown>;
     t.show.push({ ...prompt, id: "self", promptId: "p3", parent: "p3" } as never);
     t.show.push({ ...prompt, id: "orphan", promptId: "p4", parent: undefined } as never);
@@ -178,6 +180,28 @@ describe("parseStudioTurn", () => {
   });
 });
 
+describe("the release piece (spark studio-to-release)", () => {
+  it("holds a pre-flight card to a real release id, whole counts and a release status, naming what is wrong", () => {
+    const t = full();
+    const card = t.show[10] as Record<string, unknown>;
+    t.show = t.show.filter((n) => n.kind !== "release");
+    t.show.push({ ...card, id: "r-id", releaseId: "rel-xyz" } as never);
+    t.show.push({ ...card, id: "r-count", blocks: -1 } as never);
+    t.show.push({ ...card, id: "r-status", status: "shipped" } as never);
+    const { turn, dropped } = parsed(t);
+    expect(turn.show.some((n) => n.kind === "release")).toBe(false);
+    expect(dropped.map((d) => [d.at, d.kind])).toEqual([["show[10]", "release"], ["show[11]", "release"], ["show[12]", "release"]]);
+    expect(dropped[0]?.reason).toMatch(/releaseId.*a release id is rel- and 12 hex digits/);
+    expect(dropped[1]?.reason).toMatch(/blocks/);
+    expect(dropped[2]?.reason).toMatch(/status/);
+  });
+
+  it("carries the counts it was given, untouched", () => {
+    const node = parsed(full()).turn.show.find((n) => n.kind === "release");
+    expect(node).toEqual({ id: "release", kind: "release", releaseId: "rel-0000000000a1", title: "Night drive", releaseKind: "single", blocks: 2, warns: 1, status: "draft", pending: 3 });
+  });
+});
+
 describe("studio ledger events", () => {
   const say = { v: 1, id: "u1", seq: 1, at: "2026-10-29T10:00:00Z", from: "user", text: "something calm" };
 
@@ -185,7 +209,7 @@ describe("studio ledger events", () => {
     const s1 = parseStudioEvent(STUDIO_EVENTS.say, { session: "calm-bed", turn: say });
     expect(s1.ok && s1.value.parsed.turn.text).toBe("something calm");
     const t1 = parseStudioEvent(STUDIO_EVENTS.turn, { session: "calm-bed", turn: full() });
-    expect(t1.ok && t1.value.parsed.turn.show).toHaveLength(10);
+    expect(t1.ok && t1.value.parsed.turn.show).toHaveLength(11);
   });
 
   it("refuses a say that carries an agent turn, and a bad session id", () => {

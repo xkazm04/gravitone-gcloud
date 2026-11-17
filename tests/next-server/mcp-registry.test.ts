@@ -6,6 +6,7 @@ import { MCP_FAMILIES } from "@gt/domain/mcp";
 
 import { DESCRIPTION_MAX, familyAnnotations, opsOf, REGISTRY, registryFaults } from "../../app/_server/mcp/registry.ts";
 import { resolveCall, toolsOf } from "../../app/_server/mcp/projection.ts";
+import { RELEASE_OPS_FAMILY } from "../../app/_server/mcp/tools/release.ts";
 
 // THE ONE REGISTRY and its two projections (app/_server/mcp/): every op one row, published as four
 // family tools (`gt_read` + op) or one tool per op (`gt_read_projects`), and a call in either
@@ -38,6 +39,13 @@ describe("the registry", () => {
     for (const op of launch) expect(opsOf("launch").find((s) => s.op === op), op).toMatchObject({ writes: true, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } });
     // `read.steer` is the composer's sentence compile; e4's intent steer is its own op beside it.
     expect(opsOf("read").map((s) => s.op)).toEqual(expect.arrayContaining(["steer", "intent_steer"]));
+  });
+
+  it("carries the release ops (spark studio-to-release): a read, and a write that only proposes", () => {
+    const ops = opsOf(RELEASE_OPS_FAMILY);
+    expect(ops.find((s) => s.op === "release_read"), "release_read").toMatchObject({ writes: false, annotations: { readOnlyHint: true } });
+    expect(ops.find((s) => s.op === "release_propose"), "release_propose").toMatchObject({ writes: true, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } });
+    expect(REGISTRY.filter((s) => s.op.startsWith("release_")).map((s) => s.family)).toEqual([RELEASE_OPS_FAMILY, RELEASE_OPS_FAMILY]);
   });
 });
 

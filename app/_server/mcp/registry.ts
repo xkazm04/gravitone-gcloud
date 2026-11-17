@@ -6,6 +6,7 @@ import { AUDIO_STUDIO_LAUNCH_OPS, AUDIO_STUDIO_READ_OPS } from "./tools/audioStu
 import { JOB_OPS } from "./tools/job.ts";
 import { LAUNCH_OPS } from "./tools/launch.ts";
 import { READ_OPS } from "./tools/read.ts";
+import { RELEASE_OPS } from "./tools/release.ts";
 import { SONGLAB_OPS } from "./tools/songlab.ts";
 import { SPEND_OPS } from "./tools/spend.ts";
 import { STEER_OPS } from "./tools/steer.ts";
@@ -28,6 +29,7 @@ export const REGISTRY: readonly McpToolSpec[] = [
   ...AUDIO_STUDIO_LAUNCH_OPS,
   ...AUDIO_LAUNCH_OPS,
   ...JOB_OPS,
+  ...RELEASE_OPS,
   ...SPEND_OPS,
   ...SONGLAB_OPS,
 ];

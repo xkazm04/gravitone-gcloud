@@ -464,6 +464,14 @@ export const MUTANTS: UnitMutant[] = [
     why: "After a stale answer the acts made on top of the refused one are still sent, against a version their author never saw, and overwrite what the agent wrote in between.",
   },
   {
+    id: "release-read-overwrites-queued-release",
+    test: "tests/next-server/release-session.test.ts",
+    file: "app/(studio)/audio/_release/sessionModel.ts",
+    find: ".length === 0 ? r : { ...page, pending: r.pending };",
+    replace: ".length >= 0 ? r : { ...page, pending: r.pending };",
+    why: "A refresh while an edit is on its way replaces the page's release with the read's, so the operator's unsaved typing vanishes from the screen until the store answers.",
+  },
+  {
     id: "header-needs-chip-at-zero",
     test: "tests/next-server/runs-state-filter.test.ts",
     file: "app/(studio)/_shell/needsChip.ts",
@@ -1814,6 +1822,14 @@ export const MUTANTS: UnitMutant[] = [
     find: "  if (isPriced && o.token === undefined) return ok(priced(\"receipt\", first.value.value.receipt, ask.takes));",
     replace: "",
     why: "A Leonardo run is launched by the first press, with no receipt shown and no confirm: the operator is billed for takes nobody priced.",
+  },
+  {
+    id: "release-import-files-unjudged",
+    test: "tests/next-server/release-import.test.ts",
+    file: "app/(studio)/audio/_release/importActs.ts",
+    find: "title, verdict: \"kept\", fileName: p.name",
+    replace: "title, verdict: \"unjudged\", fileName: p.name",
+    why: "A dropped file is filed unjudged, so it never reaches the release shelf it was dropped on.",
   },
   {
     id: "cover-plan-rerenders-booked",

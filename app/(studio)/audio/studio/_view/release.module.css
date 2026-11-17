@@ -1,0 +1,8 @@
+/* The release piece in a thread card (spark studio-to-release): the release's name, kind and status on one line,
+   its counts and the door to its package stage on the next. The pieces are @gt/ui's; this file only frames them.
+   Tokens only. */
+.release{display:grid;gap:var(--sp-3);min-width:0;padding:var(--sp-4) var(--sp-5);border:1px solid var(--hair-2);border-radius:var(--r-lg);background:var(--ink-1)}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);min-width:0}
+.title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright)}
+.counts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-1) var(--sp-2);min-width:0}
+.grow{flex:1}

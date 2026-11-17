@@ -237,6 +237,9 @@ describe("audio_guide: the vocabulary is the registry's", () => {
   it("lists every node kind, action kind and role from the registry, each kind with its JSON schema", async () => {
     const g = (await tool("gt_read", { op: "audio_guide" })).structuredContent as { nodes: { kinds: string[]; schemas: Record<string, { type: string }> }; actions: { kinds: string[]; goes: Record<string, string>; schemas: Record<string, unknown> }; roles: string[] };
     expect(g.nodes.kinds).toEqual([...STUDIO_NODE_KINDS]);
+    // Spark studio-to-release: the pre-flight card is in the vocabulary the moment it is in the door.
+    expect(g.nodes.kinds).toContain("release");
+    expect(Object.keys((g.nodes.schemas["release"] as unknown as { properties: Record<string, unknown> }).properties)).toEqual(expect.arrayContaining(["releaseId", "title", "releaseKind", "blocks", "warns", "status", "pending"]));
     expect(Object.keys(g.nodes.schemas)).toEqual([...STUDIO_NODE_KINDS]);
     for (const k of STUDIO_NODE_KINDS) expect(g.nodes.schemas[k]?.type, k).toBe("object");
     expect(g.actions.kinds).toEqual([...STUDIO_ACTION_KINDS]);
