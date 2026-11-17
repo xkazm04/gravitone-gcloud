@@ -27,5 +27,5 @@ export function playgroundTarget(q: Query): string {
   if (m === "triage") return boardFor(packetIdOf("audio", "audio/triage"));
   if (m === "hunt") return huntHref(kind, huntParam(q));
   if (m === "arrange") return deskHref({ section: "arrange", kind });
-  return deskHref({ section: "compose", kind });
+  return deskHref({ section: "overview", kind });
 }

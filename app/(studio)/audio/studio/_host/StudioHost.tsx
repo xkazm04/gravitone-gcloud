@@ -11,7 +11,7 @@
 // no reload. A slow backstop also re-reads - quicker while a message waits for its answer - because
 // presence (a token's lastUsedAt) moves without a ledger event.
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
@@ -47,11 +47,15 @@ export type StudioHostProps = {
   readonly taste: readonly StudioTasteLine[];
   /** Spark suno-api: whether this machine holds a Suno grant, or why not. */
   readonly connection: SunoConnection;
+  /** The desk's overview (../../_overview/Overview.tsx): the rooms' cards where the conversation would be. The
+   *  dock stays; a message it sends opens the conversation in compose (a new song's first message already goes
+   *  there through onSession: studioHref is compose's address). */
+  readonly cover?: ReactNode;
 };
 
 const NEW_TITLE = "A new song";
 
-export function StudioHost({ url, sessions, renders, note, head, presence, acts, takes, taste, connection }: StudioHostProps) {
+export function StudioHost({ url, sessions, renders, note, head, presence, acts, takes, taste, connection, cover }: StudioHostProps) {
   const router = useRouter();
   const live = url.source === "live";
   const [made, setMade] = useState<string | null>(null);
@@ -75,6 +79,7 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts,
     else setMade(`A new song could not be started: ${r.error.error}`);
   };
   const refused = refusedLines(session?.refused ?? []);
+  const toCompose = cover !== undefined && session !== undefined && session.id !== "" ? { cover, afterSend: () => go({ ...url, session: session.id }) } : cover !== undefined ? { cover } : {};
   return (
     <div className={s.studio}>
       <div className={s.bar}>
@@ -93,11 +98,11 @@ export function StudioHost({ url, sessions, renders, note, head, presence, acts,
         </div>
       )}
       {session === undefined ? (
-        <Empty label="no scripted session" />
+        (cover ?? <Empty label="no scripted session" />)
       ) : live ? (
-        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} connection={connection} acts={acts} onSession={(id) => go({ ...url, session: id })} />
+        <LiveRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence={presence} renders={renders} takes={takes} taste={taste} connection={connection} acts={acts} onSession={(id) => go({ ...url, session: id })} {...toCompose} />
       ) : (
-        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} connection={connection} />
+        <FixtureRoom key={`${session.id}|${url.offline}`} session={session} offline={url.offline} presence="listening" renders={renders} takes={takes} taste={taste} connection={connection} {...toCompose} />
       )}
     </div>
   );

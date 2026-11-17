@@ -1,41 +1,10 @@
-/* ./ContextColumn.tsx: a glass column beside the spine - one list, the row every level of the tree draws, a lit
-   "here" ground with an accent bar that glides, and the stages hanging under the current room. Tokens only. */
-.column{flex:none;width:var(--w-context);min-height:0;overflow:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:var(--sp-5);padding:var(--sp-6) var(--sp-3);border-right:1px solid var(--hair);background:color-mix(in srgb,var(--glass) 60%,transparent)}
-.head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);min-height:var(--h-control-sm);padding:0 var(--sp-3) 0 var(--sp-4)}
-.title{font:300 var(--fs-title)/1 var(--sans);letter-spacing:-.025em;color:var(--ink-bright)}
+/* ./ContextColumn.tsx: the column's width beside the spine and its kind switch; the material, the head, the groups
+   and the rows are @gt/ui NavColumn's (packages/ui/src/components/navcolumn/NavColumn.module.css). Tokens only. */
+.column{flex:none;width:var(--w-context)}
 .kinds{display:inline-flex;padding:var(--sp-nudge);border:1px solid var(--hair);border-radius:var(--r-pill);background:var(--ink)}
 .kind{display:inline-flex;align-items:center;height:var(--h-chip);padding:0 var(--sp-3);border-radius:var(--r-pill);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
 .kind:hover{color:var(--ink-bright)}
 .kind[aria-current=page]{color:var(--ink-bright);background:var(--glass-hi);box-shadow:var(--shine)}
-.list{display:flex;flex-direction:column;gap:var(--sp-nudge)}
-.li{display:flex;flex-direction:column}
-
-/* the row: one shape at every level */
-.row{position:relative;isolation:isolate;display:flex;align-items:center;gap:var(--sp-3);min-height:var(--h-control);padding:0 var(--sp-3) 0 var(--sp-5);border-radius:var(--r-control);font:500 var(--fs-nav)/1.2 var(--sans);color:var(--muted);transition:color var(--dur-fast) var(--ease)}
-.row:hover{color:var(--ink-bright)}
-.row:hover:not([aria-current]){background:var(--wash)}
-.row[aria-current=page]{color:var(--ink-bright);font-weight:600}
-.row[aria-busy=true],.stage[aria-busy=true]{color:var(--ink-bright);cursor:progress}
-.here{position:absolute;inset:0;z-index:-1;border-radius:var(--r-control);background:var(--glass-hi);box-shadow:var(--shine)}
-.here::before{content:"";position:absolute;left:0;top:var(--sp-3);bottom:var(--sp-3);width:var(--stroke-mark);border-radius:var(--r-meter);background:var(--cyan)}
-.name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tally{display:inline-flex;align-items:baseline;gap:var(--sp-1);font:700 var(--fs-micro)/1 var(--mono);color:var(--ink-bright);font-variant-numeric:tabular-nums}
-.tally[data-zero]{color:var(--faint)}
-.tallyLabel{font-weight:500;color:var(--faint)}
-
-/* the stages: a numbered descent under the current room */
-.stages{position:relative;display:flex;flex-direction:column;gap:var(--sp-nudge);margin:var(--sp-2) 0 var(--sp-3) var(--sp-5);padding-left:var(--sp-4)}
-.stages::before{content:"";position:absolute;left:0;top:var(--sp-3);bottom:var(--sp-3);width:1px;background:var(--hair-2)}
-.stage{position:relative;isolation:isolate;display:flex;align-items:center;gap:var(--sp-4);min-height:var(--h-control-sm);padding:0 var(--sp-3);border-radius:var(--r-control);font:500 var(--fs-ui)/1 var(--sans);color:var(--muted)}
-.stage:hover{color:var(--ink-bright)}
-.stage:hover:not([aria-current]){background:var(--wash)}
-.stage[aria-current=step]{color:var(--ink-bright)}
-.stageHere{position:absolute;inset:0;z-index:-1;border-radius:var(--r-control);background:var(--cyan-a)}
-.stageNo{display:grid;place-items:center;flex:none;width:var(--h-tag);height:var(--h-tag);border-radius:50%;border:1px solid var(--hair-3);font:700 var(--fs-micro)/1 var(--mono);color:var(--muted)}
-.stage[aria-current=step] .stageNo{border-color:var(--cyan);color:var(--ink);background:var(--cyan)}
-.stageName{text-transform:capitalize}
 
 /* a link's pending mark (./NavLink.tsx PendingMark) is drawn as the row's own underline */
-.row > [aria-hidden=true]:last-child,.stage > [aria-hidden=true]:last-child{left:var(--sp-5);right:var(--sp-3)}
-
-@media (prefers-reduced-motion:reduce){.row{transition:none}}
+.column a > [aria-hidden=true]:last-child{left:var(--sp-3);right:var(--sp-3)}

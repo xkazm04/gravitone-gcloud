@@ -5,7 +5,9 @@
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Empty } from "@gt/ui/components/empty/Empty.tsx";
+import { RoomGlyph, type RoomGlyphName } from "@gt/ui/components/glyph/RoomGlyph.tsx";
 import { SectionGlyph, type SectionGlyphName } from "@gt/ui/components/glyph/SectionGlyph.tsx";
+import { NavColumn, NavGroup, navRow } from "@gt/ui/components/navcolumn/NavColumn.tsx";
 import { Panel } from "@gt/ui/components/panel/Panel.tsx";
 import { RoomLight, type RoomKind } from "@gt/ui/components/roomlight/RoomLight.tsx";
 import { Surface } from "@gt/ui/components/surface/Surface.tsx";
@@ -75,9 +77,52 @@ export function StructureSection() {
           ))}
         </div>
       </Spec>
+      <Spec names={["RoomGlyph"]} source="glyph/RoomGlyph.tsx">
+        <div className={k.row}>
+          {ROOM_GLYPHS.map((g) => (
+            <span key={g} className={k.glyphSpecimen}>
+              <RoomGlyph name={g} className={k.glyphMark} />
+              <span className={k.mono}>{g}</span>
+            </span>
+          ))}
+        </div>
+      </Spec>
+      <Spec names={["NavColumn", "NavGroup"]} source="navcolumn/NavColumn.tsx">
+        <div className={k.navSpecimen}>
+          <NavColumn title="Audio" label="specimen rooms">
+            <NavGroup>
+              <li>
+                <a className={navRow.row} href="#nav" aria-current="page">
+                  <span className={navRow.here} aria-hidden="true" />
+                  <RoomGlyph name="overview" className={navRow.mark} />
+                  <span className={navRow.label}>Overview</span>
+                </a>
+              </li>
+            </NavGroup>
+            <NavGroup label="Refine">
+              <li>
+                <a className={navRow.row} href="#nav">
+                  <RoomGlyph name="arrange" className={navRow.mark} />
+                  <span className={navRow.label}>Arrange</span>
+                  <span className={navRow.count}>3</span>
+                </a>
+              </li>
+              <li>
+                <a className={navRow.row} href="#nav">
+                  <RoomGlyph name="rubric" className={navRow.mark} />
+                  <span className={navRow.label}>Rubric</span>
+                  <span className={`${navRow.count} ${navRow.zero}`}>0</span>
+                </a>
+              </li>
+            </NavGroup>
+          </NavColumn>
+        </div>
+      </Spec>
     </Section>
   );
 }
+
+const ROOM_GLYPHS: readonly RoomGlyphName[] = ["overview", "compose", "cover", "hunt", "arrange", "songlab", "rubric", "strengths", "lessons", "batch", "release", "lanes", "plan", "runs"];
 
 const ROOMS: readonly RoomKind[] = ["block", "warn", "agent", "ready", "clear", "neutral"];
 const GLYPHS: readonly SectionGlyphName[] = ["floor", "projects", "runs", "scout", "library", "audio", "ledger", "kit", "signout", "send", "menu", "talk"];

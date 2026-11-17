@@ -15,9 +15,12 @@ import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
 import { readRelease } from "../_release/read.ts";
 import { applyReleaseAct, createReleaseAct, releaseThisAct } from "../_release/acts.ts";
+import type { ReactNode } from "react";
+
 import { LazyPackaging } from "./_package/LazyPackaging.tsx";
 
-export async function StudioSection({ url, port }: { readonly url: StudioUrl; readonly port?: StudioPort }) {
+// `cover`: the desk's overview drawn in the conversation's place (../_overview/Overview.tsx); make only.
+export async function StudioSection({ url, port, cover }: { readonly url: StudioUrl; readonly port?: StudioPort; readonly cover?: ReactNode }) {
   const read = await (port ?? (url.source === "fixture" ? fixturePort : ledgerPort)).read();
   const presence = read.source === "live" ? readPresence() : "listening";
   // Spark suno-api: the token file only, no network; the reason is the client's own sentence.
@@ -35,6 +38,7 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
       takes={read.takes ?? {}}
       taste={read.taste ?? []}
       connection={connection}
+      {...(cover !== undefined ? { cover } : {})}
     />
   );
   // Spark studio-to-release: in package and release the conversation stays, beside the release's steps.

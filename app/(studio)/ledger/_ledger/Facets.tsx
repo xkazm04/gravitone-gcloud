@@ -16,7 +16,7 @@ import type { FacetCount } from "@gt/kernel/events-count";
 import { CapsHeading } from "@gt/ui/components/heading/CapsHeading.tsx";
 import { FacetRow } from "@gt/ui/components/facet/FacetRow.tsx";
 import { Keycaps } from "@gt/ui/components/keycaps/Keycaps.tsx";
-import { Panel } from "@gt/ui/components/panel/Panel.tsx";
+import { NavColumn } from "@gt/ui/components/navcolumn/NavColumn.tsx";
 
 import type { LedgerFilter } from "./filter.ts";
 import type { Facets as Counts } from "./read.ts";
@@ -59,8 +59,7 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
   const lanes = valuesOf(c.lane, f.lane);
   const sources = valuesOf(c.source, f.src);
   return (
-    <aside className={s.facets} id="lg-facets" aria-label="facets">
-      <Panel title="facets" {...(f.type.length + f.lane.length + f.project.length + f.src.length > 0 ? { tally: { value: f.type.length + f.lane.length + f.project.length + f.src.length, label: "on" } } : {})}>
+    <NavColumn className={s.facets} id="lg-facets" label="facets" title="facets" {...(f.type.length + f.lane.length + f.project.length + f.src.length > 0 ? { tally: { value: f.type.length + f.lane.length + f.project.length + f.src.length, label: "on" } } : {})}>
       <div className={s.sec}>
         {head("type", "type")}
         {groups.map((g) => {
@@ -101,7 +100,6 @@ export function Facets({ filter: f, facets: c, onApply }: { readonly filter: Led
       <div className={s.keys}>
         <Keycaps mode="ledger" label="ledger keys" />
       </div>
-      </Panel>
-    </aside>
+    </NavColumn>
   );
 }

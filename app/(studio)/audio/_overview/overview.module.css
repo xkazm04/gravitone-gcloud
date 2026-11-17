@@ -1,0 +1,15 @@
+/* ./Overview.tsx: the rooms as cards on glass, in the column's groups, over the studio's composer. Tokens only. */
+.overview{display:flex;flex-direction:column;gap:var(--sp-6);padding:var(--sp-6) var(--gutter);overflow:auto;min-height:0;height:100%}
+.group{display:flex;flex-direction:column;gap:var(--sp-3)}
+.head{margin:0;font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-context) - var(--sp-5)),1fr));gap:var(--sp-3);margin:0;padding:0;list-style:none}
+.card{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:var(--sp-2) var(--sp-4);min-height:calc(var(--h-control) * 2);padding:var(--sp-4) var(--sp-5);border:1px solid var(--rim);border-radius:var(--r-pane);background:var(--glass);box-shadow:var(--shine);color:var(--text);transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
+.card:hover{background:var(--glass-hi);border-color:var(--hair-3);color:var(--ink-bright)}
+.card:hover .mark{color:var(--cyan)}
+.mark{grid-row:1 / span 2;width:var(--size-glyph-btn);height:var(--size-glyph-btn);color:var(--muted);transition:color var(--dur-fast)}
+.name{font:500 var(--fs-h3)/1.2 var(--sans);color:var(--ink-bright);letter-spacing:-.01em}
+.tally{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.tally b{color:var(--ink-bright);font-weight:700}
+.tally[data-zero] b{color:var(--faint)}
+@media (prefers-reduced-motion:reduce){.card,.mark{transition:none}}
+.card:not(:has(.tally)) .mark{grid-row:auto}

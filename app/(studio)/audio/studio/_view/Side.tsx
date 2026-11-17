@@ -110,7 +110,9 @@ export function NextSteps({ visible, turns, transport, dispatch, blocked, taste 
         {/* An offline dock is said by its pill; what still works here is each step's own chip
             ("plays here" / "asks the agent") and a blocked ask carries its reason on its row. */}
         {turn === null || actions.length === 0 ? (
-          <Empty compact label={turn === null ? "no answer yet" : "nothing suggested this turn"} />
+          <div className={s.none}>
+            <Empty compact label={turn === null ? "no answer yet" : "nothing suggested this turn"} />
+          </div>
         ) : (
           <ul className={s.list}>
             {actions.map((a) => {

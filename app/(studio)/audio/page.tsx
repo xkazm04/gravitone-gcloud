@@ -3,6 +3,8 @@
 // (./_audio/desk.ts) and its kind - music or sfx - in the URL beside the section; each section
 // reads on the server and hands one client island its data and its Server Actions.
 //
+//   overview  where the desk opens (design baseline P4, 2026-11-17): the rooms as cards in the studio's place,
+//             the studio's dock kept, a message sent from it opening the conversation in compose (./_overview);
 //   compose   the audio studio (spark audio-agent-studio, stage S2): a person says what they want
 //             in the dock, an outside agent answers with a track, its parts and its next steps
 //             (./studio/); `?s=studio` is an alias. It retired the seed composer, the say-it /
@@ -50,6 +52,7 @@ import { parseReleaseUrl } from "./_release/url.ts";
 import { openMatches } from "./_songlab/read.ts";
 import { SongLabSection } from "./_songlab/Section.tsx";
 import { parseSongLabUrl } from "./_songlab/url.ts";
+import { Overview } from "./_overview/Overview.tsx";
 import { StudioSection } from "./studio/Studio.tsx";
 import { parseStudioUrl } from "./studio/url.ts";
 import s from "./_audio/audio.module.css";
@@ -72,8 +75,10 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
     ...(unscored.ok ? { rubric: { value: unscored.value, label: "unscored" } } : {}),
     ...(open !== undefined ? { songlab: { value: open, label: "open" } } : {}),
   };
+  const rooms = audioRooms(q, tallies);
   let body: ReactNode;
-  if (url.section === "arrange") body = <LazyArrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
+  if (url.section === "overview") body = <StudioSection url={{ ...parseStudioUrl(q), stage: "make" }} cover={<Overview rooms={rooms} />} />;
+  else if (url.section === "arrange") body = <LazyArrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
   else if (url.section === "cover") body = <CoverDesk view={await readCoverDesk(q)} acts={{ launch: launchCoverAct, brief: briefCoverAct, pick: pickCoverAct, saveStyles: saveCoverStylesAct, sendSuno: sendSunoCoverAct, fileSuno: fileSunoCoverAct }} />;
   else if (url.section === "hunt") body = <LazyHunt view={await readHunt(url.kind, huntParam(q))} acts={{ draftHuntMap, renderLeaves, crownTake, draftHuntLesson, confirmLessonAct }} nowMs={audioNow()} />;
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
@@ -93,7 +98,7 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   }
   return (
     <div className={s.desk}>
-      <ContextColumn rooms={audioRooms(q, tallies)} />
+      <ContextColumn rooms={rooms} />
       <div className={s.work}>{body}</div>
     </div>
   );

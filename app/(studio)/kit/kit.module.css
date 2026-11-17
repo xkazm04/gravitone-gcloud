@@ -98,3 +98,4 @@
 .roomSpecimen{position:relative;isolation:isolate;display:grid;place-items:end center;width:calc(var(--w-detail) * .5);height:calc(var(--h-control) * 3);padding:var(--sp-3);border:1px solid var(--hair);border-radius:var(--r-pane);background:var(--ink);overflow:hidden}
 .glyphSpecimen{display:inline-flex;flex-direction:column;align-items:center;gap:var(--sp-1);color:var(--text)}
 .glyphMark{width:var(--size-glyph-btn);height:var(--size-glyph-btn)}
+.navSpecimen{width:var(--w-context);height:calc(var(--h-field) * 7)}

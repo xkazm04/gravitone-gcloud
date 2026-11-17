@@ -8,12 +8,31 @@ import { audioRooms } from "../../app/(studio)/_shell/navModel.ts";
 const cur = (xs: readonly { readonly id: string; readonly current: boolean }[] | null) => xs?.filter((x) => x.current).map((x) => x.id) ?? null;
 
 describe("audioRooms", () => {
-  it("compose is the default room, make its default stage, and it reads no kind", () => {
+  it("the overview is the default room; it draws no stages and reads no kind", () => {
     const r = audioRooms({}, {});
+    expect(cur(r.rooms)).toEqual(["overview"]);
+    expect(r.stages).toBeNull();
+    expect(r.kinds).toBeNull();
+    expect(r.rooms).toHaveLength(11);
+  });
+
+  it("the rooms stand in the work's order: the overview alone, then make, refine, learn, ship", () => {
+    const r = audioRooms({}, {});
+    expect(r.groups.map((g) => [g.label, g.items.map((x) => x.id)])).toEqual([
+      [null, ["overview"]],
+      ["Make", ["compose", "cover", "hunt"]],
+      ["Refine", ["arrange", "songlab", "rubric"]],
+      ["Learn", ["strengths", "lessons", "batch"]],
+      ["Ship", ["release"]],
+    ]);
+    expect(r.rooms.every((x) => /^[A-Z]/.test(x.label) && x.glyph !== undefined)).toBe(true);
+  });
+
+  it("compose (and its studio alias) draws its walk, make by default", () => {
+    const r = audioRooms({ s: "studio" }, {});
     expect(cur(r.rooms)).toEqual(["compose"]);
     expect(cur(r.stages)).toEqual(["make"]);
     expect(r.kinds).toBeNull();
-    expect(r.rooms).toHaveLength(10);
   });
 
   it("a stage link keeps the session and the release, and only the stage changes", () => {
