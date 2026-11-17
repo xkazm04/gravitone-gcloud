@@ -1,0 +1,116 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2a9e42d5-f64a-4760-80e5-9a95c3c6d29e",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-17T23:10:25.802906+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-engine-core",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/scout/store.ts:182 The /scout seat opens its own night with `open --ceiling` (pipeline/scout.mts num() accepts any positive number) into a night.json it can write. The per-launch spend guard reads that ceiling, so the governed party sets the guard's input, held only by a skill instruction (.claude/skills/scout/SKILL.md:69 'never raise --ceiling') rather than by custody.",
+   "techniques": [
+    {
+     "technique": "guard-input-custody",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/store.ts:182 No operator-issued upper bound. The ceiling the budget guard enforces (budget.ts:175) is whatever the governed seat passed when it opened the night."
+    },
+    {
+     "technique": "bounded-projection-of-external-work",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/scout/plan.ts:165 The seat only submits queued plan items to the store. The night-fill timer launches them detached, outside any run (planDoors.ts:42), and the worker drives the jobs, so no handle lives in the model's context."
+    },
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "conformant",
+     "evidence": "lib/foundry/scout/nightFill.ts:83 An interrupted paid job becomes a hold that the tick never clears. It is treated as an unknown outcome, not as failed (budget.ts:35 also keeps a lapsed hold counting because its outcome is unknown)."
+    }
+   ]
+  },
+  {
+   "context": "sound-generation-engine",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/sound/cli.ts:4 The context is a tool that agents call (CLI, vendor engine adapters, take store) and assembles no agent runtime. Its 14 files contain no runAgent/spawn of a model, no hook chain and no checkpoint store. Searching lib/sound for claudeCli, subagent, compaction and registerHook found nothing. Only lib/sound/cover/brief/write.ts (outside this context's file list) calls runAgent.",
+   "techniques": [],
+   "absenceTerms": [
+    "claudeCli",
+    "subagent",
+    "compaction",
+    "registerHook"
+   ]
+  },
+  {
+   "context": "library-projection-feeds",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/library/project.ts:14 The context is a deterministic projection of feeds into the kernel's Library index, with no agent loop, hook chain or contributed code. Searching lib/library for runAgent, claudeCli, subagent and compaction found nothing ('agent' appears only as a provenance label).",
+   "techniques": [],
+   "absenceTerms": [
+    "runAgent",
+    "claudeCli",
+    "subagent",
+    "compaction"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "audio-studio-host",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "foundry-strips-and-training",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-17T23:10:25.802906+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "bounded-projection-of-external-work",
+    "guard-input-custody",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "scout-engine-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-17T23:10:25.802906+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "sound-generation-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-17T23:10:25.802906+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-projection-feeds",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

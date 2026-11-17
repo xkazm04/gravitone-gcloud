@@ -13976,8 +13976,12 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "state": "not-applicable",
+          "priorNotApplicable": 7,
+          "evidence": "lib/library/project.ts:14 The context is a deterministic projection of feeds into the kernel's Library index, with no agent loop, hook chain or contributed code. Searching lib/library for runAgent, claudeCli, subagent and compaction found nothing ('agent' appears only as a provenance label).",
+          "evaluatedAt": "2026-11-17",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         }
       ],
       "governance": "governed"
@@ -19032,8 +19036,12 @@
           "revision": 29,
           "changedAt": "2026-11-06",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 7
+          "state": "deviation",
+          "priorNotApplicable": 7,
+          "evidence": "lib/foundry/scout/store.ts:182 The /scout seat opens its own night with `open --ceiling` (pipeline/scout.mts num() accepts any positive number) into a night.json it can write. The per-launch spend guard reads that ceiling, so the governed party sets the guard's input, held only by a skill instruction (.claude/skills/scout/SKILL.md:69 'never raise --ceiling') rather than by custody.",
+          "evaluatedAt": "2026-11-17",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "knowledge-registry",
@@ -20605,7 +20613,11 @@
           "changedAt": "2026-11-06",
           "confidence": "probable",
           "priorNotApplicable": 7,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/sound/cli.ts:4 The context is a tool that agents call (CLI, vendor engine adapters, take store) and assembles no agent runtime. Its 14 files contain no runAgent/spawn of a model, no hook chain and no checkpoint store. Searching lib/sound for claudeCli, subagent, compaction and registerHook found nothing. Only lib/sound/cover/brief/write.ts (outside this context's file list) calls runAgent.",
+          "evaluatedAt": "2026-11-17",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "mcp-tools",

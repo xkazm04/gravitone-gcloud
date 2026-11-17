@@ -23083,16 +23083,11 @@
       "context": "sound-generation-engine",
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-10",
-      "evaluatedTs": "2026-11-10T23:40:17.427Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "c264917f-4a21-42e0-8c19-5502a584340a",
-        "state": "not-applicable",
-        "at": "2026-11-10T23:40:45.165842+00:00",
-        "reason": "reviewer (sonnet): lib/sound/cover/brief/write.ts imports RunAgentInput from agent/cliSeam.ts and builds an agent turn (tools, model, effort, timeout), so the claim that lib/sound hosts no agent-run assembly is contradicted. The cited cli.ts:4 line only describes the CLI as the agents' contract."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-17",
+      "evaluatedTs": "2026-11-17T23:10:25.802Z",
+      "worker": "2a9e42d5-f64a-4760-80e5-9a95c3c6d29e",
+      "techniques": []
     },
     "95dd9201-2503-481d-8cdd-a863f6566283/concurrency-guards": {
       "context": "music-vendors-and-publish",
@@ -26788,6 +26783,42 @@
           "reason": "replaced by 702bec3d-f53c-4ac6-be1e-b45bb9cc3c71"
         }
       ]
+    },
+    "67420468-b503-4a5c-bf04-0e24a9bbc225/agent-runtime-assembly": {
+      "context": "scout-engine-core",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-17",
+      "evaluatedTs": "2026-11-17T23:10:25.802Z",
+      "worker": "2a9e42d5-f64a-4760-80e5-9a95c3c6d29e",
+      "techniques": [
+        {
+          "technique": "guard-input-custody",
+          "verdict": "deviation",
+          "evidence": "lib/foundry/scout/store.ts:182 No operator-issued upper bound. The ceiling the budget guard enforces (budget.ts:175) is whatever the governed seat passed when it opened the night."
+        },
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/plan.ts:165 The seat only submits queued plan items to the store. The night-fill timer launches them detached, outside any run (planDoors.ts:42), and the worker drives the jobs, so no handle lives in the model's context."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "conformant",
+          "evidence": "lib/foundry/scout/nightFill.ts:83 An interrupted paid job becomes a hold that the tick never clears. It is treated as an unknown outcome, not as failed (budget.ts:35 also keeps a lapsed hold counting because its outcome is unknown)."
+        }
+      ]
+    },
+    "04e4702a-4221-4673-9cfa-130cbd21f93e/agent-runtime-assembly": {
+      "context": "library-projection-feeds",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-17",
+      "evaluatedTs": "2026-11-17T23:10:25.802Z",
+      "worker": "2a9e42d5-f64a-4760-80e5-9a95c3c6d29e",
+      "techniques": []
     }
   }
 }
