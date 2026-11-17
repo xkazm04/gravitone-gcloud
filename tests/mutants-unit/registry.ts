@@ -8054,8 +8054,8 @@ export const MUTANTS: UnitMutant[] = [
     id: "kit-draws-a-group-the-source-lacks",
     test: "tests/next-server/kit-sheet.test.ts",
     file: "app/(studio)/kit/Tokens.tsx",
-    find: "const FRAME = [\"frame\", \"roles-layer\", \"board\", \"library\"];",
-    replace: "const FRAME = [\"frame\", \"roles-layer\", \"roles-component\", \"board\", \"library\"];",
+    find: "const FRAME = [\"frame\", \"roles-layer\", \"board\", \"library\", \"design\"];",
+    replace: "const FRAME = [\"frame\", \"roles-layer\", \"roles-component\", \"board\", \"library\", \"design\"];",
     why: "The kit's list of drawn token groups names a group source.json does not hold, so the page's placement check reads a list that is not what the sheet draws.",
   },
   {

@@ -71,6 +71,7 @@
   /* frame */
   --cal-w: clamp(260px,19vw,340px);
   --cols: 52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
+  --cols-narrow: 52px minmax(0,1.75fr) minmax(0,.55fr) minmax(0,1fr); /* The Floor's lane columns when the lanes are under 1280px wide (beside the spine at 1366): the Weir gives the Foundry's run track its share. */
   --h-axis: 20px; /* Height of a time axis under a strip. */
   --h-dock: 232px; /* Most height the composer takes from the work column (the agent's line, the verdict tray, the line in); the toast rises above it. */
   --h-event: 34px; /* Height of an event row in a ledger list. */
@@ -249,6 +250,7 @@
 
   /* design */
   --cast: 0 36px 90px -34px rgba(0,0,0,.9); /* The long shadow a floating glass surface casts on the ground. */
+  --dur-defer: .45s; /* How long a loading frame or an empty state waits before it is drawn: a read that lands sooner never shows either. */
   --dur-room: .7s; /* How long a room's light takes to cross-fade to a new hue. */
   --frost: blur(28px) saturate(1.3); /* What glass does to the light behind it (backdrop-filter). Budgeted: few per screen. */
   --fs-display: clamp(30px,1.7vw,44px); /* A work's own name or a lead's headline, set light (300) and tight. */

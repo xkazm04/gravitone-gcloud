@@ -72,6 +72,7 @@
       {"name": "head-h", "tier": "primitive", "value": "40px"},
       {"name": "cal-w", "tier": "primitive", "value": "clamp(260px,19vw,340px)"},
       {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"},
+      {"name": "cols-narrow", "tier": "role", "value": "52px minmax(0,1.75fr) minmax(0,.55fr) minmax(0,1fr)", "note": "The Floor's lane columns when the lanes are under 1280px wide (beside the spine at 1366): the Weir gives the Foundry's run track its share."},
       {"name": "w-rail", "tier": "role", "value": "228px", "note": "Width of a route's left rail: the Ledger's facets and the time strip's readout above them."},
       {"name": "w-detail", "tier": "role", "value": "344px", "note": "Width of a route's docked detail panel."},
       {"name": "h-dock", "tier": "role", "value": "232px", "note": "Most height the composer takes from the work column (the agent's line, the verdict tray, the line in); the toast rises above it."},
@@ -265,7 +266,8 @@
       {"name": "h-touch", "tier": "role", "value": "44px", "note": "Height of a primary act and of the composer's line."},
       {"name": "sp-8", "tier": "role", "value": "32px", "note": "Inset of a lead and the gap between a step's regions."},
       {"name": "sp-9", "tier": "role", "value": "48px", "note": "Air around a lead; the reach of its glow."},
-      {"name": "dur-room", "tier": "role", "value": ".7s", "note": "How long a room's light takes to cross-fade to a new hue."}
+      {"name": "dur-room", "tier": "role", "value": ".7s", "note": "How long a room's light takes to cross-fade to a new hue."},
+      {"name": "dur-defer", "tier": "role", "value": ".45s", "note": "How long a loading frame or an empty state waits before it is drawn: a read that lands sooner never shows either."}
     ]}
   ]
 }

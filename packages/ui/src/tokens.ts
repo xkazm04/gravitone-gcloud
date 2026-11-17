@@ -65,6 +65,7 @@ export const tokens = {
   // frame
   "cal-w": "clamp(260px,19vw,340px)",
   "cols": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)",
+  "cols-narrow": "52px minmax(0,1.75fr) minmax(0,.55fr) minmax(0,1fr)",
   "h-axis": "20px",
   "h-dock": "232px",
   "h-event": "34px",
@@ -230,6 +231,7 @@ export const tokens = {
   "w-lineage-thumb": "30px",
   // design
   "cast": "0 36px 90px -34px rgba(0,0,0,.9)",
+  "dur-defer": ".45s",
   "dur-room": ".7s",
   "frost": "blur(28px) saturate(1.3)",
   "fs-display": "clamp(30px,1.7vw,44px)",

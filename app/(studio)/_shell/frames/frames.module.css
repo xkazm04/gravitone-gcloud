@@ -11,3 +11,11 @@
 .control{height:var(--h-control-sm)}
 .chip{height:var(--h-chip)}
 .tabs{flex:1 1 auto;height:var(--h-control);display:flex;flex-direction:column}
+/* THE LOADING BASELINE (design baseline P4, 2026-11-17; owner: "blinked empty components or skeletons look horrible").
+   A frame is not drawn until --dur-defer has passed, then it fades in once: a read that lands sooner shows the
+   spine and the ground and nothing else, never a frame flashed for a few frames. Inside it there is no motion at all
+   - no shimmer, no pulse - only the screen's own regions on their glass (a Ghost under aria-busy draws as a quiet
+   well, ghost/Ghost.module.css). `backwards` holds the frame hidden through the delay and leaves no fill after it;
+   under reduced motion world.css drops the animation and the frame is simply there. */
+.frame{animation:frameIn var(--dur) var(--ease) var(--dur-defer) backwards}
+@keyframes frameIn{from{opacity:0}}

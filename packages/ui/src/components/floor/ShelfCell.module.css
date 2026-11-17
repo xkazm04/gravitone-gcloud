@@ -7,7 +7,7 @@
 .door:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-shelf-tile),1fr));gap:var(--sp-3)}
-.style{position:relative;display:block;text-align:left;border-radius:var(--r-control);overflow:hidden;border:1px solid var(--hair);background:var(--ink-2);color:inherit}
+.style{position:relative;display:block;text-align:left;border-radius:var(--r-control);overflow:hidden;border:1px solid var(--rim);background:var(--glass);box-shadow:var(--shine);color:inherit}
 .style.door:hover{border-color:color-mix(in srgb,var(--emerald) 45%,transparent)}
 .hero{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
 /* No cover plate: the hatched ground Plate draws for a picture it cannot show (a bare gradient read
@@ -18,8 +18,10 @@
 .nm{display:block;padding:var(--sp-1) var(--sp-2) var(--sp-tight);font-size:var(--fs-meta);line-height:1.2;color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .list{display:flex;flex-direction:column;gap:var(--sp-1)}
-.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-control);width:100%;text-align:left;padding:var(--sp-tight) var(--sp-snug);border-radius:var(--r-sm);border:1px solid transparent;font-size:var(--fs-ui);color:inherit}
+.row{display:grid;grid-template-columns:auto minmax(min(50%,var(--w-pile)),1fr) minmax(0,auto);align-items:center;gap:var(--sp-control);width:100%;text-align:left;padding:var(--sp-tight) var(--sp-snug);border-radius:var(--r-sm);border:1px solid transparent;font-size:var(--fs-ui);color:inherit}
 .row.door:hover{background:var(--wash);border-color:var(--hair)}
 .lead{display:inline-flex;align-items:center;color:var(--emerald)}
+/* the trailing fact gives way before the title does: a long kind clips, the name keeps half the row */
+.row > :last-child{min-width:0;max-width:100%;overflow:hidden;justify-self:end}
 .rowTitle{color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .fact{font:500 var(--fs-micro)/1 var(--mono);color:var(--faint)}

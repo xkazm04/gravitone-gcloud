@@ -1,5 +1,5 @@
 /* floor.css [data-component=RunRow], .run-thumb, .run-title, .run-meta, .run-bar (+ .shimmer). */
-.row{display:grid;grid-template-columns:var(--w-thumb) minmax(0,1fr);gap:var(--sp-control);align-items:center;padding:var(--sp-2);border-radius:var(--r-control);border:1px solid var(--hair);background:var(--ink-2);color:inherit;animation:runIn var(--dur) var(--ease) both}
+.row{display:grid;grid-template-columns:var(--w-thumb) minmax(0,1fr);gap:var(--sp-control);align-items:center;padding:var(--sp-2);border-radius:var(--r-control);border:1px solid var(--rim);background:var(--glass);box-shadow:var(--shine);color:inherit;animation:runIn var(--dur) var(--ease) both}
 .running{border-color:color-mix(in srgb,var(--cyan) 25%,transparent)}
 .door:hover{border-color:var(--hair-3)}
 .door:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:1px}

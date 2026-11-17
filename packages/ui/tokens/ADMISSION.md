@@ -318,3 +318,5 @@ up ~10% past ~2400px), `h-dock` (the composer's verdict tray and line). Retired:
 | dur-room | `.7s` | The room light's cross-fade. |
 
 Not admitted: `raise` and `lift` (equal to `ink-2` and `ink-3`; use those), `accent` (equal to `cyan`).
+- `cols-narrow` (2026-11-17, P4): the Floor's lane split under 1280px of lanes. Beside the 84px spine at 1366 the default `cols` left the run track ~160px; a role, not a one-off, because the Floor's loading frame draws the same lanes.
+- `dur-defer` (2026-11-17, P4, owner: "blinked empty components or skeletons look horrible"): the wait before a loading frame fades in. Under it the shell and the ground hold still and the nav's own pending mark is the only motion; a read that lands sooner shows no frame at all.

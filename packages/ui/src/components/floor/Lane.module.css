@@ -3,7 +3,7 @@
    dark ends are --wall mixed toward --letterbox (the prototype wrote #5a3f0b and #7a5410). */
 .lane{display:grid;grid-template-columns:var(--cols);min-height:0}
 
-.rail{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);padding:var(--sp-4) 0;border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);background:var(--ink-1);min-height:0;overflow:hidden}
+.rail{display:flex;flex-direction:column;align-items:center;gap:var(--sp-3);padding:var(--sp-4) 0;border-bottom:1px solid var(--hair);border-right:1px solid var(--hair);background:var(--glass);min-height:0;overflow:hidden}
 .key{flex:none}
 .mark{width:var(--size-glyph-btn);height:var(--size-glyph-btn);color:var(--muted);flex:none}
 .name{writing-mode:vertical-rl;transform:rotate(180deg);font:600 var(--fs-meta)/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-bright)}

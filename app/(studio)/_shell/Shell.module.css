@@ -5,6 +5,11 @@
 /* The world root: a fixed frame; each route scrolls inside itself. */
 .world{position:relative;isolation:isolate;height:100vh;display:flex;flex-direction:row;overflow:clip;background:var(--ink);color:var(--text);font:var(--fs-body)/1.5 var(--sans);-webkit-font-smoothing:antialiased}
 .main{flex:1;min-width:0;min-height:0;position:relative;display:flex;flex-direction:column}
+/* A screen arriving (the loading baseline, frames/frames.module.css): it rises from nothing over --dur-fast, so the
+   frame-to-screen swap is a fade, not a cut. No fill: once run the page keeps no animation and so no stacking
+   context, and a soft navigation that keeps the page mounted (a searchParams change) does not replay it. */
+.main > :not([data-frame]){animation:land var(--dur-fast) var(--ease)}
+@keyframes land{from{opacity:0}}
 
 .skip{position:absolute;z-index:var(--z-toast);left:var(--sp-wide);top:var(--sp-3);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);color:var(--ink-bright);transform:translateY(-200%)}
 .skip:focus-visible{transform:none}

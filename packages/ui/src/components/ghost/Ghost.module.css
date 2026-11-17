@@ -2,8 +2,16 @@
    on ink, the same invisible Ghost the 2026-09 refactor shipped. Owner ruling 2026-10-15: the
    outline is a mark, so it holds 3:1 (WCAG 1.4.11) - the faint ink at 80%. Rows are a field's
    height. */
-.list{display:flex;flex-direction:column;gap:var(--sp-3)}
+/* An empty place is drawn after --dur-defer (the loading baseline, Empty.module.css): a read that fills it a moment
+   later never flashes the outlines. Inside a frame the frame's own delay holds it, so the list adds none. */
+.list{display:flex;flex-direction:column;gap:var(--sp-3);animation:ghostIn var(--dur) var(--ease) var(--dur-defer) backwards}
+[aria-busy=true] .list{animation:none}
+@keyframes ghostIn{from{opacity:0}}
 .card{height:var(--h-field);border:var(--stroke-glyph) dashed color-mix(in srgb,var(--faint) 80%,transparent);border-radius:var(--r-control)}
 /* `fill`: the region's height, shared; a card never shrinks under a field's height. */
 .fill{flex:1 1 auto;width:100%;height:100%;min-height:0}
 .fill .card{flex:1 1 0;height:auto;min-height:var(--h-field)}
+/* Inside a region still being read (a loading frame, aria-busy): not the empty state's dashed mark but the region's
+   own quiet well - no outline, no motion - so a frame reads as the screen arriving, not as a list of holes. The
+   dashed 3:1 mark stays for what it is for: a place that is empty after the read. */
+[aria-busy=true] .card{border:0;background:var(--glass);box-shadow:var(--shine)}
