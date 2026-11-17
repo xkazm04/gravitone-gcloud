@@ -25,23 +25,23 @@ import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { Wizard } from "../../../_release/wizard/Wizard.tsx";
 import type { PackagingVariantProps } from "../props.ts";
 import { Grip, OPEN_DEFAULT } from "./Grip.tsx";
-import { CardsStage } from "./v/cards/CardsStage.tsx";
-import { ConsoleStage } from "./v/console/ConsoleStage.tsx";
+import { ChecklistStage } from "./v/checklist/ChecklistStage.tsx";
+import { FocusStage } from "./v/focus/FocusStage.tsx";
 import type { StageProps } from "./v/props.ts";
-import { SleeveStage } from "./v/sleeve/SleeveStage.tsx";
+import { SheetStage } from "./v/sheet/SheetStage.tsx";
 import s from "./dock.module.css";
 
 // PROTOTYPE SWITCHER (prototype dock-package, 2026-11-17) - THROWAWAY: three design directions for what fills the
-// step frame, behind `?dv=` (baseline | sleeve | console | cards) and the strip at the frame's top right. Phase 5
+// step frame, behind `?dv=` (baseline | focus | checklist | sheet) and the strip at the frame's top right. Phase 5
 // keeps one and deletes the switcher, the strip and the losers in one commit.
 function WizardBaseline({ read, session, newId, startStep }: StageProps) {
   return <Wizard read={read} session={session} newId={newId} {...(startStep === undefined ? {} : { startStep })} />;
 }
 const STAGES = [
   { id: "baseline", label: "baseline", Stage: WizardBaseline },
-  { id: "sleeve", label: "sleeve", Stage: SleeveStage },
-  { id: "console", label: "console", Stage: ConsoleStage },
-  { id: "cards", label: "cards", Stage: CardsStage },
+  { id: "focus", label: "focus", Stage: FocusStage },
+  { id: "checklist", label: "checklist", Stage: ChecklistStage },
+  { id: "sheet", label: "sheet", Stage: SheetStage },
 ] as const satisfies readonly { id: string; label: string; Stage: ComponentType<StageProps> }[];
 type StageId = (typeof STAGES)[number]["id"];
 
