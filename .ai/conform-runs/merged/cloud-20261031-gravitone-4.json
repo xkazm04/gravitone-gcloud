@@ -1,0 +1,217 @@
+{
+  "worker": "cloud-20261031-gravitone-4",
+  "evaluatedAt": "2026-10-31",
+  "pairs": [
+    {
+      "context": "a91965bd-84cb-42b6-978f-29ca7258f718",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:16 the cut surface is imported from Cut.tsx, which is not one of this context's 14 files; the context holds only text-side editors (script, article, beats, research, words), so no timeline, clip, cue lane or clock is assembled here. Terms grepped over the context's files: timeline|startS|durS|drift|clip|music|cue|alignment|loudness|render|lane. The only hits were a beat-slot cue label (Beats.tsx:113), a scenario's musicMood string and editor-registry plumbing.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/editors.tsx:33 `cut: CutEditor` only dispatches to the timeline editor, which lives outside this context; no lane is drawn here"
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "not-applicable",
+          "evidence": "app/(studio)/projects/[id]/[part]/_edit/Beats.tsx:113 the beat board shows a cue label beside a beat slot, with no clock position, so no marker is placed on a timeline here"
+        }
+      ]
+    },
+    {
+      "context": "f6554c57-29ce-484d-90c3-ae89e2f466c0",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 the score's turn mark is a second derivation (first scene whose mood matches /turn/i, labelled by slug at :90), separate from the cut's turnOf at fixtureCut.ts:143. It also silently takes the first match, so two turns or a mislabelled scene become one plausible mark, and the score and cut marks can age apart.",
+      "techniques": [
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "deviation",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:65 `pic?.clock.find((c) => /turn/i.test(c.scene.mood))`: a second copy of the turn rule (fixtureCut.ts:143 uses turnOf, lib/cut/deriveTimeline.ts:314). Both take the first match without surfacing a second candidate, which breaks 'one derivation, all consumers' and the two-match rule."
+        },
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:62 every lane's clips, scenes, gaps and edits are drawn from one deriveTimeline result over the project's records, so a typed duration has no second writer"
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:207 snap returns the offset to exactly 0 and refuses a clip already on its mark. :123 re-derives status from the current offset (shownStatus), and :199 caps a nudge at 5 s as 're-edit, not sync'."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:142 music gaps are computed (musicGaps) and :145 unplaced material carries its reason. :36 drops v1's hand-typed fallback cut, so a project with no frames is an empty cut, not a borrowed one."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureScore.ts:61 cue in/out times are re-derived by cuesFrom from cue spans stored as scene ids (:183), so a retimed picture moves every cue. Coverage is computed (:89 coveredS) and silent runs are computed (:88 gapRuns)."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixtureCut.ts:100 the cut is compiled into a deterministic EDL (compileCut and cutDocumentHash), and :259 stamps each animatic export with that document hash"
+        },
+        {
+          "technique": "alignment-names-its-text",
+          "verdict": "unread",
+          "evidence": "the voice/explainer fixtures (fixtureExplainer.ts) were not read for alignment handling"
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "unread",
+          "evidence": "fixtureMotion.ts was skimmed only to its header"
+        }
+      ]
+    },
+    {
+      "context": "038cd727-793d-43fe-b86b-a39ef50c7334",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "unknown",
+      "evidence": "packages/producers/src/motion/define.ts:12 render-clip animates a plate via image-to-video, so generated-shot-sourcing applies. These producers only plan and price units; the conditioning (tail anchoring, duration briefs) lives in lib/producers and lib/motion, outside this context, and was not read. Four of 15 techniques have anchors, below the floor.",
+      "techniques": [
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "realized",
+          "evidence": "packages/producers/src/cut/define.ts:7 export-animatic renders the deterministic EDL compiled over deriveTimeline, the one clock Score shares"
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "realized",
+          "evidence": "packages/producers/src/frames/define.ts:44 a refused plate is a named state that the batch re-plans, and motion/define.ts:11 records a decline as a produced outcome with its reason"
+        },
+        {
+          "technique": "silent-defects-get-a-code-or-an-error",
+          "verdict": "realized",
+          "evidence": "packages/producers/src/frames/look.ts:22 a missing style binding resolves to a named miss with a named default printed on the receipt, never a silent fallback. This replaces the incident where every plate was drawn in PRESETS[0] and nothing said so."
+        },
+        {
+          "technique": "verify-cheapest-artifact-first",
+          "verdict": "realized",
+          "evidence": "packages/producers/src/strips/plan.ts:17 a card's rounds continue only on lint, render-error or gate failure (seek, legibility, motion, length), and round 0 reviews its own contact sheet before another paid round"
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "unread",
+          "evidence": "packages/producers/src/motion/define.ts:64 plans one clip per plated unit; whether adjacent clips are conditioned on each other's tail is decided in the bound producer outside this context"
+        }
+      ]
+    },
+    {
+      "context": "4eeb2f28-43ae-4d58-a8da-b25c6f4d4867",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "packages/ui/src/components/audio/batch.ts:41 the briefs are music-generation techniques (tag-list, tempo locking, lyrics-for-singability) for Suno/ElevenLabs music (recipe.ts:22). That is producing sound to a creative brief, which voice-io's golden path excludes; it owns only plumbing speech (capture, STT, TTS, playback). Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were music vendor and lyrics fields.",
+      "techniques": [
+        {
+          "technique": "stt-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "packages/ui/src/components/audio/batch.ts:165 the only audio meter here is the seconds of music a provider bills; nothing captures or transcribes speech"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs voice-io to music/SFX generation contexts on vendor vocabulary (ElevenLabs, audio). The subject's own boundary (plumbing, not producing) excludes them, so route by that precondition."
+    },
+    {
+      "context": "0335f0dc-2987-4b19-96e1-58941a70c9d5",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/extract/engine.ts:66 the engine's only media input is readImage: it derives art styles from an image gallery. Its 'synthesis' (engine.ts:11) is a text reasoning turn, not speech synthesis. Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were the style-synthesis prompt and schema.",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/foundry/extract/engine.ts:11 'synthesis turn' is a style-reasoning call over images; no text is spoken and no audio is produced or captured"
+        }
+      ]
+    },
+    {
+      "context": "3f11be96-c51f-4098-8472-341c42362e6d",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/sound/hunt.ts:128 the hunt briefs music or sound effects (renderable on elevenlabs and suno, :193) and measures takes against a music rubric. That is producing and judging sound to a creative brief, outside voice-io's plumbing scope. Terms grepped: tts|stt|speech|transcri|microphone|getUserMedia|voice|whisper|elevenlabs|synthes|narrat|vocal|lyric. The only hits were the ElevenLabs music/SFX provider.",
+      "techniques": [
+        {
+          "technique": "tts-pipeline",
+          "verdict": "not-applicable",
+          "evidence": "lib/sound/huntRender.ts:81 ElevenLabs is used here as a music meter (seconds of music audio), not as speech synthesis"
+        }
+      ]
+    },
+    {
+      "context": "431b1607-266c-4fcb-93e8-b7f91e5a0ebc",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "vitest.config.mts:12 suite membership is by location under packages/*/test and tests/next-*; this context is production kernel code (decision apply, commit, gates) with no harness machinery. Terms grepped over its 13 files: vitest|expect(|playwright|harness|reset*(|test-only|data-testid|.live, with zero hits. Its pure core/persistence split serves testability but is not a harness.",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 the suites that test this module (packages/kernel/test/decision.*.test.ts) live outside the context"
+        }
+      ]
+    },
+    {
+      "context": "f770abb6-6609-4c9f-959f-a31407dc501f",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "vitest.config.mts:12 tests are collected from packages/*/test (packages/domain/test/{transitions,plan,lane,estimate}.test.ts); this context is the domain model (machines, lanes, steps) with no harness machinery. Terms grepped over its 19 files: vitest|expect(|playwright|harness|reset*(|test-only|data-testid|.live, with zero hits.",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "not-applicable",
+          "evidence": "vitest.config.mts:12 membership by location; nothing in packages/domain/src declares or runs a suite"
+        }
+      ],
+      "registryProposal": "Coverage question: the matcher pairs test-harness to production modules on shared tokens (gate, step, decision, run). The subject's precondition is harness machinery, so these pairs are lexical resonance, not governance."
+    },
+    {
+      "context": "f6554c57-29ce-484d-90c3-ae89e2f466c0",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evidence": "playwright.live.config.ts:151 the live lane runs the app on GRAVITONE_PRODUCE_SIDE=fixture, so this fixture universe is harness-relevant (a full-product-profile fixture). Only fixture-economics and live-app-harness were read against it, two of 25 techniques, below the floor.",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "realized",
+          "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:68 resetParts discards the whole in-memory universe (the tests' beforeEach in tests/next-server/parts-fixture-parity.test.ts:39). fixtureCut.ts:36 drops v1's hand-typed fixture fallback, so seeds are derived through the product's own logic."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "unread",
+          "evidence": "playwright.live.config.ts:151 drives this side; the control surface (HarnessBridge) and readback were not read"
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "test-harness",
+      "context": "3fa7a830-b03c-4d82-87ef-fba8e753d390",
+      "reason": "Only the fixture port was read. app/(studio)/board/_port/fixture.ts:19 says this whole fixture side is unreached because port SIDE is 'real'. Whether that is a harness defect (an unreached double) or simply product code outside the subject needs the Board, port and real-side files read, which this run did not do."
+    }
+  ],
+  "consults": [
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "media-generation", "subjects": ["video-assembly"], "techniques": ["multitrack-timeline-discipline", "derived-turn-markers"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "media-generation", "subjects": ["video-assembly"], "techniques": ["derived-turn-markers", "multitrack-timeline-discipline", "drift-correction", "gap-and-refusal-honesty", "music-spotting-against-picture", "cut-compiled-from-source"], "deviations": 1},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "media-generation", "subjects": ["video-assembly"], "techniques": ["cut-compiled-from-source", "gap-and-refusal-honesty", "silent-defects-get-a-code-or-an-error", "verify-cheapest-artifact-first"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["voice-io"], "techniques": ["stt-pipeline"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["voice-io"], "techniques": ["tts-pipeline"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["voice-io"], "techniques": ["tts-pipeline"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["test-harness"], "techniques": ["suite-partitioning"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["test-harness"], "techniques": ["suite-partitioning"], "deviations": 0},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["test-harness"], "techniques": ["fixture-economics"], "deviations": 0}
+  ]
+}

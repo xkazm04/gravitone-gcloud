@@ -576,4 +576,12 @@ export const MUTANTS: Mutant[] = [
     replace: "",
     why: "A store root lib/ reads drops out of the central isolation list and the next probe that touches it writes into the operator's foundry-out tree.",
   },
+  {
+    id: "protected-material-block-is-rerouted",
+    probe: "imaging-stop-reasons.probe.spec.ts",
+    file: "lib/imaging/errors.ts",
+    find: 'return this.kind === "refused" || this.kind === "rate-limited" || this.kind === "no-key";',
+    replace: 'return this.kind === "refused" || this.kind === "rate-limited" || this.kind === "no-key" || this.kind === "protected-material";',
+    why: "A protected-material (recitation) block hops down the chain, so the next vendor is asked to produce exactly what the first one declined to reproduce.",
+  },
 ];

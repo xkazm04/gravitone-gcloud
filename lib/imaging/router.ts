@@ -479,7 +479,7 @@ async function run<T extends { provenance: Provenance }>(
           hold = undefined;
         }
         first ??= err;
-        trail.push({ provider: id, why: err.kind });
+        trail.push({ provider: id, why: err.kind, ...(err.stage ? { stage: err.stage } : {}) });
         if (!err.reroutable) throw err;
         // else: try the next configured vendor
       }

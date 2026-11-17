@@ -1,0 +1,116 @@
+{
+  "worker": "cloud-20261031-gravitone-3",
+  "evaluatedAt": "2026-10-31",
+  "pairs": [
+    {
+      "context": "8c6c65cc-6679-4c2c-8951-670d77b8ad7c",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/imaging/router.ts:93 The dev generate plan still puts agy first, ahead of Google, which won the measured cost-per-usable grid. agy has no price and no usable-output measurement (router.ts:87 says only 'verified live'), so every dev generate where agy is present routes to an unmeasured vendor. The standard says a new vendor goes in behind the incumbent until a comparison says otherwise.",
+      "techniques": [
+        {"technique": "capability-to-vendor-plan", "verdict": "deviation", "evidence": "lib/imaging/router.ts:93 agy sits at the head of dev generate without a usable-output comparison, against the rule that a new vendor enters behind the incumbent. The chokepoint and the steer rules themselves are realized (orderFor: avoid removes, and an emptied chain throws no-alternative)."},
+        {"technique": "cost-per-usable-economics", "verdict": "deviation", "evidence": "lib/imaging/router.ts:87 agy took the plan's top position on 'verified live', not on cost per usable output. The google/leonardo order is measured (router.ts:81 '$0.052 per usable'), and the pre-call gate is realized (router.ts:312 reserve before any vendor)."},
+        {"technique": "non-silent-elimination", "verdict": "realized", "evidence": "lib/imaging/router.ts:405 The trail of eliminations is attached to the served result as provenance.reroutedFrom. Each skip kind is pushed at the moment of decision (e.g. router.ts:370 no-key)."},
+        {"technique": "refusal-reroute-hop", "verdict": "deviation", "evidence": "lib/imaging/errors.ts:112 Only refused, rate-limited and no-key re-route, so a vendor timeout or failure throws instead of hopping, which the standard lists as reroutable. There is also no kind for a protected-material block or an account-level stop, so those named reasons cannot throw separately. The core refusal hop is realized."},
+        {"technique": "vendor-fact-ledger", "verdict": "realized", "evidence": "lib/imaging/pricing.ts:83 Every price row requires a checked date next to its source. Unpriced rows stay undefined with a reason instead of an invented figure."},
+        {"technique": "resolution-as-stage-property", "verdict": "deviation", "evidence": "lib/imaging/types.ts:75 GenerateRequest (lines 75-88) carries aspect, count, references, seed and quality but no size or stage. The gateway therefore cannot ask for a draft rung versus a final rung, and resolution stays a per-vendor env setting."},
+        {"technique": "unspent-budget-is-a-defect", "verdict": "deviation", "evidence": "lib/imaging/handlers.ts:120 GET /api/imaging/budget returns the ceiling, spent and remaining amounts but drops floorUsd and underFloor, although budgetStats computes both. unreachedPlanTops (router.ts:181) has no production caller, only a probe spec. The floor and the uncalled plan top are computed and never reported to a human."},
+        {"technique": "extraction-model-bake-off", "verdict": "unread", "evidence": "lib/imaging/router.ts:106 recognize leads with the local ollama eye. I did not judge whether that order rests on a bake-off."}
+      ],
+      "registryProposal": "refusal-reroute-hop lists vendor-side failure and timeout as reroutable. errors.ts:85-110 gives a weighed counter-argument: a 5xx or timeout on a billable work request is presumed billed, so a hop bills twice for a request nobody declined. The technique should say when presumed-billed failures should stay unrouted."
+    },
+    {
+      "context": "60361278-9fbe-43c5-add7-454ed78ef0f5",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/imaging/providers/google.ts:53 Google's output size is still one process-wide env setting (GOOGLE_IMAGE_SIZE, default 1K) for every generate. Drafts and promoted winners bill at the same rung, the flat-rate resolution failure the standard names.",
+      "techniques": [
+        {"technique": "resolution-as-stage-property", "verdict": "deviation", "evidence": "lib/imaging/providers/google.ts:53 One env-wide IMAGE_SIZE is sent on every generate (google.ts:179), with no per-stage rung and no promotion step."},
+        {"technique": "refusal-reroute-hop", "verdict": "realized", "evidence": "lib/imaging/providers/google.ts:348 A completed call that returns no image is raised as kind 'refused', following the empty-result-is-refusal rule. The policy-vocabulary sniff at google.ts:124 is the legitimate fallback for the undocumented Interactions block shape. It does not split out protected-material or account stops; that gap is recorded on the gateway pair."},
+        {"technique": "vendor-fact-ledger", "verdict": "realized", "evidence": "lib/imaging/providers/google.ts:188 The size actually requested is passed to the price table instead of assumed, and a figure at another size goes unpriced. Wire facts are dated at the source (google.ts:58 'measured, 2026-08-13')."},
+        {"technique": "non-silent-elimination", "verdict": "realized", "evidence": "lib/imaging/providers/google.ts:353 A partial batch records how many images were asked for, returned, refused and failed (shortBatch) instead of hiding the loss."}
+      ]
+    },
+    {
+      "context": "5e00d05c-885e-4eac-ad26-f937df9d612f",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "packages/kernel/src/spend/core.ts:44 The kernel SpendClass still has only a ceiling (or null for count-only) and no floor or band. grep for floor/underFloor/unreached under packages/kernel/src finds no spend hit. The rebuilt spend kernel has dropped the floor that v1's lib/spend/meter.ts reports, so a thrifty window cannot be reported as one.",
+      "techniques": [
+        {"technique": "unspent-budget-is-a-defect", "verdict": "deviation", "evidence": "packages/kernel/src/spend/core.ts:44 A class declares a ceiling only, with no floor and no under-floor report."},
+        {"technique": "cost-per-usable-economics", "verdict": "realized", "evidence": "packages/kernel/src/spend/core.ts:96 admits() checks spent + held + lapsed + amount against the ceiling before any vendor call, so the pre-call gate half of the technique is in place."},
+        {"technique": "vendor-fact-ledger", "verdict": "realized", "evidence": "packages/kernel/src/pricing/table.ts:60 The schema requires an ISO checked date on every price row, beside a source of at least 20 characters (table.ts:59). A figure is bound to the size it was measured at (table.ts:55 atSize)."}
+      ]
+    },
+    {
+      "context": "94e6b933-0f6a-4631-b2f0-4c98b0799c28",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/text/spend.ts:5 Text spend is still count-only, and nothing under lib/text calls reserve(). The metered Google fallback in every local plan row (lib/text/router.ts:97) can therefore spend with no pre-call ceiling. That is the operator's 2026-10-07 'count only, refuse nothing' ruling, and it is still a budget that only observes after the fact.",
+      "techniques": [
+        {"technique": "cost-per-usable-economics", "verdict": "deviation", "evidence": "lib/text/spend.ts:5 The text-usd class has no ceiling, so no turn is gated before the call. Google turns are also unpriced, so they book nothing."},
+        {"technique": "capability-to-vendor-plan", "verdict": "realized", "evidence": "lib/text/router.ts:97 Turn classes route through one PLAN table per environment (claude-cli, then google)."},
+        {"technique": "non-silent-elimination", "verdict": "realized", "evidence": "lib/text/router.ts:8 The trail reaches the caller as the thrown error and as provenance.reroutedFrom when a later engine served."},
+        {"technique": "refusal-reroute-hop", "verdict": "realized", "evidence": "lib/text/errors.ts:113 'refused' is a reroutable kind beside the availability kinds."},
+        {"technique": "vendor-fact-ledger", "verdict": "realized", "evidence": "lib/text/pricing.ts:54 Every text price row carries a checked date. In-service cloud rows are deliberately unpriced, not guessed."}
+      ]
+    },
+    {
+      "context": "311e06b8-6aea-4a5b-867f-c93a256bc44d",
+      "subject": "generative-provider-routing",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "packages/kernel/src/router/tables.ts:128 The kernel image table still copies v1's dev generate order, with agy first, ahead of the measured cost-per-usable winner Google. The table's own header (tables.ts:10-12) cites only the google/leonardo grid as the reason, so agy's position has no measurement behind it.",
+      "techniques": [
+        {"technique": "capability-to-vendor-plan", "verdict": "deviation", "evidence": "packages/kernel/src/router/tables.ts:128 agy leads dev generate without a usable-output comparison. Steering is realized: an exclusion that empties the chain is refused no-alternative (route.ts:143)."},
+        {"technique": "non-silent-elimination", "verdict": "realized", "evidence": "packages/kernel/src/router/route.ts:39 Every elimination lands in trail with a sentence. route.ts:40 has the request-level constraint outrank a vendor error."},
+        {"technique": "refusal-reroute-hop", "verdict": "deviation", "evidence": "packages/kernel/src/router/route.ts:58 Only refused and rate-limited walk the chain. Timeout and vendor failure throw, which differs from the standard's reroutable list (see the registry proposal on the gateway pair)."}
+      ]
+    },
+    {
+      "context": "e660bf0f-199c-4cd9-91e1-1a13e318e55f",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/articles/types.ts:535 awaiting-approval can leave only by approved, rejected or drafting: there is no expiry edge. grep for expir/overdue/deadline in lib/articles and the decision kernel finds no reaper, so a run at the gate waits forever with no recorded 'expired unanswered' outcome and no overdue marker. The standard says a pending decision must not be immortal.",
+      "techniques": [
+        {"technique": "gate-state-machines", "verdict": "realized", "evidence": "lib/articles/humanActs.ts:35 Approve is a guarded transition allowed only from awaiting-approval (reject likewise at humanActs.ts:47). landing.ts:30 refuses to land a run with no recorded approval."},
+        {"technique": "resume-after-decision", "verdict": "deviation", "evidence": "lib/articles/types.ts:535 There is no timeout edge out of the gate, so expiry never resolves to deny-or-hold as a recorded outcome."},
+        {"technique": "decision-records", "verdict": "unread", "evidence": "lib/articles/humanActs.ts:36 The run-side approval holds only {at, patches}. The actor and revision live in the Board decision log (packages/kernel/src/decision), outside this context, and I did not judge them."}
+      ]
+    },
+    {
+      "context": "f770abb6-6609-4c9f-959f-a31407dc501f",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "packages/domain/src/run.machine.ts:29 awaiting_gate can go only to ratified, blocked or running: the domain machine has no expiry or overdue state, and no reaper exists in the decision kernel (grep expir/overdue/deadline). A gate packet the operator never answers stays pending forever, against the standard's 'timeout is deny or hold, never immortal'.",
+      "techniques": [
+        {"technique": "gate-state-machines", "verdict": "realized", "evidence": "packages/domain/src/run.machine.ts:29 The gate is an enumerated, durable state on the run, left only by ratify, block or send-back."},
+        {"technique": "fail-closed-profile-for-headless", "verdict": "realized", "evidence": "packages/domain/src/job.machine.ts:28 Nothing resumes a crashed job automatically. lane.ts:56 holds a paid lane until an operator has looked, so an unknown outcome defaults to stop rather than proceed."},
+        {"technique": "resume-after-decision", "verdict": "deviation", "evidence": "packages/domain/src/run.machine.ts:29 There is no timeout transition out of awaiting_gate."}
+      ]
+    },
+    {
+      "context": "fb6d9704-d95c-46bc-b440-c6599e487cff",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "lib/foundry/strips/types.ts:119 A strip run's status is running, awaiting-triage or committed, with no expired or overdue state and no reaper. A triage the operator never commits keeps its rendered media and its pending cards indefinitely, which the standard calls an immortal pending item.",
+      "techniques": [
+        {"technique": "gate-state-machines", "verdict": "realized", "evidence": "lib/foundry/strips/triage.ts:101 Only an awaiting-triage run is committable."},
+        {"technique": "decision-records", "verdict": "realized", "evidence": "lib/foundry/strips/triage.ts:35 A token binds the commit to the preview the operator saw. A verdict or card that moved in between is a 409, so an approval binds to what was approved."},
+        {"technique": "resume-after-decision", "verdict": "deviation", "evidence": "lib/foundry/strips/types.ts:119 There is no expiry status for an unanswered triage. The reject-to-cleanup half is realized: store.ts:18 deletes a rejected card's media on commit."}
+      ]
+    }
+  ],
+  "declined": [],
+  "consults": [
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "media-generation", "subjects": ["generative-provider-routing"], "techniques": ["capability-to-vendor-plan", "refusal-reroute-hop", "non-silent-elimination", "vendor-fact-ledger", "cost-per-usable-economics", "resolution-as-stage-property", "unspent-budget-is-a-defect", "extraction-model-bake-off"], "deviations": 5},
+    {"ts": "2026-10-31T00:00:00Z", "bundle": "software-engineering", "subjects": ["hitl-approval"], "techniques": ["gate-state-machines", "resume-after-decision", "decision-records", "fail-closed-profile-for-headless", "review-queues"], "deviations": 3}
+  ]
+}

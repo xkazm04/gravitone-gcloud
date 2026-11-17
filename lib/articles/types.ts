@@ -135,6 +135,10 @@ export interface ArticleLanding {
   gates: { lane: string; mode: "write" | "check"; ok: boolean }[];
   /** Where the paste-ready Medium package is, relative to the run directory. */
   medium?: string;
+  /** Figures and tables that did not render to PNG for the Medium package, by file
+   *  name. The landing goes on without them (the registry copy carries no PNGs), so
+   *  the record is where the loss is visible. Absent when every figure rendered. */
+  unrenderedFigures?: string[];
 }
 
 /* ── the critique (scope amendment 1) ──────────────────────────────────────── */
