@@ -155,6 +155,14 @@ describe("the reel's card and lint", () => {
     expect(standInPage("stat")).not.toMatch(/strip-data|STRIP_DATA/);
   });
 
+  it("a page whose block is not the data it was issued is refused (controlled content)", () => {
+    const page = standInPage("stat", DATA);
+    expect(reelLint(page, undefined, DATA)).toEqual([]);
+    expect(reelLint(page, undefined, { ...DATA, invented: 1 })).toEqual([
+      "data: the strip-data block is the issued data, unchanged — the block differs from the data this reel was given; put it in as it is",
+    ]);
+  });
+
   it("a resumed job plans only the reels it has not booked", () => {
     const req: ReelsRequest = { nightId: "2026-11-30", reels: [1, 2, 3].map((k) => ({ candidateId: `c-0${k}` })), estimates: { reel: { seconds: 1770, usd: 6.4 } }, by: "op" };
     expect(reelsPlan(req, new Map([["reel:1", { step: "reel:1", value: {}, at: "2026-11-30T00:00:00.000Z" }]])).map((s) => s.name)).toEqual(["reel:2", "reel:3"]);

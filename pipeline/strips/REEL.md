@@ -26,7 +26,9 @@ as it can be executed.
   derive the scale, the axis range, the timing plan and the ranking from the
   block, never from the numbers you happen to see in it today.
 - Put the brief's `data` in the block as it is. Do not round, extend or
-  "fill in" values.
+  "fill in" values. The lint compares the block with the brief's `data`
+  value by value and refuses a page where they differ (key order and
+  whitespace are free).
 
 ## The brief is illustrative
 

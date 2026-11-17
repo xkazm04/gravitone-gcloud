@@ -191,4 +191,34 @@ export function stripDataRule(html: string, id = "strip-data"): LintFinding[] {
   return out;
 }
 
+/** JSON with object keys sorted, so two values hold the same content exactly when their texts are equal. */
+const sortedJson = (v: unknown): string => {
+  if (Array.isArray(v)) return `[${v.map(sortedJson).join(",")}]`;
+  if (typeof v === "object" && v !== null) {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o).filter((k) => o[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${sortedJson(o[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(v) ?? "null";
+};
+
+/**
+ * CONTROLLED CONTENT (spark reel-skill, 2026-11-17): the data block holds exactly the data that was issued
+ * to the author, nothing rounded, extended, dropped or invented. REEL.md already says "put the brief's data in
+ * the block as it is"; this is the layer that can see whether that happened, so it refuses here instead of
+ * trusting the sentence. Key order and whitespace are free; every value is not. Silent when the block is
+ * missing or unparsable - stripDataRule names those.
+ */
+export function stripDataEquals(html: string, issued: unknown, id = "strip-data"): LintFinding[] {
+  const blocks = [...html.matchAll(new RegExp(`<script\\b[^>]*\\bid\\s*=\\s*["']${id}["'][^>]*>([\\s\\S]*?)</script>`, "gi"))];
+  if (blocks.length !== 1) return [];
+  let found: unknown;
+  try {
+    found = JSON.parse(blocks[0]?.[1] ?? "");
+  } catch {
+    return [];
+  }
+  if (sortedJson(found) === sortedJson(issued)) return [];
+  return [{ rule: `data: the ${id} block is the issued data, unchanged`, excerpt: "the block differs from the data this reel was given; put it in as it is" }];
+}
+
 export const formatLint = (f: LintFinding[]) => f.map((x) => (x.excerpt ? `${x.rule} — ${x.excerpt}` : x.rule));

@@ -18,7 +18,7 @@ import { reelApproachSchema, reelBriefSchema, type ReelApproachIn, type ReelBrie
 import type { AgentResult, RunAgentInput } from "../agent/cliSeam.ts";
 import { collectTurn, prepareTurn, standInPage, standInTurn, type StripTurn } from "../foundry/strips/author.ts";
 import { DEFAULT_OPTIONS, DEFAULT_SELECTION } from "../foundry/strips/cards.ts";
-import { formatLint, lintStrip, stripDataRule } from "../foundry/strips/lint.ts";
+import { formatLint, lintStrip, stripDataEquals, stripDataRule } from "../foundry/strips/lint.ts";
 import type { Approach, MotionGrammar, StripLane, StripMedium, SupportAsset } from "../foundry/strips/types.ts";
 import { followEpisodes } from "../foundry/scout/episodeMoves.ts";
 import { mutateNight, readNight, resolveInNight, withCandidate } from "../foundry/scout/store.ts";
@@ -101,8 +101,13 @@ export function approachOf(a: ReelApproachIn, kase: string): Result<Approach> {
   return ok({ id: REEL_APPROACH_ID, lane: REEL_LANE, case: kase, name: a.name, medium: medium.value, grammar: grammar.value, density: density.value, leonardo: REEL_SUPPORT, direction: a.direction, falsifier: a.falsifier });
 }
 
-/** The lint a reel answers to: the strips frame-purity lint (a cut's at its own frame count) and the data-block rule, as one list of lines. */
-export const reelLint = (html: string, frames?: number): string[] => formatLint([...lintStrip(html, frames === undefined ? {} : { frames }), ...stripDataRule(html, REEL_DATA_ID)]);
+/**
+ * The lint a reel answers to: the strips frame-purity lint (a cut's at its own frame count), the data-block rule, and -
+ * when the caller holds the data the author was issued - that the block is that data unchanged (controlled content:
+ * a reel shows the numbers it was given, never the author's version of them).
+ */
+export const reelLint = (html: string, frames?: number, issued?: unknown): string[] =>
+  formatLint([...lintStrip(html, frames === undefined ? {} : { frames }), ...stripDataRule(html, REEL_DATA_ID), ...(issued === undefined ? [] : stripDataEquals(html, issued, REEL_DATA_ID))]);
 
 /* ── The night ────────────────────────────────────────────────────────────── */
 
@@ -291,7 +296,7 @@ async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: num
     if (r.outcome !== "completed" || !(await landTurn(ctx, t, stripAbs))) return failOne(req, ctx, c.id, `${r.outcome}: ${r.errors.join(" | ") || "no out/strip.html written"}`);
   }
 
-  let findings = reelLint(await readFile(stripAbs, "utf8"), s.frames);
+  let findings = reelLint(await readFile(stripAbs, "utf8"), s.frames, numbers);
   if (findings.length > 0) {
     const t = await prepareTurn({ ...turnIn, feedback: { text: feedbackText(findings), current: stripAbs, ...(existsSync(styleAbs) ? { style: styleAbs } : {}) } });
     const r = await seatTurn(e, ctx, t, c.id, "fix", numbers, s.frames);
@@ -299,7 +304,7 @@ async function reelAct(e: ReelEngines, at: ReelLayout, req: ReelsRequest, k: num
     if (stop !== undefined) return stop;
     // A fix that failed or changed nothing leaves the page it was shown: the lint says what is still wrong.
     if (r.outcome === "completed") await landTurn(ctx, t, stripAbs);
-    findings = reelLint(await readFile(stripAbs, "utf8"), s.frames);
+    findings = reelLint(await readFile(stripAbs, "utf8"), s.frames, numbers);
     if (findings.length > 0) return failOne(req, ctx, c.id, `lint: ${findings.join(" | ")}`);
   }
 

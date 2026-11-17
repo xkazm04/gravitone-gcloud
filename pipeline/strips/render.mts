@@ -112,6 +112,21 @@ export async function renderFrame(opts: { browser: Browser; htmlPath: string; la
   }
 }
 
+/**
+ * Frame `to`, WARM: one page draws `from..to` in order and the last is photographed. Beside `renderFrame` (the same
+ * frame cold) this is the seek gate in miniature - a page whose frame depends on the frames before it shows here in
+ * seconds, before a full render is spent finding out (pipeline/reel.mts `proof`).
+ */
+export async function renderWalk(opts: { browser: Browser; htmlPath: string; lane: StripLane; from: number; to: number }): Promise<Buffer> {
+  const page = await openStrip(opts.browser, opts.htmlPath, opts.lane);
+  try {
+    for (let i = Math.max(0, opts.from); i <= opts.to; i++) await drawFrame(page, i);
+    return await shot(page);
+  } finally {
+    await page.close();
+  }
+}
+
 /** `fn` under an outer deadline of this process (deadline.mts); the page's own timers are not trusted. */
 const guard = <T,>(page: Page, ms: number, what: string, fn: () => Promise<T>): Promise<T> => {
   const browser = page.context().browser();
