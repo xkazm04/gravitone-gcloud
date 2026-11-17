@@ -1,0 +1,37 @@
+/* The console's instruments (prototype dock-package, "console"): lamp, LED meter, counter, readout, track lamps.
+   One hue per meaning, carried as a local `--lamp` built from a token; every transition is change-gated (a
+   property moving because a value moved), never ambient. Tokens only. */
+.counter{font-variant-numeric:tabular-nums}
+
+/* A lamp: an LED, its label, its count. Dark, it keeps a ring of its own hue so the panel reads as wired. */
+.lamp{--lamp:var(--emerald);display:inline-flex;flex-direction:column;align-items:center;gap:var(--sp-nudge);min-width:calc(var(--sp-7) + var(--sp-2))}
+.lamp[data-tone="rose"],.meter[data-tone="rose"],.trackLamp[data-tone="rose"]{--lamp:var(--rose)}
+.lamp[data-tone="amber"],.meter[data-tone="amber"],.trackLamp[data-tone="amber"]{--lamp:var(--amber)}
+.lamp[data-tone="violet"]{--lamp:var(--violet)}
+.lamp[data-tone="cyan"]{--lamp:var(--cyan)}
+.led{width:var(--size-mark);height:var(--size-mark);border-radius:50%;border:1px solid color-mix(in srgb, var(--lamp) 62%, var(--ink-2));background:radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--lamp) 18%, var(--ink-3)), var(--ink-1) 75%);box-shadow:inset 0 1px 1px var(--shadow);transition:background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease)}
+.lamp[data-on="true"] .led{border-color:var(--lamp);background:radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--lamp) 35%, var(--ink-bright)), var(--lamp) 70%);box-shadow:0 0 var(--sp-3) color-mix(in srgb, var(--lamp) 70%, transparent), 0 0 var(--sp-1) var(--lamp)}
+.lampLabel{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);transition:color var(--dur) var(--ease)}
+.lamp[data-on="true"] .lampLabel{color:var(--lamp)}
+.lampCount{font:600 var(--fs-meta)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.lamp[data-on="true"] .lampCount{color:var(--ink-bright)}
+
+/* The LED ladder: a recessed well, segments dark in their hue until lit. */
+.meter{--lamp:var(--emerald);display:flex;flex-direction:column;gap:var(--sp-nudge);width:calc(var(--sp-4) + var(--sp-2));padding:var(--sp-1);border-radius:var(--r-xs);background:var(--ink);border:1px solid var(--hair);box-shadow:inset 0 var(--sp-nudge) var(--sp-1) var(--shadow)}
+.seg{flex:1;min-height:var(--sp-nudge);border-radius:1px;background:color-mix(in srgb, var(--lamp) 16%, var(--ink-2));transition:background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease)}
+.seg[data-lit="true"]{background:var(--lamp);box-shadow:0 0 var(--sp-2) color-mix(in srgb, var(--lamp) 55%, transparent)}
+
+/* A readout: an LCD window - recessed, mono, its value bright; a missing or wrong value takes the level's hue. */
+.readout{display:grid;gap:var(--sp-nudge);width:100%;min-width:0;text-align:left;padding:var(--sp-1) var(--sp-3) var(--sp-2);border:1px solid var(--hair);border-radius:var(--r-xs);background:linear-gradient(180deg, var(--ink), var(--ink-1));box-shadow:inset 0 1px var(--sp-1) var(--shadow);color:var(--ink-bright);cursor:pointer;transition:border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease)}
+.readout:hover{border-color:var(--focus-line);background:linear-gradient(180deg, var(--ink-1), var(--ink-2))}
+.readout:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.roLabel{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.roValue{font:500 var(--fs-meta)/1.25 var(--mono);color:var(--ink-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.readout[data-level="block"] .roValue{color:var(--rose)}
+.readout[data-level="warn"] .roValue{color:var(--amber)}
+
+/* One lamp per track. */
+.trackLamps{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.trackLamp{--lamp:var(--emerald);display:inline-grid;place-items:center;min-width:var(--size-glyph-btn);height:var(--size-glyph-btn);padding:0 var(--sp-1);border-radius:var(--r-xs);font:600 var(--fs-micro)/1 var(--mono);color:var(--lamp);background:color-mix(in srgb, var(--lamp) 12%, var(--ink-1));border:1px solid color-mix(in srgb, var(--lamp) 60%, transparent);transition:color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease)}
+
+@media (prefers-reduced-motion:reduce){.led,.lampLabel,.seg,.readout,.trackLamp{transition:none}}
