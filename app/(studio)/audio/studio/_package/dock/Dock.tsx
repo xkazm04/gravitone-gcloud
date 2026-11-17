@@ -16,7 +16,8 @@
 // The handle carries the agent's pending proposals as a tally: what the conversation filled waits in the step
 // above for the operator, so the count belongs beside the fold rather than in a sentence. The store's refusals
 // are the wizard's own line (session.notice), not this layout's.
-import { useId, useRef, useState, type CSSProperties } from "react";
+import { useSearchParams } from "next/navigation";
+import { useId, useRef, useState, type ComponentType, type CSSProperties } from "react";
 
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
@@ -24,9 +25,43 @@ import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { Wizard } from "../../../_release/wizard/Wizard.tsx";
 import type { PackagingVariantProps } from "../props.ts";
 import { Grip, OPEN_DEFAULT } from "./Grip.tsx";
+import { CardsStage } from "./v/cards/CardsStage.tsx";
+import { ConsoleStage } from "./v/console/ConsoleStage.tsx";
+import type { StageProps } from "./v/props.ts";
+import { SleeveStage } from "./v/sleeve/SleeveStage.tsx";
 import s from "./dock.module.css";
 
+// PROTOTYPE SWITCHER (prototype dock-package, 2026-11-17) - THROWAWAY: three design directions for what fills the
+// step frame, behind `?dv=` (baseline | sleeve | console | cards) and the strip at the frame's top right. Phase 5
+// keeps one and deletes the switcher, the strip and the losers in one commit.
+function WizardBaseline({ read, session, newId, startStep }: StageProps) {
+  return <Wizard read={read} session={session} newId={newId} {...(startStep === undefined ? {} : { startStep })} />;
+}
+const STAGES = [
+  { id: "baseline", label: "baseline", Stage: WizardBaseline },
+  { id: "sleeve", label: "sleeve", Stage: SleeveStage },
+  { id: "console", label: "console", Stage: ConsoleStage },
+  { id: "cards", label: "cards", Stage: CardsStage },
+] as const satisfies readonly { id: string; label: string; Stage: ComponentType<StageProps> }[];
+type StageId = (typeof STAGES)[number]["id"];
+
+function useStageVariant(): readonly [StageId, (v: StageId) => void] {
+  const q = useSearchParams();
+  const asked = STAGES.find((x) => x.id === q.get("dv"))?.id ?? "baseline";
+  const [v, setV] = useState<StageId>(asked);
+  const pick = (next: StageId) => {
+    setV(next);
+    const u = new URL(window.location.href);
+    if (next === "baseline") u.searchParams.delete("dv");
+    else u.searchParams.set("dv", next);
+    window.history.replaceState(null, "", `${u.pathname}?${u.searchParams.toString()}`);
+  };
+  return [v, pick] as const;
+}
+
 export function Dock({ url, read, session, thread, newId }: PackagingVariantProps) {
+  const [variant, pickVariant] = useStageVariant();
+  const Stage = STAGES.find((x) => x.id === variant)?.Stage ?? WizardBaseline;
   const [open, setOpen] = useState(false);
   const [share, setShare] = useState(OPEN_DEFAULT);
   const layout = useRef<HTMLDivElement | null>(null);
@@ -34,8 +69,15 @@ export function Dock({ url, read, session, thread, newId }: PackagingVariantProp
   const pending = session.pending.length;
   return (
     <div ref={layout} className={s.layout} data-layout="dock" data-open={open} style={{ "--dock-share": `${share}%` } as CSSProperties}>
-      <div className={s.step}>
-        <Wizard read={read} session={session} newId={newId} {...(url.stage === "release" ? { startStep: "review" as const } : {})} />
+      <div className={s.step} data-design={variant}>
+        <div className={s.switch} role="tablist" aria-label="design direction">
+          {STAGES.map((x) => (
+            <button key={x.id} type="button" role="tab" aria-selected={x.id === variant} className={s.switchTab} onClick={() => pickVariant(x.id)}>
+              {x.label}
+            </button>
+          ))}
+        </div>
+        <Stage read={read} session={session} newId={newId} {...(url.stage === "release" ? { startStep: "review" as const } : {})} />
       </div>
       <div className={s.handle}>
         {open && <Grip value={share} onChange={setShare} controls={threadId} frame={() => layout.current?.getBoundingClientRect() ?? null} />}

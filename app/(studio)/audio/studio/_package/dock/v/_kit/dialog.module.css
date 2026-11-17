@@ -1,0 +1,14 @@
+/* The prototype's one dialog (prototype dock-package): the layer and the panel's bones. A variant's class sets the
+   panel's look (ground, border, radius, shadow); these hold what every variant's dialog must do the same way. */
+.layer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:var(--sp-6) var(--sp-loose)}
+.scrim{position:absolute;inset:0;background:var(--scrim, color-mix(in oklch, var(--ink-0) 72%, transparent))}
+.panel{position:relative;display:flex;flex-direction:column;width:min(100%, var(--w-detail));max-height:min(86vh, 100%);min-height:0;background:var(--panel-ground);border:1px solid var(--hair-2);border-radius:var(--r-lg);outline:none;overflow:hidden}
+.wide{width:min(100%, calc(var(--w-detail) * 1.6))}
+.head{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--hair)}
+.title{flex:1;margin:0;font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright)}
+.close{margin-left:auto;display:grid;place-items:center;width:var(--size-play);height:var(--size-play);border:1px solid var(--hair-2);border-radius:var(--r-sm);background:transparent;color:var(--text);font:400 var(--fs-h2)/1 var(--sans);cursor:pointer}
+.close:hover{border-color:var(--hair-3);color:var(--ink-bright)}
+.close:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.body{flex:1;min-height:0;overflow:auto;padding:var(--sp-5)}
+.foot{display:flex;justify-content:flex-end;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-top:1px solid var(--hair)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

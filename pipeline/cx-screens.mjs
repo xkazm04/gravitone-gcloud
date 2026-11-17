@@ -163,6 +163,10 @@ export const SCREENS = {
   "audio-release-open": { url: "/audio?s=release&source=fixture&r=rel-0000000000b2" },
   // Spark studio-to-release: the studio's package stage (the dock layout) and its release stage, on the fixture.
   "audio-package": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1" },
+  // prototype dock-package (THROWAWAY with the switcher): the package stage in each design direction.
+  "audio-package-sleeve": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1&dv=sleeve" },
+  "audio-package-console": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1&dv=console" },
+  "audio-package-cards": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1&dv=cards" },
   "audio-release-stage": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=release&r=rel-0000000000b2" },
   "kit-songlab": { url: "/kit#songlab" },
 };
