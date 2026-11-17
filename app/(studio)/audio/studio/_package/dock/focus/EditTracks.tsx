@@ -9,11 +9,11 @@ import { Field } from "@gt/ui/components/field/Field.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { CHANNEL_NAMES, RELEASE_CHANNELS, type ChannelRow, type ReleaseChannelId } from "@gt/domain/release";
 
-import type { TrackFields } from "../../../../../_release/draft.ts";
-import { orNull } from "../../../../../_release/wizard/fmt.ts";
-import { Shelf } from "../../../../../_release/wizard/Shelf.tsx";
-import { CHANNEL_ENTRY } from "../../../../../_release/wizard/status.ts";
-import type { StepProps } from "../../../../../_release/wizard/steps.ts";
+import type { TrackFields } from "../../../../_release/draft.ts";
+import { orNull } from "../../../../_release/wizard/fmt.ts";
+import { Shelf } from "../../../../_release/wizard/Shelf.tsx";
+import { CHANNEL_ENTRY } from "../../../../_release/wizard/status.ts";
+import type { StepProps } from "../../../../_release/wizard/steps.ts";
 import { EditGroup, EditRow } from "./Edit.tsx";
 import { TrackPick } from "./Summary.tsx";
 import s from "./focus.module.css";

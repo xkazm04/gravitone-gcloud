@@ -7,8 +7,8 @@ import type { Release } from "@gt/domain/release";
 import type { ReleaseProblem } from "@gt/domain/release.problems";
 import type { ReleaseProposal } from "@gt/domain/release.record";
 
-import { STEP_LABEL, STEPS, type StepId } from "../../../../../_release/wizard/steps.ts";
-import w from "../../../../../_release/wizard/wizard.module.css";
+import { STEP_LABEL, STEPS, type StepId } from "../../../../_release/wizard/steps.ts";
+import w from "../../../../_release/wizard/wizard.module.css";
 import { leadOf } from "./lead.ts";
 import s from "./focus.module.css";
 

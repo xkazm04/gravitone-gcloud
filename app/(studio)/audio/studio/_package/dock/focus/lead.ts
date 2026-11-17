@@ -7,8 +7,8 @@ import type { Release } from "@gt/domain/release";
 import type { ProblemCode, ReleaseProblem } from "@gt/domain/release.problems";
 import { parseProposalPath, type ProposalPath, type ReleaseProposal } from "@gt/domain/release.record";
 
-import { fieldLabel, pendingIn } from "../../../../../_release/pending.ts";
-import { problemsOf, STEP_LABEL, stepOf, trackIndexOf, type StepId } from "../../../../../_release/wizard/steps.ts";
+import { fieldLabel, pendingIn } from "../../../../_release/pending.ts";
+import { problemsOf, STEP_LABEL, stepOf, trackIndexOf, type StepId } from "../../../../_release/wizard/steps.ts";
 
 /** A rule in one to three words: the lead's title. The rule's own sentence (PROBLEM_TEXT) lives in the details. */
 export const PROBLEM_SHORT: Readonly<Record<ProblemCode, string>> = {

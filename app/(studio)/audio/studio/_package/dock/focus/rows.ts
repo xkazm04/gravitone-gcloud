@@ -5,11 +5,11 @@ import { CHANNEL_NAMES, releaseKind, type ChannelRow, type Release } from "@gt/d
 import type { ReleaseProblem } from "@gt/domain/release.problems";
 import type { ReleaseProposal } from "@gt/domain/release.record";
 
-import type { ReleaseRead } from "../../../../../_release/_port/port.ts";
-import { plannedSlots } from "../../../../../_release/draft.ts";
-import { clock, db, day, KIND_LABEL } from "../../../../../_release/wizard/fmt.ts";
-import { CHANNEL_ENTRY } from "../../../../../_release/wizard/status.ts";
-import type { StepId } from "../../../../../_release/wizard/steps.ts";
+import type { ReleaseRead } from "../../../../_release/_port/port.ts";
+import { plannedSlots } from "../../../../_release/draft.ts";
+import { clock, db, day, KIND_LABEL } from "../../../../_release/wizard/fmt.ts";
+import { CHANNEL_ENTRY } from "../../../../_release/wizard/status.ts";
+import type { StepId } from "../../../../_release/wizard/steps.ts";
 import type { ReadGroup, ReadRow } from "./Read.tsx";
 
 /** What a row can open: the step's editor, or one of the long reads behind it. */

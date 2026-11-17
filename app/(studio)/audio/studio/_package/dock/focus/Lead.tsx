@@ -12,10 +12,10 @@ import { Button } from "@gt/ui/components/button/Button.tsx";
 import type { Release } from "@gt/domain/release";
 import type { ProblemCode, ReleaseProblem } from "@gt/domain/release.problems";
 
-import { stepOfPath } from "../../../../../_release/pending.ts";
-import { shown } from "../../../../../_release/wizard/Suggest.tsx";
-import { day } from "../../../../../_release/wizard/fmt.ts";
-import { STEP_LABEL, stepOf, type StepId } from "../../../../../_release/wizard/steps.ts";
+import { stepOfPath } from "../../../../_release/pending.ts";
+import { shown } from "../../../../_release/wizard/Suggest.tsx";
+import { day } from "../../../../_release/wizard/fmt.ts";
+import { STEP_LABEL, stepOf, type StepId } from "../../../../_release/wizard/steps.ts";
 import { fieldOf, PROBLEM_SHORT, whereOf, type Lead as LeadModel } from "./lead.ts";
 import s from "./focus.module.css";
 

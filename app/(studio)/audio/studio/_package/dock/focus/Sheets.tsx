@@ -8,13 +8,13 @@ import { useState, type ReactNode } from "react";
 
 import { CHANNEL_NAMES } from "@gt/domain/release";
 
-import { plannedSlots } from "../../../../../_release/draft.ts";
-import { day } from "../../../../../_release/wizard/fmt.ts";
-import { Splits } from "../../../../../_release/wizard/Splits.tsx";
-import { CHANNEL_ENTRY } from "../../../../../_release/wizard/status.ts";
-import { StepExtras } from "../../../../../_release/wizard/StepExtras.tsx";
-import { StepSleeve } from "../../../../../_release/wizard/StepSleeve.tsx";
-import { STEP_LABEL, type StepId, type StepProps } from "../../../../../_release/wizard/steps.ts";
+import { plannedSlots } from "../../../../_release/draft.ts";
+import { day } from "../../../../_release/wizard/fmt.ts";
+import { Splits } from "../../../../_release/wizard/Splits.tsx";
+import { CHANNEL_ENTRY } from "../../../../_release/wizard/status.ts";
+import { StepExtras } from "../../../../_release/wizard/StepExtras.tsx";
+import { StepSleeve } from "../../../../_release/wizard/StepSleeve.tsx";
+import { STEP_LABEL, type StepId, type StepProps } from "../../../../_release/wizard/steps.ts";
 import { Dialog } from "../_kit/Dialog.tsx";
 import { EditDetails } from "./EditDetails.tsx";
 import { EditGroup, EditRow } from "./Edit.tsx";

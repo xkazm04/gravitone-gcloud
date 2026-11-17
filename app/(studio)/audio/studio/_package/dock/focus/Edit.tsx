@@ -9,8 +9,8 @@ import type { ReactNode } from "react";
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import type { ProposalPath } from "@gt/domain/release.record";
 
-import type { ReleaseSessionApi } from "../../../../../_release/session.ts";
-import { shown } from "../../../../../_release/wizard/Suggest.tsx";
+import type { ReleaseSessionApi } from "../../../../_release/session.ts";
+import { shown } from "../../../../_release/wizard/Suggest.tsx";
 import s from "./focus.module.css";
 
 export function AgentLine({ path, session }: { readonly path: ProposalPath; readonly session: ReleaseSessionApi }) {

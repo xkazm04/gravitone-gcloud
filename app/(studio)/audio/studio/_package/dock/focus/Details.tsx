@@ -9,10 +9,10 @@ import type { Release } from "@gt/domain/release";
 import { PROBLEM_TEXT, type ReleaseProblem } from "@gt/domain/release.problems";
 import type { ReleaseProposal } from "@gt/domain/release.record";
 
-import { stepOfPath } from "../../../../../_release/pending.ts";
-import type { ReleaseSessionApi } from "../../../../../_release/session.ts";
-import { shown } from "../../../../../_release/wizard/Suggest.tsx";
-import { STEP_LABEL, stepOf, type StepId } from "../../../../../_release/wizard/steps.ts";
+import { stepOfPath } from "../../../../_release/pending.ts";
+import type { ReleaseSessionApi } from "../../../../_release/session.ts";
+import { shown } from "../../../../_release/wizard/Suggest.tsx";
+import { STEP_LABEL, stepOf, type StepId } from "../../../../_release/wizard/steps.ts";
 import { Dialog } from "../_kit/Dialog.tsx";
 import { fieldOf, PROBLEM_SHORT, whereOf } from "./lead.ts";
 import s from "./focus.module.css";

@@ -6,9 +6,9 @@ import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Field, Select, TextArea } from "@gt/ui/components/field/Field.tsx";
 import { CREDIT_ROLES, GENRES, type CreditRole, type Genre, type Release } from "@gt/domain/release";
 
-import type { ReleaseFields, TrackFields } from "../../../../../_release/draft.ts";
-import { orNull } from "../../../../../_release/wizard/fmt.ts";
-import type { StepProps } from "../../../../../_release/wizard/steps.ts";
+import type { ReleaseFields, TrackFields } from "../../../../_release/draft.ts";
+import { orNull } from "../../../../_release/wizard/fmt.ts";
+import type { StepProps } from "../../../../_release/wizard/steps.ts";
 import { EditGroup, EditRow } from "./Edit.tsx";
 import { TrackPick } from "./Summary.tsx";
 import s from "./focus.module.css";

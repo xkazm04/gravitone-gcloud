@@ -8,8 +8,8 @@ import { Seg } from "@gt/ui/components/seg/Seg.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 import { AI_AUDIO, LICENCES, type AiCredits, type Licence, type RightsRecord } from "@gt/domain/release";
 
-import { orNull } from "../../../../../_release/wizard/fmt.ts";
-import type { StepProps } from "../../../../../_release/wizard/steps.ts";
+import { orNull } from "../../../../_release/wizard/fmt.ts";
+import type { StepProps } from "../../../../_release/wizard/steps.ts";
 import { AgentLine, EditGroup, EditRow } from "./Edit.tsx";
 import { TrackPick } from "./Summary.tsx";
 import s from "./focus.module.css";

@@ -10,7 +10,7 @@ import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import type { Release } from "@gt/domain/release";
 
-import type { StepId } from "../../../../../_release/wizard/steps.ts";
+import type { StepId } from "../../../../_release/wizard/steps.ts";
 import { ReadList, type ReadGroup } from "./Read.tsx";
 import { ROWS, type RowCtx } from "./rows.ts";
 import s from "./focus.module.css";

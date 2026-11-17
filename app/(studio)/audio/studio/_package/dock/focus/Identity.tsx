@@ -8,9 +8,9 @@ import { Plate, PlateMissing } from "@gt/ui/components/desk/Plate.tsx";
 import { EntryPill } from "@gt/ui/components/status/StatusPill.tsx";
 import { releaseKind, type Release } from "@gt/domain/release";
 
-import { clock, day, KIND_LABEL } from "../../../../../_release/wizard/fmt.ts";
-import { STATUS_ENTRY } from "../../../../../_release/wizard/status.ts";
-import w from "../../../../../_release/wizard/wizard.module.css";
+import { clock, day, KIND_LABEL } from "../../../../_release/wizard/fmt.ts";
+import { STATUS_ENTRY } from "../../../../_release/wizard/status.ts";
+import w from "../../../../_release/wizard/wizard.module.css";
 import s from "./focus.module.css";
 
 export function Identity({ r, saving, onLeave }: { readonly r: Release; readonly saving: boolean; readonly onLeave: () => void }) {
