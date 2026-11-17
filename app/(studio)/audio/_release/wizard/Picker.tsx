@@ -1,7 +1,8 @@
 "use client";
 
 // Before the walk: which release. The releases in the draft, each with its sleeve, kind, status and
-// what still blocks it; or a new one, started from takes picked off the shelf.
+// what still blocks it; or a new one, started from takes picked off the shelf - or dropped onto it
+// (Shelf.tsx `importing`: filed kept, then the page re-reads the shelf).
 import { useState } from "react";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
@@ -85,7 +86,7 @@ export function Picker({ read, releases, onOpen, onCreate }: {
           />
           {picked.size > 0 && <Button label="Clear" size="sm" onPress={() => setPicked(new Set())} />}
         </div>
-        <Shelf takes={read.shelf} label="shelf" mode={{ kind: "pick", picked, onToggle: toggle }} />
+        <Shelf takes={read.shelf} label="shelf" mode={{ kind: "pick", picked, onToggle: toggle }} importing={{ fixture: read.source === "fixture" }} />
       </section>
     </div>
   );

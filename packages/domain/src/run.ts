@@ -95,6 +95,9 @@ export const PRODUCERS = [
   "production-cut",
   // A done production's three proposed lessons (spark concept-casting-stages S6): one text turn on seat.text, enqueued by the Board's approval.
   "production-lessons",
+  // A release's sleeve takes (spark studio-to-release WP3): N square pictures of its sleeve prompt through the imaging router,
+  // Codex on seat.text or Leonardo Flare on cloud.leonardo, each offered back to the sleeve step (lib/producers/releaseSleeve.ts).
+  "release-sleeve",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

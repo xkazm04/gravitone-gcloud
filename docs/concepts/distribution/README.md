@@ -51,3 +51,31 @@ mostly in the glue compressor. Whether that trade is right is the owner's ear's 
   WAV) - store FLAC or raise the cap for remasters; keep a remaster of an import out of the ledger.
 - Extras renders: Canvas loop (MV compositor at 9:16), promo cards, splits sheet export.
 - Release-channel marks in `@gt/ui` (`ChannelBadge` covers youtube/tiktok/instagram/blog only).
+
+## Sleeve takes and the shelf import (spark studio-to-release WP3)
+
+- **Sleeve takes:** the sleeve step's "4 takes" launches the `release-sleeve` producer
+  (`packages/producers/src/release-sleeve/`, bound in `lib/producers/releaseSleeve.ts`): one kernel job of N
+  steps, `job:release-sleeve:<release>:<stamp>`, of the run `release:<id>`. Each step is one 1:1 picture of the
+  release's `sleevePrompt` through the imaging router, its bytes a blob and its pixel size and colour read off its
+  own header (`pixels.ts`: PNG colour types 2/3/6 and three-component JPEGs are RGB; grey and CMYK are not). The
+  step polls the job (`_release/sleeveActs.ts`) and shows its takes as candidates; picking one is the wizard's
+  `sleeve` edit. The producer never writes the release.
+- **Providers:** Codex on `seat.text` ($0, the operator's ChatGPT seat; the press is the confirm) and Leonardo
+  Flare on `cloud.leonardo` (the price table's per-image fallback until the API reports credits; the press
+  answers a receipt, the confirm carries its token, a prompt edited since is a stale receipt). Under
+  `GRAVITONE_DRY_ONLY=1` a Leonardo run is refused before a receipt and a Codex run goes dry (four stand-in
+  pixels, booked as would-calls, marked `dry` on the candidate). The launch drives the job on the server
+  process (dry to its end, live in the background); the worker carries what it did not finish.
+- **Fixture side:** the takes act answers on the page from the fixture's music-video stills, measured in the
+  browser; nothing is launched and the view carries no job id.
+- **Import:** a drop (or a pick of several files) above the shelf files each audio file as a KEPT music take
+  through `lib/sound/takes.ts createTake`, origin `import`, titled by `trackTitle`, its length measured by
+  ffprobe first (a file that does not decode is refused in ffprobe's words). The take id is a digest of the
+  bytes, so a second import of the same file finds its take (`already`). A Server Action's body is capped at
+  1 MB, so the page sends each file in 768 KB pieces (`_release/importActs.ts` assembles them in a temp folder
+  and files the whole); the 60 MB take cap and the audio rule refuse on the first piece, verbatim.
+- **CLI:** `node pipeline/import-folder.mts --dir <folder> [--dry] [--real]` does the same from a path (not
+  recursive). It refuses the operator's sound store unless `--real` (or `SOUND_STORE_DIR` names one), and
+  refuses a temp sound store beside the tracked ledger (`SOUND_LEDGER_PATH` unset): a kept take writes its
+  verdict to the ledger.

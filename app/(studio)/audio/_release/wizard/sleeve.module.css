@@ -28,4 +28,9 @@
 .lookImg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-xs)}
 .lookTitle{font:500 var(--fs-meta)/1.25 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* generated takes: each candidate's measured size and colour under it; the job's id beside its state */
+.takes{grid-template-columns:repeat(2,minmax(0,1fr))}
+.takeMeta{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.jobId{font:500 var(--fs-meta)/1.25 var(--mono);color:var(--text);overflow-wrap:anywhere}
+
 @media (max-width:1300px){.sleeve{grid-template-columns:minmax(0,1fr)}}

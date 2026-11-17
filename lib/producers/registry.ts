@@ -46,6 +46,7 @@ import { productionVoicesProducer } from "./productionVoices.ts";
 import { productionCutProducer } from "./productionCut.ts";
 import { productionCastProducer } from "./productionCast.ts";
 import { productionLessonsProducer } from "./productionLessons.ts";
+import { releaseSleeveProducer, SLEEVE_LANES } from "./releaseSleeve.ts";
 import { yue2PostProducer, yue2RenderProducer, yue2ScoreProducer } from "./yue2.ts";
 import { sunoDriver } from "../sound/suno/drivers.ts";
 import { sfxProducer } from "../sound/sfxJob.ts";
@@ -190,6 +191,9 @@ export const BOUND: readonly Bound[] = [
   { name: "production-cut", producer: productionCutProducer() },
   // A done production's lessons (spark concept-casting-stages S6): one text turn, enqueued by the Board's approval of the cut.
   { name: "production-lessons", producer: productionLessonsProducer() },
+  // A release's sleeve takes (spark studio-to-release WP3): N 1:1 pictures through the imaging router, on the lane of the
+  // provider the operator chose (Codex: seat.text, Leonardo Flare: cloud.leonardo).
+  ...Object.values(SLEEVE_LANES).map((lane): Bound => ({ name: "release-sleeve", producer: releaseSleeveProducer(lane) })),
   ...stepsBound(),
 ];
 
