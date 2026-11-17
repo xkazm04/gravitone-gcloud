@@ -1,0 +1,32 @@
+/* THE GROUND OF THE DECISION STACK (prototype dock-package, "cards"): deep and quiet, so the card is the only bright
+   thing in the frame. A mesh of the token hues at low strength - cyan from the top left, violet from the right, a
+   breath of emerald from below, a trace of amber in the far corner - over the ink gradient, and a fine static grain
+   (an SVG fractal noise, colourless, soft-light) that keeps the dark from banding. Nothing on it moves. The ground
+   bleeds to the frame's edges (the frame's own padding, negated) and the column sits centred on it. Tokens only. */
+.ground{
+  --mesh-cyan:color-mix(in oklab, var(--cyan) 12%, transparent);
+  --mesh-violet:color-mix(in oklab, var(--violet) 13%, transparent);
+  --mesh-emerald:color-mix(in oklab, var(--emerald) 7%, transparent);
+  --mesh-amber:color-mix(in oklab, var(--amber) 5%, transparent);
+  position:relative;isolation:isolate;flex:1 0 auto;min-height:100%;
+  margin:calc(var(--sp-4) * -1) calc(var(--sp-loose) * -1) calc(var(--sp-6) * -1);
+  padding:calc(var(--sp-7) * 2) var(--sp-7) calc(var(--sp-7) * 2.5);
+  background:
+    radial-gradient(46% 38% at 12% 2%, var(--mesh-cyan), transparent 72%),
+    radial-gradient(40% 54% at 94% 20%, var(--mesh-violet), transparent 70%),
+    radial-gradient(54% 40% at 40% 104%, var(--mesh-emerald), transparent 72%),
+    radial-gradient(30% 34% at 86% 98%, var(--mesh-amber), transparent 70%),
+    linear-gradient(180deg, var(--ink-1), var(--ink));
+}
+.ground::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.09;mix-blend-mode:soft-light;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23n%29'/%3E%3C/svg%3E");
+  background-size:calc(var(--sp-7) * 7.5);
+}
+/* A vignette: the frame's edges fall away a little, the centre (where the card sits) stays open. */
+.ground::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 90% at 50% 30%, transparent 55%, color-mix(in oklab, var(--ink) 70%, transparent) 100%)}
+
+.column{width:min(100%, calc(var(--w-detail) * 3));margin-inline:auto;display:flex;flex-direction:column;gap:var(--sp-5)}
+.notice{padding:var(--sp-3) var(--sp-5);border:1px solid color-mix(in oklab, var(--rose) 40%, transparent);border-radius:var(--r);background:color-mix(in oklab, var(--rose) 8%, var(--ink-2))}
+
+@media (max-width:760px){.ground{padding-inline:var(--sp-loose)}}

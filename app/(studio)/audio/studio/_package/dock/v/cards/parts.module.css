@@ -1,0 +1,78 @@
+/* THE CARD'S PARTS (prototype dock-package, "cards"): the info door, the dialog's look, a problem's rule, the agent's
+   offer, the value tile and the figure. One look per part on every step. Tokens only. */
+
+/* ── door ───────────────────────────────────────────────────────────────────────────── */
+.door,.doorWord{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-tight);height:var(--h-control-sm);border:1px solid var(--hair-2);background:var(--wash);color:var(--text);cursor:pointer;transition:border-color var(--dur-fast), background-color var(--dur-fast), color var(--dur-fast)}
+.door{width:var(--h-control-sm);padding:0;border-radius:50%}
+.doorWord{padding:0 var(--sp-4) 0 var(--sp-3);border-radius:var(--r-control);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.door:hover,.doorWord:hover{border-color:var(--focus-line);background:var(--wash-hi);color:var(--ink-bright)}
+.door[data-tone="agent"],.doorWord[data-tone="agent"]{border-color:color-mix(in oklab, var(--violet) 45%, transparent);color:var(--violet)}
+.door[data-tone="agent"]:hover{background:var(--violet-a);color:var(--ink-bright)}
+.door:focus-visible,.doorWord:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.doorGlyph{width:var(--size-glyph);height:var(--size-glyph)}
+
+/* ── the dialog's panel, this variant's look ────────────────────────────────────────── */
+.dialog{background:linear-gradient(180deg, var(--ink-4), var(--ink-2) 22%, var(--ink-2));border-color:var(--hair-3);box-shadow:inset 0 1px 0 color-mix(in oklab, var(--ink-bright) 10%, transparent), 0 calc(var(--sp-7) * 1.4) calc(var(--sp-7) * 4) var(--shadow)}
+
+.dialog.dialogXl{width:min(100%, calc(var(--w-detail) * 2.8))}
+
+/* ── a rule or a source, quoted ─────────────────────────────────────────────────────── */
+.rule{display:flex;flex-direction:column;gap:var(--sp-5)}
+.ruleMarks{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.ruleText{margin:0;padding:var(--sp-1) 0 var(--sp-1) var(--sp-5);border-left:var(--stroke-mark) solid var(--hair-3);font:400 var(--fs-read)/1.5 var(--sans);color:var(--ink-bright)}
+.ruleAct{display:flex;justify-content:flex-end;gap:var(--sp-3)}
+
+.issues{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+
+/* ── the agent's offer ──────────────────────────────────────────────────────────────── */
+.offers{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.offer{
+  display:grid;grid-template-columns:minmax(0, 1fr) auto;grid-template-areas:"field acts" "value acts";align-items:center;column-gap:var(--sp-6);row-gap:var(--sp-2);
+  padding:var(--sp-5) var(--sp-6);border:1px solid color-mix(in oklab, var(--violet) 40%, transparent);border-radius:var(--r);
+  background:linear-gradient(100deg, color-mix(in oklab, var(--violet) 16%, var(--ink-3)) 0%, color-mix(in oklab, var(--violet) 5%, var(--ink-2)) 70%);
+  box-shadow:inset 0 1px 0 color-mix(in oklab, var(--violet) 22%, transparent), 0 var(--sp-3) var(--sp-7) calc(var(--sp-3) * -1) color-mix(in oklab, var(--violet) 30%, transparent);
+}
+.offerField{grid-area:field;font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--violet)}
+.offerBody{grid-area:value;min-width:0}
+.offerValue{display:inline-block;font:600 var(--fs-h2)/1.25 var(--sans);color:var(--ink-bright)}
+.offerValue[data-long]{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:400 var(--fs-read)/1.4 var(--sans)}
+.offerFacts{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+.offer[data-compact]{grid-template-columns:calc(var(--sp-7) * 7) minmax(0, 1fr) auto;grid-template-areas:"field value acts";padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-5)}
+.offer[data-compact] .offerValue{font:600 var(--fs-ui)/1.3 var(--sans);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.offerActs{grid-area:acts;display:flex;align-items:center;gap:var(--sp-3)}
+
+/* ── value tile ─────────────────────────────────────────────────────────────────────── */
+.tile{position:relative;grid-column:span 1;min-width:0;min-height:calc(var(--sp-7) * 3.4);border:1px solid var(--hair);border-radius:var(--r);background:color-mix(in oklab, var(--ink-1) 55%, var(--ink-2));transition:border-color var(--dur-fast), background-color var(--dur-fast)}
+.tile[data-span="2"]{grid-column:span 2}
+.tile:hover{border-color:var(--hair-3);background:color-mix(in oklab, var(--ink-1) 30%, var(--ink-3))}
+.tile[data-issue="block"]{border-color:color-mix(in oklab, var(--rose) 60%, transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--rose)}
+.tile[data-issue="warn"]{border-color:color-mix(in oklab, var(--amber) 55%, transparent);box-shadow:inset var(--stroke-mark) 0 0 var(--amber)}
+.tile[data-open]{border-color:var(--focus-line);background:var(--ink-3)}
+.tileFace{width:100%;height:100%;min-height:inherit;display:flex;flex-direction:column;justify-content:space-between;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border:0;border-radius:inherit;background:none;color:inherit;cursor:pointer;text-align:left}
+.tileFace:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.tileLabel{display:flex;align-items:center;gap:var(--sp-2);font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tileSuggested{width:var(--size-dot);height:var(--size-dot);border-radius:50%;background:var(--violet);box-shadow:0 0 0 var(--ring-halo) var(--violet-a)}
+.tileValue{display:block;font:600 var(--fs-h2)/1.2 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.tile[data-size="hero"] .tileValue{font:600 var(--fs-article)/1.08 var(--serif);letter-spacing:-.01em}
+.tileEmpty{font:400 var(--fs-h2)/1.2 var(--sans);color:var(--muted)}
+.tileEdit{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5)}
+.tileEdit > :last-child{align-self:flex-end}
+.tileEditor{min-width:0}
+
+/* ── figure ─────────────────────────────────────────────────────────────────────────── */
+.figure{display:inline-flex;flex-direction:column;gap:var(--sp-1);min-width:0}
+.figureValue{font:600 var(--fs-h1)/1 var(--mono);color:var(--ink-bright);letter-spacing:-.02em;white-space:nowrap}
+.figureLabel{font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.figure[data-tone="ok"] .figureValue{color:var(--done-text)}
+.figure[data-tone="block"] .figureValue{color:var(--rose)}
+.figure[data-tone="warn"] .figureValue{color:var(--amber)}
+
+@media (max-width:760px){
+  .offer,.offer[data-compact]{grid-template-columns:minmax(0, 1fr);grid-template-areas:"field" "value" "acts"}
+}
+@media (prefers-reduced-motion:reduce){.door,.doorWord,.tile{transition:none}}
+
+/* The shared Dialog's scrim reads `--scrim` and falls back to a colour built from `--ink-0`, which is no token, so the
+   fallback is invalid and the page behind an open dialog stays undimmed (reported). While one of this variant's
+   dialogs is open, the body carries a scrim built from `--ink`. */
+:global(body):has(.dialog){--scrim:color-mix(in oklab, var(--ink) 74%, transparent)}
