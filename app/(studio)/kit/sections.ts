@@ -8,7 +8,7 @@ export const SECTIONS = [
   { id: "type", group: "Tokens", title: "Type", sub: "--fs-* · floor 12px" },
   { id: "space", group: "Tokens", title: "Space · size · radii", sub: "--sp-* · --h-* · --r-*" },
   { id: "motion", group: "Tokens", title: "Motion", sub: "--ease · --dur-*" },
-  { id: "frame", group: "Tokens", title: "Frame · layers", sub: "--hdr-h · --z-*" },
+  { id: "frame", group: "Tokens", title: "Frame · layers", sub: "--w-spine · --w-context · --z-*" },
   { id: "signal", group: "Signal", title: "Chip · Tally · Source", sub: "chip · tally · source · ledger · channel" },
   { id: "keys", group: "Signal", title: "Keys · Hint · Ghost", sub: "KEYMAP · every mode" },
   { id: "evidence", group: "Signal", title: "Evidence", sub: "provenance · breaks · errors · facts" },

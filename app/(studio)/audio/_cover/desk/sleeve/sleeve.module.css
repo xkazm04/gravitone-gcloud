@@ -5,7 +5,7 @@
 .main{display:grid;gap:var(--sp-4);min-width:0;align-content:start}
 
 /* the crate */
-.crate{position:sticky;top:0;display:grid;gap:var(--sp-3);align-content:start;min-width:0;max-height:calc(100vh - var(--hdr-h) - var(--sp-page-end));overflow:auto;padding-right:var(--sp-1)}
+.crate{position:sticky;top:0;display:grid;gap:var(--sp-3);align-content:start;min-width:0;max-height:calc(100vh - var(--sp-page-end));overflow:auto;padding-right:var(--sp-1)}
 .day{display:grid;gap:var(--sp-1)}
 .dayLabel{font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:var(--sp-2) 0 var(--sp-1);border-bottom:1px solid var(--hair)}
 .sleeves{list-style:none;margin:0;padding:0;display:grid;gap:var(--sp-1)}

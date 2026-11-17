@@ -6,11 +6,11 @@
   --hair: rgba(255,255,255,.08);
   --hair-2: rgba(255,255,255,.14);
   --hair-3: rgba(255,255,255,.22);
-  --ink: #080a10;
-  --ink-1: #0b0e15;
-  --ink-2: #10141d;
-  --ink-3: #161b27;
-  --ink-4: #1d2331;
+  --ink: #05060a;
+  --ink-1: #0a0c12;
+  --ink-2: #0e1119;
+  --ink-3: #161a25;
+  --ink-4: #1d2230;
   --ink-bright: #f3f6fb;
   --muted: #9aa3b6;
   --text: #d9dfea;
@@ -35,17 +35,17 @@
   --actor-operator: #fbbf24;
 
   /* type */
-  --fs-body: 15px; /* body */
+  --fs-body: clamp(15px,.64vw,16.5px); /* body */
   --fs-h1: 32px;
-  --fs-h2: 19px;
-  --fs-h3: 16px;
-  --fs-meta: 13px; /* mono metadata */
+  --fs-h2: clamp(19px,.8vw,21px);
+  --fs-h3: clamp(16px,.68vw,17.5px);
+  --fs-meta: clamp(13px,.54vw,14px); /* mono metadata */
   --fs-micro: 12px; /* mono caps labels, chips, tallies — the floor minimum */
-  --fs-read: 17px;
-  --fs-ui: 14px; /* rows, controls, body-small */
-  --mono: "JetBrains Mono","Cascadia Mono",Consolas,ui-monospace,monospace;
-  --sans: "Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
-  --serif: "Iowan Old Style","Charter","Georgia",serif;
+  --fs-read: clamp(17px,.72vw,18.5px);
+  --fs-ui: clamp(14px,.6vw,15.5px); /* rows, controls, body-small */
+  --mono: var(--font-jetbrains),"Cascadia Mono",Consolas,ui-monospace,monospace;
+  --sans: var(--font-hanken),"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --serif: var(--font-hanken),"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
 
   /* space */
   --sp-1: 4px;
@@ -53,8 +53,8 @@
   --sp-3: 8px;
   --sp-4: 10px;
   --sp-5: 12px;
-  --sp-6: 18px;
-  --sp-7: 24px;
+  --sp-6: clamp(18px,.8vw,21px);
+  --sp-7: clamp(24px,1.06vw,28px);
 
   /* radii */
   --r: 10px;
@@ -72,7 +72,7 @@
   --cal-w: clamp(260px,19vw,340px);
   --cols: 52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr);
   --h-axis: 20px; /* Height of a time axis under a strip. */
-  --h-dock: 156px; /* Most height a page's bottom dock takes from the viewport; the toast rises above it. */
+  --h-dock: 232px; /* Most height the composer takes from the work column (the agent's line, the verdict tray, the line in); the toast rises above it. */
   --h-event: 34px; /* Height of an event row in a ledger list. */
   --h-hours: 34px; /* Height of the hour axis over the Runs day-line. */
   --h-lane-folded: 48px; /* Height of a Floor lane folded to its summary while another lane is focused. */
@@ -83,7 +83,6 @@
   --h-progress: 3px; /* Height of a run's progress rail. */
   --h-strip: 60px; /* Height of a time strip's bar box. */
   --h-thumb: 36px; /* Height of a run's thumbnail in the Foundry column. */
-  --hdr-h: 56px;
   --head-h: 40px;
   --ledger-cols: 54px 96px 128px 128px minmax(0,1fr) 70px 90px; /* Columns of an event row and its head: # · time · actor · type · subject · cost · src. */
   --slot-cols: 42px 26px minmax(0,1fr); /* Columns of a calendar slot row: time, channel, title. */
@@ -140,9 +139,9 @@
 
   /* roles-size */
   --h-chip: 22px; /* Height of a chip or keycap. */
-  --h-control: 36px; /* Height of a full button. */
-  --h-control-sm: 30px; /* Height of a small button, toggle, segment, tab or group head. */
-  --h-field: 32px; /* Height of a text field, select or ghost row. */
+  --h-control: clamp(36px,1.56vw,40px); /* Height of a full button. */
+  --h-control-sm: clamp(30px,1.3vw,34px); /* Height of a small button, toggle, segment, tab or group head. */
+  --h-field: clamp(32px,1.38vw,36px); /* Height of a text field, select or ghost row. */
   --h-meter: 5px; /* Height of a proportional meter rail. */
   --h-row: 28px; /* Height of a facet or list row. */
   --h-tag: 20px; /* Height of a compact tag: a channel badge, a keycap inside a tab. */
@@ -177,17 +176,17 @@
   --fs-bar: 12.5px; /* Label inside a bar on a time track. */
   --fs-control-sm: 13.5px; /* Text of a small button, a keymap legend, a hint tip. */
   --fs-error: 12.5px; /* A verbatim error line. */
-  --fs-nav: 14.5px; /* Text of navigation, crumbs, facts and a toast. */
-  --fs-title: 24px; /* Serif title of what a Projects view is showing: a project, or Runs itself. */
+  --fs-nav: clamp(14.5px,.62vw,16px); /* Text of navigation, crumbs, facts and a toast. */
+  --fs-title: clamp(24px,1.02vw,27px); /* Serif title of what a Projects view is showing: a project, or Runs itself. */
 
   /* roles-mark */
-  --ambient: radial-gradient(900px 500px at 8% -10%,rgba(34,211,238,.10),transparent 60%),radial-gradient(700px 600px at 100% 110%,rgba(139,92,246,.10),transparent 60%),radial-gradient(600px 400px at 70% 0%,rgba(16,185,129,.06),transparent 60%); /* The ambient light behind every page (prototype tokens.css body::before). */
+  --ambient: radial-gradient(70% 55% at 50% 0%,rgba(103,232,249,.06),transparent 72%); /* The ambient light behind every page (prototype tokens.css body::before). */
   --chan-instagram: #f0a6e6; /* Mark colour of the Instagram channel. */
   --chan-tiktok: #8ef0f7; /* Mark colour of the TikTok channel. */
   --chan-youtube: #ff8a8a; /* Mark colour of the YouTube channel. */
   --cloud-mark: #cbd5e1; /* Mark of a paid cloud resource. */
   --hatch: repeating-linear-gradient(135deg,rgba(255,255,255,.36) 0 2px,transparent 2px 5px); /* Fill of an undecided or unmeasured span. */
-  --panel-ground: rgba(0,0,0,.14); /* Recessed ground of a route panel. */
+  --panel-ground: rgba(255,255,255,.042); /* Recessed ground of a route panel. */
   --warn-cut: #3b0712; /* Cut-out mark inside the warning glyph. */
 
   /* board */
@@ -247,4 +246,24 @@
   --w-lib-tile-s: 150px; /* Least width of a Library grid tile at size S. */
   --w-lineage-role: 62px; /* Width of a lineage node's role column (source, run, this, used by). */
   --w-lineage-thumb: 30px; /* Width of the thumbnail on a lineage link. */
+
+  /* design */
+  --cast: 0 36px 90px -34px rgba(0,0,0,.9); /* The long shadow a floating glass surface casts on the ground. */
+  --dur-room: .7s; /* How long a room's light takes to cross-fade to a new hue. */
+  --frost: blur(28px) saturate(1.3); /* What glass does to the light behind it (backdrop-filter). Budgeted: few per screen. */
+  --fs-display: clamp(30px,1.7vw,44px); /* A work's own name or a lead's headline, set light (300) and tight. */
+  --glass: rgba(255,255,255,.042); /* Fill of a glass surface: a panel, the spine, the context column, the composer. */
+  --glass-hi: rgba(255,255,255,.085); /* Glass under the pointer, the current row of a navigation, the composer's line. */
+  --gutter: clamp(16px,1.6vw,44px); /* Side inset of the work column: grows with the viewport. */
+  --h-touch: 44px; /* Height of a primary act and of the composer's line. */
+  --haze: blur(96px) saturate(1.7); /* How far out of focus a release's sleeve stands behind its stage. */
+  --r-pane: 18px; /* Corner of a pane: the lead, a glass panel, the composer. */
+  --r-pill: 999px; /* A fully round end: a capsule control, a chip, a tally. */
+  --rim: rgba(255,255,255,.12); /* The rim of a glass surface. */
+  --shine: inset 0 1px 0 rgba(255,255,255,.09); /* The light on a glass surface's top edge. */
+  --sp-8: 32px; /* Inset of a lead and the gap between a step's regions. */
+  --sp-9: 48px; /* Air around a lead; the reach of its glow. */
+  --w-context: clamp(208px,11vw,280px); /* Width of a route's context column beside the spine: its rooms and their stages. */
+  --w-read-col: clamp(300px,21vw,520px); /* The measure of one column of a step's read; the read splits into as many as fit. */
+  --w-spine: 84px; /* Width of the app's spine: the sections, a glyph over each name. */
 }

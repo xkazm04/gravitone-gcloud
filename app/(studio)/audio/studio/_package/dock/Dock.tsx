@@ -19,24 +19,29 @@
 // are the wizard's own line (session.notice), not this layout's.
 import { useId, useRef, useState, type CSSProperties } from "react";
 
+import { RoomLight } from "@gt/ui/components/roomlight/RoomLight.tsx";
+
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 import { Toggle } from "@gt/ui/components/toggle/Toggle.tsx";
 
 import type { PackagingVariantProps } from "../props.ts";
 import { Grip, OPEN_DEFAULT } from "./Grip.tsx";
 import { FocusStage } from "./focus/FocusStage.tsx";
+import type { StageLight } from "./focus/props.ts";
 import s from "./dock.module.css";
 
 export function Dock({ url, read, session, thread, newId }: PackagingVariantProps) {
   const [open, setOpen] = useState(false);
   const [share, setShare] = useState(OPEN_DEFAULT);
+  const [light, setLight] = useState<StageLight>({ kind: "clear", sleeve: null });
   const layout = useRef<HTMLDivElement | null>(null);
   const threadId = useId();
   const pending = session.pending.length;
   return (
     <div ref={layout} className={s.layout} data-layout="dock" data-open={open} style={{ "--dock-share": `${share}%` } as CSSProperties}>
+      <RoomLight kind={light.kind} sleeve={light.sleeve} />
       <div className={s.step}>
-        <FocusStage read={read} session={session} newId={newId} {...(url.stage === "release" ? { startStep: "review" as const } : {})} />
+        <FocusStage read={read} session={session} newId={newId} onLight={setLight} {...(url.stage === "release" ? { startStep: "review" as const } : {})} />
       </div>
       <div className={s.handle}>
         {open && <Grip value={share} onChange={setShare} controls={threadId} frame={() => layout.current?.getBoundingClientRect() ?? null} />}

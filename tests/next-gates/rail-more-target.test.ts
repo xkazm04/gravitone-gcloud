@@ -17,6 +17,9 @@ function px(v: string): number {
     if (!t) throw new Error(`no token ${m[1]}`);
     return px(t.value);
   }
+  // A clamped size (the design baseline's step-up past ~2400px) is held to its floor: the smallest it renders.
+  const c = /^clamp\(\s*([^,]+),/.exec(v.trim());
+  if (c) return px(c[1] ?? "");
   const n = /^(-?[\d.]+)px$/.exec(v.trim());
   if (!n) throw new Error(`not px: ${v}`);
   return Number(n[1]);

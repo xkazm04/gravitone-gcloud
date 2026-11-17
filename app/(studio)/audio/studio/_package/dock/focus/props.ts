@@ -11,4 +11,9 @@ export interface StageProps {
   readonly newId: () => string;
   /** The release stage opens the walk at its review. */
   readonly startStep?: StepId;
+  /** The room's light (@gt/ui RoomLight): what the step leads with, and the sleeve that glows behind it. The
+   *  layout that owns the room draws it; the stage only says what it is. */
+  readonly onLight?: (light: StageLight) => void;
 }
+
+export type StageLight = { readonly kind: "block" | "warn" | "agent" | "ready" | "clear"; readonly sleeve: string | null };

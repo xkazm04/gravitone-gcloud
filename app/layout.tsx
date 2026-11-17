@@ -31,8 +31,11 @@ export const metadata: Metadata = {
 // route error boundary speaks through, and the two dev-only seams.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={[instrument.variable, hanken.variable, jetbrains.variable].join(" ")}>
+    // The face variables sit on <html>, not <body>: the (studio) tokens name them from `:root`
+    // (packages/ui/tokens/source.json `sans`, `mono`), and a custom property resolves where it is
+    // declared - on <body> they would be undefined at `:root` and every face would fall back.
+    <html lang="en" className={[instrument.variable, hanken.variable, jetbrains.variable].join(" ")}>
+      <body>
         {/* Design tokens straight from components/ui/tokens.ts, server-rendered
             as the first thing in the document so every --gt-* var globals.css
             reads, and the landing's --pc-* world, resolve on the first paint. (A

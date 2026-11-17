@@ -73,7 +73,7 @@ describe("tokens:check", () => {
 
   it("exits 1 on drifted outputs and prints the regeneration command; the in-date twin is green", () => {
     const drifted = run(
-      makeRoot({}, { css: renderCss(src).replace("#080a10", "#080a11"), ts: renderTs(src) }),
+      makeRoot({}, { css: renderCss(src).replace("#05060a", "#05060b"), ts: renderTs(src) }),
     );
     expect(drifted.code).toBe(1);
     expect(drifted.out).toContain("DRIFT packages/ui/src/tokens.css");

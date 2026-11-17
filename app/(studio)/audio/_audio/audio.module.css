@@ -1,6 +1,7 @@
-/* The audio desk (Phase 6): the section and kind rails over one section, and the arrange section's
+/* The audio desk (Phase 6): the context column beside one section, and the arrange section's
    scroll. The composer's three columns retired with it (spark audio-agent-studio, stage S2: the
    compose section is the studio, ../studio/). */
-.desk{flex:1;min-height:0;display:flex;flex-direction:column}
-.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--sp-3) var(--sp-6);padding:0 var(--sp-loose);border-bottom:1px solid var(--hair);flex:none}
+.desk{flex:1;min-height:0;display:flex;flex-direction:row}
+/* the room beside the desk's context column (../../_shell/ContextColumn.tsx) */
+.work{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;container:work / inline-size}
 .arrange{flex:1;min-height:0;overflow:auto;padding:var(--sp-5) var(--sp-loose) var(--sp-page-end);display:grid;grid-auto-rows:max-content;gap:var(--sp-4);align-content:start;min-width:0}

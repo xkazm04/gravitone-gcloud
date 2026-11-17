@@ -37,7 +37,7 @@ interface Walk {
   readonly began: string | null;
 }
 
-export function FocusStage({ read, session, newId, startStep }: StageProps) {
+export function FocusStage({ read, session, newId, startStep, onLight }: StageProps) {
   const { state, dispatch } = session;
   const reduce = useReducedMotion();
   const release = state.releases.find((r) => r.id === state.openId) ?? null;
@@ -57,6 +57,12 @@ export function FocusStage({ read, session, newId, startStep }: StageProps) {
       setVisited((v) => ({ ...v, [next]: v[from] ?? [] }));
     } else setWalk({ id: next, step: release === null ? "tracks" : entryStep(problems, isPageMade(release.id, read.records)), track: 0, began: next });
   }
+
+  // The room's light follows the lead; with no release open the room is clear. Computed before the early return
+  // so the hook order holds.
+  const lightKind = release === null ? "clear" : leadOf(walk.step, problems, session.pending, release).kind;
+  const lightSleeve = release?.sleeve?.href ?? null;
+  useEffect(() => onLight?.({ kind: lightKind, sleeve: lightSleeve }), [onLight, lightKind, lightSleeve]);
 
   useEffect(() => {
     if (!moved.current) return;

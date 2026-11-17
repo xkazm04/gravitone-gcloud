@@ -286,3 +286,35 @@ recorded in INVENTORY.md "Library parts".
 | Role | Value | Uses | Definition |
 | --- | --- | --- | --- |
 | h-dock | `156px` | 2 | Most height a page's bottom dock takes from the viewport; the toast rises above it (Dock and Toast read it, so the receipt never covers the chat). |
+
+## Design baseline (2026-11-17, docs/next/design-baseline/PLAN.md)
+
+The owner's contest verdict: X1 "Spine" for navigation and layout, Y2 "Aperture" for grounds, gradients and theme.
+No token modes: one design, so the existing roles were RE-VALUED rather than shadowed.
+
+Re-valued: the ground ramp `ink`..`ink-4` (Y2's near-black #05060a and its raise #0e1119 / lift #161a25),
+`panel-ground` (glass), `ambient` (one quiet wash), the faces (`sans`, `serif` -> the loaded grotesque through
+`var(--font-hanken)`, `mono` through `var(--font-jetbrains)`; the variables sit on `<html>` so `:root` resolves
+them), the type and control sizes (`fs-meta`..`fs-title`, `sp-6`, `sp-7`, `h-control*`, `h-field`: clamps that step
+up ~10% past ~2400px), `h-dock` (the composer's verdict tray and line). Retired: `hdr-h` (no header row).
+
+| Role | Value | Definition |
+| --- | --- | --- |
+| glass | `rgba(255,255,255,.042)` | Fill of a glass surface: a panel, the spine, the context column, the composer. |
+| glass-hi | `rgba(255,255,255,.085)` | Glass under the pointer; the current row of a navigation; the composer's line. |
+| rim | `rgba(255,255,255,.12)` | The rim of a glass surface. |
+| shine | inset top light | The light on a glass surface's top edge. |
+| cast | long shadow | The shadow a floating glass surface casts on the ground. |
+| frost | `blur(28px) saturate(1.3)` | What glass does to the light behind it. Budgeted (PLAN.md R3). |
+| haze | `blur(96px) saturate(1.7)` | How far out of focus a sleeve stands behind its stage. |
+| r-pill | `999px` | A capsule: Button, Chip, Tally, Toggle, Seg. |
+| r-pane | `18px` | Corner of a pane: the lead, a glass panel, the composer. |
+| gutter | clamp | Side inset of the work column. |
+| w-spine, w-context | `84px`, clamp | The spine; a route's context column. |
+| w-read-col | clamp | One column of a step's read; the read splits into as many as fit. |
+| fs-display | clamp | A work's name or a lead's headline, light and tight. |
+| h-touch | `44px` | A primary act; the composer's line. |
+| sp-8, sp-9 | `32px`, `48px` | A lead's inset; the air and glow around it. |
+| dur-room | `.7s` | The room light's cross-fade. |
+
+Not admitted: `raise` and `lift` (equal to `ink-2` and `ink-3`; use those), `accent` (equal to `cyan`).

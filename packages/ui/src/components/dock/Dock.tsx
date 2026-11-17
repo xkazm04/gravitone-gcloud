@@ -81,7 +81,7 @@ export function Dock({ state, reply, notice = null, draft, onDraft, onSend, drop
         <div className={s.field}>
           <Field label="your message to the studio" value={draft} onChange={onDraft} placeholder={state === "offline" ? "nobody is listening" : "make the bass softer"} maxLength={400} disabled={!canSendIn(state)} />
         </div>
-        <Button label="Send" tone="cyan" submit disabled={!canSend} />
+        <Button label="Send" tone="cyan" solid submit disabled={!canSend} />
       </form>
     </section>
   );

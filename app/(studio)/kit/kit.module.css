@@ -92,3 +92,9 @@
 /* The part workspace specimens (PartKit.tsx): the frame fills a route, so the kit gives it one. */
 .workspace{display:flex;flex-direction:column;height:calc(var(--h-pile-face) * 8);border:1px solid var(--hair);border-radius:var(--r-box);overflow:hidden}
 .workspaceShort{display:flex;flex-direction:column;width:100%;height:calc(var(--h-pile-face) * 3);border:1px solid var(--hair);border-radius:var(--r-box);overflow:hidden}
+
+/* Design baseline specimens (Structure.tsx): the three grounds, the room's light by kind, the section glyphs. */
+.surfaceSpecimen{display:grid;place-items:center;width:calc(var(--w-detail) * .5);height:calc(var(--h-control) * 2.5)}
+.roomSpecimen{position:relative;isolation:isolate;display:grid;place-items:end center;width:calc(var(--w-detail) * .5);height:calc(var(--h-control) * 3);padding:var(--sp-3);border:1px solid var(--hair);border-radius:var(--r-pane);background:var(--ink);overflow:hidden}
+.glyphSpecimen{display:inline-flex;flex-direction:column;align-items:center;gap:var(--sp-1);color:var(--text)}
+.glyphMark{width:var(--size-glyph-btn);height:var(--size-glyph-btn)}

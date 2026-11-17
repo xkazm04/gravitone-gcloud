@@ -30,7 +30,10 @@ const refuse = (e: { preventDefault: () => void }): void => e.preventDefault();
 export type ButtonProps = {
   readonly label: string;
   readonly tone?: Tone;
-  readonly size?: "md" | "sm";
+  /** `lg`: the primary act of a lead. */
+  readonly size?: "md" | "sm" | "lg";
+  /** The act a screen leads with: the tone as a full ground. At most one per screen. */
+  readonly solid?: boolean;
   /** The keymap row that runs the same verb; its caps are drawn after the label. */
   readonly shortcut?: { readonly mode: string; readonly verb: string };
   /** A leading glyph. */
@@ -49,8 +52,8 @@ export type ButtonProps = {
   readonly submit?: boolean;
 };
 
-export function Button({ label, tone = "neutral", size = "md", shortcut, glyph, badge, tally, glyphAfter, disabled = false, pending = false, onPress, href, submit = false }: ButtonProps) {
-  const cls = cx(s.btn, size === "sm" && s.sm, tone !== "neutral" && s[tone], pending && !disabled && s.pending);
+export function Button({ label, tone = "neutral", size = "md", solid = false, shortcut, glyph, badge, tally, glyphAfter, disabled = false, pending = false, onPress, href, submit = false }: ButtonProps) {
+  const cls = cx(s.btn, size === "sm" && s.sm, size === "lg" && s.lg, tone !== "neutral" && s[tone], solid && s.solid, pending && !disabled && s.pending);
   const body = (
     <>
       {glyph !== undefined && <Glyph name={glyph} className={s.glyph} />}

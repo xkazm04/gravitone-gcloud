@@ -72,10 +72,10 @@ function Body({ lead, step, release, slots, acts }: { readonly lead: LeadModel; 
         </p>
       )}
       <div className={s.leadActs}>
-        {q !== null && <Button label="Accept" tone="emerald" onPress={() => acts.accept(q.id)} />}
-        {q !== null && p === null && <Button label="Dismiss" onPress={() => acts.dismiss(q.id)} />}
-        {p !== null && <Button label={review ? `Open ${STEP_LABEL[stepOf(p)]}` : q !== null ? "Edit" : (FIX_LABEL[p.code] ?? "Fix")} tone={q !== null ? "neutral" : "cyan"} onPress={() => acts.fix(p)} />}
-        {lead.kind === "ready" && <Button label="Schedule" tone="emerald" onPress={acts.schedule} />}
+        {q !== null && <Button label="Accept" tone="emerald" size="lg" solid onPress={() => acts.accept(q.id)} />}
+        {q !== null && p === null && <Button label="Dismiss" size="lg" onPress={() => acts.dismiss(q.id)} />}
+        {p !== null && <Button label={review ? `Open ${STEP_LABEL[stepOf(p)]}` : q !== null ? "Edit" : (FIX_LABEL[p.code] ?? "Fix")} tone={q !== null ? "neutral" : "cyan"} size="lg" solid={q === null} onPress={() => acts.fix(p)} />}
+        {lead.kind === "ready" && <Button label="Schedule" tone="emerald" size="lg" solid onPress={acts.schedule} />}
         <button type="button" className={s.leadMore} onClick={acts.details} aria-label={lead.rest > 0 ? `details, ${lead.rest} more` : "details"}>
           details
           {lead.rest > 0 && (
