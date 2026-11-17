@@ -125,3 +125,25 @@ The owner's notes, verbatim:
     lead, what would not have happened), not a bigger-sounding measure.
 13. **Two tones are a limit, not a style.** The owner asked for colour in both two-tone picks.
 14. **Maps are precise or absent.** A rough symbol standing in for territory reads as lazy.
+
+## Full films, first watch (2026-11-17)
+
+The owner's notes on the first full films, verbatim:
+
+- Cut paper / franchises: "background still does not represent in any capacity the leading franchise"
+- Ink notebook / population: "stopping the time when order is change is disturbing nad breaks continuity"
+- Engraved map / empires: "Initial screen can zoom from whole wolrd into the first locality. List can handle up
+  to 7 empires as boh mobile and screen do have space below. Each empire can have double the time on map to be
+  recognizable, we don't need to hard limit to 1:00. We can do speedup version for mobile (2x speed) and normal
+  for screen in 1:00 - 2:00 range, in general"
+- Memphis / Wikipedia: "again, time stops are disturbing, we don't need them. If two event cards happen between
+  same time track we can stack them on top of each other"
+
+What this changes in the standard *(host's reading)*:
+
+15. **The clock never stops.** This withdraws the earlier "the clock holds" (pattern change-staged-with-weight).
+    A change is staged by motion on a running clock; overlapping cards stack instead of waiting.
+16. **Length follows the reel, not a 60-second rule.** Desktop at normal speed, 60 to 120 seconds; the phone film
+    is the same timeline at 2x (rendered every second frame).
+17. **A backdrop that is meant to identify something must identify it at a glance.** Abstract motifs did not.
+
