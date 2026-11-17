@@ -223,6 +223,10 @@ export const IDENTITY_INDEPENDENT_LOCAL_KEYS: readonly string[] = [
   // same for every account on it - evicting it on a flip would only make the
   // next visit re-measure the same GPU.
   "gravitone.cosmos-tier.v1",
+  // The studio's split packaging layout (app/(studio)/audio/studio/_package/split/Split.tsx, spark
+  // studio-to-release): how wide the conversation pane is and whether it is folded. A fact about this
+  // screen's width, the same for every account on the machine - evicting it would only reset a divider.
+  "gt.audio.package.split",
 ];
 
 /**
