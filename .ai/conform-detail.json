@@ -26712,6 +26712,82 @@
           "evidence": "fixtureMotion.ts was skimmed only to its header"
         }
       ]
+    },
+    "7d68ed0e-8d1f-44d9-a825-4a8b7f6504c0/audit-logging": {
+      "context": "run-records-and-slots",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-17",
+      "evaluatedTs": "2026-11-17T22:08:44.582Z",
+      "worker": "702bec3d-f53c-4ac6-be1e-b45bb9cc3c71",
+      "techniques": [
+        {
+          "technique": "append-only-design",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/schema.ts:67 Triggers refuse UPDATE and DELETE on publications and metric_snapshots, and slots_no_delete (line 59) does the same for slots. Cancel is soft, and a failed slot's error is kept on cancel (core.ts toCancelled)."
+        },
+        {
+          "technique": "write-chokepoint",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/write.ts:38 Every slot write (create, move, cancel, publish-now, outcome, sweep, import) goes through putSlotIn, which validates through the door and appends its event. Publications have exactly two writers, outcome.ts landIn and import.ts, and schema.ts names both."
+        },
+        {
+          "technique": "best-effort-with-accounting",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/write.ts:14 The context claims the transactional exception in writing: the act and its event are one commit. The publication row is also the at-most-once guard (UNIQUE slot_id, slots_one_publication), and it fails closed."
+        },
+        {
+          "technique": "retention-and-partitioning",
+          "verdict": "deviation",
+          "evidence": "packages/kernel/src/slots/schema.ts:30 The design comment covers append-only but states no horizon or reaper for either ledger. Metric readings come from a timer and are never retired."
+        },
+        {
+          "technique": "two-clock-records",
+          "verdict": "conformant",
+          "evidence": "packages/kernel/src/slots/outcome.ts:119 Each reading keeps its own instant (`at` / readAt) beside the event's store clock. The v1 import does the same: it keeps the v1 createdAt on the slot.import event and the original published_at on the row, so the time a fact happened is kept apart from the time it was imported."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/kernel/src/slots/schema.ts:78 The publications and metric_snapshots ledgers are append-only with no stated horizon or reaper anywhere (the search over the kernel's slots and records modules, lib/publish and workers found none), so metric readings written on a timer grow without bound, against retention-and-partitioning.",
+          "evaluatedAt": "2026-10-25",
+          "worker": null,
+          "reason": "replaced by 702bec3d-f53c-4ac6-be1e-b45bb9cc3c71"
+        }
+      ]
+    },
+    "00c6177f-43a3-4f35-8252-59c9ae8110e0/audit-logging": {
+      "context": "ui-ledger-timeline",
+      "subject": "audit-logging",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-17",
+      "evaluatedTs": "2026-11-17T22:08:44.582Z",
+      "worker": "702bec3d-f53c-4ac6-be1e-b45bb9cc3c71",
+      "techniques": [
+        {
+          "technique": "two-clock-records",
+          "verdict": "deviation",
+          "evidence": "packages/ui/src/components/timestrip/strip.ts:29 The window type does not name which clock it ranges over. The ledger windows by coalesce(occurred_at, at), so a backfilled act and a recorded one fall in a day that no label distinguishes. The row has the same shape: one `time` prop, where ≈ marks only that the effective time was inferred."
+        },
+        {
+          "technique": "audit-querying",
+          "verdict": "conformant",
+          "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:1 The in-context surface: any subject's screen links to its own history. EventRow renders the record's actor, type, subject, cost and source as given, and computes nothing new."
+        }
+      ],
+      "registryProposal": "two-clock-records could say what a single-row display owes when the store keeps both clocks: whether a compact row may show the coalesced time if it labels it, or whether the recorded instant must be reachable from the row itself. As written, the query/report obligation is ambiguous for presentational list components.",
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 Providing only a single formatted time string property prevents UI consumers from inspecting and contrasting effective time against recorded time.",
+          "evaluatedAt": "2026-10-18",
+          "worker": null,
+          "reason": "replaced by 702bec3d-f53c-4ac6-be1e-b45bb9cc3c71"
+        }
+      ]
     }
   }
 }

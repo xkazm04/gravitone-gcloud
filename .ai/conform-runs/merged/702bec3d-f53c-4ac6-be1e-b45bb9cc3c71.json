@@ -1,0 +1,100 @@
+{
+ "schema": "conform-run/1",
+ "worker": "702bec3d-f53c-4ac6-be1e-b45bb9cc3c71",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-11-17T22:08:44.582141+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "run-records-and-slots",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/kernel/src/slots/schema.ts:78 Nothing states a horizon for the publications and metric_snapshots ledgers, and a trigger refuses every delete, so a horizon trim cannot run either. The metrics-refresh timer appends one reading per live publication on every pass (packages/producers/src/publish/metrics.ts calls recordMetric), so this ledger grows without bound. That goes against retention-and-partitioning, and packages/kernel/src/resources/load.ts contrasts its own 30-day RETENTION_MS with these ledgers, which it says are kept forever.",
+   "techniques": [
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/schema.ts:67 Triggers refuse UPDATE and DELETE on publications and metric_snapshots, and slots_no_delete (line 59) does the same for slots. Cancel is soft, and a failed slot's error is kept on cancel (core.ts toCancelled)."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/write.ts:38 Every slot write (create, move, cancel, publish-now, outcome, sweep, import) goes through putSlotIn, which validates through the door and appends its event. Publications have exactly two writers, outcome.ts landIn and import.ts, and schema.ts names both."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/write.ts:14 The context claims the transactional exception in writing: the act and its event are one commit. The publication row is also the at-most-once guard (UNIQUE slot_id, slots_one_publication), and it fails closed."
+    },
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "packages/kernel/src/slots/schema.ts:30 The design comment covers append-only but states no horizon or reaper for either ledger. Metric readings come from a timer and are never retired."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "conformant",
+     "evidence": "packages/kernel/src/slots/outcome.ts:119 Each reading keeps its own instant (`at` / readAt) beside the event's store clock. The v1 import does the same: it keeps the v1 createdAt on the slot.import event and the original published_at on the row, so the time a fact happened is kept apart from the time it was imported."
+    }
+   ]
+  },
+  {
+   "context": "ui-ledger-timeline",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/ui/src/components/eventrow/EventRow.tsx:26 An event row takes one pre-formatted time and a `derived` flag. The caller fills it with occurredAt ?? at (app/(studio)/ledger/_ledger/vocab.ts timeOf), so the row never says which clock it shows and cannot show when the ledger recorded a backfilled act. TimeStrip's Range {from, to} also windows without naming its clock. That falls short of two-clock-records' rule to name the clock in the interface and label the output.",
+   "techniques": [
+    {
+     "technique": "two-clock-records",
+     "verdict": "deviation",
+     "evidence": "packages/ui/src/components/timestrip/strip.ts:29 The window type does not name which clock it ranges over. The ledger windows by coalesce(occurred_at, at), so a backfilled act and a recorded one fall in a day that no label distinguishes. The row has the same shape: one `time` prop, where \u2248 marks only that the effective time was inferred."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "conformant",
+     "evidence": "packages/ui/src/components/ledgerlink/LedgerLink.tsx:1 The in-context surface: any subject's screen links to its own history. EventRow renders the record's actor, type, subject, cost and source as given, and computes nothing new."
+    }
+   ],
+   "registryProposal": "two-clock-records could say what a single-row display owes when the store keeps both clocks: whether a compact row may show the coalesced time if it labels it, or whether the recorded instant must be reachable from the row itself. As written, the query/report obligation is ambiguous for presentational list components."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-17T22:08:44.582141+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "best-effort-with-accounting",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint"
+   ],
+   "deviations": 1,
+   "context": "run-records-and-slots",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-17T22:08:44.582141+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "audit-querying",
+    "two-clock-records"
+   ],
+   "deviations": 1,
+   "context": "ui-ledger-timeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
