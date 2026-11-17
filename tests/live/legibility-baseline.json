@@ -26,12 +26,6 @@
     "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
   ],
   "audio-package": [
-    "mark div.Panel-module__PFc0vG__body > ul.side-module__A6ED9G__list > li.side-module__A6ED9G__step > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "mark div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
-    "text div.Panel-module__PFc0vG__body > ul.side-module__A6ED9G__list > li.side-module__A6ED9G__step > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm[aria-disabled=true]",
-    "text div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
-  ],
-  "audio-package-dock": [
     "mark div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
   ],

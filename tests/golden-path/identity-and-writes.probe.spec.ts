@@ -183,8 +183,6 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // list being empty was itself once the accident, so it is named here with
     // its reason rather than left to look like an oversight.
     "app/_landing/cosmos/engine/perf.ts": { exempt: "gravitone.cosmos-tier.v1" },
-    // The split packaging layout's divider and fold (spark studio-to-release): a fact about the screen.
-    "app/(studio)/audio/studio/_package/split/Split.tsx": { exempt: "gt.audio.package.split" },
     // The shell palette (components/ui/shell/palette.ts, its per-account recent destinations)
     // retired with StudioFrame in Phase 6 wave C; the eviction keeps naming its key so a browser
     // that still holds one loses it with the account.
