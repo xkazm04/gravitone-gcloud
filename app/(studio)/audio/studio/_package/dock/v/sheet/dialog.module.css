@@ -1,0 +1,51 @@
+/* The sheet's dialog (variant "sheet"): where the detail lives - the lead's items and every section's editor. The
+   panel is the sheet's paper lifted over the scrim; an item is a row with a small state dot, its words in full, and
+   its acts on the right. Tokens only. */
+.panel[role="dialog"]{background:var(--ink-2);border-color:var(--hair-3);box-shadow:0 calc(var(--sp-7) * 1.2) calc(var(--sp-7) * 3) var(--shadow)}
+.panel[role="dialog"].xl{width:min(100%, calc(var(--w-detail) * 3))}
+.panel[role="dialog"] > header > h2{font:400 var(--fs-h2)/1.2 var(--serif)}
+
+/* the lead's list */
+.list{display:flex;flex-direction:column;gap:var(--sp-7)}
+.group{display:flex;flex-direction:column;gap:var(--sp-3)}
+.groupHead{margin:0;display:flex;align-items:baseline;gap:var(--sp-3);font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.groupN{font-variant-numeric:tabular-nums;color:var(--text)}
+.items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.items > li + li{border-top:1px solid var(--hair)}
+.clip{overflow:hidden}
+.item{--item-c:var(--muted);display:grid;grid-template-columns:var(--size-dot) minmax(0,1fr) auto;align-items:start;gap:var(--sp-5);padding:var(--sp-5) 0}
+.item[data-tone="block"]{--item-c:var(--rose)}
+.item[data-tone="warn"]{--item-c:var(--amber)}
+.item[data-tone="agent"]{--item-c:var(--actor-agent)}
+.dot{width:var(--size-dot);height:var(--size-dot);margin-top:var(--sp-2);border-radius:50%;background:var(--item-c)}
+.itemBody{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.itemK{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.itemV{font:400 var(--fs-body)/1.4 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.rule{font:400 var(--fs-body)/1.4 var(--sans);color:var(--ink-bright)}
+.source{font:400 var(--fs-ui)/1.35 var(--sans);color:var(--muted)}
+.itemActs{display:flex;gap:var(--sp-3);align-items:center}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--sp-1) var(--sp-5);margin:0}
+.fact{display:contents}
+.fact dt{font:500 var(--fs-meta)/1.4 var(--mono);color:var(--muted)}
+.fact dd{margin:0;font:400 var(--fs-body)/1.4 var(--sans);color:var(--ink-bright)}
+
+/* an editor */
+.editor{display:flex;flex-direction:column;gap:var(--sp-7)}
+.block{display:flex;flex-direction:column;gap:var(--sp-5)}
+.blockHead{margin:0;font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-5) var(--sp-6)}
+.cell{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.cell[data-w="wide"]{grid-column:1 / -1}
+.k{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-4)}
+.rowList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.rowItem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-4);align-items:center}
+.rowItem[data-cols="3"]{grid-template-columns:minmax(0,1fr) minmax(0,.7fr) auto}
+.choice{display:grid;grid-template-columns:calc(var(--w-thumb) * 2) minmax(0,1fr);align-items:center;gap:var(--sp-5)}
+.remove{display:grid;place-items:center;width:var(--h-field);height:var(--h-field);border:1px solid var(--hair-2);border-radius:var(--r-sm);background:none;color:var(--muted);font:400 var(--fs-h3)/1 var(--sans);cursor:pointer;transition:color var(--dur-fast),border-color var(--dur-fast)}
+.remove:hover{color:var(--rose);border-color:var(--hair-3)}
+.remove:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.chan{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--sp-1) var(--sp-5);align-items:center;padding:var(--sp-4) 0;border-top:1px solid var(--hair)}
+.chanState{font:500 var(--fs-meta)/1 var(--mono);color:var(--muted)}
+.chanDetail{grid-column:2;font:400 var(--fs-ui)/1.4 var(--sans);color:var(--muted)}
+.stopgap{display:block}
