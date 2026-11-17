@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.setConfig({ testTimeout: 120_000 });
 
-import { MASTER_TARGET } from "@gt/domain/release";
+import { MASTER_DEFAULT, MASTER_TARGET } from "@gt/domain/release";
 
 import { measureFile, SIDECAR_SCRIPT } from "../../lib/audio/sidecar.ts";
 import { masterFile } from "../../lib/audio/sidecarMaster.ts";
@@ -167,6 +167,38 @@ describe.skipIf(NOT_READY !== null)("master uni-1", () => {
     const child = (await listTakes()).find((t) => t.id === a.takeId);
     expect(child).toMatchObject({ parentId: parent.id, stage: "remaster", verdict: "kept", origin: "suno-return", fileName: "hot.uni-1.wav" });
     expect("error" in matchTake(await listTakes(), at("nothing-like-it.wav"))).toBe(true);
+  });
+});
+
+describe.skipIf(NOT_READY !== null)("master tone-1 (the default)", () => {
+  it("is the default recipe, and a quiet source rises to -14 +/- 0.5 LUFS with no limiter at work", async () => {
+    expect(MASTER_DEFAULT).toBe("tone-1");
+    const [l, r] = mix(48_000, 6, 0.1, false, 21);
+    wav16(at("quiet.wav"), 48_000, l, r);
+    const out = at(masterName(at("quiet.wav"), MASTER_DEFAULT));
+    const m = must(await masterFile(at("quiet.wav"), out, MASTER_DEFAULT));
+    expect(m.recipe).toBe("tone-1");
+    expect(m.before.lufs).toBeLessThan(-16);
+    expect(m.limitDb).toBe(0);
+    const re = must(await measureFile(out));
+    expect(judge(re, MASTER_TARGET)).toBeNull();
+    expect(Math.abs((re.integratedLufs ?? 0) - -14)).toBeLessThanOrEqual(0.5);
+  });
+
+  it("never limits: a peaky source stops at the true-peak ceiling and stays quieter than the target", async () => {
+    const out = at(masterName(at("peaky.wav"), "tone-1"));
+    const m = must(await masterFile(at("peaky.wav"), out, "tone-1"));
+    expect(m.limitDb).toBe(0);
+    const re = must(await measureFile(out));
+    expect(re.truePeakDb ?? 0).toBeLessThanOrEqual(-1);
+    expect(re.integratedLufs ?? 0).toBeLessThanOrEqual(-14 + 0.5);
+    expect(re.clippedSamples).toBe(0);
+  });
+
+  it("keeps the song's length (a linear-phase filter is trimmed, not shifted)", async () => {
+    const before = must(await measureFile(at("quiet.wav")));
+    const after = must(await measureFile(at(masterName(at("quiet.wav"), "tone-1"))));
+    expect(Math.abs((after.durationS ?? 0) - (before.durationS ?? 0))).toBeLessThan(0.002);
   });
 });
 

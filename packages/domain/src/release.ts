@@ -89,9 +89,13 @@ export interface RightsRecord {
   readonly licence: Licence;
 }
 
-/** The one universal master recipe (owner, wave 2: one click, no parameters). Append-only. */
-export const MASTER_RECIPES = ["uni-1", "uni-2", "uni-3"] as const;
+/** The master recipes (owner, wave 2: one click, no parameters). Append-only. uni-1/2/3 are RETIRED: the owner heard
+ *  all three as degrading a track on another device (2026-11-16); they stay so an old master names a real recipe. */
+export const MASTER_RECIPES = ["uni-1", "uni-2", "uni-3", "tone-1"] as const;
 export type MasterRecipe = (typeof MASTER_RECIPES)[number];
+/** The recipe a one-click master runs: a linear-phase tonal EQ toward the album's average, then one static gain - no
+ *  compressor, no limiter (owner's pick of five techniques, 2026-11-17; docs/concepts/distribution/mastering-research.md). */
+export const MASTER_DEFAULT: MasterRecipe = "tone-1";
 export const MASTER_STATES = ["none", "running", "done", "failed"] as const;
 export type MasterState = (typeof MASTER_STATES)[number];
 /** Integrated loudness (LUFS), true peak (dBTP) and loudness range (LU) of one file. */

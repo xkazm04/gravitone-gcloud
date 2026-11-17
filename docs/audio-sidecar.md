@@ -132,6 +132,10 @@ python pipeline/audio/sidecar.py master --in song.wav --out song.uni-1.wav --rec
  "ms": 6704, "limitDb": 0.0, "passes": 1}
 ```
 
+**The default is `tone-1`** (below); `uni-1`, `uni-2` and `uni-3` are retired - the owner heard all three as
+degrading a track on another device (2026-11-16). They stay in `RECIPES` so an old master still names a real
+recipe, and their section is kept as the record of what not to do.
+
 The universal master (spark audio-distribution): one recipe applied to every track, no
 parameters - the owner's "one click" ruling. The request names a recipe and nothing else; the
 recipe's numbers are one row of `RECIPES` in `pipeline/audio/master.py`, and a row a master was
@@ -189,6 +193,24 @@ Measured on Dancing in the Static (one minute from 1:00, level-matched), against
 `uni-2` moved the side/mid ratio below 120 Hz from -12.8 to -23.1 dB (mono), above 2.5 kHz by +1.1
 to +2.6 dB, and the highs up ~1.7 dB; `uni-3` +2.3 to +4.0 dB of width above 2.5 kHz and +2.2 to
 +3.5 dB of highs. Loudness range 12.5 LU at the source: 9.7 (`uni-1`), 8.4 (`uni-2`), 6.4 (`uni-3`).
+
+`tone-1` (2026-11-17, the owner's pick of five techniques tried on one song - the research, the bisect and the
+results are in `docs/concepts/distribution/mastering-research.md`) is `pipeline/audio/master_tone.py`. The bisect
+found what hurt: a 30 Hz minimum-phase high-pass rotates a bass-heavy song's bass region by 11-37 degrees (peak
++1.2 dB) and the compressors move the level 1-2 dB with the music; the limiter never engaged. So the chain has no
+minimum-phase filter, no compressor and no limiter:
+
+| Step | Numbers | Why |
+| --- | --- | --- |
+| measure | the song's long-term 1/3-octave shape (Welch, 16384), level removed | what the song is |
+| correct | half the distance to `targets/misu-vol2.json` (the 20 Misu Vol 2 songs' average shape), clamped -1.5 / +0.75 dB, nothing below 30 Hz, tapering to nothing by 12 kHz, smoothed 1/3 octave | nudged toward its siblings, never past them; the codec band is left alone |
+| apply | a 16385-tap symmetric FIR, the same on every channel, `fftconvolve(mode="same")` | linear phase: no frequency delayed against another, the stereo image cannot move |
+| loudness | one static gain to -14 LUFS, stopped at -1 dBTP if the ceiling would be passed | no limiter: a peaky song comes out quieter than the target, and the trial says so |
+
+On Stay Here it moved the bands by at most 0.4 dB (wobble 0.16 dB against the old chain's 1.14, loudness range
+6.6 unchanged, 12-22 kHz unchanged). The target is a taste reference, not a standard: a new album is a new
+target file and a new recipe row, never an edit of `misu-vol2`. `MASTER_DEFAULT` (`release.ts`) names the default;
+the trial runs it unless `--recipes` says otherwise.
 
 **Why -14 LUFS and -1 dBTP.** -14 LUFS integrated is Spotify's published normalisation level (the
 other streaming stores sit near it), so a master there is played at the level it was made at, not

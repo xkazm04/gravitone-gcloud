@@ -47,7 +47,9 @@ import loudness
 
 OUT_RATE = 48000
 
-# One row per recipe. NEVER edit a row a master was made with: add `uni-2`.
+# One row per recipe. NEVER edit a row a master was made with: a changed sound is a new row.
+# tone-1 is the default (@gt/domain/release MASTER_DEFAULT). uni-1/2/3 are RETIRED: the owner heard all three as
+# degrading a track on another device (2026-11-16); they stay so an old master still names a real recipe.
 RECIPES = {
     "uni-1": {
         "refLufs": -18.0,          # level the compressor sees (step 2)
@@ -114,6 +116,19 @@ RECIPES = {
         "limitWindowS": 0.05,
         "tolLu": 0.1,
         "maxPasses": 8,
+    },
+    # 2026-11-17, the owner's pick of five techniques tried on Stay Here: a linear-phase tonal EQ toward the
+    # album's average spectrum, then one static gain. No compressor, no limiter, no minimum-phase filter.
+    "tone-1": {
+        "chain": "tone",
+        "target": "misu-vol2",     # pipeline/audio/targets/misu-vol2.json: the 20 Misu Vol 2 songs' average 1/3-octave shape
+        "strength": 0.5,           # half of the distance to the target
+        "maxCutDb": 1.5, "maxBoostDb": 0.75,
+        "floorHz": 30.0,           # nothing below (there is no energy there to move)
+        "ceilHz": 12000.0, "taperHz": 2000.0,   # nothing above 12 kHz: the codec band is left alone
+        "taps": 16385,             # symmetric FIR: linear phase, no frequency delayed against another
+        "targetLufs": -14.0,
+        "ceilingDbtp": -1.0,       # the gain stops here instead of limiting
     },
 }
 
@@ -251,8 +266,14 @@ def master_file(inp, out, rid, read_audio):
         raise RecipeRefused(f"{inp} has no integrated loudness or loudness range (silent, or under 3 s); nothing to master")
     x = to_rate(data, rate)
     del data
-    x = pre_chain(x, OUT_RATE, row)
-    y, _gain, deepest, passes = loudness_and_limit(x, OUT_RATE, row)
+    if row.get("chain") == "tone":
+        import master_tone
+
+        y, _corr, _gain, _stopped = master_tone.apply(x, OUT_RATE, row)
+        deepest, passes = 0.0, 1  # no limiter in this chain
+    else:
+        x = pre_chain(x, OUT_RATE, row)
+        y, _gain, deepest, passes = loudness_and_limit(x, OUT_RATE, row)
     del x
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     part = f"{out}.{os.getpid()}.part.wav"

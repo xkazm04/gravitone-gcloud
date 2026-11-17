@@ -5,7 +5,7 @@
 //   npx tsx pipeline/master-trial.mts --files a.wav b.wav --out <dir> [...]
 //
 // For each .wav (one at a time - a five-minute 24-bit master is ~80 MB in the sidecar's memory) and each
-// recipe (default: every recipe in @gt/domain/release MASTER_RECIPES): master it through the sidecar's
+// recipe (default: MASTER_DEFAULT, tone-1; --recipes names others, e.g. to compare): master it through the sidecar's
 // `master` verb into <out>/<stem>.<recipe>.wav, RE-MEASURE the written file with the sidecar's own `measure`
 // verb (acceptance is that reading, not the verb's self-report: -14 +/- 0.5 LUFS integrated, true peak
 // <= -1 dBTP, no clipped sample), and write <out>/compare.json and <out>/listen.html - the original and
@@ -25,7 +25,7 @@ import { readdirSync, statSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { MASTER_RECIPES, MASTER_TARGET, type MasterRecipe } from "@gt/domain/release";
+import { MASTER_DEFAULT, MASTER_RECIPES, MASTER_TARGET, type MasterRecipe } from "@gt/domain/release";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -44,7 +44,7 @@ let out: string | null = null;
 let limit = Infinity;
 let adopt = false;
 let reuse = false;
-let recipes: MasterRecipe[] = [...MASTER_RECIPES];
+let recipes: MasterRecipe[] = [MASTER_DEFAULT];
 const files: string[] = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
