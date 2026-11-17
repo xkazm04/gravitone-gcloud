@@ -95,10 +95,10 @@ screen shows the thing, the value carries `view`, a deep-link path: `/projects/<
 
 `GRAVITONE_MCP_PROJECTION` is read once when the server starts. It is server-only.
 
-- `family` (default): five tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend` and `gt_songlab`. Each takes
+- `family` (default): six tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend`, `gt_songlab` and `gt_release`. Each takes
   `{op, ...args}`. Its `inputSchema` is a JSON-Schema `oneOf` over its ops, discriminated by `op`. Its
   annotations are the most severe of its ops'.
-- `operation`: one tool per op, `gt_<family>_<op>` (44 today).
+- `operation`: one tool per op, `gt_<family>_<op>`.
 
 A family tool's description is its lead plus its op names, and it must stay within 240 characters. The read
 and launch leads were cut short for the audio ops: a new op in either family needs a shorter lead or a
@@ -250,10 +250,9 @@ or schedule. It reads the release and PROPOSES field values, and each proposal w
 operator accepts or dismisses it. The ops live in `app/_server/mcp/tools/release.ts` and go through the one
 release store (`lib/release/store.ts`), which writes the kernel's `releases` table.
 
-- **The family is `job` for now.** The `read` and `launch` family descriptions are at 238 and 240 of the
-  240-character cap, so neither can name another op. `RELEASE_OPS_FAMILY` holds the choice in one place until
-  a `release` family exists. Call `gt_job {op: "release_read", ...}`, or `gt_job_release_read` in the
-  operation projection.
+- **The `release` family.** The `read` and `launch` family descriptions are at 238 and 240 of the 240-character
+  cap, so the release ops have their own family, as the song lab does: `gt_release {op: "release_read", ...}`, or
+  `gt_release_release_read` in the operation projection.
 - `release_read` takes `id` (one release) or `session` (that conversation's releases). With neither, it
   answers the newest 10. Each release comes back as `{id, version, sessionId, kind, release, problems, blocks,
   warns, pending, empty, draftFrom, card, view}`:

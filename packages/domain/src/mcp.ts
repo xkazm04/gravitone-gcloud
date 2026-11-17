@@ -13,8 +13,9 @@ import { SEAT_UNPRICED_REASONS } from "@gt/catalog/partOptions";
 import type { ComposerInput, Receipt } from "./produce.ts";
 
 /** The tool families the default projection publishes, one routing tool each. `songlab` is the YuE2 song
- *  lab's (spark yue2-song-lab): its own family because the read and launch tools' descriptions are full. */
-export const MCP_FAMILIES = ["read", "launch", "job", "spend", "songlab"] as const;
+ *  lab's (spark yue2-song-lab): its own family because the read and launch tools' descriptions are full; `release`
+ *  is a release's packaging (spark studio-to-release), its own family for the same reason. */
+export const MCP_FAMILIES = ["read", "launch", "job", "spend", "songlab", "release"] as const;
 export type McpFamily = (typeof MCP_FAMILIES)[number];
 
 /** `family`: one tool per family (`gt_read` + `op`). `operation`: one tool per op (`gt_read_projects`). */

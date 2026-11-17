@@ -37,7 +37,7 @@ import { defineOp, READS, WRITES, type McpToolSpec, type Obj } from "../op.ts";
 // FAMILY: both ops belong in `read` / `launch`, but those families' published descriptions are at 238 and 240 of
 // DESCRIPTION_MAX (app/_server/mcp/projection.ts FAMILY_WORDS + their op names), so either op there fails the
 // registry's own rule. Until a `release` family exists (MCP_FAMILIES + FAMILY_WORDS), they ride one family together.
-export const RELEASE_OPS_FAMILY: McpFamily = "job";
+export const RELEASE_OPS_FAMILY: McpFamily = "release";
 
 /** The most releases one read answers when it names neither a release nor a conversation (bounded-enumeration). */
 export const RELEASE_READ_MAX = 10;

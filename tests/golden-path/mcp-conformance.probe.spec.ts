@@ -85,7 +85,7 @@ test("the SDK client initializes, lists the five family tools and calls gt_read 
 
     const { tools } = await client.listTools();
     console.log(`[mcp] tools/list -> ${tools.map((t) => t.name).join(", ")}`);
-    expect(tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend", "gt_songlab"]);
+    expect(tools.map((t) => t.name)).toEqual(["gt_read", "gt_launch", "gt_job", "gt_spend", "gt_songlab", "gt_release"]);
     for (const t of tools) expect(t.inputSchema.type).toBe("object");
 
     const r = await client.callTool({ name: "gt_read", arguments: { op: "projects" } });

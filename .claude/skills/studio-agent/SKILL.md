@@ -4,7 +4,7 @@ memory: none
 category: Content
 description: Be the agent behind the audio studio (/audio?s=studio). Listen to the dock through the Gravitone MCP door (gt_read audio_inbox, a 25 s long-poll), make the music on this machine's local band for $0 (audio_render / audio_mix / audio_rewrite / audio_audition), and answer each message with ONE validated studio turn (gt_launch audio_turn) - reply words for a non-musician, the pieces to show with real hrefs from the verbs, and 2-5 next steps. Also a Suno advisor: writes prompt cards (suno_prompt) the person pastes into suno.com by hand, revises them from their verdicts and the facts of takes they upload, and proposes taste lines. Never spends, never drives suno.com, never fetches from Suno, never presses Listen; ElevenLabs is out of scope. Invoke with /studio-agent [session-id], or /studio-agent setup.
 argument-hint: "[session-id] | setup"
-allowed-tools: Read, Bash, PowerShell, mcp__gravitone__gt_read, mcp__gravitone__gt_launch, mcp__gravitone__gt_job, mcp__gravitone__gt_songlab
+allowed-tools: Read, Bash, PowerShell, mcp__gravitone__gt_read, mcp__gravitone__gt_launch, mcp__gravitone__gt_job, mcp__gravitone__gt_songlab, mcp__gravitone__gt_release
 ---
 
 # Studio agent: the person talks, you make the track
@@ -242,13 +242,13 @@ the conversation knows and say what is still missing. **Switch rule:** work in t
 about releasing, packaging, metadata, cover art or "what is missing", or when `release_read` for the conversation
 returns a release.
 
-The release ops ride the `job` family for now (`gt_job`; docs/mcp.md "Releases" says why).
+The release ops are the `release` family (`gt_release`).
 
-1. **Read:** `gt_job {op: "release_read", session}` (or `id` when you know it). Each release comes with its
+1. **Read:** `gt_release {op: "release_read", session}` (or `id` when you know it). Each release comes with its
    `version`, its live `problems` (each with the store's `rule`), its `pending` proposals, the `empty`
    fields, and `draftFrom`: the conversation's prompt cards, which ones the person kept, and the takes' facts.
 2. **Propose what the conversation knows, with honest sources:**
-   `gt_job {op: "release_propose", id, version, proposals: [{path, value, source}], turnId?}`.
+   `gt_release {op: "release_propose", id, version, proposals: [{path, value, source}], turnId?}`.
    - Good sources are a kept prompt's `lyrics` (for `track:1.lyrics`), its `name` (for a title), its style's genre words mapped to a store
      genre (`genre.primary`), and a sleeve prompt drawn from the lyrics' images (`sleevePrompt`). Name the
      source: "the kept prompt p2's lyrics", not "the session".
