@@ -100,3 +100,28 @@ What this adds to the standard *(host's reading)*:
     halves. Fight posters are copyrighted artwork and show real people's likenesses; this conflicts with the
     no-likeness and no-scraped-artwork rules. It needs the owner's decision (licensed or press-kit imagery,
     or a drawn poster style that resembles nobody) before the boxing reel is redone.
+
+## Round three picks (2026-11-17, ten subjects with assigned art directions)
+
+Taken: **cut paper / film franchises**, **ink notebook / population**, **8-bit / programming languages**,
+**engraved map / largest empires**, **Memphis / Wikipedia languages**. Dropped: watercolour life expectancy,
+woven warming, the chess table, the clay EV what-if; the Olympic poster had no verdict.
+
+Assigning each reel a named art direction, and showing builders every earlier still, broke the convergence:
+the ten stills were unlike each other at thumbnail size. That is now the method for a new reel.
+
+The owner's notes, verbatim:
+
+- Cut paper: works "Idea"; fails "Visuals are dual tones, if we would have background poster changing based on
+  the franchise, it would work better" (posters are copyrighted and show actors: answered with a drawn
+  cut-paper backdrop per franchise instead).
+- Ink notebook: works "Idea"; fails "Black and white dual tones can be enriched with subtle coloring of flags".
+- Engraved map: "Good idea but poor execution. Map areas are lazy and not precise, small typography hard to read".
+- Clay EV what-if: works "Nicer artwork and execution"; fails "Content of what if scenario is not interesting,
+  information like filling x pools is useless and not providing any realization of the fact."
+
+12. **A what-if's impact must change what the viewer understands**, not convert a number into a novelty unit.
+    Pools of petrol were judged useless: the consequence has to be a fact the viewer did not know (who would
+    lead, what would not have happened), not a bigger-sounding measure.
+13. **Two tones are a limit, not a style.** The owner asked for colour in both two-tone picks.
+14. **Maps are precise or absent.** A rough symbol standing in for territory reads as lazy.
