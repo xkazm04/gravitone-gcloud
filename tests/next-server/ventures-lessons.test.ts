@@ -66,6 +66,7 @@ let kernels: Kernel[] = [];
 afterEach(() => {
   for (const k of kernels) k.close();
   kernels = [];
+  vi.unstubAllEnvs();
 });
 
 function world(): { store: Store; location: string } {
@@ -266,6 +267,11 @@ describe("start and join", () => {
 
 describe("lessons", () => {
   it("one job is enqueued by the Board's approval, and a redelivery enqueues no second; the seat's fake writes the proposals, drawn from the record", async () => {
+    // The adapter reads the shell's GRAVITONE_DRY_ONLY (final.ts dryOnlyFrom(process.env)); this claim is about the
+    // live job the approval enqueues, its seat a fake, so the test pins the switch off instead of inheriting it: an
+    // agent shell runs with it set (CLAUDE.md), and there the approval enqueued a DRY job whose stand-in proposed
+    // every dimension - the test failed on every agent-run push gate and passed in the owner's (2026-11-17).
+    vi.stubEnv("GRAVITONE_DRY_ONLY", "");
     const { store, location } = world();
     const id = await produced(store, "cutting");
     const adapter = makeFinalAdapter({ store: () => ({ ok: true, value: store }) });

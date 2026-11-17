@@ -8,17 +8,16 @@
 // the work.
 //
 // The current section is derived from the pathname (./nav.ts sectionOf), never held; its lifted ground glides
-// between places. Section links are ./NavLink.tsx (prefetch off, a soft navigation, the pending mark). A section
+// between places (./glide.tsx). Section links are ./NavLink.tsx (prefetch off, a soft navigation, the pending mark). A section
 // that is not built is a disabled link: focusable, named, aria-disabled, with no href.
-import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { SectionGlyph } from "@gt/ui/components/glyph/SectionGlyph.tsx";
 
-import { GLIDE } from "./ContextColumn.tsx";
 import { FailedSlot, type NeedsReread } from "./FailedSlot.tsx";
+import { Here } from "./glide.tsx";
 import type { NeedsFacts, SpendFacts } from "./headerFacts.ts";
 import { NavLink } from "./NavLink.tsx";
 import { SECTIONS, sectionOf } from "./nav.ts";
@@ -30,8 +29,6 @@ export type SpineProps = { readonly devAuth: boolean; readonly facts: SpendFacts
 
 export function Spine({ devAuth, facts, needs, rereadNeeds }: SpineProps) {
   const here = sectionOf(usePathname());
-  const reduce = useReducedMotion();
-  const glide = reduce === true ? { duration: 0 } : GLIDE;
   const { signOut } = useShell();
   const kit = SECTIONS.find((x) => x.id === "kit");
   const pages = SECTIONS.filter((x) => x.id !== "kit");
@@ -44,7 +41,7 @@ export function Spine({ devAuth, facts, needs, rereadNeeds }: SpineProps) {
         {pages.map((x) =>
           x.built ? (
             <NavLink key={x.id} className={s.item} href={x.href} current={here === x.id}>
-              {here === x.id && <motion.span layoutId="spine-here" className={s.here} transition={glide} aria-hidden="true" />}
+              {here === x.id && <Here mark="spine" className={s.here} />}
               <SectionGlyph name={x.id} className={s.glyph} />
               <span className={s.label}>{x.label}</span>
             </NavLink>
@@ -68,7 +65,7 @@ export function Spine({ devAuth, facts, needs, rereadNeeds }: SpineProps) {
         <SpendReadout facts={facts} />
         {kit !== undefined && (
           <NavLink className={s.item} href={kit.href} current={here === "kit"}>
-            {here === "kit" && <motion.span layoutId="spine-here" className={s.here} transition={glide} aria-hidden="true" />}
+            {here === "kit" && <Here mark="spine" className={s.here} />}
             <SectionGlyph name="kit" className={s.glyph} />
             <span className={s.label}>{kit.label}</span>
           </NavLink>
