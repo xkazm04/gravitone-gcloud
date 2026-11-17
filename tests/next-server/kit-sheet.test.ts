@@ -19,9 +19,8 @@
 //      draws (DRAWN_GROUPS, which page.tsx checks the source against) are the source's groups -
 //      no more, no fewer. `roles-component` was listed and is no group: a page check reading
 //      that list could pass for a group nothing drew.
-//   5. The nav marks a section that is still in view. KitNav set the mark only on a section
-//      ENTERING its band and ignored one leaving it, so scrolling back up out of the section
-//      below left the mark on that section while the reader looked at the one above.
+//   5. (retired 2026-11-17) The one-page index's mark: the kit is a page per group now and its
+//      column marks the group, from the address (tests/next-server/nav-model.test.ts kitRooms).
 //   6. Every picture a screen kit draws is a file git tracks. public/trials/**/*.jpg is
 //      gitignored (a fresh clone lacks it); the style atelier's fixture was moved off it
 //      (f03cf366) and the kit, its twin, still drew six plates a clone does not have. The case
@@ -60,7 +59,6 @@ import { RunsSection } from "../../app/(studio)/kit/RunsKit.tsx";
 import { StyleSection } from "../../app/(studio)/kit/StyleKit.tsx";
 import { SignalSections } from "../../app/(studio)/kit/Signal.tsx";
 import { DRAWN_GROUPS, TokenSections } from "../../app/(studio)/kit/Tokens.tsx";
-import { KitNav } from "../../app/(studio)/kit/KitNav.tsx";
 import { MonthCalendar } from "@gt/ui/components/floor/MonthCalendar.tsx";
 import { ScheduleForm } from "@gt/ui/components/floor/ScheduleForm.tsx";
 import { SLOT_HOLDS } from "@gt/domain/slot.machine";
@@ -208,46 +206,6 @@ describe("/kit: the token sheet draws source.json whole", () => {
     const tokens = groups.flatMap((g) => g.tokens.map((t) => t.name));
     expect(tokens.length, "source.json holds no token").toBeGreaterThan(100);
     expect(drawn.sort()).toEqual(tokens.sort());
-  });
-});
-
-type Entry = { readonly target: { readonly id: string }; readonly isIntersecting: boolean };
-
-describe("/kit: the nav marks the section in view", () => {
-  test("a section leaving the band hands the mark back to the one still in it", async () => {
-    let fire: (entries: readonly Entry[]) => void = () => undefined;
-    const g = globalThis as Record<string, unknown>;
-    const saved = { document: g.document, IntersectionObserver: g.IntersectionObserver };
-    g.document = { getElementById: (id: string) => ({ id }) };
-    g.IntersectionObserver = class {
-      constructor(cb: (entries: readonly Entry[]) => void) {
-        fire = cb;
-      }
-      observe(): void {}
-      disconnect(): void {}
-    };
-    try {
-      const nav = harness(() => KitNav({ bodyId: "kit-body" }), { settleWhen: "stable" });
-      const marked = async (): Promise<string[]> => {
-        const out = JSON.stringify(await nav.settleUp());
-        return [...out.matchAll(/"href":"#([\w-]+)","aria-current":"location"/g)].map((m) => m[1] ?? "");
-      };
-      expect(await marked()).toEqual(["colour"]);
-      // An observer's first callback reports every target it observes.
-      fire([
-        { target: { id: "colour" }, isIntersecting: true },
-        { target: { id: "type" }, isIntersecting: false },
-      ]);
-      expect(await marked()).toEqual(["colour"]);
-      fire([{ target: { id: "type" }, isIntersecting: true }]);
-      expect(await marked(), "the section scrolled into the band").toEqual(["type"]);
-      fire([{ target: { id: "type" }, isIntersecting: false }]);
-      expect(await marked(), "scrolled back up: colour never left the band").toEqual(["colour"]);
-      nav.unmount();
-    } finally {
-      g.document = saved.document;
-      g.IntersectionObserver = saved.IntersectionObserver;
-    }
   });
 });
 

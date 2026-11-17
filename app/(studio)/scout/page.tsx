@@ -17,17 +17,15 @@ import { serverScout } from "./_port/port.ts";
 import { SCOUT_PORT } from "./_port/wire.ts";
 import { Scout } from "./_scout/Scout.tsx";
 import s from "./_scout/scout.module.css";
-import { isScoutPacket, ScoutHead } from "./_scout/ScoutHead.tsx";
-import { serverBoard } from "../board/_port/port.ts";
+import { ScoutHead } from "./_scout/ScoutHead.tsx";
 
 export const metadata: Metadata = { title: "Gravitone · Scout" };
 
 export default async function ScoutPage() {
   await connection();
-  const [view, packets, facts] = await Promise.all([serverScout().view(), serverBoard().listPackets(), scoutHeaderFacts()]);
-  const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
+  const [view, facts] = await Promise.all([serverScout().view(), scoutHeaderFacts()]);
   const backlog = view.ok ? view.value.backlog : undefined;
-  const head = <ScoutHead current="graph" undecided={undecided} facts={facts} {...(backlog === undefined ? {} : { backlog })} />;
+  const head = <ScoutHead facts={facts} {...(backlog === undefined ? {} : { backlog })} />;
   if (!view.ok) {
     return (
       <div className={s.page}>

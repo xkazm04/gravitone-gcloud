@@ -195,7 +195,7 @@
       {"name": "h-sheet-bar", "tier": "role", "value": "50px", "note": "Height of a level sheet's crumb bar."},
       {"name": "w-grab", "tier": "role", "value": "44px", "note": "Width of the grab handle on a level sheet."},
       {"name": "dur-sheet", "tier": "role", "value": ".34s", "note": "How long a level sheet takes to rise over the Floor."},
-      {"name": "sheet-ground", "tier": "role", "value": "linear-gradient(180deg,#0f131c,#0a0d14)", "note": "Ground of a level sheet: the Board over the Floor."},
+      {"name": "sheet-ground", "tier": "role", "value": "linear-gradient(180deg,#121722,#0a0c12)", "note": "Ground of a level sheet: the Board over the Floor."},
       {"name": "shadow-sheet", "tier": "role", "value": "0 -30px 80px rgba(0,0,0,.7)", "note": "The shadow a level sheet casts up over the Floor."},
       {"name": "h-commit", "tier": "role", "value": "38px", "note": "Height of the commit button that ends a desk."},
       {"name": "r-tile", "tier": "role", "value": "9px", "note": "Corner of a decision tile, a pile face and the commit button."},
@@ -267,6 +267,7 @@
       {"name": "sp-8", "tier": "role", "value": "32px", "note": "Inset of a lead and the gap between a step's regions."},
       {"name": "sp-9", "tier": "role", "value": "48px", "note": "Air around a lead; the reach of its glow."},
       {"name": "dur-room", "tier": "role", "value": ".7s", "note": "How long a room's light takes to cross-fade to a new hue."},
+      {"name": "scrollbar", "tier": "role", "value": "2px", "note": "Thickness of every scrollbar in the studio, vertical and horizontal (world.css)."},
       {"name": "dur-defer", "tier": "role", "value": ".45s", "note": "How long a loading frame or an empty state waits before it is drawn: a read that lands sooner never shows either."}
     ]}
   ]

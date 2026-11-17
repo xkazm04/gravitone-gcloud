@@ -12,6 +12,7 @@ import type { RoomGlyphName } from "@gt/ui/components/glyph/RoomGlyph.tsx";
 
 import { deskHref, GROUPS as DESK_GROUPS, KINDS, parseDeskUrl, SECTIONS as DESK_ROOMS, type Section as DeskSection } from "../audio/_audio/desk.ts";
 import { parseStudioUrl, STUDIO_STAGES, studioHref } from "../audio/studio/url.ts";
+import { KIT_GROUPS, kitHref, type KitGroupId } from "../kit/sections.ts";
 
 export type NavTally = { readonly value: number; readonly label: string };
 
@@ -62,4 +63,26 @@ export function audioRooms(q: Query, tallies: Readonly<Partial<Record<DeskSectio
   }
   const kinds = KINDLESS.has(desk.section) ? null : KINDS.map((k): NavItem => ({ id: k, label: k, href: deskHref({ ...desk, kind: k }), current: desk.kind === k }));
   return { title: "Audio", rooms, groups, stages, kinds };
+}
+
+/** /kit: the kit's groups and nothing under them (each group is its own page, ../kit/sections.ts); foundations
+ *  first, then the screens' compositions. */
+export function kitRooms(current: KitGroupId): Rooms {
+  const rooms = KIT_GROUPS.map((g): NavItem => ({ id: g.id, label: g.label, glyph: g.glyph, href: kitHref(g.id), current: g.id === current }));
+  const shelf = (s: "foundations" | "screens"): NavItem[] => rooms.filter((r) => KIT_GROUPS.find((g) => g.id === r.id)?.shelf === s);
+  return { title: "Kit", rooms, groups: [{ id: "foundations", label: "Foundations", items: shelf("foundations") }, { id: "screens", label: "Screens", items: shelf("screens") }], stages: null, kinds: null };
+}
+
+/** The Scout's rooms (/scout, /scout/runs[/packet], /scout/productions, /scout/ventures), the current one the
+ *  pathname's; the Runs tally is the open scout packets the layout counted (undefined: the Board could not be read). */
+export function scoutRooms(pathname: string, undecided: number | undefined): Rooms {
+  const at = pathname.startsWith("/scout/runs") ? "runs" : pathname.startsWith("/scout/productions") ? "productions" : pathname.startsWith("/scout/ventures") ? "ventures" : "graph";
+  const rows: readonly (readonly [string, string, string, RoomGlyphName])[] = [
+    ["graph", "Graph", "/scout", "graph"],
+    ["runs", "Runs", "/scout/runs", "runs"],
+    ["productions", "Productions", "/scout/productions", "production"],
+    ["ventures", "Ventures", "/scout/ventures", "ventures"],
+  ];
+  const rooms = rows.map(([id, label, href, glyph]): NavItem => ({ id, label, href, glyph, current: id === at, ...(id === "runs" && undecided !== undefined ? { tally: { value: undecided, label: "undecided" } } : {}) }));
+  return { title: "Scout", rooms, groups: [{ id: "scout", label: null, items: rooms }], stages: null, kinds: null };
 }

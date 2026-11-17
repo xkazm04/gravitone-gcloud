@@ -3,7 +3,8 @@
 // only what the page handed in.
 import { describe, expect, it } from "vitest";
 
-import { audioRooms } from "../../app/(studio)/_shell/navModel.ts";
+import { audioRooms, kitRooms } from "../../app/(studio)/_shell/navModel.ts";
+import { KIT_GROUPS, SECTIONS as KIT_SECTIONS, sectionHref } from "../../app/(studio)/kit/sections.ts";
 
 const cur = (xs: readonly { readonly id: string; readonly current: boolean }[] | null) => xs?.filter((x) => x.current).map((x) => x.id) ?? null;
 
@@ -52,5 +53,24 @@ describe("audioRooms", () => {
     expect(r.kinds?.find((k) => k.id === "music")?.href).toContain("arrange");
     expect(r.rooms.find((x) => x.id === "arrange")?.tally).toEqual({ value: 3, label: "final" });
     expect(r.rooms.filter((x) => x.tally !== undefined)).toHaveLength(1);
+  });
+});
+
+describe("kitRooms", () => {
+  it("lists the kit's groups and nothing under them, the open one current, /kit the tokens", () => {
+    const r = kitRooms("audio");
+    expect(r.rooms.map((x) => x.id)).toEqual(KIT_GROUPS.map((g) => g.id));
+    expect(cur(r.rooms)).toEqual(["audio"]);
+    expect(r.stages).toBeNull();
+    expect(r.kinds).toBeNull();
+    expect(r.rooms.find((x) => x.id === "tokens")?.href).toBe("/kit");
+    expect(r.rooms.find((x) => x.id === "audio")?.href).toBe("/kit/audio");
+    expect(r.groups.flatMap((g) => g.items).length).toBe(KIT_GROUPS.length);
+  });
+
+  it("every section lives on a group's page, and its address is that page's anchor", () => {
+    for (const s of KIT_SECTIONS) expect(KIT_GROUPS.some((g) => g.id === s.group), s.id).toBe(true);
+    expect(sectionHref("songlab")).toBe("/kit/audio#songlab");
+    expect(sectionHref("colour")).toBe("/kit#colour");
   });
 });

@@ -122,7 +122,7 @@ export function StructureSection() {
   );
 }
 
-const ROOM_GLYPHS: readonly RoomGlyphName[] = ["overview", "compose", "cover", "hunt", "arrange", "songlab", "rubric", "strengths", "lessons", "batch", "release", "lanes", "plan", "runs"];
+const ROOM_GLYPHS: readonly RoomGlyphName[] = ["overview", "compose", "cover", "hunt", "arrange", "songlab", "rubric", "strengths", "lessons", "batch", "release", "lanes", "plan", "runs", "tokens", "signal", "controls", "structure", "operations", "production", "wave", "books", "contract", "graph", "ventures"];
 
 const ROOMS: readonly RoomKind[] = ["block", "warn", "agent", "ready", "clear", "neutral"];
 const GLYPHS: readonly SectionGlyphName[] = ["floor", "projects", "runs", "scout", "library", "audio", "ledger", "kit", "signout", "send", "menu", "talk"];

@@ -1,6 +1,6 @@
-// THE TITLE SECTION of /scout and /scout/runs: where the operator is, and the two views of the scout's work - the
-// decision graph, and the nights and seed batches waiting for (or past) their triage. Each tab is its own address
-// (projects/runs/_runs/Runs.tsx is the precedent), so a reload or a pasted link lands on the same view.
+// THE TITLE SECTION of every Scout page: where the operator is. The rooms - the graph, the runs, the productions, the
+// ventures - were a tab row here until the design baseline (P4, 2026-11-17) moved them into the Scout's context column
+// (../layout.tsx, ./ScoutColumn.tsx), each still its own address.
 //
 // On the right (spark scout-storyboards WP2, moved here from the studio header): the last 24 hours' spend and the
 // NEXT scout pile - the oldest scout or seeds pile still waiting (_shell/facts.ts nextScoutPile), opened on the Runs
@@ -13,7 +13,6 @@
 import type { PacketSummary } from "@gt/domain/board";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
 import { Crumbs } from "@gt/ui/components/crumbs/Crumbs.tsx";
-import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
 
 import { SCOUT_PILE_SOURCES } from "../../_shell/facts.ts";
@@ -42,22 +41,11 @@ function Backlog({ backlog }: { readonly backlog: ScoutBacklog }) {
   );
 }
 
-export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "runs" | "productions" | "ventures"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
+export function ScoutHead({ facts, backlog }: { readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
   const next = facts.next;
   return (
     <div className={s.head}>
       <Crumbs trail={[]} here="Scout" />
-      <TabRail
-        label="view"
-        mode="scout"
-        current={current}
-        tabs={[
-          { id: "graph", label: "Graph", href: "/scout" },
-          { id: "runs", label: "Runs", href: "/scout/runs", ...(undecided === undefined ? {} : { tally: { value: undecided, label: "undecided" } }) },
-          { id: "productions", label: "Productions", href: "/scout/productions" },
-          { id: "ventures", label: "Ventures", href: "/scout/ventures" },
-        ]}
-      />
       <div className={s.headEnd}>
         {backlog !== undefined && <Backlog backlog={backlog} />}
         <SpendSlot facts={facts} />

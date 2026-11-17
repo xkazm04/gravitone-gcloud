@@ -2,7 +2,7 @@
    `.sheet-body`. The scrim's ink is the page ink at the prototype's .62 (it wrote 4,5,9, a hair
    darker than --ink; recorded in INVENTORY). */
 .scrim{position:fixed;inset:0 0 0 var(--w-spine);background:color-mix(in srgb,var(--ink) 62%,transparent);z-index:var(--z-scrim)}
-.sheet{position:fixed;z-index:var(--z-sheet);left:calc(var(--w-spine) + var(--sp-loose));right:var(--sp-loose);top:var(--sp-5);bottom:0;border-radius:var(--r-lg) var(--r-lg) 0 0;background:var(--sheet-ground);border:1px solid var(--hair-2);border-bottom:0;box-shadow:var(--shadow-sheet);transform:translateY(102%);transition:transform var(--dur-sheet) var(--ease);display:flex;flex-direction:column;overflow:hidden}
+.sheet{position:fixed;z-index:var(--z-sheet);left:calc(var(--w-spine) + var(--sp-loose));right:var(--sp-loose);top:var(--sp-5);bottom:0;border-radius:var(--r-pane) var(--r-pane) 0 0;background:var(--sheet-ground);border:1px solid var(--rim);border-bottom:0;box-shadow:var(--shine),var(--shadow-sheet);transform:translateY(102%);transition:transform var(--dur-sheet) var(--ease);display:flex;flex-direction:column;overflow:hidden}
 .open{transform:none}
 .sheet:focus{outline:none}
 .full{position:relative;left:auto;right:auto;top:auto;bottom:auto;margin:var(--sp-5) var(--sp-loose) 0;height:calc(100vh - var(--sp-5));transform:none;transition:none}

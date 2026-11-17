@@ -204,7 +204,7 @@
   --reading-bright: #fbf7ee; /* Serif headings of an article under review. */
   --reading-muted: #c9c2b3; /* An article's standfirst under its title. */
   --shadow-sheet: 0 -30px 80px rgba(0,0,0,.7); /* The shadow a level sheet casts up over the Floor. */
-  --sheet-ground: linear-gradient(180deg,#0f131c,#0a0d14); /* Ground of a level sheet: the Board over the Floor. */
+  --sheet-ground: linear-gradient(180deg,#121722,#0a0c12); /* Ground of a level sheet: the Board over the Floor. */
   --size-badge: 26px; /* Side of the keep or reject badge on a decided tile. */
   --sp-page: 28px; /* Inset of the article page in a review desk. */
   --sp-page-end: 60px; /* Scroll room after the last section of a review desk's page. */
@@ -262,6 +262,7 @@
   --r-pane: 18px; /* Corner of a pane: the lead, a glass panel, the composer. */
   --r-pill: 999px; /* A fully round end: a capsule control, a chip, a tally. */
   --rim: rgba(255,255,255,.12); /* The rim of a glass surface. */
+  --scrollbar: 2px; /* Thickness of every scrollbar in the studio, vertical and horizontal (world.css). */
   --shine: inset 0 1px 0 rgba(255,255,255,.09); /* The light on a glass surface's top edge. */
   --sp-8: 32px; /* Inset of a lead and the gap between a step's regions. */
   --sp-9: 48px; /* Air around a lead; the reach of its glow. */

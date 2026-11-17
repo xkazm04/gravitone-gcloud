@@ -1,4 +1,4 @@
-// /kit WITH A TOKEN FILE IT CANNOT READ (app/(studio)/kit/page.tsx). parseSource is a Result and
+// /kit WITH A TOKEN FILE IT CANNOT READ (app/(studio)/kit/page.tsx, the tokens group of ./KitGroup.tsx). parseSource is a Result and
 // the page draws its failure as a live ErrorLine; the read in front of it threw, so a moved
 // source.json or a cwd that is not the repo root made the route an error boundary with no
 // specimen at all. The read now goes through the same door: one red line carrying the
@@ -30,7 +30,7 @@ describe("/kit with an unreadable token file", () => {
     gate.fail = true;
     const html = renderToStaticMarkup(h(KitPage));
     expect(html).toContain("tokens/source.json: ENOENT: no such file or directory");
-    expect(html, "a non-token section is still drawn").toContain("Signal");
+    expect(html, "the kit's column, its other groups, is still drawn").toContain("/kit/signal");
   });
 
   it("with a readable file, draws no source ErrorLine", () => {

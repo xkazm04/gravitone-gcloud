@@ -1,6 +1,7 @@
 /* floor.css [data-component=CalendarColumn], .cal-head, .cal-expand, .cal-body, .cal-sec,
    .cal-day, .now-line. */
-.col{border-left:1px solid var(--hair);display:flex;flex-direction:column;min-height:0;min-width:0;background:linear-gradient(180deg,color-mix(in srgb,var(--violet) 5%,transparent),color-mix(in srgb,var(--violet) 1.5%,transparent))}
+/* on glass like every route's column (navcolumn/NavColumn.module.css), the calendar's violet a wash at its head */
+.col{border-left:1px solid var(--rim);display:flex;flex-direction:column;min-height:0;min-width:0;background:linear-gradient(180deg,color-mix(in srgb,var(--violet) 6%,transparent),transparent 45%),var(--glass);box-shadow:var(--shine)}
 .head{height:var(--head-h);display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);border-bottom:1px solid var(--hair);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--violet);flex:none}
 .expand{margin-left:auto;display:inline-flex;align-items:center;gap:var(--sp-2);height:var(--h-row);padding:0 var(--sp-1) 0 var(--sp-3);border-radius:var(--r-sm);border:1px solid var(--hair-2);color:var(--muted)}
 .expand:hover{color:var(--ink-bright);border-color:var(--hair-3)}

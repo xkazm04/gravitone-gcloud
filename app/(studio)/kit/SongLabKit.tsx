@@ -77,7 +77,7 @@ export function SongLabSection() {
             decided={3}
             total={15}
             upsets={1}
-            fieldHref="/kit#songlab"
+            fieldHref="/kit/audio#songlab"
             seedCut
           />
         </At>

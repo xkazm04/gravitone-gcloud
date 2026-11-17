@@ -17,12 +17,13 @@
 
 import { GRAPH_STAGES, type GraphEdge, type GraphNode, type GraphStage, type GraphState } from "@gt/domain/scoutGraph";
 
-import { tokens, type TokenName } from "../../tokens.ts";
+import { tokenPx } from "../../tokenPx.ts";
 import type { StatusEntry } from "../status/status.ts";
 
 export type GraphView = "live" | "all";
 
-const px = (name: TokenName): number => Number.parseFloat(tokens[name]);
+// A clamp reads as its floor (../../tokenPx.ts): parseFloat of one was NaN, and the graph drew width="NaN".
+const px = tokenPx;
 
 /** The tokens' own numbers: a node is a field's height wide as a lane's label, columns two gutters apart. */
 export const GEOMETRY = {

@@ -12,11 +12,27 @@
 // function under packages/ui/src/components (read off the filesystem, so a new component
 // is a new requirement the day it lands); the token list is packages/ui/tokens/source.json.
 // Each has a floor, because a walk that found nothing would pass every assertion.
+//
+// A PAGE PER GROUP (design baseline P4, 2026-11-17): the sheet is /kit (the tokens) and /kit/<group> for the rest
+// (app/(studio)/kit/sections.ts KIT_GROUPS), so the specimen and type-floor claims walk every group page and take
+// the union; a group page that does not render is its own failure.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+import { KIT_GROUPS, kitHref } from "../../app/(studio)/kit/sections.ts";
+
+const PAGES = KIT_GROUPS.map((g) => kitHref(g.id));
+
+/** Open each group page in turn and hand it to `read`. */
+async function eachPage(page: Page, read: (url: string) => Promise<void>): Promise<void> {
+  for (const url of PAGES) {
+    await page.goto(url, { waitUntil: "networkidle" });
+    await read(url);
+  }
+}
 
 const ROOT = process.cwd();
 const COMPONENTS = join(ROOT, "packages", "ui", "src", "components");
@@ -51,10 +67,14 @@ test.describe("/kit", () => {
   test("renders a specimen of every @gt/ui component, with no page error", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.reload({ waitUntil: "networkidle" });
     const wanted = exportedComponents();
     expect(wanted.length, "walked no component exports").toBeGreaterThan(25);
-    const drawn = new Set((await page.locator("[data-specimen]").evaluateAll((els) => els.map((e) => e.getAttribute("data-specimen") ?? ""))).flatMap((s) => s.split(" ")));
+    const drawn = new Set<string>();
+    await eachPage(page, async (url) => {
+      const here = (await page.locator("[data-specimen]").evaluateAll((els) => els.map((e) => e.getAttribute("data-specimen") ?? ""))).flatMap((s) => s.split(" "));
+      expect(here.length, `${url} drew no specimen`).toBeGreaterThan(0);
+      for (const n of here) drawn.add(n);
+    });
     expect(wanted.filter((n) => !drawn.has(n)), "components with no specimen on /kit").toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -78,7 +98,7 @@ test.describe("/kit", () => {
         native.apply(this, args);
       };
     });
-    await page.reload({ waitUntil: "networkidle" });
+    await page.goto("/kit/operations", { waitUntil: "networkidle" });
     // Hydration of the whole sheet is slow and in pieces: wait for the review's own fiber.
     await page.waitForFunction(() => {
       const el = document.querySelector('[data-component="PacketReview"]');
@@ -89,6 +109,7 @@ test.describe("/kit", () => {
   });
 
   test("no readable text under 12px (computed, after v1's cascade)", async ({ page }) => {
+    await eachPage(page, async (url) => {
     const r = await page.evaluate(() => {
       const world = document.querySelector('[data-world="next"]');
       if (world === null) return { checked: 0, small: ["no world root"] };
@@ -107,17 +128,16 @@ test.describe("/kit", () => {
       }
       return { checked, small };
     });
-    expect(r.checked, "measured no text").toBeGreaterThan(200);
-    expect(r.small).toEqual([]);
+    expect(r.checked, `${url} measured no text`).toBeGreaterThan(20);
+    expect(r.small, url).toEqual([]);
+    });
   });
 
   test("a Hint opens on hover and Escape dismisses it without moving focus (WCAG 1.4.13)", async ({ page }) => {
+    await page.goto("/kit/signal", { waitUntil: "networkidle" });
     const hint = page.locator('[data-specimen="Hint"]');
     const glyph = hint.getByRole("button", { name: "spend" });
     const tip = hint.locator('[role="tooltip"]');
-    // The Runs specimen seeds a selection and focuses that bar once its day-line has measured
-    // itself after hydration; wait for that, or it takes the focus this test sets below.
-    await page.locator('[data-component="RunsDayline"][data-measured]').first().waitFor();
     await glyph.scrollIntoViewIfNeeded();
     // Focus somewhere else first: the dismissal must leave it exactly there.
     await page.locator("#keys-h").evaluate((h) => {

@@ -18,7 +18,7 @@ const HOME = { label: "Scout", href: "/scout", railBase: "/scout/runs" } as cons
 
 export default async function ScoutRun({ params }: { readonly params: Promise<{ readonly packet: string }> }) {
   const [r, facts] = await Promise.all([loadBoard(params), scoutHeaderFacts()]);
-  const head = (undecided?: number) => <ScoutHead current="runs" facts={facts} {...(undecided === undefined ? {} : { undecided })} />;
+  const head = () => <ScoutHead facts={facts} />;
   if (!r.ok) {
     return (
       <div className={s.page}>
@@ -30,7 +30,7 @@ export default async function ScoutRun({ params }: { readonly params: Promise<{ 
   const rail = r.rail.filter(isScoutPacket);
   return (
     <div className={s.page}>
-      {head(rail.filter((p) => p.state === "open").length)}
+      {head()}
       <Board id={r.id} initial={r.packet} rail={rail} kind="full" port={BOARD_PORT} redrive={BOARD_REDRIVE} home={HOME} {...(r.head === undefined ? {} : { head: r.head })} />
     </div>
   );

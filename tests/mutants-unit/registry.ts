@@ -8059,14 +8059,6 @@ export const MUTANTS: UnitMutant[] = [
     why: "The kit's list of drawn token groups names a group source.json does not hold, so the page's placement check reads a list that is not what the sheet draws.",
   },
   {
-    id: "kit-nav-mark-ignores-a-leaving-section",
-    test: "tests/next-server/kit-sheet.test.ts",
-    file: "app/(studio)/kit/KitNav.tsx",
-    find: "else inBand.delete(e.target.id);",
-    replace: "else inBand.has(e.target.id);",
-    why: "Scrolling back up out of a /kit section leaves the nav marking the section below, not the one being read.",
-  },
-  {
     id: "agy-workspace-removed",
     test: "tests/next-server/imaging-agy.test.ts",
     file: "lib/imaging/providers/agy.ts",
@@ -9277,9 +9269,17 @@ export const MUTANTS: UnitMutant[] = [
     why: "The --hatch stripes fall back to .28 alpha: 2.5:1 on a StackBar's track, so undecided reads as empty.",
   },
   {
+    id: "token-px-reads-a-clamp-whole",
+    test: "packages/ui/test/tokenPx.test.ts",
+    file: "packages/ui/src/tokenPx.ts",
+    find: "const inner = /^clamp\\(\\s*([^,]+),/.exec(v)?.[1] ?? v;",
+    replace: "const inner = v;",
+    why: "A clamped token read as pixels is parsed whole again, so a layout in numbers (the Scout's stage graph) gets NaN or a throw instead of the clamp's floor.",
+  },
+  {
     id: "kit-source-read-throws",
     test: "tests/next-server/kit-source-unreadable.test.ts",
-    file: "app/(studio)/kit/page.tsx",
+    file: "app/(studio)/kit/KitGroup.tsx",
     find: "return err(\"unavailable\", errorMessage(e));",
     replace: "throw e;",
     why: "An unreadable tokens/source.json throws out of the kit page again, so /kit is an error boundary with no specimen instead of one ErrorLine.",

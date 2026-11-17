@@ -22,7 +22,7 @@ export default async function ScoutRuns() {
   if (to !== undefined) redirect(runFor(to.id));
   return (
     <div className={s.page}>
-      <ScoutHead current="runs" undecided={0} facts={await scoutHeaderFacts()} />
+      <ScoutHead facts={await scoutHeaderFacts()} />
       {/* Nothing has run yet: an absence, drawn as one - not a failure in the error's rose. */}
       <Empty label="no night or seed batch has opened a packet yet" />
     </div>
