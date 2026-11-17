@@ -1,0 +1,41 @@
+/* The checklist variant's dialog (prototype dock-package, round 2): the panel's material, its head (the item's mark,
+   name and value), the track pick, the rule lines, the agent's suggestion. Detail lives here, never on the page.
+   Tokens only. */
+.panel{background:linear-gradient(180deg,var(--ink-3),var(--ink-2));border-color:var(--hair-2);box-shadow:0 var(--sp-7) calc(var(--sp-7) * 3) var(--shadow)}
+.panel.huge{width:min(100%,calc(var(--w-detail) * 2.8))}
+
+.head{flex:1;display:flex;align-items:center;gap:var(--sp-4);min-width:0}
+.headTitle{font:400 var(--fs-h2)/1.2 var(--serif);color:var(--ink-bright);white-space:nowrap}
+.headValue{min-width:0;font:500 var(--fs-meta)/1.3 var(--mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.stack{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0}
+.editor{min-width:0}
+.after{display:flex;padding-top:var(--sp-5);border-top:1px solid var(--hair)}
+
+/* the track pick: one numbered door per track, the item's mark on it */
+.trackBar{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp-3);min-width:0;padding-bottom:var(--sp-5);border-bottom:1px solid var(--hair)}
+.pick{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.pickTrack{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);min-width:var(--h-control-sm);height:var(--h-control-sm);padding:0 var(--sp-3);border:1px solid var(--hair-2);border-radius:var(--r-control);background:none;color:var(--text);font:600 var(--fs-ui)/1 var(--mono);cursor:pointer;transition:background var(--dur-fast),border-color var(--dur-fast)}
+.pickTrack:hover{background:var(--wash)}
+.pickTrack[aria-pressed="true"]{border-color:var(--focus-line);background:var(--wash-hi);color:var(--ink-bright)}
+.pickTrack:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.trackName{max-width:100%;min-width:0;font:400 var(--fs-ui)/1.3 var(--sans);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* the store's rule, verbatim */
+.rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.rule{display:grid;grid-template-columns:var(--size-mark) minmax(0,1fr);align-items:baseline;gap:var(--sp-4);font:400 var(--fs-ui)/1.45 var(--sans);color:var(--text)}
+
+/* the agent's suggestion: a thin agent edge, the value bright, the source quiet */
+.suggestion{display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-5);border:1px solid var(--hair-2);border-radius:var(--r);background:var(--wash);box-shadow:inset var(--stroke-mark) 0 0 var(--actor-agent)}
+.sgHead{display:flex;align-items:center;gap:var(--sp-3)}
+.sgWho{font:600 var(--fs-micro)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sgValue{margin:0;font:400 var(--fs-body)/1.45 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+.sgFacts{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-thumb) * 2),1fr));gap:var(--sp-3) var(--sp-6)}
+.sgFacts dt{font:600 var(--fs-micro)/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sgFacts dd{margin:var(--sp-1) 0 0;font:400 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright)}
+.sgSource{margin:0;font:400 var(--fs-meta)/1.4 var(--mono);color:var(--muted)}
+.sgActs{display:flex;gap:var(--sp-3)}
+
+@media (prefers-reduced-motion:reduce){
+  .pickTrack{transition:none}
+}

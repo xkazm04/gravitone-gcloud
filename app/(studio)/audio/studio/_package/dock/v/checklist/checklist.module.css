@@ -1,0 +1,57 @@
+/* The checklist variant (prototype dock-package, round 2): what goes INSIDE the wizard's regions - the state marks, the
+   rail's rows, the step's list and its one lead. The regions themselves are wizard.module.css's. Tokens only. Colour is
+   for state and small: a mark, the lead's edge; content is neutral ink. */
+
+/* ---- the state mark: one shape per state, never colour alone ---- */
+.mark{position:relative;display:inline-block;flex:none;justify-self:center;width:var(--size-pip);height:var(--size-pip);box-sizing:border-box}
+.mark[data-mark="need"]{border-radius:50%;background:var(--rose)}
+.mark[data-mark="agent"]{width:calc(var(--size-pip) - var(--sp-nudge));height:calc(var(--size-pip) - var(--sp-nudge));border-radius:var(--sp-nudge);background:var(--actor-agent);transform:rotate(45deg)}
+.mark[data-mark="warn"]{background:var(--amber);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.mark[data-mark="done"]{width:calc(var(--size-pip) / 2);height:var(--size-pip);border-right:var(--stroke-mark) solid var(--emerald);border-bottom:var(--stroke-mark) solid var(--emerald);transform:translateY(calc(var(--sp-nudge) * -1)) rotate(45deg)}
+.mark[data-mark="idle"]{border:var(--stroke-glyph) solid var(--faint);border-radius:50%}
+.mark[data-mark="todo"]{border:var(--stroke-mark) solid var(--cyan);border-radius:50%;box-shadow:0 0 0 var(--ring-halo) var(--cyan-a)}
+
+/* ---- the rail: the wizard's row metrics (so its box matches the baseline's), a name and one mark ---- */
+.railList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-1)}
+.railStep{display:grid;grid-template-columns:var(--size-badge) minmax(0,1fr) var(--size-mark);align-items:center;gap:var(--sp-4);width:100%;min-height:calc(var(--h-control) + var(--sp-3));padding:var(--sp-2) var(--sp-4);border:1px solid transparent;border-radius:var(--r-control);background:none;color:var(--text);font:500 var(--fs-nav)/1.2 var(--sans);text-align:left;cursor:pointer;transition:background var(--dur-fast),border-color var(--dur-fast)}
+.railStep:hover{background:var(--wash)}
+.railStep:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.railStep[aria-current="step"]{background:var(--wash-hi);border-color:var(--hair-3);color:var(--ink-bright)}
+.railNo{justify-self:center;font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.railStep[aria-current="step"] .railNo{color:var(--ink-bright)}
+.railLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- the list: quiet rows, a name and a value on one baseline, the mark at the end ---- */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-width:calc(var(--w-detail) * 3)}
+.row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto var(--size-glyph-xs) var(--size-mark);align-items:center;gap:var(--sp-5);min-height:calc(var(--h-control) + var(--sp-4));padding:0 var(--sp-5);border-bottom:1px solid var(--hair);transition:background var(--dur-fast)}
+.row:hover{background:var(--wash)}
+.open{display:grid;grid-template-columns:calc(var(--w-cull-label) * 1.25) minmax(0,1fr);gap:var(--sp-6);align-items:baseline;min-width:0;padding:var(--sp-4) 0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+/* the whole row is the door; the lead's action sits above it */
+.open::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit}
+.open:focus-visible{outline:none}
+.open:focus-visible::after{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:calc(var(--sp-nudge) * -1);border-radius:var(--r-control)}
+.label,.value,.chev,.mark{position:relative}
+.label{font:500 var(--fs-ui)/1.3 var(--sans);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.value{font:400 var(--fs-ui)/1.3 var(--sans);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chev{font:400 var(--fs-h3)/1 var(--sans);color:var(--muted);opacity:0;transition:opacity var(--dur-fast)}
+.row:hover .chev,.row:focus-within .chev{opacity:1}
+.act{position:relative;z-index:2}
+
+/* ---- the lead: the one raised row, its edge in its state, its action visible ---- */
+.row[data-lead]{--lead-edge:var(--cyan);min-height:calc(var(--h-control) * 2);margin-bottom:var(--sp-6);padding:0 var(--sp-6);border-bottom-color:transparent;background:none}
+.row[data-lead][data-mark="need"]{--lead-edge:var(--rose)}
+.row[data-lead][data-mark="agent"]{--lead-edge:var(--actor-agent)}
+.leadPlate{position:absolute;inset:0;border:1px solid var(--hair-3);border-radius:var(--r-lg);background:linear-gradient(180deg,var(--ink-4),var(--ink-3));box-shadow:inset var(--stroke-mark) 0 0 var(--lead-edge),0 var(--sp-3) var(--sp-7) var(--shadow)}
+.row[data-lead] .open{padding:var(--sp-6) 0}
+.row[data-lead] .label{font:600 var(--fs-h3)/1.3 var(--sans);color:var(--ink-bright)}
+.row[data-lead] .value{font:400 var(--fs-h3)/1.3 var(--sans);color:var(--text)}
+.row[data-lead] .chev{visibility:hidden}
+.row[data-lead] .mark{transform-origin:center}
+.row[data-lead] .mark[data-mark="need"],.row[data-lead] .mark[data-mark="todo"]{width:var(--size-mark);height:var(--size-mark)}
+
+@media (max-width:1100px){
+  .railList{flex-direction:row;flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){
+  .row,.chev,.railStep{transition:none}
+}

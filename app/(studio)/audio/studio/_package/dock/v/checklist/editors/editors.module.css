@@ -1,0 +1,39 @@
+/* The checklist variant's editors inside the dialog (prototype dock-package, round 2): labelled cells, list lines,
+   facts, the review's doors. Tokens only. */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-5) var(--sp-6)}
+.cell{display:flex;flex-direction:column;gap:var(--sp-2);min-width:0}
+.cell[data-w="wide"]{grid-column:1 / -1}
+.k{font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:var(--sp-5);min-width:0}
+
+.lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-3);align-items:center}
+.line[data-cols="3"]{grid-template-columns:minmax(0,1fr) minmax(0,.7fr) auto}
+.remove{display:grid;place-items:center;width:var(--h-control-sm);height:var(--h-control-sm);border:1px solid var(--hair-2);border-radius:var(--r-control);background:none;color:var(--muted);font:400 var(--fs-h3)/1 var(--sans);cursor:pointer}
+.remove:hover{border-color:var(--rose);color:var(--ink-bright)}
+.remove:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+
+.facts{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--w-thumb) * 2),1fr));gap:var(--sp-4) var(--sp-6);padding:var(--sp-5) 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.fact dt{font:600 var(--fs-micro)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fact dd{margin:var(--sp-1) 0 0;font:400 var(--fs-ui)/1.3 var(--sans);color:var(--text);font-variant-numeric:tabular-nums}
+.acts{display:flex;align-items:center;gap:var(--sp-3)}
+.push{margin-left:auto}
+
+.channel{display:flex;align-items:center;gap:var(--sp-5);flex-wrap:wrap}
+.chanName{display:inline-flex;align-items:center;gap:var(--sp-3);font:500 var(--fs-body)/1.2 var(--sans);color:var(--ink-bright);margin-right:auto}
+.quote{margin:0;padding-left:var(--sp-5);border-left:var(--stroke-mark) solid var(--hair-2);font:400 var(--fs-meta)/1.5 var(--mono);color:var(--text)}
+
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rowLine{display:grid;grid-template-columns:minmax(0,.8fr) auto auto minmax(0,1.4fr);align-items:center;gap:var(--sp-5);padding:var(--sp-4) 0;border-bottom:1px solid var(--hair)}
+.rowName{font:500 var(--fs-ui)/1.3 var(--sans);color:var(--ink-bright)}
+.rowValue{font:400 var(--fs-ui)/1.3 var(--sans);color:var(--text)}
+.rowNote{font:400 var(--fs-meta)/1.4 var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.door{display:grid;grid-template-columns:var(--size-mark) minmax(0,1fr) auto;align-items:baseline;gap:var(--sp-4);width:100%;padding:var(--sp-4) var(--sp-3);border:0;border-bottom:1px solid var(--hair);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background var(--dur-fast)}
+.door:hover{background:var(--wash)}
+.door:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:calc(var(--sp-nudge) * -1)}
+.doorText{font:400 var(--fs-ui)/1.45 var(--sans);color:var(--text)}
+
+@media (prefers-reduced-motion:reduce){
+  .door{transition:none}
+}
+.door .rowNote{max-width:calc(var(--w-detail) * .6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
