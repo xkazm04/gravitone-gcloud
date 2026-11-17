@@ -27,6 +27,6 @@
 /* PROTOTYPE SWITCHER (throwaway, prototype dock-package). */
 .switch{position:absolute;top:var(--sp-2);right:var(--sp-loose);z-index:5;display:flex;gap:var(--sp-1);padding:var(--sp-1);border:1px dashed var(--muted);border-radius:var(--r-sm);background:var(--panel-ground)}
 .switchTab{padding:var(--sp-1) var(--sp-3);border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);font:600 var(--fs-meta)/1.2 var(--mono);cursor:pointer}
-.switchTab[aria-selected=true]{background:var(--cyan);color:var(--ink-0)}
-.switchTab:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.switchTab[aria-selected=true]{background:var(--cyan);color:var(--ink)}
+.switchTab:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--stroke-mark)}
 .step{position:relative}

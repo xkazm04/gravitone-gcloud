@@ -30,6 +30,12 @@ export function Dialog({ open, onClose, title, head, children, foot, className, 
   const panel = useRef<HTMLDivElement | null>(null);
   const opener = useRef<Element | null>(null);
   const titleId = useId();
+  // onClose is read through a ref: an inline callback changes identity every render, and re-running the effect
+  // below would pull focus out of a field on each keystroke (console builder, round 1).
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +45,7 @@ export function Dialog({ open, onClose, title, head, children, foot, className, 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        close.current();
         return;
       }
       if (e.key !== "Tab" || panel.current === null) return;
@@ -60,7 +66,7 @@ export function Dialog({ open, onClose, title, head, children, foot, className, 
       document.removeEventListener("keydown", onKey, true);
       if (opener.current instanceof HTMLElement) opener.current.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (typeof document === "undefined") return null;
   return createPortal(
