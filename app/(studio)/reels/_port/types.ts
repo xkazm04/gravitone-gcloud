@@ -22,6 +22,8 @@ export type ReelRow = {
   readonly poster?: string;
   /** 12 desktop frames, in film order. Empty before the film is rendered. */
   readonly strip: readonly string[];
+  /** Bytes the retention sweep has deleted from this reel (lib/reel/archive.ts). Absent: nothing archived. */
+  readonly archivedBytes?: number;
   readonly updatedAt: string;
   /** WP3 addition: a render running now (from the reel's jobs), so a row can draw how far it got. */
   readonly progress?: { readonly face: FilmFace; readonly frame: number; readonly frames: number };

@@ -156,3 +156,23 @@ prints the film. The Strait imported in 71 s (1.1 GB of masters).
   reel passes trivially.
 - **Scout's continuity record.** `/scout` reels still record no steps, lead changes or event plan (registry
   `data-video-virality`, a recorded deviation on `scout-producers`); their data is not in the reel table shape.
+
+## Retention (spark reel-studio, the owner's rule of 2026-11-18)
+
+Films are heavy (a desktop master is up to 750 MB) and disposable once a person has decided on them; the record is
+not. The worker's `reel-archive` timer (hourly, `lib/producers/reelArchive.ts`) runs `lib/reel/archive.ts`
+`sweepReels`, and `npx tsx pipeline/reel-archive.mts [--dry] [--slug s] [--now ISO]` runs it by hand.
+
+| What | When it goes (`lib/reel/retention.ts`) |
+|---|---|
+| masters `film-desktop.mp4`, `film-phone.mp4`, and `stills/` | 14 days after the render; the clock is paused while the film is in review, sound or release |
+| mixes `mix-*.mp4` | as soon as that face's copy is encoded |
+| final cut `release-*.mp4` and the Calendar's copy in the exports root | 3 days after that face's slot really published (a dry publication starts no clock) |
+| the bed | with the last cut; its Suno prompt stays in the recipe |
+
+What stays: `reel.json` (every deletion recorded in `film.archived`: file, bytes, sha, rule, time, `foundMissing`
+when it was already gone), `recipe.json` (`gravitone.reel-recipe/1`: idea, table, page code by sha, render settings,
+bed prompt and mux filters, encode settings, verdicts with their pins, publications, what was archived, and what a
+rebuild cannot reproduce) with its readable `RECIPE.md`, the page code and `data/`, the table, the poster and the
+thumbnails. The recipe is written before any deletion and again after. A rebuild from the recipe is not built yet:
+"Render again" / "Release again" on an archived film fails on the missing master.

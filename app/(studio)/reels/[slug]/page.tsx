@@ -63,7 +63,7 @@ export default async function ReelPage({ params }: { readonly params: Promise<{ 
           <Head d={d} />
           <div className={r.layout}>
             <section id="review" className={r.main} aria-label="review">
-              {hasFilm ? <Review detail={d} actions={{ decide: decideAction }} /> : <BeforeFilm d={d} />}
+              {hasFilm ? <Review detail={d} actions={{ decide: decideAction }} /> : d.archivedBytes !== undefined && d.strip.length > 0 ? <Archived d={d} /> : <BeforeFilm d={d} />}
             </section>
             <aside id="steps" className={r.steps} aria-label="steps">
               <Steps detail={d} />
@@ -94,6 +94,7 @@ function Head({ d }: { readonly d: ReelDetail }) {
         <StageChip stage={d.stage} />
         <VerdictChip last={d.last} />
         {d.film?.imported !== undefined && <span className={r.imported}>imported</span>}
+        {d.archivedBytes !== undefined && <span className={r.imported}>archived {(d.archivedBytes / 1e9).toFixed(2)} GB</span>}
       </div>
       <p className={r.hook}>{d.hook}</p>
       {figures.length > 0 && (
@@ -111,6 +112,18 @@ function Head({ d }: { readonly d: ReelDetail }) {
 }
 
 /** Before a film: the reel's path to its answer, set large, the empty strip it will fill, a render's reach. */
+/** A reel whose films the retention sweep deleted: what survives is its frames, its recipe and its records. */
+function Archived({ d }: { readonly d: ReelDetail }) {
+  return (
+    <div className={r.before}>
+      <div className={r.stage}>
+        <p className={r.path}>{d.idea.path}</p>
+      </div>
+      <Filmstrip frames={d.strip} label={`${d.title}, twelve frames`} size="rail" />
+    </div>
+  );
+}
+
 function BeforeFilm({ d }: { readonly d: ReelDetail }) {
   const p = d.progress;
   return (

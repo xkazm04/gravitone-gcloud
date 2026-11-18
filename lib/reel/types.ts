@@ -241,7 +241,29 @@ export interface BedRecord {
   readonly attachedAt: string;
 }
 
+/**
+ * Why a film's file was deleted (lib/reel/retention.ts). The owner's rule (2026-11-18): masters 14 days after the
+ * render (never while the film waits for a verdict, a bed or its release), the final cut 3 days after it really
+ * published, the bed with it, and the mixes as soon as the copies are encoded. What survives is the recipe
+ * (`<slug>/recipe.json` + `RECIPE.md`), the page code, the table, the poster and the thumbnails.
+ */
+export type ArchiveRule = "master-14d" | "mix-encoded" | "cut-3d-published" | "bed-with-cut";
+
+/** A file that was deleted, and the record that says so (the record outlives the media). */
+export interface ArchivedFile {
+  /** Film-relative, or `exports:<name>` for the Calendar's copy in the exports root. */
+  readonly file: string;
+  readonly bytes: number;
+  readonly sha?: string;
+  readonly rule: ArchiveRule;
+  readonly at: string;
+  /** True when the sweep found the file already gone (a crash between delete and record, or a hand). */
+  readonly foundMissing?: boolean;
+}
+
 export interface FilmRecord {
+  /** Every file the retention sweep deleted, oldest first. Absent: nothing was archived. */
+  readonly archived?: readonly ArchivedFile[];
   /** The timeline's frame count at desktop speed (`window.REEL.frames`). */
   readonly frames: number;
   readonly renders: Partial<Record<FilmFace, FilmRender>>;

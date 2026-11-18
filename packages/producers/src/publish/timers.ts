@@ -20,7 +20,7 @@ import type { Reader } from "@gt/kernel/store";
 
 // `load-sample` (spark night-load-band): the box's load, one reading a minute, for a night's band.
 // `night-fill` (spark scout-vision S6): the night's plan queue launched while the box sits under the band.
-export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample", "night-fill"] as const;
+export const TIMER_NAMES = ["publish-tick", "metrics-refresh", "load-sample", "night-fill", "reel-archive"] as const;
 export type TimerName = (typeof TIMER_NAMES)[number];
 
 export type TimerSpec = {
@@ -47,6 +47,10 @@ export const NIGHT_FILL: TimerSpec = { name: "night-fill", everyMs: 5 * 60_000, 
 
 /** A stretch a timer was not ticking: from its last heartbeat to the tick that noticed. */
 export type Gap = { readonly from: string; readonly to: string };
+
+/** The reel retention sweep (spark reel-studio): hourly, so a mix is gone within the hour of its encode and a
+ *  master within the hour of its 14th day. A sweep stats files and deletes a few; past 15 minutes it is hung. */
+export const REEL_ARCHIVE: TimerSpec = { name: "reel-archive", everyMs: 60 * 60_000, deadlineMs: 15 * 60_000, firstDelayMs: 120_000 };
 
 export const timerResource = (name: TimerName): string => `timer:${name}`;
 

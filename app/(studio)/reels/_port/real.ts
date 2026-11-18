@@ -8,6 +8,7 @@ import path from "node:path";
 
 import { measureContinuity } from "@/lib/reel/continuity";
 import { filmStageOf, filmSubjectSha } from "@/lib/reel/film";
+import { archivedBytes } from "@/lib/reel/retention";
 import { readVerdicts, listReelSlugs, reelDir, type ReelVerdict, type ReelVerdicts, type StopKey } from "@/lib/reel/store";
 import { readPublish, readReelState } from "@/lib/reel/studio";
 import { parseTable } from "@/lib/reel/table";
@@ -47,13 +48,14 @@ const faces = <T>(f: (face: FilmFace) => T | undefined): Partial<Record<FilmFace
 
 const nonEmpty = <T extends object>(o: T): T | undefined => (Object.keys(o).length === 0 ? undefined : o);
 
-function filmFacts(slug: string, film: FilmRecord | undefined): Pick<ReelRow, "seconds" | "bytes" | "poster" | "strip"> {
+function filmFacts(slug: string, film: FilmRecord | undefined): Pick<ReelRow, "seconds" | "bytes" | "poster" | "strip" | "archivedBytes"> {
   if (film === undefined) return { strip: [] };
   const seconds = nonEmpty(faces((f) => film.renders[f]?.seconds));
   const bytes = nonEmpty(faces((f) => film.copies[f]?.bytes ?? film.renders[f]?.bytes));
   const poster = film.thumbs?.poster;
   return {
     strip: (film.thumbs?.desktop ?? []).map((t) => media(slug, t)),
+    ...(archivedBytes(film) > 0 ? { archivedBytes: archivedBytes(film) } : {}),
     ...(seconds === undefined ? {} : { seconds }),
     ...(bytes === undefined ? {} : { bytes }),
     ...(poster === undefined ? {} : { poster: media(slug, poster) }),
@@ -109,10 +111,15 @@ function verdictViews(v: ReelVerdicts, shas: ReelDetail["subjectSha"]): ReelDeta
 async function mediaOf(slug: string, film: FilmRecord | undefined): Promise<ReelDetail["media"]> {
   if (film === undefined) return {};
   const dir = path.join(reelDir(slug), FILM_DIR);
-  const [mixD, mixP] = await Promise.all([exists(path.join(dir, FILM_SPEC.desktop.mix)), exists(path.join(dir, FILM_SPEC.phone.mix))]);
+  // A file the retention sweep took (lib/reel/archive.ts) is still in the record but no longer on disk: offer only what is there.
+  const on = (rel: string | undefined): Promise<boolean> => (rel === undefined ? Promise.resolve(false) : exists(path.join(dir, rel)));
+  const [mixD, mixP, mD, mP, rD, rP, bd] = await Promise.all([
+    on(FILM_SPEC.desktop.mix), on(FILM_SPEC.phone.mix), on(film.renders.desktop?.file), on(film.renders.phone?.file),
+    on(film.copies.desktop?.file), on(film.copies.phone?.file), on(film.bed?.file),
+  ]);
   const out: { -readonly [K in keyof ReelDetail["media"]]: ReelDetail["media"][K] } = {};
-  if (film.renders.desktop !== undefined) out.desktop = media(slug, film.renders.desktop.file);
-  if (film.renders.phone !== undefined) out.phone = media(slug, film.renders.phone.file);
+  if (film.renders.desktop !== undefined && mD) out.desktop = media(slug, film.renders.desktop.file);
+  if (film.renders.phone !== undefined && mP) out.phone = media(slug, film.renders.phone.file);
   if (film.thumbs !== undefined && film.thumbs.phone.length > 0) out.phoneStrip = film.thumbs.phone.map((t) => media(slug, t));
   const d0 = film.thumbs?.desktop[0];
   const p0 = film.thumbs?.phone[0];
@@ -120,9 +127,9 @@ async function mediaOf(slug: string, film: FilmRecord | undefined): Promise<Reel
   if (p0 !== undefined) out.posterPhone = media(slug, p0);
   if (film.bed !== undefined && mixD) out.mixDesktop = media(slug, FILM_SPEC.desktop.mix);
   if (film.bed !== undefined && mixP) out.mixPhone = media(slug, FILM_SPEC.phone.mix);
-  if (film.copies.desktop !== undefined) out.releaseDesktop = media(slug, film.copies.desktop.file);
-  if (film.copies.phone !== undefined) out.releasePhone = media(slug, film.copies.phone.file);
-  if (film.bed !== undefined) out.bed = media(slug, film.bed.file);
+  if (film.copies.desktop !== undefined && rD) out.releaseDesktop = media(slug, film.copies.desktop.file);
+  if (film.copies.phone !== undefined && rP) out.releasePhone = media(slug, film.copies.phone.file);
+  if (film.bed !== undefined && bd) out.bed = media(slug, film.bed.file);
   return out;
 }
 
