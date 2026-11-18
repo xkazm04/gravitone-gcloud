@@ -201,8 +201,12 @@ async function sha256File(abs: string): Promise<string> {
  * address, @gt/domain/blob - a digest of the PATH would be a second identity
  * that drifts from the bytes), its size, and the mime its extension names.
  * `not-found` when the file is gone, which the caller treats as "not judgeable".
+ *
+ * `known`: the sha256 a writer recorded when the file landed (a reel film's render or publish copy, up to 750 MB,
+ * hashed once at the end of its job). The file is stat'ed for its size and NOT read: hashing a master on every
+ * Board read is the cost the record exists to avoid. The writer owns the claim that the sha is of these bytes.
  */
-export async function mediaRef(abs: string): Promise<Result<BlobRef>> {
+export async function mediaRef(abs: string, known?: { readonly sha256: string }): Promise<Result<BlobRef>> {
   let s: { size: number; mtimeMs: number; isFile(): boolean };
   try {
     s = await stat(abs);
@@ -210,6 +214,7 @@ export async function mediaRef(abs: string): Promise<Result<BlobRef>> {
     return err("not-found", `${abs}: ${errorMessage(e)}`, { cause: e });
   }
   if (!s.isFile()) return err("not-found", `${abs} is not a file`);
+  if (known !== undefined) return ok({ sha256: known.sha256, bytes: s.size, mime: mimeOf(abs) });
   const key = `${abs}\u0000${s.size}\u0000${s.mtimeMs}`;
   let sha = digests.get(key);
   if (sha === undefined) {

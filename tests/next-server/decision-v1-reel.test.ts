@@ -1,12 +1,10 @@
-// THE REEL DECISION ADAPTER (lib/decision/v1/sources/reel.ts) AND A KEPT CUT ON THE CALENDAR
-// (lib/producers/reelActs.ts) - over a temp reel folder, a temp exports root and an in-memory kernel.
+// THE REEL DECISION ADAPTER (lib/decision/v1/sources/reel.ts) - over a temp reel folder, a temp exports root and
+// an in-memory kernel. The film's two stops and the release landing are pinned in ./reel-film.test.ts.
 //
 // Pinned: each of a reel's three stops opens as its own packet with one cell; a reject owes a reason and an
 // agent's keep is refused at the preview; the verdict is written into the folder by the apply alone, with the
 // digest of what was judged; a subject made again is round 2, and the old verdict stops counting. A kept cut
-// with a `calendar:` line becomes exactly one youtube slot carrying publish.json's words, over a copy of the
-// judged bytes in the exports; a second delivery makes nothing more; a cut rendered again after the keep is
-// never scheduled under it.
+// records its verdict and lands nothing: since spark reel-studio only a release keep goes on the Calendar.
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,12 +30,12 @@ import { ok } from "@gt/domain/errors";
 import type { PacketId } from "@gt/domain/ids";
 import { patchMany } from "@gt/kernel/decision/driver";
 import { head } from "@gt/kernel/decision/read";
-import { getSlot, listSlots } from "@gt/kernel/slots/read";
+import { listSlots } from "@gt/kernel/slots/read";
 import type { Store } from "@gt/kernel/store";
-import { encodeSchedule, proposeAt } from "@gt/ui/components/review/schedule.ts";
+import { encodeSchedule } from "@gt/ui/components/review/schedule.ts";
 
 import { liveReelPiles, makeReelAdapter } from "../../lib/decision/v1/sources/reel.ts";
-import { reelExportId, reelScheduleOf, reelSlotId } from "../../lib/producers/reelActs.ts";
+import { reelScheduleOf } from "../../lib/producers/reelActs.ts";
 import { parseStopRun, roundOf, type ReelVerdict, type ReelVerdicts } from "../../lib/reel/store.ts";
 import { defaultPublish, refuseRejectedProof } from "../../pipeline/reel/stops.mts";
 import { must, openFlow } from "./decision-v1-harness.ts";
@@ -106,7 +104,7 @@ describe("a reel's stops, named and counted (pure)", () => {
 
   it("a kept cut with no calendar line takes the day after the commit, 08:00 UTC, on youtube; another channel is refused", () => {
     expect(must(reelScheduleOf(undefined, "2026-11-17T21:40:00.000Z"))).toEqual({ channel: "youtube", publishAt: "2026-11-18T08:00:00.000Z" });
-    expect(words(reelScheduleOf(encodeSchedule({ channel: "tiktok", publishAt: "2026-11-20T17:00:00.000Z" }), "2026-11-17T21:40:00.000Z"))).toBe("invalid: a reel cut goes out on youtube, not on tiktok");
+    expect(words(reelScheduleOf(encodeSchedule({ channel: "tiktok", publishAt: "2026-11-20T17:00:00.000Z" }), "2026-11-17T21:40:00.000Z"))).toBe("invalid: a reel goes out on youtube, not on tiktok");
     expect(words(reelScheduleOf("calendar: youtube friday", "2026-11-17T21:40:00.000Z"))).toBe('invalid: calendar: "friday" is not an ISO instant');
   });
 
@@ -205,86 +203,31 @@ describe("the verdict, written back by the apply alone", () => {
   });
 });
 
-describe("a kept cut on the Calendar", () => {
+describe("a kept cut lands nothing (spark reel-studio: only a release keep goes on the Calendar)", () => {
   const AT = "2026-11-20T17:00:00.000Z";
 
-  it("an operator's keep with a schedule makes exactly one youtube slot from publish.json, over a copy of the judged cut; a second delivery makes nothing more", async () => {
-    const flow = await openFlow(adapter, `${SLUG}:short:cut`, blobDir);
-    current = flow.store;
-    flow.patch([{ candidate: "cut", verdict: "keep", note: encodeSchedule({ channel: "youtube", publishAt: AT, notes: "pin the source in the first comment" }) }]);
-    const c = must(flow.preview()).consequence;
-    expect(c.writes.map((w) => [w.kind, w.target.replace(/^.*[\\/]/, ""), w.detail])).toEqual([
-      ["index-row", "verdicts.json short:cut", "keep"],
-      ["file", "reel-demo-race-short.mp4", "copied: short/render/strip.mp4"],
-      ["index-row", "calendar · youtube · 20 Nov 17:00 UTC", "slot sl-reel-demo-race-short: Every demo win, race by race"],
-    ]);
-    must(flow.commit());
-    const claim = flow.claim();
-    must(await adapter.apply(claim));
-
-    const slots = must(listSlots(flow.store));
-    expect(slots).toHaveLength(1);
-    expect(slots[0]?.slot).toMatchObject({ id: reelSlotId(SLUG, "short"), libraryItemId: `video:export:${reelExportId(SLUG, "short")}`, channel: "youtube", at: AT, state: "scheduled", title: PUBLISH.title, description: PUBLISH.description, tags: PUBLISH.tags });
-    expect(readFileSync(path.join(EXPORTS, "reel-demo-race-short.mp4"), "utf8")).toBe(CUT);
-    expect(JSON.parse(readFileSync(path.join(EXPORTS, "reel-demo-race-short.json"), "utf8"))).toEqual({ projectId: "reel", sha256: sha(CUT) });
-    expect(existsSync(path.join(EXPORTS, "reel-demo-race-short.partial.mp4"))).toBe(false);
-    expect(verdicts().stops["short:cut"]).toMatchObject({ verdict: "keep", by: "operator", of: sha(CUT), round: 1, note: `calendar: youtube ${AT}\npin the source in the first comment` });
-
-    // Redelivered, and redelivered after the cut was rendered again: the same slot, the same export, the same verdict.
-    must(await adapter.apply(claim));
-    writeFileSync(path.join(dir, "short", "render", "strip.mp4"), "the cut, rendered again");
-    must(await adapter.apply(claim));
-    expect(must(listSlots(flow.store)).map((r) => r.slot.id)).toEqual([reelSlotId(SLUG, "short")]);
-    expect(readFileSync(path.join(EXPORTS, "reel-demo-race-short.mp4"), "utf8")).toBe(CUT);
-    expect(readFileSync(path.join(dir, "verdicts.log.jsonl"), "utf8").trim().split("\n")).toHaveLength(1);
-  });
-
-  it("a keep with no calendar line is slotted the day after its commit, 08:00 UTC", async () => {
-    const flow = await openFlow(adapter, `${SLUG}:short:cut`, blobDir);
-    current = flow.store;
-    flow.patch([{ candidate: "cut", verdict: "keep" }]);
-    expect(must(flow.preview()).consequence.writes[2]?.target).toBe("calendar · youtube · the day after the commit, 08:00 UTC");
-    must(flow.commit());
-    const claim = flow.claim();
-    must(await adapter.apply(claim));
-    if (claim.outcome.act !== "commit") throw new Error("expected a commit");
-    expect(must(getSlot(flow.store, reelSlotId(SLUG, "short"))).slot.at).toBe(proposeAt(Date.parse(claim.outcome.result.at)));
-  });
-
-  it("a cut rendered again between the keep and its delivery is not scheduled, and the keep is not recorded", async () => {
+  it("an operator's keep, even with a calendar line, records its verdict and makes no slot and no export", async () => {
     const flow = await openFlow(adapter, `${SLUG}:short:cut`, blobDir);
     current = flow.store;
     flow.patch([{ candidate: "cut", verdict: "keep", note: encodeSchedule({ channel: "youtube", publishAt: AT }) }]);
+    expect(must(flow.preview()).consequence.writes.map((w) => [w.kind, w.target.replace(/^.*[\/]/, ""), w.detail])).toEqual([["index-row", "verdicts.json short:cut", "keep"]]);
     must(flow.commit());
     const claim = flow.claim();
-    writeFileSync(path.join(dir, "short", "render", "strip.mp4"), "the cut, rendered again");
-    expect(words(await adapter.apply(claim))).toBe(`conflict: reel ${SLUG}: the short cut was rendered again after it was judged; what is in the folder now is not what was kept, so nothing was scheduled`);
-    expect(must(listSlots(flow.store))).toEqual([]);
-    expect(existsSync(path.join(EXPORTS, "reel-demo-race-short.mp4"))).toBe(false);
-    expect(existsSync(path.join(EXPORTS, "reel-demo-race-short.partial.mp4"))).toBe(false);
-    expect(existsSync(path.join(dir, "verdicts.json"))).toBe(false);
-  });
-
-  it("refuses at the preview: another channel, a line that does not read, words the platform would not take, no publish.json; a reject schedules nothing", async () => {
-    const flow = await openFlow(adapter, `${SLUG}:short:cut`, blobDir);
-    current = flow.store;
-    flow.patch([{ candidate: "cut", verdict: "keep", note: encodeSchedule({ channel: "blog", publishAt: AT }) }]);
-    expect(words(flow.preview())).toBe("invalid: a reel cut goes out on youtube, not on blog");
-    flow.patch([{ candidate: "cut", verdict: "keep", note: "calendar: youtube soon" }]);
-    expect(words(flow.preview())).toBe('invalid: calendar: "soon" is not an ISO instant');
-    flow.patch([{ candidate: "cut", verdict: "keep" }]);
-    writeFileSync(path.join(dir, "short", "publish.json"), JSON.stringify({ ...PUBLISH, title: "a <b> title" }));
-    expect(words(flow.preview(must(await adapter.read({ runId: `${SLUG}:short:cut` }))))).toBe(`invalid: reel ${SLUG}: short/publish.json: title/description may not contain '<' or '>'`);
-    rmSync(path.join(dir, "short", "publish.json"));
-    const bare = must(await adapter.read({ runId: `${SLUG}:short:cut` }));
-    expect(words(flow.preview(bare))).toBe(`invalid: reel ${SLUG}: short/publish.json is not written yet: run \`cut\` again`);
-    expect(must(adapter.packet(bare)).losses.map((l) => l.grade)).toEqual(["dropped"]);
-
-    flow.patch([{ candidate: "cut", verdict: "reject", reasons: ["pacing"] }]);
-    must(flow.commit(bare));
-    expect((await flow.deliver())?.result).toBe("applied");
+    must(await adapter.apply(claim));
+    must(await adapter.apply(claim));
     expect(must(listSlots(flow.store))).toEqual([]);
     expect(existsSync(EXPORTS)).toBe(false);
+    expect(verdicts().stops["short:cut"]).toMatchObject({ verdict: "keep", by: "operator", of: sha(CUT), round: 1 });
+    expect(readFileSync(path.join(dir, "verdicts.log.jsonl"), "utf8").trim().split("\n")).toHaveLength(1);
+  });
+
+  it("a cut with no publish.json is still judged; a reject records its reason", async () => {
+    rmSync(path.join(dir, "short", "publish.json"));
+    const flow = await openFlow(adapter, `${SLUG}:short:cut`, blobDir);
+    expect(flow.plan.losses).toEqual([]);
+    flow.patch([{ candidate: "cut", verdict: "reject", reasons: ["pacing"] }]);
+    must(flow.commit());
+    expect((await flow.deliver())?.result).toBe("applied");
     expect(verdicts().stops["short:cut"]).toMatchObject({ verdict: "reject", reasons: ["pacing"], round: 1 });
   });
 });

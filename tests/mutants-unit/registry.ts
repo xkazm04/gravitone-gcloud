@@ -7507,6 +7507,22 @@ export const MUTANTS: UnitMutant[] = [
     why: "A non-audio upload reads as a server fault (500) instead of the person's file being refused.",
   },
   {
+    id: "reel-launch-live-under-dry-only",
+    test: "tests/next-server/reel-studio-steps.test.ts",
+    file: "app/(studio)/reels/_actions/steps.ts",
+    find: "if (i.mode === \"live\" && dryOnly) return err(",
+    replace: "if (i.mode === \"live\" && !dryOnly) return err(",
+    why: "A live reel launch reaches the door in a process that may only run dry.",
+  },
+  {
+    id: "reel-bed-filed-without-film",
+    test: "tests/next-server/reel-studio-steps.test.ts",
+    file: "app/(studio)/reels/[slug]/bed/route.ts",
+    find: "if (st.value.film?.renders.desktop === undefined) return err(",
+    replace: "if (st.value.film?.renders.desktop === null) return err(",
+    why: "A bed uploaded under a reel with no desktop film is filed as a take before it is refused.",
+  },
+  {
     id: "studio-port-missing-take-silent",
     test: "tests/next-server/studio-take.test.ts",
     file: "app/(studio)/audio/studio/_port/ledger.ts",
@@ -9891,6 +9907,22 @@ export const MUTANTS: UnitMutant[] = [
     find: '.refine((b) => (b.illustrative === true) !== (b.source !== undefined), { message: "a brief is illustrative (`illustrative: true`) or real (`source`), exactly one" })',
     replace: "",
     why: "A brief with neither flag nor source (or both) reaches the seat: the source line on screen is undecided.",
+  },
+  {
+    id: "reel-job-plan-reruns-booked-steps",
+    test: "packages/producers/test/reel-define.test.ts",
+    file: "packages/producers/src/reel/define.ts",
+    find: "    .filter((name) => !outputs.has(name))",
+    replace: "    .filter((name) => name !== \"\")",
+    why: "A resumed reel render draws a face it already booked: a 15-minute master rendered twice.",
+  },
+  {
+    id: "reel-film-check-skips-impure-clock",
+    test: "packages/producers/test/reel-define.test.ts",
+    file: "packages/producers/src/reel/brief.ts",
+    find: "    for (const [re, why] of IMPURE) if (re.test(f.text)) out.push(`${f.name}: ${why}`);",
+    replace: "",
+    why: "A film reading Math.random or the wall clock is landed: frames drawn cold and warm differ, and the seek fails at render.",
   },
   // ---- steer by ear (2026-10-28): the sentence compile, the shape, the duel
   {

@@ -96,21 +96,59 @@ store `lib/reel/store.ts` (`REELS_STORE_DIR`, else `foundry-out/reels`).
 - Verdicts land in `<folder>/verdicts.json`, written by the adapter's `apply` alone, each with the sha256 of the
   file judged. `cut` refuses a cut whose proof was rejected; a missing verdict blocks nothing, so the CLI runs
   without the app.
-- **A kept cut goes to the Calendar** (`lib/producers/reelActs.ts`): the judged file is copied into the exports
-  root as `reel-<slug>-<cut>.mp4` (refused if the bytes are no longer the ones kept) and a youtube slot
-  `sl-reel-<slug>-<cut>` is made with the title, description and tags of `<cut>/publish.json`. The time is the
-  keep's `calendar: youtube <ISO>` note; **a keep with no note is slotted for the next day at 08:00 UTC**, as an
-  article is, and the preview says so before the commit. Uploading to YouTube is the publish worker's and is
-  not part of this.
+- **A kept cut lands nothing** since spark reel-studio (2026-11-18): the verdict is recorded and that is all.
+  Only a film's `release` keep goes on the Calendar (below).
 
 Not exercised in a browser: the Board's rendering of these packets. The headless path (`pipeline/decide.mts`
 show, verdict, preview, commit) was run end to end on a temp copy of the F1 reel.
 
+## The film (spark reel-studio)
+
+One timeline, two faces. The desktop film (1920x1080, normal speed, 60-120 s) and the phone film (1080x1920, the
+SAME timeline rendered `--step 2`, half as long) come from one page pair over one module: `reel-desktop.html` and
+`reel.html`, both exposing `window.REEL.frames` at desktop speed. Types in `lib/reel/types.ts` (`FILM_SPEC`,
+`FilmRecord`), the stage machine in `lib/reel/film.ts`, ffmpeg in `lib/reel/encode.ts`, the one verdict writer in
+`lib/reel/decide.ts`.
+
+**The folder.** Everything a film owns is under `<slug>/film/`: the pages and their modules, `fonts/`, `data/`,
+`film-desktop.mp4` / `film-phone.mp4` (silent masters), `bed.<ext>`, `mix-<face>.mp4` (the bed laid under the
+master, picture copied), `release-<face>.mp4` (the publish copies), `thumbs/d-NN.jpg` (320 w) and `p-NN.jpg`
+(180 w), `poster.jpg` (desktop at 40%, 1280 w) and `publish.json` (the slots' words: written once from the idea
+on the first release keep - title, hook plus the table's source line, tags - then the operator's). Each render
+and copy records its sha256 when it lands, in `reel.json` `film`; nothing hashes a master on a read.
+
+**The stages** are derived, never stored (`filmStageOf`): idea -> data (a table, the data stop not kept) ->
+authoring (no film record) -> rendering (a face missing, or rendered before `film.authoredAt`) -> review -> redo
+(film rejected; `rendering` once the pages are written again) | dropped (final) | sound (film kept; no bed, or a
+copy missing or carrying another bed) -> release -> released (release kept; a release reject goes back to sound).
+The page pair is checked by its writer, not here: a film record exists only once both pages do.
+
+**The two stops**, `pkt:reel:<slug>:film` and `pkt:reel:<slug>:release`, each a verdict of the PAIR - sha256 of
+the desktop and phone shas joined by a newline (`filmSubjectSha`): a re-render of either face is a new round.
+The film stop takes keep, reject (reasons and notes pinned to moments, `pins`) or drop; drop and pins are the
+film stop's alone. The Board shows one cell, the desktop face with its poster: a matrix cull decides cells
+independently and the film is one decision, so the phone face is judged beside it on /reels. Both doors write
+through `decideReelStop`, so a stop decided on /reels reads decided on the Board. A **release keep** lands both
+copies: exports `reel-<slug>-desktop|phone[-r<n>].mp4` and two youtube slots `sl-reel-<slug>-<face>`, at the
+keep's `calendar:` time (else the next day 08:00 UTC). The phone face goes out on youtube too: 1080x1920 and
+under three minutes, the platform files it as a Short.
+
+**The sizes.** The copy is 2-pass libx264 slow, yuv420p, high profile, +faststart, aac 192k, aimed at 50 MB
+(desktop) and 30 MB (phone): video kbps = floor((bytes*8/s)/1000 - 192) * 0.98. Measured 2026-11-18 on The
+Strait (n=1, this box, under load from three other builders): desktop 100 s -> 48.93 MB (-2.1%) in 88 s, VMAF
+93.70 mean / 87.13 min; phone 50 s -> 29.29 MB (-2.4%) in 53 s, VMAF 93.84 / 83.56. The bed is one upload for
+both faces: as-is on desktop, `atempo=2` on the phone, loudnorm I -14 / TP -1.5, trimmed with a 1.2 s fade; a bed
+shorter than the desktop film is refused with the length to ask Suno for.
+
+**Import.** `npx tsx pipeline/reel-import.mts <folder> --slug <s> --title <t> --hook <q?> --path <why>
+[--again] [--dry] [--shared <dir>]` brings a film made outside the pipeline in at `review`: pages, modules,
+`fonts/`, `data/`, `NOTES.md`, `still*.png` and the masters are copied, the shared `/data/` dir once to
+`<root>/_shared/data/`, the masters measured and hashed, thumbs and poster drawn. No table is invented; `status`
+prints the film. The Strait imported in 71 s (1.1 GB of masters).
+
 ## Not built yet
 
 - **A schedule control on the Board.** The cull desk has none, so a time is typed as a `calendar:` note.
-- **A guard on silent cuts.** A cut with no bed can be kept and slotted; only the operator's `sound` reject
-  stops it.
 - **Byte-stable WebGL.** Antialiased three.js frames on this GPU differ by a few pixels at one level in 1-3% of
   identical cold draws (measured by two builders). `proof` and the render's seek gate both allow 0.05% of
   pixels more than two levels apart, which these pass; a page that needs exact frames turns antialias off.

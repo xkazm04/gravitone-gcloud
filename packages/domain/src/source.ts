@@ -151,13 +151,15 @@ export const SOURCES = {
   // cell: the measured table (a card), the twelve proof frames (a sheet), the finished cut (the video). A reject
   // names what the next attempt must fix, so it owes a reason; the note carries a kept cut's `calendar:` line
   // (@gt/ui review/schedule.ts). reasonsBy: each stop's own three are keys 2-4 (the row's group is its stop).
+  // Spark reel-studio added the film's two stops with no new reason (the source holds its 11): `film` (the
+  // rendered pair) and `release` (bed and publish copies; its keep's note carries the `calendar:` line now).
   reel: {
     modes: ["matrix-cull"],
     reasons: ["thin", "source", "story", "legibility", "layout", "look", "accuracy", "pacing", "motion", "sound", "hook"],
     maxReasons: 3,
     noteMax: NOTE_SHORT,
     reasonOnReject: true,
-    reasonsBy: { data: ["thin", "source", "story"], proof: ["legibility", "layout", "look"], cut: ["pacing", "motion", "sound"] },
+    reasonsBy: { data: ["thin", "source", "story"], proof: ["legibility", "layout", "look"], cut: ["pacing", "motion", "sound"], film: ["pacing", "legibility", "accuracy"], release: ["sound", "look", "hook"] },
   },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 

@@ -76,6 +76,9 @@ export const stopRunId = (slug: string, key: StopKey, round: number): string => 
 
 /** What a stop shows, reel-relative: the card `data` drew, the sheet `proof` tiled, the cut (with its bed when it has one). */
 export function stopMediaRel(stop: Stop, hasFinal: boolean): string {
+  // The Board shows the desktop face of a film or a release; the phone face is judged beside it on /reels.
+  if (stop.kind === "film") return "film/film-desktop.mp4";
+  if (stop.kind === "release") return "film/release-desktop.mp4";
   if (stop.kind === "data" || stop.cut === undefined) return "data-card.png";
   return stop.kind === "proof" ? `${stop.cut}/proof/sheet.png` : `${stop.cut}/render/${hasFinal ? "final.mp4" : "strip.mp4"}`;
 }
@@ -108,14 +111,31 @@ export const VERDICT_LOG = "verdicts.log.jsonl";
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 
+const isStrings = (x: unknown): x is string[] => Array.isArray(x) && x.every((r) => typeof r === "string");
+
+/** The pins, in time order, or undefined when one does not read (a moment at or after 0 s, its reasons, its words). */
+export function parsePins(raw: unknown): ReelPin[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ReelPin[] = [];
+  for (const p of raw as unknown[]) {
+    if (!isObj(p)) return undefined;
+    const { t, reasons, text } = p;
+    if (typeof t !== "number" || !Number.isFinite(t) || t < 0 || !isStrings(reasons) || typeof text !== "string") return undefined;
+    out.push({ t, reasons, text });
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
 function parseVerdict(raw: unknown): ReelVerdict | undefined {
   if (!isObj(raw)) return undefined;
-  const { verdict, reasons, note, by, at, of, round } = raw;
-  if (verdict !== "keep" && verdict !== "reject") return undefined;
-  if (!Array.isArray(reasons) || reasons.some((r) => typeof r !== "string")) return undefined;
+  const { verdict, reasons, note, pins, by, at, of, round } = raw;
+  if (verdict !== "keep" && verdict !== "reject" && verdict !== "drop") return undefined;
+  if (!isStrings(reasons)) return undefined;
   if (by !== "operator" && by !== "agent") return undefined;
   if (typeof at !== "string" || typeof of !== "string" || typeof round !== "number" || !Number.isInteger(round) || round < 1) return undefined;
-  return { verdict, reasons: reasons as string[], ...(typeof note === "string" && note !== "" ? { note } : {}), by, at, of, round };
+  const pinned = pins === undefined ? [] : parsePins(pins);
+  if (pinned === undefined) return undefined;
+  return { verdict, reasons, ...(typeof note === "string" && note !== "" ? { note } : {}), ...(pinned.length === 0 ? {} : { pins: pinned }), by, at, of, round };
 }
 
 /** The recorded verdicts, or a sentence saying what is wrong with the file. A stop whose record does not read is an error, never "undecided". */
@@ -151,7 +171,8 @@ export function roundOf(held: ReelVerdict | undefined, sha256: string): { readon
   return held.of === sha256 ? { round: held.round, open: false } : { round: held.round + 1, open: true };
 }
 
-const sameWords = (a: ReelVerdict, b: ReelVerdict): boolean => a.verdict === b.verdict && a.of === b.of && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "");
+const pinWords = (v: ReelVerdict): string => JSON.stringify(v.pins ?? []);
+const sameWords =(a: ReelVerdict, b: ReelVerdict): boolean => a.verdict === b.verdict && a.of === b.of && a.reasons.join("\u0000") === b.reasons.join("\u0000") && (a.note ?? "") === (b.note ?? "") && pinWords(a) === pinWords(b);
 
 const said = (v: ReelVerdict): string => `${v.verdict}${v.reasons.length === 0 ? "" : ` (${v.reasons.join(", ")})`}`;
 
@@ -169,7 +190,15 @@ export type Recorded = "written" | "same" | "superseded";
  * verdict for the round the head already holds is refused with both spelled. Run-locked, so two deliveries of one
  * commit cannot interleave their read and write.
  */
-export function recordVerdict(dir: string, key: StopKey, v: ReelVerdict): Promise<Recorded> {
+export function recordVerdict(dir: string, key: StopKey, given: ReelVerdict): Promise<Recorded> {
+  // A drop abandons a FILM; every other stop is kept or sent back. Pins are moments of a film.
+  if (given.verdict === "drop" && key !== "film") return Promise.reject(new FoundryError(`only the film stop can be dropped, not ${key}`, 400));
+  const pins = given.pins === undefined ? [] : parsePins(given.pins);
+  if (pins === undefined) return Promise.reject(new FoundryError("a pinned note is a moment at or after 0 s, its reasons and its words", 400));
+  if (pins.length > 0 && key !== "film") return Promise.reject(new FoundryError(`only the film stop takes pinned notes, not ${key}`, 400));
+  const { pins: _given, ...rest } = given;
+  void _given;
+  const v: ReelVerdict = { ...rest, ...(pins.length === 0 ? {} : { pins }) };
   return withRunLock(dir, async () => {
     if (!(await stat(dir).then((s) => s.isDirectory(), () => false))) throw new FoundryError(`${dir} is not a reel folder.`, 404);
     const cur = await readVerdicts(dir);

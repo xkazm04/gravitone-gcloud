@@ -193,3 +193,29 @@ and not publishable. Keeping, publishing and scheduling are the operator's acts.
 - **Do not commit a reel folder.** `foundry-out/` is the operator's output, not the repo's.
 - After a session that made a cut, add one dated line to `knowledge/reel/backlog.md` under the idea: the
   measured continuity numbers and the operator's verdict in their words.
+
+## /reels - the four jobs behind the studio (spark reel-studio)
+
+The `/reels` screen walks a reel without this CLI: one film (desktop 1920x1080 at 1x, 60-120 s; phone 1080x1920,
+the same timeline rendered every second frame) under `<reel>/film/`. Each step is a kernel job launched
+receipt-first by `lib/producers/reel.ts` `launchReelJob(kind, slug, {mode, token?, note?, notes?})`: no token
+answers the receipt, the token confirms it, a reel with that kind's job still open answers `existing`, and a reel at
+the wrong stage (`lib/reel/film.ts` `filmStageOf`) is refused in one line ("the film has no bed yet"). Ids are
+`job:<kind>:<slug>:<n>`. `reelJobsOf(slug)` is the screen's read: the latest job per kind, the render's frame
+progress, the last error verbatim.
+
+| Job | Lane | Steps | Writes |
+|---|---|---|---|
+| `reel-data` | seat.text | `data` | one seat turn (web) from `pipeline/REEL-DATA-PROMPT.md` and the idea (plus the operator's send-back note): `table.json`, `continuity.json`, `SOURCES.md`, `reel.json` `tableSha` |
+| `reel-author` | seat.text | `author` | one seat turn (no web) from `pipeline/REEL-FILM-PROMPT.md`, `knowledge/reel/look.md`, the table and the redo pins in time order, plus one fix turn on a failed check: `film/reel.html`, `film/reel-desktop.html`, `film/*.js`, `film/data/`; the declared `out/reel.json` frames become `film.frames`; the last pair moves to `film/history/` |
+| `reel-render` | box.render | `stills`, `render:desktop`, `render:phone`, `thumbs` | `film/stills/<face>-NN.png` (8 a face), `film/film-desktop.mp4`, `film/film-phone.mp4` (ffprobe, sha, `film.renders`), `film/progress.json` while drawing, `film/thumbs/{d,p}-NN.jpg`, `film/poster.jpg` |
+| `reel-release` | box.render | `mix:desktop`, `mix:phone`, `encode:desktop`, `encode:phone`, `vmaf` | `film/mix-*.mp4` (the bed; atempo 2 on the phone), `film/release-*.mp4` (2-pass x264 to 50 / 30 MB, `film.copies`), VMAF recorded on each copy (a reading, never a gate) |
+
+- A seat turn is the operator's seat: an unpriced receipt line, the seat's report booked after it. A dry job's turns
+  are stand-ins (a stand-in table, a stand-in film) and never enter the seat; renders and releases are local and
+  free, and run the same dry or live. `GRAVITONE_DRY_ONLY=1` refuses a live launch.
+- A resumed job never redoes booked work: a paid turn's `out/` is collected, a face whose master is in the state is
+  adopted, a render that crashed is drawn again from frame 0 (three crashes in a row fail the job).
+- The renderer is `pipeline/reel/film-render.mts` (the night tool as a module, on the GPU browser):
+  `npx tsx pipeline/reel/film-render.mts <filmDir> <out.mp4> --page reel-desktop.html --width 1920 --height 1080 --from 1500 --frames 150`
+  renders a 5 s look by hand (`--shared` names the shared data; default `<reels>/_shared/data`).

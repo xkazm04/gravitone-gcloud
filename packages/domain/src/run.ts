@@ -98,6 +98,12 @@ export const PRODUCERS = [
   // A release's sleeve takes (spark studio-to-release WP3): N square pictures of its sleeve prompt through the imaging router,
   // Codex on seat.text or Leonardo Flare on cloud.leonardo, each offered back to the sleeve step (lib/producers/releaseSleeve.ts).
   "release-sleeve",
+  // A /reels film's four jobs (spark reel-studio WP2): its table researched and its pages authored on the Claude seat
+  // (seat.text), its two faces rendered on the GPU and its publish copies made with ffmpeg (box.render) (lib/producers/reel.ts).
+  "reel-data",
+  "reel-author",
+  "reel-render",
+  "reel-release",
 ] as const;
 export const producerNameSchema = z.enum(PRODUCERS);
 export type ProducerName = z.output<typeof producerNameSchema>;

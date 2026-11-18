@@ -251,6 +251,12 @@ export interface FilmRecord {
   readonly thumbs?: { readonly desktop: readonly string[]; readonly phone: readonly string[]; readonly poster: string };
   /** Set when the film was brought in from a folder made outside the pipeline. */
   readonly imported?: { readonly from: string; readonly at: string };
+  /**
+   * When the page pair was last written (the author job sets it once BOTH pages are on disk). A render older than
+   * this is a picture of the previous pages: the film is `rendering` again. Absent (an imported film): every render
+   * counts.
+   */
+  readonly authoredAt?: string;
 }
 
 export interface ReelState {

@@ -12,6 +12,8 @@
 //   npx tsx pipeline/reel.mts cut <dir> short|long [--cpu]
 //   npx tsx pipeline/reel.mts status <dir>
 //
+//   (A film - spark reel-studio - is imported by pipeline/reel-import.mts and walked on /reels; `status` prints it.)
+//
 //   new     record the idea: {title, hook, path}. The hook is a question; the path says why someone keeps watching.
 //   data    the table door (lib/reel/table.ts) and the continuity gate, MEASURED on the rows (lib/reel/
 //           continuity.ts). Under a floor it refuses and says which; --thin records the operator's reason for
@@ -52,7 +54,9 @@ import { measureContinuity } from "../lib/reel/continuity";
 import { advanceCut, CUT_NAMES, cutOf, newReel, nextVerb, parseIdea, parseState, trackFrames, withBrief, withPlan, withTable, withTrack } from "../lib/reel/state";
 import { canonical, parseTable } from "../lib/reel/table";
 import { computeTimingPlan } from "../lib/reel/timing";
-import { CUTS, REEL_FPS, ReelError, type ReelCut, type ReelState, type ReelTable } from "../lib/reel/types";
+import { filmStageOf } from "../lib/reel/film";
+import { readVerdicts } from "../lib/reel/store";
+import { CUTS, FILM_FACES, REEL_FPS, ReelError, type ReelCut, type ReelState, type ReelTable } from "../lib/reel/types";
 import { drawDataCard } from "./reel/card.mts";
 import { launchReelBrowser } from "./reel/gpu.mts";
 import { lintPage, prepare, sampleOf, type Block } from "./reel/page.mts";
@@ -317,9 +321,32 @@ async function verbCut(dir: string, cut: ReelCut, flags: Flags): Promise<unknown
   return { cut, renderer, video, ...(final === undefined ? { sound: "none: silent cut" } : { final }), sheet: path.join(outDir, "sheet.png"), publish, seconds: Math.round(frames / REEL_FPS), renderMs: result.renderMs, gates: result.gates, next: nextVerb(moved, dir) };
 }
 
+/** The film as `status` prints it: its stage, each face's master and copy, the bed (spark reel-studio). */
+async function filmStatus(dir: string, state: ReelState): Promise<Record<string, unknown> | undefined> {
+  const film = state.film;
+  if (film === undefined) return undefined;
+  const mb = (b: number): string => `${(b / 1_000_000).toFixed(1)} MB`;
+  const faces = Object.fromEntries(
+    FILM_FACES.map((face) => {
+      const r = film.renders[face];
+      const c = film.copies[face];
+      return [face, { render: r === undefined ? "not rendered" : `${r.file} · ${r.frames} frames · ${r.seconds.toFixed(1)} s · ${mb(r.bytes)} · ${r.sha.slice(0, 12)}`, copy: c === undefined ? "not encoded" : `${c.file} · ${mb(c.bytes)}${c.vmaf === undefined ? "" : ` · VMAF ${c.vmaf.mean.toFixed(1)}/${c.vmaf.min.toFixed(1)}`}${c.bedSha === undefined ? " · silent" : ""}`}];
+    }),
+  );
+  return {
+    stage: filmStageOf(state, await readVerdicts(dir)),
+    frames: film.frames,
+    ...faces,
+    bed: film.bed === undefined ? "none" : `${film.bed.file} · ${film.bed.seconds.toFixed(1)} s${film.bed.lufs === undefined ? "" : ` · ${film.bed.lufs.toFixed(1)} LUFS`}`,
+    ...(film.imported === undefined ? {} : { imported: `${film.imported.from} at ${film.imported.at}` }),
+  };
+}
+
 async function verbStatus(dir: string): Promise<unknown> {
   const state = await loadState(dir);
-  return { slug: state.slug, stage: state.stage, idea: state.idea, tracks: state.tracks ?? {}, cuts: state.cuts, verdicts: await recordedVerdicts(dir), next: nextVerb(state, dir) };
+  const film = await filmStatus(dir, state);
+  // A film's next step is taken on /reels; the cut verbs below are the CLI's own walk and do not apply to it.
+  return { slug: state.slug, stage: state.stage, idea: state.idea, ...(film === undefined ? {} : { film }), tracks: state.tracks ?? {}, cuts: state.cuts, verdicts: await recordedVerdicts(dir), next: film === undefined ? nextVerb(state, dir) : `film: ${String(film["stage"])} (on /reels)` };
 }
 
 /* ── The command line ─────────────────────────────────────────────────────── */
