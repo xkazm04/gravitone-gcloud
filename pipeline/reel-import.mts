@@ -31,7 +31,8 @@ import { newReel, parseIdea } from "../lib/reel/state";
 import { isReelSlug, readVerdicts, reelsRoot } from "../lib/reel/store";
 import { FILM_DIR, FILM_SPEC, REEL_FPS, ReelError, type FilmFace, type FilmRecord, type FilmRender, type ReelState } from "../lib/reel/types";
 
-const DEFAULT_SHARED = "C:/Users/kazda/AppData/Local/Temp/claude/46f132430c565ee6/300936fe-bcb1-419b-a872-57153faef9d7/scratchpad/r3/shared";
+// The shared /data/ folder (flags, geo, fonts) the night pages load: --shared or REEL_SHARED_DATA; no default, a path
+// on one machine is no path on another. Absent and already in <root>/_shared/data: nothing to copy.
 /** The phone master's name in a contest folder, and in the store. */
 const SOURCE_MASTER: Readonly<Record<FilmFace, readonly string[]>> = { desktop: ["film-desktop.mp4"], phone: ["film-mobile.mp4", "film-phone.mp4"] };
 const PAGE_EXT = new Set([".html", ".js", ".json", ".css"]);
@@ -77,9 +78,11 @@ export async function importReel(o: ImportOptions): Promise<Record<string, unkno
   if ((await isFile(path.join(dir, "reel.json"))) && o.again !== true) throw new ReelError(`reel ${o.slug} exists in ${root}: pass --again to import over its film`);
   const masters = { desktop: await masterOf(folder, "desktop"), phone: await masterOf(folder, "phone") };
   const files = await plan(folder);
-  const shared = path.resolve(o.shared ?? process.env["REEL_SHARED_DATA"] ?? DEFAULT_SHARED);
+  const sharedFrom = o.shared ?? process.env["REEL_SHARED_DATA"];
+  const shared = sharedFrom === undefined ? undefined : path.resolve(sharedFrom);
   const sharedTo = path.join(root, "_shared", "data");
-  const sharedNeeded = !(await isDir(sharedTo)) && (await isDir(shared));
+  const sharedNeeded = shared !== undefined && !(await isDir(sharedTo)) && (await isDir(shared));
+  if (shared === undefined && !(await isDir(sharedTo))) throw new ReelError(`${sharedTo} is absent: pass --shared <the night data folder> (or REEL_SHARED_DATA) once`);
   if (o.dry === true) return { dry: true, slug: o.slug, into: path.join(dir, FILM_DIR), copies: files.map(([, rel, d]) => (d ? `${rel}/` : rel)), masters, shared: sharedNeeded ? `${shared} -> ${sharedTo}` : "already there or absent" };
 
   const now = o.now ?? new Date().toISOString();
@@ -91,7 +94,7 @@ export async function importReel(o: ImportOptions): Promise<Record<string, unkno
     else await copyFile(src, path.join(filmDir, rel));
   }
   for (const face of ["desktop", "phone"] as const) await copyFile(masters[face], path.join(filmDir, FILM_SPEC[face].file));
-  if (sharedNeeded) {
+  if (sharedNeeded && shared !== undefined) {
     // Staged and renamed: a half-copied shared dir would read as present to the next import.
     const tmp = `${sharedTo}.partial`;
     await rm(tmp, { recursive: true, force: true });
