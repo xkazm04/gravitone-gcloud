@@ -279,7 +279,8 @@ export async function liveReelPiles(): Promise<Result<WeirItem[]>> {
       const state = await stateOf(slug);
       if (state === undefined) continue;
       const verdicts = await readVerdicts(reelDir(slug));
-      for (const key of STOP_KEYS) {
+      // WP-0 (spark reel-studio): the film and release stops have no media door here until WP1 builds them.
+      for (const key of STOP_KEYS.filter((k) => k !== "film" && k !== "release")) {
         const stop = stopOf(slug, key);
         const at = await standing(state, stop, verdicts);
         if (!at.ok) return at;

@@ -151,6 +151,108 @@ export interface TrackRecord {
   readonly sha: string;
 }
 
+/* ── the film: one timeline, two faces (spark reel-studio, 2026-11-18) ───────────────────────────────────────
+ *
+ * The owner's rule (knowledge/reel/look.md): the desktop film runs at normal speed, 60 to 120 s; the phone film is
+ * the SAME timeline rendered at 2x (`--step 2`), so it lasts half as long. One page pair shares one module:
+ * `reel-desktop.html` (1920x1080) and `reel.html` (1080x1920), both exposing `window.REEL.frames` at desktop speed.
+ * Everything a film owns lives under `<slug>/film/`. A field that has no value yet is OMITTED, never null or 0.
+ */
+export type FilmFace = "desktop" | "phone";
+export const FILM_FACES: readonly FilmFace[] = ["desktop", "phone"];
+
+export interface FilmFaceSpec {
+  readonly width: number;
+  readonly height: number;
+  /** Render every `step`-th frame of the timeline: the phone film is the desktop timeline at 2x. */
+  readonly step: 1 | 2;
+  /** The page, film-relative. */
+  readonly page: string;
+  /** The silent master the render writes, film-relative. */
+  readonly file: string;
+  /** The master with its bed laid under it. */
+  readonly mix: string;
+  /** The compressed publish copy. */
+  readonly release: string;
+  /** What the publish copy is encoded to (2-pass libx264); the owner's band is +-30 MB around 50 MB. */
+  readonly targetBytes: number;
+}
+
+export const FILM_SPEC: Readonly<Record<FilmFace, FilmFaceSpec>> = {
+  desktop: { width: 1920, height: 1080, step: 1, page: "reel-desktop.html", file: "film-desktop.mp4", mix: "mix-desktop.mp4", release: "release-desktop.mp4", targetBytes: 50_000_000 },
+  phone: { width: 1080, height: 1920, step: 2, page: "reel.html", file: "film-phone.mp4", mix: "mix-phone.mp4", release: "release-phone.mp4", targetBytes: 30_000_000 },
+};
+
+/** The folder inside a reel that holds its film. */
+export const FILM_DIR = "film";
+
+/** How long the DESKTOP film may run, in seconds. The phone film is half of it. */
+export const FILM_SECONDS: readonly [number, number] = [60, 120];
+
+/** One rendered silent master. */
+export interface FilmRender {
+  /** Film-relative file name (FILM_SPEC[face].file). */
+  readonly file: string;
+  /** Frames in the file (the phone film holds half the timeline's frames). */
+  readonly frames: number;
+  readonly seconds: number;
+  readonly bytes: number;
+  /** sha256 of the file, computed once when the render landed. */
+  readonly sha: string;
+  readonly renderedAt: string;
+}
+
+/** One compressed publish copy (bed included when the film has one). */
+export interface FilmCopy {
+  readonly file: string;
+  readonly seconds: number;
+  readonly bytes: number;
+  readonly sha: string;
+  readonly encodedAt: string;
+  /** The bed the copy carries; absent for a silent copy. */
+  readonly bedSha?: string;
+  /** VMAF of the copy's picture against the master, when measured. A reading, never a gate. */
+  readonly vmaf?: { readonly mean: number; readonly min: number };
+}
+
+/** What the operator typed into Suno to make the bed: recorded so a later spark can learn to make beds itself. */
+export interface BedPrompt {
+  readonly style: string;
+  readonly title?: string;
+  readonly lyrics?: string;
+  /** The Suno model as the operator names it ("v5.5"). */
+  readonly model?: string;
+  /** The song's page on suno.com. */
+  readonly url?: string;
+  readonly note?: string;
+}
+
+/** The music bed under a film. One bed serves both faces: as-is on desktop, at atempo 2 on the phone. */
+export interface BedRecord {
+  /** Film-relative file name, `bed.<ext>`. */
+  readonly file: string;
+  readonly seconds: number;
+  readonly sha: string;
+  /** Integrated loudness as measured on attach. */
+  readonly lufs?: number;
+  /** The sound store take the bed was uploaded as, when it came through the take upload. */
+  readonly takeId?: string;
+  readonly prompt?: BedPrompt;
+  readonly attachedAt: string;
+}
+
+export interface FilmRecord {
+  /** The timeline's frame count at desktop speed (`window.REEL.frames`). */
+  readonly frames: number;
+  readonly renders: Partial<Record<FilmFace, FilmRender>>;
+  readonly bed?: BedRecord;
+  readonly copies: Partial<Record<FilmFace, FilmCopy>>;
+  /** Film-relative jpgs: 12 frames spread across each face, and one poster. */
+  readonly thumbs?: { readonly desktop: readonly string[]; readonly phone: readonly string[]; readonly poster: string };
+  /** Set when the film was brought in from a folder made outside the pipeline. */
+  readonly imported?: { readonly from: string; readonly at: string };
+}
+
 export interface ReelState {
   readonly v: 1;
   readonly slug: string;
@@ -160,6 +262,8 @@ export interface ReelState {
   /** A track attached to a cut before it is planned. Absent: the cut is silent and as long as its table asks. */
   readonly tracks?: Partial<Record<ReelCut, TrackRecord>>;
   readonly cuts: Partial<Record<ReelCut, CutRecord>>;
+  /** The film (one timeline, desktop and phone faces). Absent until a page pair was authored or imported. */
+  readonly film?: FilmRecord;
   readonly updatedAt: string;
 }
 

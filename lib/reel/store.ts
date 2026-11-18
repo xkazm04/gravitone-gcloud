@@ -45,20 +45,20 @@ export function reelDir(slug: string): string {
 
 /* ── the stops ─────────────────────────────────────────────────────────────── */
 
-export const STOP_KINDS = ["data", "proof", "cut"] as const;
+export const STOP_KINDS = ["data", "proof", "cut", "film", "release"] as const;
 export type StopKind = (typeof STOP_KINDS)[number];
-export type StopKey = "data" | `${ReelCut}:proof` | `${ReelCut}:cut`;
-export const STOP_KEYS: readonly StopKey[] = ["data", ...CUT_NAMES.flatMap((c): StopKey[] => [`${c}:proof`, `${c}:cut`])];
+export type StopKey = "data" | `${ReelCut}:proof` | `${ReelCut}:cut` | "film" | "release";
+export const STOP_KEYS: readonly StopKey[] = ["data", ...CUT_NAMES.flatMap((c): StopKey[] => [`${c}:proof`, `${c}:cut`]), "film", "release"];
 
 export type Stop = { readonly slug: string; readonly key: StopKey; readonly kind: StopKind; readonly cut?: ReelCut };
 
 export function stopOf(slug: string, key: StopKey): Stop {
-  if (key === "data") return { slug, key, kind: "data" };
+  if (key === "data" || key === "film" || key === "release") return { slug, key, kind: key };
   const [cut, kind] = key.split(":") as [ReelCut, "proof" | "cut"];
   return { slug, key, kind, cut };
 }
 
-const RUN_RE = /^([^:]+):(data|(?:short|long):(?:proof|cut))(?::([1-9]\d*))?$/;
+const RUN_RE = /^([^:]+):(data|film|release|(?:short|long):(?:proof|cut))(?::([1-9]\d*))?$/;
 
 /** A packet's run id as its stop and the round it names (undefined: the bare run, whichever round is open). */
 export function parseStopRun(runId: string): (Stop & { readonly round?: number }) | undefined {
@@ -82,10 +82,16 @@ export function stopMediaRel(stop: Stop, hasFinal: boolean): string {
 
 /* ── verdicts ──────────────────────────────────────────────────────────────── */
 
+/** A note pinned to a moment of the film (spark reel-studio): desktop-timeline seconds, the reasons, the words. */
+export type ReelPin = { readonly t: number; readonly reasons: readonly string[]; readonly text: string };
+
 export type ReelVerdict = {
-  readonly verdict: "keep" | "reject";
+  /** `drop` is the film stop's third answer: the reel is abandoned, not sent back. */
+  readonly verdict: "keep" | "reject" | "drop";
   readonly reasons: readonly string[];
   readonly note?: string;
+  /** Notes pinned to moments of the film, in time order (film stop only). */
+  readonly pins?: readonly ReelPin[];
   /** The ledger's word for who decided: a keep is only ever the operator's. */
   readonly by: "operator" | "agent";
   readonly at: string;
@@ -205,7 +211,7 @@ export async function listReelSlugs(): Promise<string[]> {
 }
 
 /** The file route serves these for a reel: what a stop shows and its records. Never the page (`strip.html` is code). */
-const REEL_SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm"]);
+const REEL_SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json", ".mp4", ".webm", ".mp3", ".m4a", ".wav"]);
 
 /** Resolve a reel-relative file for the file route (app/api/foundry/file, `kind=reel`): contained, servable, a file. */
 export async function reelFileStat(slug: string, rel: string): Promise<{ abs: string; size: number }> {
