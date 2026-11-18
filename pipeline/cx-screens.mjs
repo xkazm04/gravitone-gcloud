@@ -126,6 +126,13 @@ export const SCREENS = {
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },
+  // reels          the reel studio's overview (spark reel-studio) on the fixture side: ten reels, one per film stage,
+  //                in each of the three views behind its switch (filmstrip rows, poster grid, stage board).
+  // reels-review   one reel at its film stop: the two linked players, the strip, the verdict bar, a past round.
+  reels: { url: "/reels" },
+  "reels-posters": { url: "/reels?view=posters" },
+  "reels-stages": { url: "/reels?view=stages" },
+  "reels-review": { url: "/reels/towers-of-light" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },

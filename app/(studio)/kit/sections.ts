@@ -44,6 +44,7 @@ export const SECTIONS = [
   { id: "board", group: "operations", title: "Board", sub: "sheet · rail · cull · pair · review · cut · consequence" },
   { id: "produce", group: "production", title: "Produce", sub: "composer · receipt · plan · compose · re-route · hold" },
   { id: "part", group: "production", title: "Part workspace", sub: "workspace · rail · verdict · part tabs" },
+  { id: "reels", group: "production", title: "Reels", sub: "filmstrip · loupe · playhead · pinned notes" },
   { id: "audio", group: "audio", title: "Audio", sub: "preview · prompt · measured · terms · composer · variations · drafts · references" },
   { id: "ear", group: "audio", title: "Steer by ear", sub: "ear button" },
   { id: "studio", group: "audio", title: "Audio studio", sub: "dock · verdict row · transport row · fader" },

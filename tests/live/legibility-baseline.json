@@ -134,6 +134,15 @@
   "part-script-trailer": [],
   "projects": [],
   "projects-empty": [],
+  "reels": [],
+  "reels-posters": [],
+  "reels-review": [
+    "mark div.review-module__f0BlGq__layout > aside.review-module__f0BlGq__steps > div.Steps-module__9Ybybq__steps > section.Steps-module__9Ybybq__step",
+    "mark div.review-module__f0BlGq__review > section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true]",
+    "text div.review-module__f0BlGq__review > section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true]",
+    "text section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap"
+  ],
+  "reels-stages": [],
   "route:/audio": [
     "mark main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"

@@ -28,6 +28,7 @@ import { LedgerSections } from "./LedgerKit.tsx";
 import { LibrarySection } from "./LibraryKit.tsx";
 import { PartSection } from "./PartKit.tsx";
 import { ProduceSection } from "./ProduceKit.tsx";
+import { ReelSection } from "./ReelKit.tsx";
 import { RunsSection } from "./RunsKit.tsx";
 import type { KitGroupId } from "./sections.ts";
 import { SignalSections } from "./Signal.tsx";
@@ -86,6 +87,7 @@ const BODIES: Readonly<Record<KitGroupId, () => ReactNode>> = {
     <>
       <ProduceSection />
       <PartSection />
+      <ReelSection />
     </>
   ),
   audio: () => (
