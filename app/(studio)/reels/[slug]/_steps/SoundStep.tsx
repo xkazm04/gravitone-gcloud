@@ -106,13 +106,13 @@ export function SoundStep({ detail, bedProblem }: { readonly detail: ReelDetail;
           {detail.media.mixDesktop !== undefined && (
             <div className={s.face}>
               <Chip label="desktop mix" />
-              <video className={s.player} controls preload="none" src={detail.media.mixDesktop} aria-label="desktop mix" />
+              <video className={s.player} controls preload="none" src={detail.media.mixDesktop} poster={detail.media.posterDesktop} aria-label="desktop mix" />
             </div>
           )}
           {detail.media.mixPhone !== undefined && (
             <div className={s.face}>
               <Chip label="phone mix" />
-              <video className={s.player} controls preload="none" src={detail.media.mixPhone} aria-label="phone mix" />
+              <video className={s.player} controls preload="none" src={detail.media.mixPhone} poster={detail.media.posterPhone} aria-label="phone mix" />
             </div>
           )}
         </div>

@@ -42,7 +42,7 @@ function Copy({ face, detail }: { readonly face: FilmFace; readonly detail: Reel
           ]}
         />
       )}
-      {src !== undefined && <video className={s.player} controls preload="none" src={src} aria-label={`${face} release copy`} />}
+      {src !== undefined && <video className={s.player} controls preload="none" src={src} poster={face === "desktop" ? detail.media.posterDesktop : detail.media.posterPhone} aria-label={`${face} release copy`} />}
     </div>
   );
 }
