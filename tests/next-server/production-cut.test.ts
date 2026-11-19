@@ -38,7 +38,7 @@ import { H3_REF2VA_UNET, H3_REF_LORA, setRef2VaGraph, speakingPrompt } from "../
 import { loadH3Graph } from "../../lib/imaging/video/comfyH3.ts";
 import { requestSpeakingTake, productionVoiceRoute } from "../../lib/producers/productionAudio.ts";
 import { cutJobId, driveCut, jobOfCut, requestCutIn, type RequestCutInput } from "../../lib/producers/productionCut.ts";
-import { cutSize, layArgs, leadingSilence, lineStarts, MUSIC_CLIP_SCRIPT, musicClipPlan, onsetArgs, scriptArgs, TRAILER_SCRIPT, trailerEdit } from "../../lib/producers/productionCutActs.ts";
+import { cutSize, layArgs, layMeasureArgs, leadingSilence, lineStarts, MUSIC_CLIP_SCRIPT, musicClipPlan, onsetArgs, scriptArgs, TRAILER_SCRIPT, trailerEdit } from "../../lib/producers/productionCutActs.ts";
 import { producers } from "../../lib/producers/registry.ts";
 import { silentWav } from "../../lib/producers/voice.ts";
 
@@ -205,27 +205,37 @@ describe("the craft scripts' folder and argv", () => {
     expect(scriptArgs({ format: "music-clip", aspect: "16:9" }, "/repo", "/d", "/o.mp4")[0]).toBe(path.join("/repo", MUSIC_CLIP_SCRIPT));
   });
 
-  it("lays lines at their scene openings, the bed under, without a shell", () => {
+  it("lays lines at their scene openings, the native sound dropped, the bed ducked under the voice, without a shell", () => {
     expect(lineStarts([take, take], 2)).toEqual([0.2, 5.2]);
-    const a = layArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 0.2 }], bed: "/b.mp3", totalS: 9, out: "/o.mp4" });
+    const a = layArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 0.2 }], bed: "/b.mp3", ir: "/room.wav", totalS: 9, out: "/o.mp4" });
     expect(a.join(" ")).toContain("adelay=delays=200:all=1");
-    expect(a.join(" ")).toContain("amix=inputs=3");
+    expect(a.join(" ")).not.toContain("[0:a]");
+    expect(a.join(" ")).toContain("volume=-14.00dB,apad,atrim=end=9.00000[bed]");
+    expect(a.join(" ")).toContain("[bed][vkey]sidechaincompress");
     expect(a.slice(-1)).toEqual(["/o.mp4"]);
+    expect(layMeasureArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 0.2 }], ir: "/room.wav", totalS: 9, out: "/o.mp4" }).slice(-3)).toEqual(["-f", "null", "-"]);
+    // A bed with no lines keeps today's lay: the native sound under it, limited.
+    const b = layArgs({ video: "/in.mp4", lines: [], bed: "/b.mp3", totalS: 9, out: "/o.mp4" }).join(" ");
+    expect(b).toContain("[0:a]aresample=48000,aformat=channel_layouts=stereo,volume=-5dB,apad[nat]");
+    expect(b).toContain("amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.89[a]");
   });
 
   it("lays a line from its first speech; the 0.2 s lead only when the silence could not be measured", () => {
     // A line with 0.62 s of breath before its first word, and one whose silence is unknown.
     expect(lineStarts([take, take], 2, [0.62, undefined])).toEqual([0, 5.2]);
     expect(lineStarts([take, take], 2, [0, 0])).toEqual([0, 5]);
-    const a = layArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 5, trimS: 0.62 }, { file: "/m.wav", startS: 0.2 }], totalS: 9, out: "/o.mp4" }).join(" ");
-    expect(a).toContain("[1:a]atrim=start=0.620,asetpts=PTS-STARTPTS,aresample=48000");
-    expect(a).toContain("[2:a]aresample=48000");
+    const a = layArgs({ video: "/in.mp4", lines: [{ file: "/l.wav", startS: 5, trimS: 0.62 }, { file: "/m.wav", startS: 0.2 }], ir: "/room.wav", totalS: 9, out: "/o.mp4" }).join(" ");
+    expect(a).toContain("[1:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=mono,atrim=start=0.6200,asetpts=PTS-STARTPTS,");
+    expect(a).toContain("[2:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=mono,highpass=f=90");
     expect(onsetArgs("/l.wav")).toContain("silencedetect=noise=-40dB:d=0.05");
     const report = (lines: string) => `Input #0, wav, from '/l.wav':\n  Stream #0:0: Audio: pcm_s16le, 44100 Hz, mono\n${lines}`;
     expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0\n[silencedetect @ 0x1] silence_end: 0.6213 | silence_duration: 0.6213\n[silencedetect @ 0x1] silence_start: 2.1"))).toBe(0.621);
     expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 1.4\n[silencedetect @ 0x1] silence_end: 1.9"))).toBe(0);
     expect(leadingSilence(report(""))).toBe(0);
     expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0"))).toBeUndefined();
+    // A 3.15 ms click before the breath (el-dub-r2's C1-adrian): the silence after it is still the leading one.
+    expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0.00315193\n[silencedetect @ 0x1] silence_end: 0.118798 | silence_duration: 0.115646\n[silencedetect @ 0x1] silence_start: 1.861542"))).toBe(0.119);
+    expect(leadingSilence(report("[silencedetect @ 0x1] silence_start: 0.012\n[silencedetect @ 0x1] silence_end: 0.3"))).toBe(0);
     expect(leadingSilence("")).toBeUndefined();
   });
 
@@ -244,8 +254,14 @@ describe("the craft scripts' folder and argv", () => {
     await driveCut(store, location, jobId, { dryOnly: false, engines: { spawn, node: process.execPath, ffmpeg: "ffmpeg", probe: async () => 5 } });
     expect(log.calls.some((c) => c.args.some((a) => a.startsWith("silencedetect")))).toBe(true);
     const lay = log.calls.find((c) => c.args.join(" ").includes("adelay"))?.args.join(" ") ?? "";
-    expect(lay).toContain("atrim=start=0.450");
+    expect(lay).toContain("atrim=start=0.4500");
     expect(lay).toContain("adelay=delays=0:all=1");
+    // Each line's loudness is measured, then the mix twice: pass 1 to null, pass 2 to the file (one pass here, as the
+    // fake prints no loudnorm report, and the note says so).
+    expect(log.calls.some((c) => c.args.some((a) => a.includes("ebur128")))).toBe(true);
+    const passes = log.calls.filter((c) => c.args.some((a) => a.includes("loudnorm")));
+    expect(passes.map((c) => c.args.slice(-1)[0]?.endsWith("laid.mp4") ? "file" : c.args.slice(-1)[0])).toEqual(["-", "file"]);
+    expect(must(store.read((r) => readProduction(r, id)))?.cut?.note).toContain("one loudnorm pass");
   });
 });
 

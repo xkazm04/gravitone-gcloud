@@ -15,6 +15,8 @@ import { madePaid } from "@gt/producers/research/partAct";
 import { meteredCall } from "@gt/producers/research/metered";
 import { ASSEMBLE_STEP, LAY_STEP, laysAudio, type CutPorts, type CutRequest } from "@gt/producers/production-cut/define";
 
+import { parseEbur128 } from "../adRender.ts";
+import { dialogueLoudnessArgs, dialogueMeasureArgs, dialogueMixArgs, loudnormMeasured, roomIrWav, type DialogueLine, type LoudnormMeasure } from "../cut/dialogueMix.ts";
 import { binsFrom, realSpawn, type Spawn } from "../foundry/scout/ingest.ts";
 import { blobRootOf } from "../kernelProcess.ts";
 import { blobRoute } from "../library/media.ts";
@@ -32,7 +34,9 @@ import { packetIdOf } from "../ledger/v1/packet.ts";
 //   lay        ffmpeg lays the dub lines and the score over the assembled video, the same spawn seam. A line that runs past
 //              the picture's end is cut there and named in the cut's note. Each line enters on its first speech, not
 //              its first sample: ffmpeg silencedetect measures the leading silence and the lay trims it (0.2 s lead when
-//              it cannot be measured).
+//              it cannot be measured). With lines, the native sound is dropped and lib/cut/dialogueMix.ts places each
+//              line (its measured loudness to a per-direction level, tone, side, room), ducks the score under the voice
+//              and sets the loudness in two passes; a bed with no lines keeps the native sound under it.
 //   land       the video reaches the record and the Board; a dry job only rehearses (no packet, no video).
 //
 // A dry job asks no script and no ffmpeg: each is a declared stand-in. Every write is fenced against the job's slot.
@@ -53,6 +57,8 @@ export type CutEngines = {
   readonly probe?: (file: string) => Promise<number>;
   /** Seconds of silence before a line's first speech; undefined when it cannot be measured. */
   readonly onset?: (file: string) => Promise<number | undefined>;
+  /** A line segment's integrated loudness (LUFS); undefined when it cannot be measured. */
+  readonly loudness?: (file: string, trimS: number) => Promise<number | undefined>;
 };
 
 const dryRun = (ctx: StepContext): boolean => ctx.job.mode.kind !== "live";
@@ -139,6 +145,11 @@ export const FALLBACK_LEAD_S = 0.2;
 /** Quieter than this is silence; a pause shorter than the minimum is speech. */
 const ONSET_NOISE = "-40dB";
 const ONSET_MIN_S = 0.05;
+/** A silence that starts this close to the head is still the leading one: a take may open on a few ms of click before
+ *  its breath (C1-adrian, el-dub-r2: 3.15 ms, then silence to 0.119 s, read as 0 under a 1 ms window, laid ~110 ms late). */
+const ONSET_HEAD_S = 0.01;
+/** A score or music master under dub lines: today's static level, now ducked under the voice. */
+export const SCORE_BED_DB = -14;
 
 /** The ffmpeg argv that reports a line's silences on stderr. No shell. Pure. */
 export const onsetArgs = (file: string): readonly string[] => ["-hide_banner", "-nostats", "-i", file, "-af", `silencedetect=noise=${ONSET_NOISE}:d=${ONSET_MIN_S}`, "-f", "null", "-"];
@@ -148,7 +159,7 @@ export const onsetArgs = (file: string): readonly string[] => ["-hide_banner", "
 export function leadingSilence(stderr: string): number | undefined {
   if (!/Stream #\d+:\d+.*Audio/.test(stderr)) return undefined;
   const start = /silence_start:\s*(-?[\d.]+)/.exec(stderr);
-  if (start === null || Number(start[1]) > 0.001) return 0;
+  if (start === null || Number(start[1]) > ONSET_HEAD_S) return 0;
   const end = /silence_end:\s*([\d.]+)/.exec(stderr);
   if (end === null) return undefined;
   const s = Number(end[1]);
@@ -159,6 +170,12 @@ const onsetWith = (e: CutEngines, bins: ReturnType<typeof binsFrom>) => async (f
   if (e.onset !== undefined) return e.onset(file);
   const r = await (e.spawn ?? realSpawn)(e.ffmpeg ?? bins.ffmpeg, onsetArgs(file), { timeoutMs: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
   return r.ok ? leadingSilence(r.stderr) : undefined;
+};
+
+const loudnessWith = (e: CutEngines, bins: ReturnType<typeof binsFrom>) => async (file: string, trimS: number): Promise<number | undefined> => {
+  if (e.loudness !== undefined) return e.loudness(file, trimS);
+  const r = await (e.spawn ?? realSpawn)(e.ffmpeg ?? bins.ffmpeg, dialogueLoudnessArgs(file, trimS), { timeoutMs: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 });
+  return r.ok ? parseEbur128(r.stderr)?.integratedLufs : undefined;
 };
 
 /**
@@ -176,25 +193,33 @@ export function lineStarts(takes: readonly { readonly durationS: number }[], lin
   return starts;
 }
 
-/** The ffmpeg lay: dub lines at their starts, a bed under them, the assembled sound ducked, the result limited. No shell. Pure. */
-export function layArgs(input: { readonly video: string; readonly lines: readonly { readonly file: string; readonly startS: number; readonly trimS?: number }[]; readonly bed?: string; readonly totalS: number; readonly out: string }): readonly string[] {
-  const chain: string[] = [];
-  const inputs = ["-i", input.video, ...input.lines.flatMap((l) => ["-i", l.file]), ...(input.bed === undefined ? [] : ["-i", input.bed])];
-  const nat = input.lines.length > 0 || input.bed !== undefined ? "volume=-5dB," : "";
-  chain.push(`[0:a]aresample=48000,aformat=channel_layouts=stereo,${nat}apad[nat]`);
+type LayInput = { readonly video: string; readonly lines: readonly DialogueLine[]; readonly bed?: string; readonly ir?: string; readonly totalS: number; readonly out: string };
+
+/**
+ * The ffmpeg lay. With lines: the dialogue mix (lib/cut/dialogueMix.ts) over the picture, no native sound, the bed at
+ * SCORE_BED_DB ducked under the voice, loudness from pass 1's measure (one pass without it). A bed alone: the native sound
+ * at -5 dB under it, the result limited. No shell. Pure.
+ */
+export function layArgs(input: LayInput, measured?: LoudnormMeasure): readonly string[] {
+  if (input.lines.length > 0) return dialogueMixArgs(dialogueInput(input), measured);
+  const inputs = ["-i", input.video, ...(input.bed === undefined ? [] : ["-i", input.bed])];
+  const chain = [`[0:a]aresample=48000,aformat=channel_layouts=stereo,${input.bed === undefined ? "" : "volume=-5dB,"}apad[nat]`];
   const mixed = ["[nat]"];
-  input.lines.forEach((l, i) => {
-    const trim = l.trimS !== undefined && l.trimS > 0 ? `atrim=start=${l.trimS.toFixed(3)},asetpts=PTS-STARTPTS,` : "";
-    chain.push(`[${i + 1}:a]${trim}aresample=48000,aformat=channel_layouts=stereo,adelay=delays=${Math.round(l.startS * 1000)}:all=1[l${i}]`);
-    mixed.push(`[l${i}]`);
-  });
   if (input.bed !== undefined) {
-    chain.push(`[${input.lines.length + 1}:a]aresample=48000,aformat=channel_layouts=stereo,volume=-14dB[bed]`);
+    chain.push(`[1:a]aresample=48000,aformat=channel_layouts=stereo,volume=${SCORE_BED_DB}dB[bed]`);
     mixed.push("[bed]");
   }
   chain.push(`${mixed.join("")}amix=inputs=${mixed.length}:duration=first:normalize=0,alimiter=limit=0.89[a]`);
   return ["-v", "error", "-y", ...inputs, "-filter_complex", chain.join(";"), "-map", "0:v", "-map", "[a]", "-t", input.totalS.toFixed(3), "-c:v", "copy", "-c:a", "aac", "-b:a", "384k", "-ar", "48000", "-movflags", "+faststart", input.out];
 }
+
+function dialogueInput(input: LayInput): Parameters<typeof dialogueMixArgs>[0] {
+  if (input.ir === undefined) throw new AppError("internal", "a dialogue lay needs its room impulse");
+  return { video: input.video, lines: input.lines, ir: input.ir, ...(input.bed === undefined ? {} : { bed: { file: input.bed, gainDb: SCORE_BED_DB } }), totalS: input.totalS, out: input.out };
+}
+
+/** Pass 1 of a dialogue lay: its loudness measured to null (loudnormMeasured reads the stderr). No shell. Pure. */
+export const layMeasureArgs = (input: LayInput): readonly string[] => dialogueMeasureArgs(dialogueInput(input));
 
 /* ── the acts ─────────────────────────────────────────────────────────────── */
 
@@ -262,6 +287,7 @@ async function layAct(store: Store, e: CutEngines, req: CutRequest, ctx: StepCon
     const bins = binsFrom(process.env);
     const probe = probeWith(e, bins);
     const onset = onsetWith(e, bins);
+    const loudness = loudnessWith(e, bins);
     const files: string[] = [];
     const silences: (number | undefined)[] = [];
     for (const [i, l] of req.lines.entries()) {
@@ -271,19 +297,33 @@ async function layAct(store: Store, e: CutEngines, req: CutRequest, ctx: StepCon
       silences.push(await onset(f));
     }
     const starts = lineStarts(req.takes, req.lines.length, silences);
-    const lines = req.lines.map((l, i) => ({ file: files[i] ?? "", startS: starts[i] ?? 0, name: l.name, ...(silences[i] === undefined ? {} : { trimS: silences[i] }) }));
+    const lines = req.lines.map((l, i) => ({ file: files[i] ?? "", startS: starts[i] ?? 0, name: l.name, ...(silences[i] === undefined ? {} : { trimS: silences[i] }), ...(l.x === undefined ? {} : { x: l.x }), ...(l.direction === undefined ? {} : { direction: l.direction }) }));
     const bed = req.bed === undefined ? undefined : path.join(dir, `bed.${trackExt(req.bed.mime)}`);
     if (req.bed !== undefined && bed !== undefined) await writeFile(bed, await bytesOf(blobRoot, req.bed));
     const over: string[] = [];
-    for (const l of lines) if (l.startS + (await probe(l.file)) - (l.trimS ?? 0) > assembled.durationS) over.push(l.name);
+    const placed: DialogueLine[] = [];
+    for (const l of lines) {
+      const durS = await probe(l.file);
+      if (l.startS + durS - (l.trimS ?? 0) > assembled.durationS) over.push(l.name);
+      const lufs = await loudness(l.file, l.trimS ?? 0);
+      placed.push({ ...l, durS, ...(lufs === undefined ? {} : { lufs }) });
+    }
+    const ir = path.join(dir, "room.wav");
+    if (placed.length > 0) await writeFile(ir, roomIrWav());
     const out = path.join(dir, "laid.mp4");
-    const args = layArgs({ video, lines, ...(bed === undefined ? {} : { bed }), totalS: assembled.durationS, out });
-    const r = await (e.spawn ?? realSpawn)(e.ffmpeg ?? bins.ffmpeg, args, { timeoutMs: SCRIPT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 });
+    const input = { video, lines: placed, ...(bed === undefined ? {} : { bed }), ir, totalS: assembled.durationS, out };
+    const spawn = e.spawn ?? realSpawn;
+    const ffmpeg = e.ffmpeg ?? bins.ffmpeg;
+    const opts = { timeoutMs: SCRIPT_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 };
+    const pass1 = placed.length === 0 ? undefined : await spawn(ffmpeg, layMeasureArgs(input), opts);
+    const measured = pass1?.ok === true ? loudnormMeasured(pass1.stderr) : undefined;
+    const r = await spawn(ffmpeg, layArgs(input, measured), opts);
     if (!r.ok) throw new AppError("unavailable", `ffmpeg: ${r.error}`);
     fence(ctx);
     const blob = await ctx.fx.blob(new Uint8Array(await readFile(out)), "video/mp4");
     if (!blob.ok) throw blob.error;
-    const note = [...(assembled.note === undefined ? [] : [assembled.note]), ...(over.length === 0 ? [] : [`${over.join(", ")}'s line runs past the picture's end and was cut there`])].join("; ");
+    const once = placed.length > 0 && measured === undefined ? ["the dialogue's loudness could not be measured; one loudnorm pass set it"] : [];
+    const note = [...(assembled.note === undefined ? [] : [assembled.note]), ...(over.length === 0 ? [] : [`${over.join(", ")}'s line runs past the picture's end and was cut there`]), ...once].join("; ");
     return madePaid(data({ blob: blob.value, durationS: assembled.durationS, ...(note === "" ? {} : { note }) } satisfies StepOut), ctx);
   } catch (x) {
     if (x instanceof AppError && x.code === "conflict") throw x;

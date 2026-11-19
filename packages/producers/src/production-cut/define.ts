@@ -30,7 +30,8 @@ export const LAND_STEP = "land";
 const id = z.string().min(1).max(200);
 
 const cutTakeSchema = z.object({ takeId: id, video: blobRefSchema, durationS: z.number().positive() }).strict();
-const cutLineSchema = z.object({ roleId: id, name: z.string().min(1).max(60), line: z.string().min(1).max(1000), audio: blobRefSchema }).strict();
+/** x: the speaker's horizontal centre, 0..1 of frame width (absent: centre); direction: the line's read ("quietly"), which sets its level. */
+const cutLineSchema = z.object({ roleId: id, name: z.string().min(1).max(60), line: z.string().min(1).max(1000), audio: blobRefSchema, x: z.number().min(0).max(1).optional(), direction: z.string().min(1).max(60).optional() }).strict();
 
 export const cutRequestSchema = z
   .object({
