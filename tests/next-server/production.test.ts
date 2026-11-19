@@ -34,7 +34,7 @@ import { episodesDue } from "../../lib/foundry/scout/channels.ts";
 import { keptConcepts } from "../../lib/foundry/scout/concepts.ts";
 import { setEpisodeDoorForTests } from "../../lib/foundry/scout/episodeMoves.ts";
 import { Refusal } from "../../lib/foundry/scout/acts.ts";
-import { setH3Graph } from "../../lib/imaging/video/comfyH3.ts";
+import { H3_FLEX_LORA, H3_FLEX_SIGMAS, setH3Graph } from "../../lib/imaging/video/comfyH3.ts";
 import { driveTake, markProven, moveProduction, requestTake, startProduction, takeSeed, type RequestTakeInput } from "../../lib/producers/production.ts";
 import { producers } from "../../lib/producers/registry.ts";
 
@@ -256,7 +256,17 @@ describe("the wiring", () => {
     expect(set.value.has("production-take@gpu.local")).toBe(true);
   });
 
-  it("the H3 graph is clips-h3.py's: frames wired, the t2v branch gone, the seed and turbo LoRA set", () => {
+  const sampler = () => ({
+    "140:123": { class_type: "KSamplerSelect", inputs: { sampler_name: "res_multistep" } },
+    "140:124": { class_type: "BasicScheduler", inputs: { steps: ["140:136", 0] } },
+    "140:125": { class_type: "SamplerCustomAdvanced", inputs: { sigmas: ["140:124", 0] } },
+    "140:134": { class_type: "LoraLoaderModelOnly", inputs: { lora_name: "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors" } },
+    "140:136": { class_type: "ComfySwitchNode", inputs: {} },
+    "140:137": { class_type: "PrimitiveInt", inputs: { value: 20 } },
+    "140:138": { class_type: "PrimitiveInt", inputs: { value: 8 } },
+  });
+
+  it("the H3 graph is clips-h3.py's: frames wired, the t2v branch gone, the seed set, the six-step Flex adapter on its knots", () => {
     const g = {
       "115": { class_type: "ResolutionSelector", inputs: {} },
       "140:132": { class_type: "ComfyMathExpression", inputs: {} },
@@ -266,8 +276,18 @@ describe("the wiring", () => {
       "140:129": { class_type: "RandomNoise", inputs: { noise_seed: 1 } },
       "140:130": { class_type: "CreateVideo", inputs: { fps: 1 } },
       "92": { class_type: "SaveVideo", inputs: { filename_prefix: "x" } },
+      ...sampler(),
     };
     const out = setH3Graph(g, { first: "a.png", last: "b.png", prompt: "go", width: 1280, height: 704, seed: 42, prefix: "gravitone/h3-a" });
+    expect(out["140:134"]?.inputs["lora_name"]).toBe(H3_FLEX_LORA);
+    expect(out["140:123"]?.inputs["sampler_name"]).toBe("lcm");
+    expect(out["140:125"]?.inputs["sigmas"]).toEqual(["140:143", 0]);
+    expect(out["140:143"]).toEqual({ class_type: "ManualSigmas", inputs: { sigmas: H3_FLEX_SIGMAS } });
+    for (const id of ["140:124", "140:136", "140:137", "140:138"]) expect(out[id]).toBeUndefined();
+    const turbo = setH3Graph(g, { first: "a.png", prompt: "go", width: 1280, height: 704, seed: 42, prefix: "p", schedule: "turbo8" });
+    expect(turbo["140:134"]?.inputs["lora_name"]).toBe("minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors");
+    expect(turbo["140:125"]?.inputs["sigmas"]).toEqual(["140:124", 0]);
+    expect(turbo["140:143"]).toBeUndefined();
     expect(out["115"]).toBeUndefined();
     expect(out["140:131"]?.inputs).toMatchObject({ prompt: "go", width: 1280, height: 704, length: 124, first_frame: ["s1", 0], last_frame: ["s2", 0] });
     expect(out["s1"]?.inputs["image"]).toBe("a.png");
@@ -278,7 +298,7 @@ describe("the wiring", () => {
   });
 
   it("a one-frame take has no last frame wired", () => {
-    const g = { "140:131": { class_type: "X", inputs: {} }, "140:139": { class_type: "PrimitiveBoolean", inputs: {} }, "140:129": { class_type: "RandomNoise", inputs: {} }, "140:130": { class_type: "CreateVideo", inputs: {} }, "92": { class_type: "SaveVideo", inputs: {} } };
+    const g = { "140:131": { class_type: "X", inputs: {} }, "140:139": { class_type: "PrimitiveBoolean", inputs: {} }, "140:129": { class_type: "RandomNoise", inputs: {} }, "140:130": { class_type: "CreateVideo", inputs: {} }, "92": { class_type: "SaveVideo", inputs: {} }, ...sampler() };
     const out = setH3Graph(g, { first: "a.png", prompt: "go", width: 1280, height: 704, seed: 1, prefix: "p" });
     expect(out["140:131"]?.inputs["last_frame"]).toBeUndefined();
     expect(out["s2"]).toBeUndefined();
