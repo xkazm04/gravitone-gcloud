@@ -41,8 +41,8 @@ const PARALLEL = 3;
 const MAX_REFS = 3;
 const WHO = "Keep her face and identity exactly; the look changes the medium, never who she is.";
 const ROLES = "Image 1 is the set. Image 2 is a reference sheet of who she is.";
-const GUARDS = "Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2, and the drawing style is the painted look of image 1. Exactly one woman in the frame.";
-const GUARDS_NO_ROOM = "Take only who she is from image 1 (face, hair, build); her clothes are the ones written above, not the clothes in image 1. Exactly one woman in the frame.";
+const GUARDS = "Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.";
+const GUARDS_NO_ROOM = "Take only who she is from image 1 (face, hair, build); her clothes are the ones written above, not the clothes in image 1 and none of the garments her description names. Exactly one woman in the frame.";
 
 const noStop = (s: string): string => s.trim().replace(/\.$/, "");
 const digest = (...parts: readonly string[]): string => createHash("sha1").update(parts.join("\u0000")).digest("hex").slice(0, 12);
@@ -95,6 +95,26 @@ const missingOf = (refs: readonly string[]): string[] => refs.filter((r) => !exi
 
 /* ── style ─────────────────────────────────────────────────────────────── */
 
+/**
+ * The song's outfit, when the director's bible defines one (`## Wardrobe per section`, its first line): a production
+ * dresses its cast, so a core adapts to it and leaves her card's own garment off (operator, 2026-11-20: "the outfit for
+ * the song was defined and character should adapt").
+ */
+export function productionWardrobe(): string | null {
+  try {
+    const bible = readFileSync(path.join(productionFixtureRoot(), "experiment", "director", "bible.md"), "utf8");
+    const sec = bible.split(/^## Wardrobe per section\s*$/m)[1];
+    const line = sec?.split(/\r?\n/).find((l) => l.trim().startsWith("- "));
+    const text = line?.replace(/^\s*-\s*(\*\*[^*]*\*\*)?\s*/, "").trim();
+    return text === undefined || text === "" ? null : text.replace(/\.$/, "");
+  } catch {
+    return null;
+  }
+}
+
+/** What a production's frames say about clothes: the song's outfit replaces every garment her card names. */
+const dressed = (w: string | null): string => (w === null ? "Of her clothes, only the garment her description names, exactly as named; everything else plain and neutral." : `Dress her in the song's outfit: ${w}. Leave out every garment her description names (scarf, jacket, accessory): the song's outfit replaces them.`);
+
 export function stylePlan(productionId: string, coreRef: string): Result<DrawPlan> {
   const s = readState(productionId);
   if (!s.ok) return s;
@@ -106,13 +126,14 @@ export function stylePlan(productionId: string, coreRef: string): Result<DrawPla
   const roles = refs.length > 1 ? "Image 1 is her portrait and image 2 her reference sheet: take only who she is from them, not their drawing style." : "Image 1 is her portrait: take only who she is from it, not its drawing style.";
   const base = `${c.identity} ${roles} Redraw her in this look: ${noStop(lookOf(s.value.production))}. ${WHO}`;
   const dir = styledDir(productionId, c);
+  const wardrobe = productionWardrobe();
   const frames: PlannedFrame[] = [
-    { id: "portrait", out: path.join(dir, "portrait.png"), refs, prompt: `${base} A head-and-shoulders portrait of her at rest, facing the camera, neutral expression, neutral light, plain ground, no text.` },
+    { id: "portrait", out: path.join(dir, "portrait.png"), refs, prompt: `${base} A head-and-shoulders portrait of her at rest, facing the camera, neutral expression, neutral light, plain ground, no text. ${dressed(wardrobe)}` },
     {
       id: "sheet",
       out: path.join(dir, "sheet.png"),
       refs,
-      prompt: `${base} An invariant reference sheet of her on one plain ground: full-body front, three-quarter, side and back views, and two head close-ups at rest; neutral light, no labels, no text. Of her clothes, only the garment her description names, exactly as named; everything else plain and neutral.`,
+      prompt: `${base} An invariant reference sheet of her on one plain ground: full-body front, three-quarter, side and back views, and two head close-ups at rest; neutral light, no labels, no text. ${dressed(wardrobe)}`,
     },
   ];
   return ok({ verb: "style", production: productionId, core: c.id, frames, missing: missingOf(refs) });
@@ -183,6 +204,12 @@ const plateOf = (p: Production, n: ProductionNode): ProductionNode | undefined =
   return id === undefined ? undefined : p.nodes.find((x) => x.id === id);
 };
 
+/** The room plate a keyframe is drawn on, judged against and animated from: the director's pick, else the node's own. */
+export function plateFor(p: Production, n: ProductionNode, plates: ReadonlyMap<string, string> = directorPlates()): string | null {
+  const k = takeOf(n);
+  return (k === null ? undefined : plates.get(k)) ?? refFile(plateOf(p, n)?.media?.src);
+}
+
 export type KeyframeOptions = { readonly ids?: readonly string[]; readonly all?: boolean };
 
 /** The default set: the stale take-start keyframes; `all`: every stale keyframe with a prompt to draw from. */
@@ -221,8 +248,7 @@ export function keyframesPlan(productionId: string, o: KeyframeOptions): Result<
   const dir = keyframesDir(p.id, p.cast.id);
   const frames = nodes.value.map((n): PlannedFrame => {
     const st = stateOf(n, director) as { readonly text: string; readonly source: string };
-    const k = takeOf(n);
-    const plate = (k === null ? undefined : plates.get(k)) ?? refFile(plateOf(p, n)?.media?.src);
+    const plate = plateFor(p, n, plates);
     const refs = (plate === null ? [sheet.file] : [plate, sheet.file]).slice(0, MAX_REFS);
     const prompt = plate === null ? `Image 1 is a reference sheet of who she is. ${p.cast.identity} ${st.text.trim()} The drawing style: ${noStop(lookOf(p))}. ${GUARDS_NO_ROOM}` : `${ROLES} ${p.cast.identity} ${st.text.trim()} ${GUARDS}`;
     return { id: n.id, out: path.join(dir, `${n.id.replace(/^kf:/, "")}.png`), prompt, refs, source: plate === null ? `${st.source}; no room plate` : st.source };
@@ -276,8 +302,8 @@ export function clipsPlan(productionId: string): Result<ClipsPlan> {
     .map((n): ClipLine => {
       const take = takeOf(n) ?? n.id;
       const start = p.nodes.find((x) => x.id === `kf:${take}`);
-      const plate = start === undefined ? undefined : plateOf(p, start);
-      return { take, clip: n.id, start: start?.media === undefined ? `kf:${take}` : (refFile(start.media.src) ?? start.media.src), startState: start?.state ?? "missing", plate: refFile(plate?.media?.src), sheet: sheet.file, seconds: n.dur ?? 0, minutes: MIN_PER_CLIP };
+      const plate = start === undefined ? null : plateFor(p, start);
+      return { take, clip: n.id, start: start?.media === undefined ? `kf:${take}` : (refFile(start.media.src) ?? start.media.src), startState: start?.state ?? "missing", plate, sheet: sheet.file, seconds: n.dur ?? 0, minutes: MIN_PER_CLIP };
     });
   return ok({ production: p.id, core: p.cast.id, clips, minutes: clips.length * MIN_PER_CLIP, ...(sheet.refusal === undefined ? {} : { refusal: sheet.refusal }) });
 }

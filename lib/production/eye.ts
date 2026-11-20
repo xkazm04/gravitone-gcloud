@@ -10,6 +10,7 @@ import { DRIFT_AXES, type Drift, type ProductionNode } from "@gt/domain/producti
 
 import { isRec } from "./check.ts";
 import { coreKey, fileOfUrl, readState, updateState } from "./state.ts";
+import { plateFor } from "./draw.ts";
 
 /** One headless model turn: its stdout, or the sentence it failed with. */
 export type EyeRunner = (prompt: string) => Promise<{ readonly ok: true; readonly reply: string } | { readonly ok: false; readonly sentence: string }>;
@@ -78,9 +79,7 @@ export async function eye(productionId: string, o: { readonly ids?: readonly str
       const i = next++;
       const n = nodes[i] as ProductionNode;
       const frame = n.media === undefined ? null : fileOfUrl(n.media.src);
-      const plateId = n.madeFrom.find((f) => f.startsWith("plate:"));
-      const plateSrc = p.nodes.find((x) => x.id === plateId)?.media?.src;
-      const plate = plateSrc === undefined ? null : fileOfUrl(plateSrc);
+      const plate = plateFor(p, n);
       if (frame === null) {
         reads[i] = { id: n.id, ok: false, sentence: `${n.id}'s image is not a production file` };
         continue;
