@@ -20,9 +20,12 @@ export type RejectNoteProps = {
   readonly text: string | undefined;
   readonly max: number;
   readonly onSave: (text: string) => void;
+  /** The field's accessible name and placeholder where the note is not a reject's: a take's direction for its redo. */
+  readonly name?: string;
+  readonly placeholder?: string;
 };
 
-export function RejectNote({ label, text, max, onSave }: RejectNoteProps) {
+export function RejectNote({ label, text, max, onSave, name, placeholder = "note" }: RejectNoteProps) {
   const held = text ?? "";
   const [draft, setDraft] = useState(held);
   // A note written elsewhere (E's field, an undo) is what the field shows next.
@@ -42,7 +45,7 @@ export function RejectNote({ label, text, max, onSave }: RejectNoteProps) {
         save();
       }}
     >
-      <Field label={`note on rejecting ${label}`} value={draft} placeholder="note" maxLength={max} onChange={(v) => setDraft(v.slice(0, max))} onBlur={save} />
+      <Field label={name ?? `note on rejecting ${label}`} value={draft} placeholder={placeholder} maxLength={max} onChange={(v) => setDraft(v.slice(0, max))} onBlur={save} />
     </form>
   );
 }

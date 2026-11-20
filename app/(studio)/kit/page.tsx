@@ -34,6 +34,7 @@ import { StyleSection } from "./StyleKit.tsx";
 import { StudioSection } from "./StudioKit.tsx";
 import { SongLabSection } from "./SongLabKit.tsx";
 import { SunoSection } from "./SunoKit.tsx";
+import { TimelineSection } from "./TimelineKit.tsx";
 import { StructureSection } from "./Structure.tsx";
 import { PartSection } from "./PartKit.tsx";
 import { ProduceSection } from "./ProduceKit.tsx";
@@ -75,6 +76,7 @@ export default function KitPage() {
         <LedgerSections />
         <FloorSection />
         <BoardSection data={boardKitData()} />
+        <TimelineSection />
         <ProduceSection />
         <PartSection />
         <AudioSection />

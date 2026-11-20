@@ -60,6 +60,8 @@ export const SCREENS = {
   "kit-law": { url: "/kit#colour" },
   "kit-parts": { url: "/kit#signal" },
   "kit-migration": { url: "/kit#status" },
+  // spark character-cores WP3: the track-locked Timeline's specimen.
+  "kit-timeline": { url: "/kit#timeline" },
   // The part editors (Phase 4 wave C, L38): a part of a seeded project, reached as its Plan row
   // reaches it. The fixture part side seeds these two projects' own records (their notebook,
   // their beat board), so each screen draws real work, not an empty state. why-bitcoin's script

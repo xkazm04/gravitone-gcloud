@@ -20,6 +20,7 @@ export const SECTIONS = [
   { id: "ledger", group: "Composition", title: "Ledger", sub: "time strip · event row · json · stale" },
   { id: "floor", group: "Composition", title: "Floor", sub: "lane · run · pile · shelf · calendar · month · header" },
   { id: "board", group: "Composition", title: "Board", sub: "sheet · rail · cull · pair · review · cut · consequence" },
+  { id: "timeline", group: "Composition", title: "Timeline", sub: "sections · beats · lyrics · takes · verdict · direction" },
   { id: "produce", group: "Composition", title: "Produce", sub: "composer · receipt · plan · compose · re-route · hold" },
   { id: "part", group: "Composition", title: "Part workspace", sub: "workspace · rail · verdict · part tabs" },
   { id: "audio", group: "Composition", title: "Audio", sub: "preview · prompt · measured · terms · composer · variations · drafts · references" },

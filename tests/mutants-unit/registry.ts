@@ -44,6 +44,15 @@ export type UnitMutant = {
 export const UNGUARDED_TEST_BUDGET = 0;
 
 export const MUTANTS: UnitMutant[] = [
+  // ---- @gt/ui: a production's review round as a Board packet (spark character-cores WP3)
+  {
+    id: "production-round-out-of-clock-order",
+    test: "packages/ui/test/production-round.test.ts",
+    file: "packages/ui/src/board/productionRound.ts",
+    find: ".sort((a, b) => (a.at ?? 0) - (b.at ?? 0))",
+    replace: "",
+    why: "The round's runs follow the nodes' stored order instead of the track, so the gallery shows K01 before K00 and a verdict reads against the wrong neighbour.",
+  },
   // ---- @gt/domain and @gt/catalog
   {
     id: "thumb-width-admits-spellings",
