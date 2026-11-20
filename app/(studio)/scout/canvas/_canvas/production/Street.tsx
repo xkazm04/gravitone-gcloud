@@ -20,6 +20,7 @@ import { acceptSwap, focusNode, frameStreet, keepCast, openStreet, previewCore, 
 import { FilmStrip } from "./FilmStrip.tsx";
 import { clock, countLine, counts, driftName, STATION_NAME, VARIANT_NAME, VARIANTS, type Variant } from "./model.ts";
 import type { StreetProps } from "./parts.tsx";
+import { Review } from "./Review.tsx";
 import { RiverStreet } from "./RiverStreet.tsx";
 import { CoresTray, SwapPanel } from "./Swap.tsx";
 import { TimelineStreet } from "./TimelineStreet.tsx";
@@ -154,6 +155,9 @@ export function Street() {
       )}
       <div className={s.body}>
         <Draw {...props} />
+        <div className={s.review}>
+          <Review st={st} p={p} />
+        </div>
         {u.tray && <CoresTray cores={st.prod.cores} cast={p.cast.id} left={u.variant === "c"} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
         {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
       </div>
