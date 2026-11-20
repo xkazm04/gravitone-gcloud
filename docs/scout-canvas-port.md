@@ -161,7 +161,7 @@ it); the first real triage from the canvas is the owner's manual test.
 
 Spark `character-cores` (`.vault/Spark/ideas/character-cores.md`), WP2, 2026-11-20. A music clip driven as a graph of
 stations - track → look → cast (a character core) → keyframes → clips → cut - drawn on this canvas from the fixture
-WP1 imported out of Unlatched's first 1:46 (`_port/fixtureProduction.json`, 57 nodes, 27 cores). Types:
+WP1 imported out of Unlatched's first 1:46 (`lib/production/fixtureProduction.json`, 57 nodes, 27 cores). Types:
 `@gt/domain/productionGraph` (WP0). The real side holds no production yet (S2: the kernel production manifest), so the
 basin is drawn only on the fixture side; nothing here spends or regenerates.
 

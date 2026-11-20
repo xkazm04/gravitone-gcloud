@@ -9,7 +9,7 @@ import { redoOf, staleAfter } from "@gt/domain/productionGraph";
 vi.mock("server-only", () => ({}));
 
 const { acceptSwap, checkFixture, fixtureProductions, previewSwap, resetFixtureProductions, setVerdict } = await import("../../app/(studio)/scout/canvas/_port/fixtureProduction.ts");
-const imported: unknown = (await import("../../app/(studio)/scout/canvas/_port/fixtureProduction.json", { with: { type: "json" } })).default;
+const imported: unknown = (await import("../../lib/production/fixtureProduction.json", { with: { type: "json" } })).default;
 
 // The canvas's fixture production (spark character-cores S1, WP1): the Unlatched first minute as imported by
 // pipeline/production-fixture.mts. The JSON holds WP0's types; a recast stales every keyframe that drew her, every take

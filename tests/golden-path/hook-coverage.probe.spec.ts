@@ -29,6 +29,9 @@ export const EXEMPT: Record<string, string> = {
   // v1's Foundry, Sound lab, Articles and Calendar hooks (24 exemptions) went with their pages in
   // Phase 6 wave C; what is left is the new world's own (studio) hooks.
   "app/(studio)/library/_library/useNarrow.ts": NEEDS_DOM,
+  // The scout canvas port: reads the CanvasStore a mounted <CanvasContext.Provider> holds (useSyncExternalStore over
+  // it); the store and its reducers are unit-tested in tests/next-server/scout-canvas-*.test.ts.
+  "app/(studio)/scout/canvas/_canvas/useCanvas.ts": "reads the canvas store through a React context only a mounted canvas provides, which this DOM-less lane has none of",
   "app/(studio)/audio/_audio/useCardDrag.ts": NEEDS_DOM,
   "app/(studio)/audio/_audio/useTransport.ts": NEEDS_DOM,
   // spark reel-studio: two <video> elements on one clock (the phone at half rate, pulled back on drift), read per frame.

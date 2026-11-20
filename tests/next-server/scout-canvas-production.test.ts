@@ -4,7 +4,7 @@ import { redoOf, staleAfter, type Production } from "@gt/domain/productionGraph"
 import type { ScoutGraph } from "@gt/domain/scoutGraph";
 
 import type { CanvasView } from "../../app/(studio)/scout/canvas/_port/contract.ts";
-import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
+import imported from "../../lib/production/fixtureProduction.json" with { type: "json" };
 import { buildScene } from "../../app/(studio)/scout/canvas/_canvas/scene/index.ts";
 import { basinFacts, becameStale, clock, countLine, counts, driftName, hours, lanesOf, playsAt, receipt, redoMinutes, rulerOf, sectionAt } from "../../app/(studio)/scout/canvas/_canvas/production/model.ts";
 

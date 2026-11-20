@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Production, ProductionNode } from "@gt/domain/productionGraph";
 
-import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
+import imported from "../../lib/production/fixtureProduction.json" with { type: "json" };
 import { runOf, stepRun, usedBy } from "../../app/(studio)/scout/canvas/_canvas/production/model.ts";
 
 // The timeline street's overlays (spark character-cores S1.5 WP7) on the Unlatched fixture: what ← → walk from a

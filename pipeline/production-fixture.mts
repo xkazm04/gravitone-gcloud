@@ -7,7 +7,7 @@
 // Reads the clip folder READ-ONLY (timeline.json, directions.json + PICK.md, character.md + character/S2-P.jpg,
 // keyframes-v2.json + keyframes-v2/*.png, film5/plan.json + K00..K05.mp4 + film5-so-far.mp4, film5/bible/), the
 // scout nights through keptCharacters, and the Codex round foundry-out/scout-codex/2026-11-20-new (kept-cores.json,
-// verdicts.json, t1/sheet-<key>/sheet.png). Writes app/(studio)/scout/canvas/_port/fixtureProduction.json and copies the
+// verdicts.json, t1/sheet-<key>/sheet.png). Writes lib/production/fixtureProduction.json and copies the
 // media (ffmpeg) into foundry-out/production-fixture/{unlatched,cores}/ - never experiment/, which the core-to-scene
 // experiment owns. Opens no store: the kernel is never imported.
 //
@@ -43,7 +43,7 @@ const DRY = args.includes("--dry");
 const M = path.join(SRC, "music-clip");
 const REPO = process.cwd();
 const CODEX = path.join(REPO, "foundry-out", "scout-codex", "2026-11-20-new");
-const JSON_OUT = path.join(REPO, "app", "(studio)", "scout", "canvas", "_port", "fixtureProduction.json");
+const JSON_OUT = path.join(REPO, "lib", "production", "fixtureProduction.json");
 const OUT = productionFixtureRoot();
 const RUN = "unlatched";
 

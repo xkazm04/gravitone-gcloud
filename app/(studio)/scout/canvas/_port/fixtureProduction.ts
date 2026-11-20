@@ -2,7 +2,7 @@ import "server-only";
 
 // THE PRODUCTION BASIN'S FIXTURE SIDE (spark character-cores). One real production - the paused Unlatched clip's first
 // 1:46 as a graph of stations - and the cores it can cast, imported once by pipeline/production-fixture.mts into
-// ./fixtureProduction.json. Since S1.5 (WP5) the production lives in a file seeded from that JSON
+// lib/production/fixtureProduction.json. Since S1.5 (WP5) the production lives in a file seeded from that JSON
 // (lib/production/state.ts) and every verb here is lib/production/ops.ts over it, read per call: pipeline/production.mts
 // changes the same file, so a recast or a redraw from the CLI shows on the next render, without a store or a vendor.
 //

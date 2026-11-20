@@ -22,7 +22,7 @@ usage: python pipeline/production-clips.py <job.json> [<job.json> ...]   (in ord
 import ctypes, json, os, shutil, subprocess, sys, time, urllib.request, uuid
 
 BASE = os.environ.get("COMFY_URL", "http://127.0.0.1:8188")
-OUTG = os.environ.get("COMFY_OUTPUT", r"C:\Users\kazda\ai\ComfyUI\ComfyUI\output")
+OUTG = os.environ.get("COMFY_OUTPUT") or os.path.join(os.path.expanduser("~"), "ai", "ComfyUI", "ComfyUI", "output")
 UNET = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 CLIP = "qwen3vl_32b_minimax_h3_int8_convrot.safetensors"
 VAE = "minimax_h3_video_vae_int8_convrot.safetensors"

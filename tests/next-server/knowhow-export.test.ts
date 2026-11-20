@@ -64,7 +64,7 @@ beforeEach(() => {
   put("experiment/FINDINGS.md", "# WP4 (2026-11-20)\n\n## What held\n- **Wardrobe held.** 18 of 18.\n  - nested detail\n- Chaining held identity.\n\n## Files\n- `sheet.jpg`: the contact sheet.\n");
   put("experiment/director/bible.md", "## Room\nOne bedroom.\n");
   mkdirSync(path.join(skills(), "scout"), { recursive: true });
-  const lessons = ["# scout", "", "## 1.0.0 - 2026-10-23 - night", "- A dated lesson.", "", "## undated", "- not exported", "- 2026-10-26 (S6): a bullet with its own date,", "  continued.", "- 2026-10-27 a lesson naming C:/Users/someone/x is refused", ""];
+  const lessons = ["# scout", "", "## 1.0.0 - 2026-10-23 - night", "- A dated lesson.", "", "## undated", "- not exported", "- 2026-10-26 (S6): a bullet with its own date,", "  continued.", "- 2026-10-27 a lesson naming C:/Users/<someone>/x is refused", ""];
   writeFileSync(path.join(skills(), "scout", "LESSONS.md"), lessons.join("\n"));
   mkdirSync(path.dirname(process.env["GRAVITONE_STORE_PATH"]), { recursive: true });
   const k = openKernel(process.env["GRAVITONE_STORE_PATH"]);

@@ -1,5 +1,5 @@
 // THE PRODUCTION'S FILE (spark character-cores S1.5, WP5) - one truth for the canvas and the CLI. A production lives at
-// <productionFixtureRoot()>/state/<productionId>.json, seeded from the canvas port's fixtureProduction.json the first
+// <productionFixtureRoot()>/state/<productionId>.json, seeded from ./fixtureProduction.json (the canvas port's fixture) the first
 // time it is read; every operation reads it per call and writes it whole (temp file + rename), so a recast from
 // pipeline/production.mts shows on the dev server's next render and a verdict from the screen shows in `status`.
 //
@@ -19,7 +19,7 @@ import type { MediaRef } from "@gt/domain/knowhow";
 import type { CoreRef, Production } from "@gt/domain/productionGraph";
 
 import { productionFixtureRoot } from "../foundry/production/files.ts";
-import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
+import imported from "./fixtureProduction.json" with { type: "json" };
 import { thisDevice } from "../knowhow/device.ts";
 import { markDevices, mirroredCores, readMirror } from "../knowhow/mirror.ts";
 import { afterWrite } from "../knowhow/hook.ts";
