@@ -9,7 +9,7 @@
     "/(.)board/[packet]": 214140,
     "/projects/runs": 204064,
     "/ledger": 206309,
-    "/kit": 341756,
+    "/kit": 349387,
     "/projects": 196113,
     "/projects/[id]": 195605,
     "/projects/[id]/[part]": 196801,
@@ -31,8 +31,9 @@
     "/scout/ventures": 187619,
     "/scout/runs": 176682,
     "/scout/runs/[packet]": 217234,
+    "/scout/canvas": 247303,
     "/local-draws": 173320,
-    "/kit/[group]": 341756,
+    "/kit/[group]": 349387,
     "/reels": 177200,
     "/reels/[slug]": 195500,
     "/reels/new": 177600
@@ -50,5 +51,6 @@
   "fable-ten": "2026-11-09, spark fable-ten: every entry lowered to its measurement on the settled tree (full build; this step states the tree before Firebase left first load, the measured numbers plus that change's 31232 B). /projects/[id]/[part] own chunks 47847 -> 25208 B: the nine later editors (Frames, Motion, Score, Cut, Words, Render, Article, Strips, Voice) load by kind through import() and use() on one stamped promise per kind (_edit/editors.tsx), warmed on idle for the project's tabs. No Suspense of its own: React 19.3's server renderer outlines any boundary over 500 B, so a local fallback painted before every hard load. The same wave added the header's needs chip and NavLink's pending mark to the shell, 14 loading frames, Jump (loaded on first press) and Plate/Clip's settle; their sum is inside these numbers. RAISED in this step, for that shell and frame work: /floor 224990 -> 230817; /board/[packet] 232243 -> 239778; /(.)board/[packet] 232243 -> 239778; /projects/runs 223606 -> 229774; /ledger 228656 -> 232541; /kit 358031 -> 360938; /projects 210474 -> 222611; /projects/[id] 209951 -> 222423; /projects/import 214709 -> 219686; /articles 192897 -> 198063; /articles/[runId] 192897 -> 198063; /articles/new 192897 -> 198063; /audio 230981 -> 233869; /board 192897 -> 198063; /calendar 192897 -> 198063; /foundry 192897 -> 198063; /library 223794 -> 228457; /library/style/[id] 209783 -> 214704; /playground 192897 -> 198063; /projects/new 192897 -> 198063; /studio/[projectId] 192897 -> 198063; /scout 203054 -> 207927; /scout/runs 193150 -> 198312; /scout/runs/[packet] 232305 -> 239832; /local-draws 192897 -> 199729 (the next entry lowers each again).",
   "firebase-loaded": "2026-11-09: every route -31232 B (studio floor 198060 -> 166828; landing -31261), compile-mode builds of one tree, then these entries from a full build. Firebase's client (33382 B, one root chunk) left first load: lib/firebase.ts loadAuth() fetches it in the auth context's first effect (never under DEV_AUTH or LOCAL_MODE); lib/sessionToken.ts and _shell/session.ts take the SDK from it. With config present the chunk is still fetched right after hydration on every page: the win is first-load parse and hydration, not transfer. Held by tests/next-gates/firebase-lazy.test.ts. Reverting that commit restores the entries it lowered.",
   "studio-to-release": "2026-11-17: measured on a Turbopack build of 6af48d1a (NEXT_DIST_DIR=.next-s2r). Raised: /audio 202637 -> 207045 (+4.4 KB, two sparks): ~3.1 KB from audio-distribution S1 (the release tab row and its lazy island, merged inside the 2% slack at ff8cec56) and ~1.3 KB from this spark - the studio's main chunk now carries the release card in the view registry, the \"Release this\" button on the track lane and the lazy packaging island's boundary; the packaging stage itself (wizard, session, layouts) stays a lazy chunk. /kit +4.0 KB stays inside its slack (not raised).",
-  "design-baseline": "2026-11-17, the design baseline (docs/next/design-baseline/PLAN.md): every (studio) route raised to its measurement, ~4.8 KB gzip each - the spine replacing the header bar, the shared NavColumn and the context column with its room glyphs, the loading and empty baseline. Measured first at ~52 KB a route: motion/react had come into the shell for the 'here' mark's glide; it was cut (_shell/glide.tsx, the Web Animations API) and motion stays only in the audio surfaces that loaded it before. Scout (+8-10 KB) carries its rooms' column from scout/layout.tsx, /audio (+9 KB) the overview, /kit (+12 KB) the context column over its sheet; /kit/[group] enters at the same measurement as /kit, the groups being one page's sections split across addresses."
+  "design-baseline": "2026-11-17, the design baseline (docs/next/design-baseline/PLAN.md): every (studio) route raised to its measurement, ~4.8 KB gzip each - the spine replacing the header bar, the shared NavColumn and the context column with its room glyphs, the loading and empty baseline. Measured first at ~52 KB a route: motion/react had come into the shell for the 'here' mark's glide; it was cut (_shell/glide.tsx, the Web Animations API) and motion stays only in the audio surfaces that loaded it before. Scout (+8-10 KB) carries its rooms' column from scout/layout.tsx, /audio (+9 KB) the overview, /kit (+12 KB) the context column over its sheet; /kit/[group] enters at the same measurement as /kit, the groups being one page's sections split across addresses.",
+  "character-cores": "2026-11-21: /kit and /kit/[group] raised to measurement 349387 B (+7.6 KB: the track-locked Timeline specimen, spark character-cores WP3, now in the production group); /scout/canvas seeded at its measured first load 247303 B (the scout canvas port, docs/scout-canvas-port.md: map, desk, gallery and the production street)."
 }
