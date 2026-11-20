@@ -22,6 +22,7 @@ import { errorMessage } from "@gt/domain/errors";
 
 import { Button } from "@gt/ui/components/button/Button.tsx";
 import { Chip } from "@gt/ui/components/chip/Chip.tsx";
+import { Empty } from "@gt/ui/components/empty/Empty.tsx";
 import type { Tone } from "@gt/ui/components/chip/tone.ts";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { Tally } from "@gt/ui/components/tally/Tally.tsx";
@@ -171,7 +172,7 @@ export function ImportView() {
           <ErrorLine message={phase.message} live />
         </section>
       )}
-      {phase.kind === "preview" && sources.length === 0 && refusedAccounts.length === 0 && <p className={s.quiet}>no v1 projects in this browser</p>}
+      {phase.kind === "preview" && sources.length === 0 && refusedAccounts.length === 0 && <Empty label="no v1 projects in this browser" />}
       {refusedAccounts.map((r) => (
         <section key={r.name} className={s.refused} aria-label="refused" data-account={r.name}>
           <Chip label="refused" value={r.code} tone="rose" />
@@ -190,7 +191,7 @@ export function ImportView() {
                 <Tally value={src.preview.projects.length} label="projects" />
                 <Tally value={mb(src.preview.bytes)} label="archive" />
               </h2>
-              {src.preview.projects.length === 0 && <p className={s.quiet}>no projects</p>}
+              {src.preview.projects.length === 0 && <Empty compact label="no projects" />}
               <ul className={s.rows}>
                 {src.preview.projects.map((p) => (
                   <ProjectRow key={p.v1Id} p={p} />

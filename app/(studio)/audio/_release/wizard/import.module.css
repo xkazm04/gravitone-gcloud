@@ -1,0 +1,11 @@
+/* The shelf's import (Shelf.tsx ShelfImport): a dashed drop that is also the file picker - the dash carries the
+   state "drop here", brightening while files are dragged over it - and one row per file sent. Tokens only. */
+.import{display:flex;flex-direction:column;gap:var(--sp-3)}
+.drop{position:relative;display:flex;align-items:center;justify-content:center;min-height:calc(var(--h-control) * 1.5);padding:0 var(--sp-6);border:1px dashed var(--muted);border-radius:var(--r-control);font:600 var(--fs-ui)/1 var(--sans);color:var(--ink-bright);cursor:pointer}
+.drop:hover,.drop[data-over]{background:var(--wash-hi);border-color:var(--ink-bright)}
+.drop:focus-within{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.row{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;min-width:0}
+.name{font:500 var(--fs-meta)/1.25 var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.shelf{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}

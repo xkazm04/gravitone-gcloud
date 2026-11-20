@@ -328,6 +328,15 @@ const songlab: Binding[] = [
   { mode: "audio.songlab", keys: ["⏎"], verb: "send", does: "send vote", when: "match" },
 ];
 
+// spark reel-studio: a reel's two linked players (/reels/<slug>). `,` `.` step a desktop frame; `[` `]` walk the
+// pinned notes; P pins the drafted reasons and words at the playhead.
+const reel: Binding[] = [
+  { mode: "reel", keys: ["Space"], verb: "play", does: "play · pause" },
+  { mode: "reel", keys: [",", "."], verb: "frame", does: "frame", repeat: true },
+  { mode: "reel", keys: ["[", "]"], verb: "note", does: "note" },
+  { mode: "reel", keys: ["P"], verb: "pin", does: "pin at playhead" },
+];
+
 // THE STUDIO'S OWN KEYS (spark fable-ten, package C): the global layer, heard after the screen
 // declined (route.ts). Both carry the platform modifier - keyboard-shortcuts
 // shortcut-collision-rules: an application-wide accelerator made of a printable character (`?`,
@@ -394,7 +403,7 @@ const canvas: Binding[] = [
 ];
 
 export const BINDINGS: readonly Binding[] = [...floor, ...calendar,
-  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio, ...songlab, ...studio, ...jump, ...canvas];
+  ...slot, ...board, ...projects, ...compose, ...receipt, ...library, ...ledger, ...part, ...partL40, ...style, ...audio, ...songlab, ...reel, ...studio, ...jump, ...canvas];
 
 /** The app's one compiled keymap. */
 export const KEYMAP = compile(BINDINGS);

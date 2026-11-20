@@ -1,0 +1,100 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b97c0f42-9f92-47b8-8a20-dc60b793486c",
+ "subject": "release-pipeline",
+ "evaluatedAt": "2026-11-10T23:31:05.351907+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/port.ts:11 The context is a server port that picks fixture or real part data for in-app editors and does no release work; a search of app/(studio)/projects for changelog, @deprecated, semver, release notes and bundle size found nothing, and its 'version'/'release' hits are domain vocabulary (script versions in scriptView.ts, a 'wide-release' cut lane)",
+   "techniques": [],
+   "absenceTerms": [
+    "changelog",
+    "@deprecated",
+    "semver",
+    "release notes",
+    "bundle size"
+   ]
+  },
+  {
+   "context": "cover-sound-and-producers",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/sound/cover/store.ts:12 The context is a per-cover disk store with vendor calls and kernel-job producers; nothing in it mints a version, compiles a changelog, stages a release or feeds an updater, and a search of lib/sound, lib/producers, packages/producers/src and lib/library for changelog, @deprecated, semver, release notes and bundle size found nothing ('release' in lib/sound/cover/suno.ts means releasing a spend receipt)",
+   "techniques": [],
+   "absenceTerms": [
+    "changelog",
+    "@deprecated",
+    "semver",
+    "release notes",
+    "bundle size"
+   ]
+  },
+  {
+   "context": "music-vendors-and-publish",
+   "subject": "release-pipeline",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/publish/youtube.ts:1 Here 'publish' means uploading private videos to YouTube and running vendor music/TTS calls, not shipping a versioned software artifact to installed copies; a search of lib/music, lib/suno, lib/publish and app/api/sound for changelog, @deprecated, semver, release notes and bundle size found nothing, and the 'release' hits are budget-hold releases (lib/music/ttsBudget.ts releaseTts)",
+   "techniques": [],
+   "absenceTerms": [
+    "changelog",
+    "@deprecated",
+    "semver",
+    "release notes",
+    "bundle size"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "release-pipeline",
+   "context": "audio-cover-desk",
+   "reason": "evidence leans on desk/sleeve/peaks.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T23:31:05.351907+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T23:31:05.351907+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "cover-sound-and-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T23:31:05.351907+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "release-pipeline"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "music-vendors-and-publish",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

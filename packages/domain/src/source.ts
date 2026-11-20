@@ -23,7 +23,7 @@ import { err, ok, type Result } from "./errors.ts";
  *  carried to Phase 4). The first domain also had `triage`; nothing opened a
  *  packet under it, and the word was ambiguous between audio triage (`audio`)
  *  and v1's explainer research scope (not a Weir surface), so it is gone. */
-export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend", "final"] as const;
+export const PACKET_SOURCES = ["forge", "extract", "dojo", "strips", "article", "audio", "suno", "mv", "trials", "step", "proof", "scout", "seeds", "spend", "final", "reel"] as const;
 export type PacketSource = (typeof PACKET_SOURCES)[number];
 
 export const PACKET_MODES = ["matrix-cull", "blind-pair", "packet-review"] as const;
@@ -147,6 +147,20 @@ export const SOURCES = {
   // spark athena-control-mcp: a day's live launches an agent asked for (@gt/domain/mcp SpendRequest), a row
   // per request; K pays at the price on the card, X says why not, and the agent reads the reason back.
   spend: { modes: ["matrix-cull"], reasons: ["price", "vendor", "timing", "brief", "duplicate", "local"], maxReasons: 2, noteMax: NOTE_SHORT, reasonOnReject: true },
+  // A stat reel's three operator stops (pipeline/reel.mts; lib/decision/v1/sources/reel.ts), one packet each with one
+  // cell: the measured table (a card), the twelve proof frames (a sheet), the finished cut (the video). A reject
+  // names what the next attempt must fix, so it owes a reason; the note carries a kept cut's `calendar:` line
+  // (@gt/ui review/schedule.ts). reasonsBy: each stop's own three are keys 2-4 (the row's group is its stop).
+  // Spark reel-studio added the film's two stops with no new reason (the source holds its 11): `film` (the
+  // rendered pair) and `release` (bed and publish copies; its keep's note carries the `calendar:` line now).
+  reel: {
+    modes: ["matrix-cull"],
+    reasons: ["thin", "source", "story", "legibility", "layout", "look", "accuracy", "pacing", "motion", "sound", "hook"],
+    maxReasons: 3,
+    noteMax: NOTE_SHORT,
+    reasonOnReject: true,
+    reasonsBy: { data: ["thin", "source", "story"], proof: ["legibility", "layout", "look"], cut: ["pacing", "motion", "sound"], film: ["pacing", "legibility", "accuracy"], release: ["sound", "look", "hook"] },
+  },
 } as const satisfies { readonly [S in PacketSource]: SourceSpec };
 
 type ReasonOf<S extends PacketSource> = (typeof SOURCES)[S]["reasons"][number];
@@ -252,6 +266,19 @@ export const REASON_MEANING: { readonly [S in PacketSource]: { readonly [R in Re
     brief: "The brief is wrong: fix what it makes before paying.",
     duplicate: "Already made, or already asked for on another card.",
     local: "A free local lane can make this instead.",
+  },
+  reel: {
+    thin: "The table moves too little to hold a viewer.",
+    source: "The source or its licence does not allow publishing this.",
+    story: "The numbers hold no question worth a minute of watching.",
+    legibility: "Text or marks are too small, cramped or cut off.",
+    layout: "The frame is badly composed: crowding, dead space, wrong emphasis.",
+    look: "Palette, type or finish is off the channel's look.",
+    accuracy: "A frame shows a value, label or date the table lacks.",
+    pacing: "The cut drags, rushes, or holds its answer too briefly.",
+    motion: "Movement is wrong: jitter, jumps, or changes too fast to follow.",
+    sound: "The bed is missing, mislevelled, or fights the picture.",
+    hook: "The opening asks no question worth staying for.",
   },
 };
 

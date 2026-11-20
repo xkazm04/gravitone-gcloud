@@ -8,11 +8,13 @@ import { Button, type ButtonProps } from "../button/Button.tsx";
 import type { TwelveWords } from "../hint/words.ts";
 import s from "./Empty.module.css";
 
-export type EmptyProps<S extends string> = { readonly label: S; readonly action?: ButtonProps } & TwelveWords<S>;
+// `compact` (design baseline P4, 2026-11-17): the same words in a list or a panel that has other things in it - set
+// at the start of the line, no held height - where the whole-region form would push its neighbours away.
+export type EmptyProps<S extends string> = { readonly label: S; readonly action?: ButtonProps; readonly compact?: boolean } & TwelveWords<S>;
 
-export function Empty<const S extends string>({ label, action }: EmptyProps<S>) {
+export function Empty<const S extends string>({ label, action, compact = false }: EmptyProps<S>) {
   return (
-    <div className={s.empty}>
+    <div className={compact ? `${s.empty} ${s.compact}` : s.empty}>
       <span>{label}</span>
       {action !== undefined && <Button {...action} />}
     </div>

@@ -1,0 +1,86 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ecb6fba6-a338-45e2-8ef2-2306f07b4b92",
+ "subject": "agent-browser-control",
+ "evaluatedAt": "2026-11-10T22:58:21.645832+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "imaging-vendor-providers-and-video",
+   "subject": "agent-browser-control",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "lib/imaging/studio/browser.ts:7 The Leonardo Studio code is hand-scripted Playwright over CDP: driver.ts fills the form from a fixed selector table and is called by producers and pipelines (scoutScene, music-video, keyframes). No agent is ever handed the browser as a command tool, so the subject's precondition (an agent driving a browser through a command surface) does not hold. An rg -i for ariaSnapshot, getByRole, mcp and tunnel over lib/imaging/{providers,studio,video} returned no hits, and nothing in app/_server/mcp references the studio browser.",
+   "techniques": [
+    {
+     "technique": "references-over-selectors",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/selectors.ts:1 Engineers maintain the selectors in code. No agent composes or receives element references."
+    },
+    {
+     "technique": "persistent-browser-daemon",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/browser.ts:6 The code attaches to the operator's long-lived Chrome profile. There is no per-workspace agent daemon or state file, and none is needed."
+    },
+    {
+     "technique": "agent-actionable-errors",
+     "verdict": "not-applicable",
+     "evidence": "lib/imaging/studio/driver.ts:29 Errors go to an operator or a pipeline. No agent reads them as recovery instructions."
+    }
+   ],
+   "absenceTerms": [
+    "ariaSnapshot",
+    "getByRole",
+    "mcp",
+    "tunnel"
+   ]
+  },
+  {
+   "context": "library-browser-screen",
+   "subject": "agent-browser-control",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/page.tsx:4 This context is a Next.js screen for browsing produced assets. The word 'browser' in its name is only a lexical match: it does not drive a browser and gives no agent a browser tool. An rg -i for playwright, ariaSnapshot, getByRole, mcp and tunnel over app/(studio)/library returned no hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "playwright",
+    "ariaSnapshot",
+    "getByRole",
+    "mcp",
+    "tunnel"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-10T22:58:21.645832+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-browser-control"
+   ],
+   "techniques": [
+    "agent-actionable-errors",
+    "persistent-browser-daemon",
+    "references-over-selectors"
+   ],
+   "deviations": 0,
+   "context": "imaging-vendor-providers-and-video",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:58:21.645832+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-browser-control"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

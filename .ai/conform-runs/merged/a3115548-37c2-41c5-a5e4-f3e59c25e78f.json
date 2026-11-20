@@ -1,0 +1,209 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a3115548-37c2-41c5-a5e4-f3e59c25e78f",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-10T22:19:02.121285+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:192 Each frame alternative is a full-price plate render. packages/producers/src/frames/define.ts prices it with the same `p.image` unit as render-plate, and lib/producers/frames.ts appends it to frames-alts with no cap and no removal op, so the losing trials are kept forever at final fidelity.",
+   "techniques": [
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:192 Alternatives are rendered at the same price and fidelity as the final plate and appended without bound. No op removes them (architecture-review-2026-10-18 confirms there is no removal), so disposables are neither probe-fidelity nor bounded."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutClock.tsx:26 The score and the cut draw one clock with startS/durS in seconds. Per-block ok, missing and drift are first-class states, and the turn mark is data on the clock."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/CutFinish.tsx:107 The ad finish's render act is replaced by a 'render blocked' chip while any blocking finish check fails, so the expensive boundary is gated by checks that read the artifact."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/Cut.tsx:192 The finish line's summary chip turns rose if any check fails. It is not an average or a 'most advanced' figure."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/PartEditor.tsx:154 This is the editor frame in the same _edit directory that every listed editor receives as `act`. Renders become kernel jobs shown with elapsed time since start and their stage, with no invented fraction."
+    }
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "deviation",
+   "evidence": "app/(studio)/projects/_port/realRead.ts:126 A cancelled upstream job reaches the kernel scheduler as `done`, which places its dependents forward with `blocked: false`, so the port's ProduceJob reports runnable work behind a run that never finished. Runs' own view.ts counts cancelled as STUCK, so the two screens disagree about the same job.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/projects/_port/realRead.ts:126 A cancelled job is promoted to done for scheduling. The kernel scheduler only blocks dependents of `stuck` items, so this flatters the dependents' state."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/realRead.ts:200 Jobs are persisted kernel records read back with their real state and the interruption's stage. Launches go through a receipt and only enqueue."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_port/realRead.ts:209 Each part job carries its upstream part jobs as dependencies, so downstream work is scheduled after what it builds on."
+    }
+   ]
+  },
+  {
+   "context": "plan-and-import",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/_plan/CompositionList.tsx:67 The plan surfaces put the worst news first on each row. Launch is a priced receipt that only enqueues jobs, gates are the operator's own acts, and the plan's times are wall-clock ETAs, not a product clock.",
+   "techniques": [
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_plan/CompositionList.tsx:67 A row's chip shows failed before gates. Independent projects are grouped by state (shelf GROUPS), not merged, which is the portfolio exception the technique names."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_plan/Plan.tsx:152 Launch enqueues kernel jobs and answers a toast that links to Runs and the ledger. Nothing blocks the screen while the work runs."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/_plan/PlanSummary.tsx:79 Gates in the plan are counted as the operator's acts: graduation is a human act, not an inference."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/_plan/PlanSummary.tsx:77 The plan's time is a wall-clock ETA, which is job-layer scheduling. The technique keeps that apart from the runtime clock."
+    }
+   ]
+  },
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:108 The part view lists every upstream part whose own verdict is not ready. Each kind's verdict is computed by its own module from its records, the adopted script is kept apart from its candidates, interrupted jobs surface as failed, and the project's runtime target is inherited by every part.",
+   "techniques": [
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:108 upstream.missing names the upstream parts that have not graduated, so an editor knows it is building on unsettled input."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:59 Single writer: each part's state comes from its own kind module over its own records, never from a typed field."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScript.ts:25 Adoption is its own record, separate from the candidates, and accepted versions are kept as an explicit list. The human decision is what mints the asset."
+    },
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:90 The newest job, if it ended failed or interrupted, is surfaced with the job's own error. runningOf leaves interrupted jobs out of the running list."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:51 One project runtime target (targetS) is read upstream and handed to every part kind's context."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "runs-console",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T22:19:02.121285+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 1,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:19:02.121285+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "worst-news-first-progress"
+   ],
+   "deviations": 1,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:19:02.121285+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "plan-and-import",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:19:02.121285+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

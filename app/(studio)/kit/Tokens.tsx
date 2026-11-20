@@ -78,7 +78,7 @@ const TYPE = ["type", "roles-type"];
 const BARS = ["space", "roles-space", "roles-size", "roles-stroke"];
 const RADII = ["radii", "roles-shape", "roles-corner"];
 const MOTION = ["motion"];
-const FRAME = ["frame", "roles-layer", "board", "library"];
+const FRAME = ["frame", "roles-layer", "board", "library", "design"];
 
 /** Every group id the sections below draw; the page checks the source holds no other. */
 export const DRAWN_GROUPS: readonly string[] = [...COLOUR, ...TYPE, ...BARS, ...RADII, ...MOTION, ...FRAME];

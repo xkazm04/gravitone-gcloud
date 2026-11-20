@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "791cd20f-ed8b-47e4-8eca-130c4f72efbb",
+ "subject": "measurement-honesty",
+ "evaluatedAt": "2026-11-11T22:09:24.025637+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "publish-producers",
+   "subject": "measurement-honesty",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "packages/producers/src/publish/standing.ts:31 A channel's standing is folded over at most 200 ledger rows (`LIMIT ?`, WINDOW=200), and the limit is applied before dry rehearsals are filtered out. So once a success falls outside that window, `failuresSinceSuccess` is only a floor and `lastSuccessAt=null` reads as \"never worked\". Standing has no field that marks the truncation, so `pipeline/publish.mts:167` prints \"last ok \u2014 \u00b7 N failure(s) since\" as if it were the total. Because DRY is the default, 200 dry rehearsals are enough to push the last live success out of the window.",
+   "techniques": [
+    {
+     "technique": "lower-bound-disclosure",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/publish/standing.ts:31 The floor is admitted only in a doc comment. The value that travels (Standing) has no truncated or at-least field, so consumers render the count as a total."
+    },
+    {
+     "technique": "incomplete-not-verdict",
+     "verdict": "deviation",
+     "evidence": "packages/producers/src/publish/standing.ts:57 The listing is capped by LIMIT, and nothing checks whether it was truncated before standingOf interprets it. A full window with no success turns into the verdict lastSuccessAt=null."
+    },
+    {
+     "technique": "unmeasurable-vs-zero",
+     "verdict": "conformant",
+     "evidence": "packages/producers/src/publish/metrics.ts:31 Metrics the platform does not report are null, not 0. A withheld or deleted video arrives as null (lib/publish/youtube.ts fetchStats maps missing ids to null), and the note names the mechanism at metrics.ts:77."
+    },
+    {
+     "technique": "renormalize-over-present",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/metrics.ts:18 This context only appends snapshots. Totals and group sums are computed in @gt/domain/publication, so no averaging happens here."
+    },
+    {
+     "technique": "minimum-sample-floors",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/metrics.ts:26 No rate or percentage is derived anywhere in the context. It reports raw counts and lifetime totals only."
+    },
+    {
+     "technique": "control-failure-is-not-a-datum-state",
+     "verdict": "not-applicable",
+     "evidence": "packages/producers/src/publish/metrics.ts:46 No comparison or control arm exists here. This line shows the related honest move: when metrics are not measured, a reason is reported instead of zeros."
+    }
+   ],
+   "registryProposal": "incomplete-not-verdict lists truncated listings as an ingestion-boundary case. A capped fold over an event log (a fixed SELECT \u2026 LIMIT window used to derive a \"since last success\" streak) is the same defect inside one query, and lower-bound-disclosure could name it as a typical floor: a streak counted inside a bounded window."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-11T22:09:24.025637+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "measurement-honesty"
+   ],
+   "techniques": [
+    "control-failure-is-not-a-datum-state",
+    "incomplete-not-verdict",
+    "lower-bound-disclosure",
+    "minimum-sample-floors",
+    "renormalize-over-present",
+    "unmeasurable-vs-zero"
+   ],
+   "deviations": 1,
+   "context": "publish-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

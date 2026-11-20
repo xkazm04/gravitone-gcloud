@@ -2,6 +2,9 @@
    selected node, the split) on the right. Below 1100px the side column moves above the bands and the page
    scrolls as one; each band's graph scrolls sideways inside itself, never the page. */
 /* the page: the title section over the view */
+/* the Scout's frame (../layout.tsx): its rooms' column beside the page */
+.desk{flex:1;min-height:0;display:flex;flex-direction:row}
+.work{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .page{flex:1;min-height:0;display:flex;flex-direction:column}
 .head{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-5);padding:var(--sp-3) var(--sp-5);border-bottom:1px solid var(--hair)}
 /* the head's right end: the spend and the NEXT scout pile; on a narrow screen it wraps to its own row, left. NEXT's

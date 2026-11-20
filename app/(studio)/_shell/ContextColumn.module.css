@@ -1,0 +1,10 @@
+/* ./ContextColumn.tsx: the column's width beside the spine and its kind switch; the material, the head, the groups
+   and the rows are @gt/ui NavColumn's (packages/ui/src/components/navcolumn/NavColumn.module.css). Tokens only. */
+.column{flex:none;width:var(--w-context)}
+.kinds{display:inline-flex;padding:var(--sp-nudge);border:1px solid var(--hair);border-radius:var(--r-pill);background:var(--ink)}
+.kind{display:inline-flex;align-items:center;height:var(--h-chip);padding:0 var(--sp-3);border-radius:var(--r-pill);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.kind:hover{color:var(--ink-bright)}
+.kind[aria-current=page]{color:var(--ink-bright);background:var(--glass-hi);box-shadow:var(--shine)}
+
+/* a link's pending mark (./NavLink.tsx PendingMark) is drawn as the row's own underline */
+.column a > [aria-hidden=true]:last-child{left:var(--sp-3);right:var(--sp-3)}

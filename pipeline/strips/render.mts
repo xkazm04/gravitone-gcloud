@@ -55,7 +55,7 @@ export interface RenderResult {
   error?: string;
 }
 
-async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, frames?: number): Promise<Page> {
+export async function openStrip(browser: Browser, htmlPath: string, lane: StripLane, frames?: number): Promise<Page> {
   const { width, height } = STRIP_SIZE[lane];
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   await page.route("**/*", (route) => {
@@ -112,13 +112,28 @@ export async function renderFrame(opts: { browser: Browser; htmlPath: string; la
   }
 }
 
+/**
+ * Frame `to`, WARM: one page draws `from..to` in order and the last is photographed. Beside `renderFrame` (the same
+ * frame cold) this is the seek gate in miniature - a page whose frame depends on the frames before it shows here in
+ * seconds, before a full render is spent finding out (pipeline/reel.mts `proof`).
+ */
+export async function renderWalk(opts: { browser: Browser; htmlPath: string; lane: StripLane; from: number; to: number }): Promise<Buffer> {
+  const page = await openStrip(opts.browser, opts.htmlPath, opts.lane);
+  try {
+    for (let i = Math.max(0, opts.from); i <= opts.to; i++) await drawFrame(page, i);
+    return await shot(page);
+  } finally {
+    await page.close();
+  }
+}
+
 /** `fn` under an outer deadline of this process (deadline.mts); the page's own timers are not trusted. */
 const guard = <T,>(page: Page, ms: number, what: string, fn: () => Promise<T>): Promise<T> => {
   const browser = page.context().browser();
   return browser === null ? fn() : bounded(browser, ms, what, fn);
 };
 
-const drawFrame = (page: Page, i: number): Promise<void> => guard(page, BUDGET.frame, `renderFrameAt(${i})`, () => drawFrameIn(page, i));
+export const drawFrame = (page: Page, i: number): Promise<void> => guard(page, BUDGET.frame, `renderFrameAt(${i})`, () => drawFrameIn(page, i));
 
 async function drawFrameIn(page: Page, i: number): Promise<void> {
   await page.evaluate(
@@ -133,10 +148,10 @@ async function drawFrameIn(page: Page, i: number): Promise<void> {
   );
 }
 
-const shot = (page: Page) => guard(page, BUDGET.still, "the screenshot", () => page.screenshot({ type: "png", animations: "disabled", caret: "hide" }));
+export const shot = (page: Page) => guard(page, BUDGET.still, "the screenshot", () => page.screenshot({ type: "png", animations: "disabled", caret: "hide" }));
 
 /** Pixel comparison and motion statistics, computed in a blank page. */
-async function imageLab(browser: Browser) {
+export async function imageLab(browser: Browser) {
   const page = await browser.newPage();
   await page.setContent("<!doctype html><body></body>");
   await page.evaluate(KEEP_NAMES_SHIM);

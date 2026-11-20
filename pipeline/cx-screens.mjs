@@ -58,10 +58,10 @@ export const SCREENS = {
   // token law, the component specimens, and the status table that replaced the five copies.
   kit: { url: "/kit" },
   "kit-law": { url: "/kit#colour" },
-  "kit-parts": { url: "/kit#signal" },
-  "kit-migration": { url: "/kit#status" },
+  "kit-parts": { url: "/kit/signal#signal" },
+  "kit-migration": { url: "/kit/signal#status" },
   // spark character-cores WP3: the track-locked Timeline's specimen.
-  "kit-timeline": { url: "/kit#timeline" },
+  "kit-timeline": { url: "/kit/production#timeline" },
   // The part editors (Phase 4 wave C, L38): a part of a seeded project, reached as its Plan row
   // reaches it. The fixture part side seeds these two projects' own records (their notebook,
   // their beat board), so each screen draws real work, not an empty state. why-bitcoin's script
@@ -92,7 +92,7 @@ export const SCREENS = {
   // the explainer's voice and strips wait on their runs (its article is written; its strips queue)
   "part-explainer-strips": { url: "/projects/provider-routing-explainer/strips" },
   "part-explainer-voice": { url: "/projects/provider-routing-explainer/voice" },
-  "kit-part": { url: "/kit#part" },
+  "kit-part": { url: "/kit/production#part" },
   // PHASE 6 (L61): the new world's own screens, which had no id - the legibility lane walked them
   // by route (studio-routes.live) and nothing photographed them.
   //   floor           the hub: four lanes, Foundry -> Weir -> shelf, the Calendar rail
@@ -150,6 +150,13 @@ export const SCREENS = {
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },
+  // reels          the reel studio's overview (spark reel-studio) on the fixture side: ten reels, one per film stage,
+  //                in each of the three views behind its switch (filmstrip rows, poster grid, stage board).
+  // reels-review   one reel at its film stop: the two linked players, the strip, the verdict bar, a past round.
+  reels: { url: "/reels" },
+  "reels-posters": { url: "/reels?view=posters" },
+  "reels-stages": { url: "/reels?view=stages" },
+  "reels-review": { url: "/reels/towers-of-light" },
   ledger: { url: "/ledger" },
   runs: { url: "/projects/runs" },
   "library-style": { url: "/library/style/painted-3d" },
@@ -175,12 +182,18 @@ export const SCREENS = {
   "audio-cover-remixed": { url: "/audio?s=cover&fixture=remixed" },
   // Spark suno-advisor: the scripted Suno conversation, and its kit pieces.
   "audio-suno": { url: "/audio?s=studio&source=fixture&session=night-drive" },
-  "kit-suno": { url: "/kit#suno" },
+  "kit-suno": { url: "/kit/audio#suno" },
   // Spark yue2-song-lab S2: the knockout on the fixture side (the contest's staged field, a scripted
   // agent) - the main draw with its first match glowing; the post · s3 draw with its upset quarter-final
   // open in the booth, revealed (that draw opens with its quarter-finals judged); the field sheet open.
   "audio-songlab": { url: "/audio?s=songlab&source=fixture" },
   "audio-songlab-match": { url: "/audio?s=songlab&source=fixture&d=037e2bd84636&m=QF-2" },
   "audio-songlab-field": { url: "/audio?s=songlab&source=fixture&f=1" },
-  "kit-songlab": { url: "/kit#songlab" },
+  // Spark audio-distribution: the release wizard on its fixture - the picker, and the ready EP opened at its first step.
+  "audio-release": { url: "/audio?s=release&source=fixture" },
+  "audio-release-open": { url: "/audio?s=release&source=fixture&r=rel-0000000000b2" },
+  // Spark studio-to-release: the studio's package stage (the dock layout) and its release stage, on the fixture.
+  "audio-package": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=package&r=rel-0000000000a1" },
+  "audio-release-stage": { url: "/audio?s=studio&source=fixture&session=night-drive&stage=release&r=rel-0000000000b2" },
+  "kit-songlab": { url: "/kit/audio#songlab" },
 };

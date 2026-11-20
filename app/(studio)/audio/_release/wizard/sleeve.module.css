@@ -1,0 +1,36 @@
+/* The sleeve step (StepSleeve.tsx): the picture large on a recessed stage - a non-square file keeps
+   its own aspect inside the square frame, so the defect shows - and its sources beside it. */
+.sleeve{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:var(--sp-7);align-items:start}
+.stage{margin:0;display:flex;flex-direction:column;gap:var(--sp-4)}
+.stage > :first-child{width:min(64vh,calc(var(--w-detail) * 1.75));max-width:100%;aspect-ratio:1;box-shadow:0 var(--sp-6) var(--sp-page-end) var(--shadow);border-radius:var(--r-arm)}
+.stage:not([data-square]) > :first-child{object-fit:contain;background:var(--hatch-future),var(--ink-2)}
+.art{display:block;object-fit:cover}
+.missing{display:block}
+.caption{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap}
+.dims{font:600 var(--fs-ui)/1 var(--mono);color:var(--ink-bright);font-variant-numeric:tabular-nums}
+.side{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0}
+.side section{display:flex;flex-direction:column;gap:var(--sp-4)}
+.side > button,.panel > button{align-self:flex-start}
+.panel{display:flex;flex-direction:column;gap:var(--sp-4);padding-top:var(--sp-2)}
+.row{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap}
+
+/* upload */
+.file{position:relative;display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;height:var(--h-control);padding:0 var(--sp-6);border:1px dashed var(--muted);border-radius:var(--r-control);font:600 var(--fs-ui)/1 var(--sans);color:var(--ink-bright);cursor:pointer}
+.file:hover{background:var(--wash-hi)}
+.file:focus-within{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.fileInput{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+/* MV looks */
+.looks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-pair-thumb),1fr));gap:var(--sp-4)}
+.look{display:flex;flex-direction:column;gap:var(--sp-2);width:100%;padding:var(--sp-2);border:1px solid var(--hair-2);border-radius:var(--r);background:none;color:var(--text);text-align:left;cursor:pointer}
+.look:hover{border-color:var(--hair-3)}
+.look[aria-pressed="true"]{border-color:var(--cyan);box-shadow:0 0 0 var(--stroke-mark) var(--focus-line)}
+.lookImg{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-xs)}
+.lookTitle{font:500 var(--fs-meta)/1.25 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* generated takes: each candidate's measured size and colour under it; the job's id beside its state */
+.takes{grid-template-columns:repeat(2,minmax(0,1fr))}
+.takeMeta{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.jobId{font:500 var(--fs-meta)/1.25 var(--mono);color:var(--text);overflow-wrap:anywhere}
+
+@media (max-width:1300px){.sleeve{grid-template-columns:minmax(0,1fr)}}

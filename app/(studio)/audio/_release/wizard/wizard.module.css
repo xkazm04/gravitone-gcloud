@@ -1,0 +1,70 @@
+/* The wizard's frame (Wizard.tsx): the release's identity strip, the step rail beside the step, the
+   step's heading and its back / next foot; and the picker before the walk. Tokens only. */
+.wizard{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0}
+.sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* identity */
+.identity{display:flex;align-items:center;gap:var(--sp-6);padding:var(--sp-2) 0}
+.idArt{width:var(--size-badge);height:var(--size-badge);flex:none;border-radius:var(--r-xs);object-fit:cover}
+.identity .idArt{width:calc(var(--h-control) * 2);height:calc(var(--h-control) * 2);border-radius:var(--r);box-shadow:var(--cast)}
+.idText{display:flex;flex-direction:column;gap:var(--sp-1);min-width:0;flex:1}
+.idTitle{font:300 var(--fs-display)/1.05 var(--sans);letter-spacing:-.025em;color:var(--ink-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.idMeta{font:500 var(--fs-meta)/1.3 var(--mono);color:var(--muted)}
+
+/* the walk */
+.flow{display:grid;grid-template-columns:var(--w-rail) minmax(0,1fr);gap:var(--sp-7);align-items:start}
+.main{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0}
+.stepHead{display:flex;align-items:baseline;gap:var(--sp-5);padding-bottom:var(--sp-4)}
+.stepNo{font:600 var(--fs-meta)/1 var(--mono);color:var(--faint);font-variant-numeric:tabular-nums}
+.stepTitle{margin:0;font:300 var(--fs-h1)/1.1 var(--sans);letter-spacing:-.025em;color:var(--ink-bright);outline:none}
+.stepTitle:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-1);border-radius:var(--r-xs)}
+.body{min-width:0}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-5);padding-top:var(--sp-6);border-top:1px solid var(--hair)}
+
+/* rail */
+.rail{position:sticky;top:var(--sp-5)}
+.railList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-1);position:relative}
+.railList::before{content:"";position:absolute;left:calc(var(--sp-4) + var(--size-badge) / 2);top:var(--sp-6);bottom:var(--sp-6);width:1px;background:var(--hair-2)}
+.railItem{position:relative}
+.railStep{display:grid;grid-template-columns:var(--size-badge) minmax(0,1fr) auto;align-items:center;gap:var(--sp-4);width:100%;min-height:calc(var(--h-control) + var(--sp-3));padding:var(--sp-2) var(--sp-4);border:1px solid transparent;border-radius:var(--r-control);background:none;color:var(--text);font:500 var(--fs-nav)/1.2 var(--sans);text-align:left;cursor:pointer;transition:background var(--dur-fast),border-color var(--dur-fast)}
+.railStep:hover{background:var(--wash)}
+.railStep:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.railStep[aria-current="step"]{background:var(--wash-hi);border-color:var(--hair-3);color:var(--ink-bright)}
+.railDot{position:relative;display:grid;place-items:center;width:var(--size-badge);height:var(--size-badge);border-radius:50%;border:var(--stroke-glyph) solid var(--muted);background:var(--ink);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+.railStep[data-mark="complete"] .railDot{border-color:var(--emerald);color:var(--emerald);background:var(--emerald-a)}
+.railStep[data-mark="attention"][data-tone="block"] .railDot{border-color:var(--rose);color:var(--rose);background:var(--rose-a)}
+.railStep[data-mark="attention"][data-tone="warn"] .railDot{border-color:var(--amber);color:var(--amber);background:var(--amber-a)}
+.railStep[aria-current="step"] .railDot{box-shadow:0 0 0 var(--ring-halo) var(--focus-line)}
+.railLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.railCounts{display:flex;gap:var(--sp-1)}
+.countBlock,.countWarn,.countReady,.countPending{display:inline-grid;place-items:center;min-width:var(--h-tag);height:var(--h-tag);padding:0 var(--sp-tight);border-radius:var(--r-chip);font:700 var(--fs-micro)/1 var(--mono)}
+.countBlock{color:var(--rose);background:var(--rose-a);border:1px solid color-mix(in srgb,var(--rose) 45%,transparent)}
+.countWarn{color:var(--amber);background:var(--amber-a);border:1px solid color-mix(in srgb,var(--amber) 45%,transparent)}
+.countReady{color:var(--emerald);background:var(--emerald-a);border:1px solid color-mix(in srgb,var(--emerald) 45%,transparent);text-transform:uppercase;letter-spacing:.03em}
+.countPending{color:var(--actor-agent);background:var(--violet-a);border:1px solid color-mix(in srgb,var(--actor-agent) 45%,transparent)}
+
+/* the session: the store's last refusal or conflict, a step's accept-all */
+.notice{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) var(--sp-5);border:1px solid color-mix(in srgb,var(--rose) 40%,transparent);border-radius:var(--r-control);background:var(--rose-a)}
+.acceptAll{margin-left:auto;align-self:center}
+
+/* picker */
+.picker{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--sp-7);align-items:start}
+.pickerCol{display:flex;flex-direction:column;gap:var(--sp-5);min-width:0}
+.cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-4)}
+.card{display:grid;grid-template-columns:calc(var(--w-thumb) * 2) minmax(0,1fr);gap:var(--sp-6);align-items:center;width:100%;padding:var(--sp-5);border:1px solid var(--rim);border-radius:var(--r-pane);background:var(--glass);box-shadow:var(--shine);color:inherit;text-align:left;cursor:pointer;transition:border-color var(--dur-fast),background var(--dur-fast)}
+.card:hover{border-color:var(--hair-3);background:var(--wash)}
+.card:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+.cardArt{width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r)}
+.cardBody{display:flex;flex-direction:column;gap:var(--sp-3);min-width:0}
+.cardTitle{font:300 var(--fs-title)/1.15 var(--sans);letter-spacing:-.02em;color:var(--ink-bright)}
+.cardMeta{font:500 var(--fs-meta)/1.3 var(--mono);color:var(--muted)}
+.cardChips{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+.startBar{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap}
+
+@media (max-width:1100px){
+  .flow{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static}
+  .railList{flex-direction:row;flex-wrap:wrap}
+  .railList::before{display:none}
+  .picker{grid-template-columns:minmax(0,1fr)}
+}

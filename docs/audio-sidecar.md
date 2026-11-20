@@ -120,6 +120,124 @@ true peak is above -1 dBTP, a final gain sets it to -1.1 dBTP (the 0.1 dB is roo
 16-bit write); `gainDb` is that gain, 0 when none was needed, and `truePeakDb` is measured on the
 file as written. A lowpass above Nyquist is set just under it and `notes` says so.
 
+### master
+
+```bash
+python pipeline/audio/sidecar.py master --in song.wav --out song.uni-1.wav --recipe uni-1 --json
+```
+
+```json
+{"ok": true, "recipe": "uni-1", "input": "...\\Brisk Gallop.wav", "output": "...\\Brisk Gallop.uni-1.wav",
+ "before": {"lufs": -14.96, "truePeakDb": -2.99, "lra": 3.24}, "after": {"lufs": -14.0, "truePeakDb": -1.38, "lra": 2.34},
+ "ms": 6704, "limitDb": 0.0, "passes": 1}
+```
+
+**The default is `tone-1`** (below); `uni-1`, `uni-2` and `uni-3` are retired - the owner heard all three as
+degrading a track on another device (2026-11-16). They stay in `RECIPES` so an old master still names a real
+recipe, and their section is kept as the record of what not to do.
+
+The universal master (spark audio-distribution): one recipe applied to every track, no
+parameters - the owner's "one click" ruling. The request names a recipe and nothing else; the
+recipe's numbers are one row of `RECIPES` in `pipeline/audio/master.py`, and a row a master was
+made with is never edited: a changed sound is `uni-2`, a new row, and a new id in
+`MASTER_RECIPES` (`packages/domain/src/release.ts`). Node: `masterFile(input, output, recipe)` in
+`lib/audio/sidecarMaster.ts` (split from `sidecar.ts` at the 400-line cap), the answer parsed by
+`masterAnswerSchema` (`packages/domain/src/audio.master.ts`); 300 s timeout.
+
+`uni-1`, in signal order:
+
+| Step | Numbers | Why |
+| --- | --- | --- |
+| resample | to 48 kHz when the source differs (`resample_poly`, exact ratio) | the delivery rate |
+| reference gain | to -18 LUFS integrated | puts the compressor's fixed threshold at the same place on every track |
+| high-pass | 30 Hz | rumble only; a kick's fundamental sits above it |
+| tilt | low shelf +0.5 dB at 100 Hz, high shelf +0.75 dB at 10 kHz, Q 0.707 | a small broad lift at both ends, nothing a listener hears as EQ |
+| glue compressor | -20 dBFS threshold, 2:1, 30 ms attack, 250 ms release | lowers integrated loudness by about 1.6 dB at the -18 LUFS reference (measured on two MiSu tracks, 2026-11-16): glue, not a squash; the slow attack lets transients through |
+| loudness | static gain to -14 LUFS integrated | the target |
+| true-peak limiter | aims at -1.3 dBTP, 50 ms lookahead + release window | the ceiling is -1.0 dBTP; the limiter aims under it |
+| write | 24-bit PCM WAV, 48 kHz, channels kept | what distributors ask for |
+
+Steps 6-7 are iterated (at most 8 passes): limiting lowers loudness, so the gain is corrected and
+the limiter's aim lowered until integrated loudness is within 0.1 LU of -14 AND the true peak is at
+or under -1.0 dBTP. `limitDb` is the limiter's deepest gain reduction (0 when no frame reached the
+ceiling) and `passes` how many passes it took. `before` and `after` are `measure`'s own meter
+(`loudness.py`), `after` read from the file as written. A source with no integrated loudness or no
+loudness range (silent, under 3 s), an unknown recipe, or an `--out` equal to `--in` is refused.
+
+The limiter is not pedalboard's: JUCE's `dsp::Limiter` runs a fixed 4:1 first stage from -10 dBFS
+and has no lookahead, so it would colour every peak of a -14 LUFS master and still overshoot
+between samples. `master.py`'s limiter reads the 4x-oversampled peak envelope (the oversampling
+`truePeakDb` measures with, so the two agree), takes each frame's needed gain, runs a centred
+minimum filter over the window and two box filters of half its width over that: the gain is never
+above what any frame needs, starts moving half a window before a peak and recovers over the other
+half, in O(n) with no recursion.
+
+`uni-2` and `uni-3` (2026-11-16) exist because the owner heard `uni-1` as "minimal", far from the
+clarity and the depth "on both ears" Mixea gives; measured at matched loudness, `uni-1` moved every
+band by under 1 dB. Both run `pipeline/audio/master_wide.py` (`"chain": "wide"` in the row) into the
+same loudness-and-limit stage; `uni-3` is the same chain pushed about 1.5-2x, so the ear has a ladder:
+
+| Step | `uni-2` | `uni-3` | Why |
+| --- | --- | --- | --- |
+| high-pass | 25 Hz | 25 Hz | sub rumble |
+| side high-pass (Linkwitz-Riley 4) | 120 Hz | 140 Hz | the low end in the middle: depth reads as weight, not smear |
+| side high shelf | +3 dB at 2.5 kHz | +5 dB at 2 kHz | width on both ears lives in the side channel's highs |
+| mid peak cut | -2 dB at 300 Hz, Q 1 | -3 dB at 300 Hz, Q 0.9 | low-mid congestion |
+| mid peak lift | +1.5 dB at 3 kHz, Q 0.9 | +2.5 dB at 3 kHz, Q 0.8 | presence |
+| low / high shelf | +2 dB at 70 Hz, +2 dB at 12 kHz | +3 dB at 65 Hz, +3.5 dB at 11 kHz | weight and air |
+| 3-band compression, split 150 Hz / 5 kHz | low -24 dB 3:1, mid -22 dB 2:1, high -26 dB 2.5:1 | low -26 dB 4:1, mid -24 dB 2.5:1, high -28 dB 3:1 | density; each band gets its pre-compression RMS back, so the tone set above survives |
+| exciter | highs above 3.5 kHz, tanh drive 8, 12 % | above 3 kHz, drive 10, 20 % | harmonics where clarity is heard |
+| glue | -16 dB 1.5:1 | -18 dB 2:1 | the whole held together |
+
+Measured on Dancing in the Static (one minute from 1:00, level-matched), against the original:
+`uni-2` moved the side/mid ratio below 120 Hz from -12.8 to -23.1 dB (mono), above 2.5 kHz by +1.1
+to +2.6 dB, and the highs up ~1.7 dB; `uni-3` +2.3 to +4.0 dB of width above 2.5 kHz and +2.2 to
++3.5 dB of highs. Loudness range 12.5 LU at the source: 9.7 (`uni-1`), 8.4 (`uni-2`), 6.4 (`uni-3`).
+
+`tone-1` (2026-11-17, the owner's pick of five techniques tried on one song - the research, the bisect and the
+results are in `docs/concepts/distribution/mastering-research.md`) is `pipeline/audio/master_tone.py`. The bisect
+found what hurt: a 30 Hz minimum-phase high-pass rotates a bass-heavy song's bass region by 11-37 degrees (peak
++1.2 dB) and the compressors move the level 1-2 dB with the music; the limiter never engaged. So the chain has no
+minimum-phase filter, no compressor and no limiter:
+
+| Step | Numbers | Why |
+| --- | --- | --- |
+| measure | the song's long-term 1/3-octave shape (Welch, 16384), level removed | what the song is |
+| correct | half the distance to `targets/misu-vol2.json` (the 20 Misu Vol 2 songs' average shape), clamped -1.5 / +0.75 dB, nothing below 30 Hz, tapering to nothing by 12 kHz, smoothed 1/3 octave | nudged toward its siblings, never past them; the codec band is left alone |
+| apply | a 16385-tap symmetric FIR, the same on every channel, `fftconvolve(mode="same")` | linear phase: no frequency delayed against another, the stereo image cannot move |
+| loudness | one static gain to -14 LUFS, stopped at -1 dBTP if the ceiling would be passed | no limiter: a peaky song comes out quieter than the target, and the trial says so |
+
+On Stay Here it moved the bands by at most 0.4 dB (wobble 0.16 dB against the old chain's 1.14, loudness range
+6.6 unchanged, 12-22 kHz unchanged). The target is a taste reference, not a standard: a new album is a new
+target file and a new recipe row, never an edit of `misu-vol2`. `MASTER_DEFAULT` (`release.ts`) names the default;
+the trial runs it unless `--recipes` says otherwise.
+
+**Why -14 LUFS and -1 dBTP.** -14 LUFS integrated is Spotify's published normalisation level (the
+other streaming stores sit near it), so a master there is played at the level it was made at, not
+turned down or up by the store; -1 dBTP is the true-peak ceiling below which a lossy encode does
+not clip on decoding (registry: media-generation `generated-music-acceptance` /
+`loudness-and-peak-acceptance`, which also notes -2 dBTP as the more cautious ceiling for a
+destination that transcodes). Both are `MASTER_TARGET` in `release.ts`.
+
+**The trial.** `npx tsx pipeline/master-trial.mts --dir <folder> --out <dir> [--recipes uni-1,uni-2]
+[--limit N] [--reuse] [--adopt]` masters every `.wav` one at a time under each recipe (default: every
+recipe) into `<out>/<stem>.<recipe>.wav`, re-measures each written file with `measure` (acceptance is
+that reading: -14 +/- 0.5 LUFS, <= -1 dBTP, 0 clipped samples), and writes `<out>/compare.json` and
+`<out>/listen.html` (`lib/audio/masterCompare.ts`) - a page that opens from disk with one row per
+song: the original and every recipe side by side, keys 1-N to switch. Every version of the playing
+song runs at once, in sync, and a switch only changes which one is audible - no pause and no seek
+into a cold file, so a switch has no gap. `npx tsx pipeline/master-bundle.mts --trial <out> --to
+<originals' folder>` copies the masters into `<recipe>/` subfolders beside the originals and writes a
+`listen.html` there with relative paths only: the folder alone plays on another machine.
+MATCHED LOUDNESS (default) lowers every version's media-element volume to the quietest one's
+integrated loudness, so a switch compares tone and image, not level; AS DELIVERED plays each at its
+own level. (A WebAudio gain would be silent from disk: Chrome feeds a `MediaElementSource` zeroes for
+a `file://` source.) `--reuse` keeps a master already in `<out>` (re-measured, not re-rendered), so a
+new recipe renders only itself. `--adopt` files each passing
+master as a kept `remaster` child take of the take whose stored file, upload name or title equals
+the source's stem (`lib/sound/takes.ts` `createTake`); a take is capped at 60 MB, which a 24-bit
+48 kHz stereo master passes at about 3 min 38 s.
+
 ### triage
 
 ```bash

@@ -5,7 +5,6 @@
 .head{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
 .block{display:grid;gap:var(--sp-3);align-content:start}
 .chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;min-width:0}
-.emptyLine{margin:0;font:500 var(--fs-meta)/1.5 var(--mono);color:var(--faint)}
 
 /* term rail */
 .rail{display:grid;gap:var(--sp-5);align-content:start}

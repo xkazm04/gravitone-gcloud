@@ -16,9 +16,8 @@ import { connection } from "next/server";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { scoutHeaderFacts } from "../../_shell/headerFacts.ts";
-import { serverBoard } from "../../board/_port/port.ts";
 import s from "../_scout/scout.module.css";
-import { isScoutPacket, ScoutHead } from "../_scout/ScoutHead.tsx";
+import { ScoutHead } from "../_scout/ScoutHead.tsx";
 import { serverCanvas } from "./_port/port.ts";
 import { CANVAS_PORT } from "./_port/wire.ts";
 import { Canvas, type CanvasProds } from "./_canvas/ui/Canvas.tsx";
@@ -52,9 +51,8 @@ async function prodsOf(raw: Search): Promise<CanvasProds> {
 
 export default async function ScoutCanvasPage({ searchParams }: { readonly searchParams: Promise<Search> }) {
   await connection();
-  const [view, packets, facts, prod] = await Promise.all([serverCanvas().view(), serverBoard().listPackets(), scoutHeaderFacts(), searchParams.then(prodsOf)]);
-  const undecided = packets.ok ? packets.value.packets.filter((p) => isScoutPacket(p) && p.state === "open").length : 0;
-  const head = <ScoutHead current="canvas" undecided={undecided} facts={facts} />;
+  const [view, facts, prod] = await Promise.all([serverCanvas().view(), scoutHeaderFacts(), searchParams.then(prodsOf)]);
+  const head = <ScoutHead facts={facts} />;
   if (!view.ok) {
     return (
       <div className={s.page}>

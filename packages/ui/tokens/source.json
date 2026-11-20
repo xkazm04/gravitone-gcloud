@@ -2,11 +2,11 @@
   "source": "approved prototype .contest/arena/foundry-next-design-r4/polish/variant-1/tokens.css (:root), plus the roles admitted in tokens/ADMISSION.md",
   "groups": [
     {"id": "ground", "tokens": [
-      {"name": "ink", "tier": "primitive", "value": "#080a10"},
-      {"name": "ink-1", "tier": "primitive", "value": "#0b0e15"},
-      {"name": "ink-2", "tier": "primitive", "value": "#10141d"},
-      {"name": "ink-3", "tier": "primitive", "value": "#161b27"},
-      {"name": "ink-4", "tier": "primitive", "value": "#1d2331"},
+      {"name": "ink", "tier": "primitive", "value": "#05060a"},
+      {"name": "ink-1", "tier": "primitive", "value": "#0a0c12"},
+      {"name": "ink-2", "tier": "primitive", "value": "#0e1119"},
+      {"name": "ink-3", "tier": "primitive", "value": "#161a25"},
+      {"name": "ink-4", "tier": "primitive", "value": "#1d2230"},
       {"name": "ink-bright", "tier": "primitive", "value": "#f3f6fb"},
       {"name": "text", "tier": "primitive", "value": "#d9dfea"},
       {"name": "muted", "tier": "primitive", "value": "#9aa3b6"},
@@ -35,16 +35,16 @@
       {"name": "actor-machine", "tier": "primitive", "value": "#67e8f9"}
     ]},
     {"id": "type", "tokens": [
-      {"name": "sans", "tier": "primitive", "value": "\"Inter\",\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,-apple-system,sans-serif"},
-      {"name": "mono", "tier": "primitive", "value": "\"JetBrains Mono\",\"Cascadia Mono\",Consolas,ui-monospace,monospace"},
-      {"name": "serif", "tier": "primitive", "value": "\"Iowan Old Style\",\"Charter\",\"Georgia\",serif"},
+      {"name": "sans", "tier": "primitive", "value": "var(--font-hanken),\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,-apple-system,sans-serif"},
+      {"name": "mono", "tier": "primitive", "value": "var(--font-jetbrains),\"Cascadia Mono\",Consolas,ui-monospace,monospace"},
+      {"name": "serif", "tier": "primitive", "value": "var(--font-hanken),\"Segoe UI Variable Display\",\"Segoe UI\",system-ui,sans-serif"},
       {"name": "fs-micro", "tier": "primitive", "value": "12px", "note": "mono caps labels, chips, tallies — the floor minimum"},
-      {"name": "fs-meta", "tier": "primitive", "value": "13px", "note": "mono metadata"},
-      {"name": "fs-ui", "tier": "primitive", "value": "14px", "note": "rows, controls, body-small"},
-      {"name": "fs-body", "tier": "primitive", "value": "15px", "note": "body"},
-      {"name": "fs-h3", "tier": "primitive", "value": "16px"},
-      {"name": "fs-h2", "tier": "primitive", "value": "19px"},
-      {"name": "fs-read", "tier": "primitive", "value": "17px"},
+      {"name": "fs-meta", "tier": "primitive", "value": "clamp(13px,.54vw,14px)", "note": "mono metadata"},
+      {"name": "fs-ui", "tier": "primitive", "value": "clamp(14px,.6vw,15.5px)", "note": "rows, controls, body-small"},
+      {"name": "fs-body", "tier": "primitive", "value": "clamp(15px,.64vw,16.5px)", "note": "body"},
+      {"name": "fs-h3", "tier": "primitive", "value": "clamp(16px,.68vw,17.5px)"},
+      {"name": "fs-h2", "tier": "primitive", "value": "clamp(19px,.8vw,21px)"},
+      {"name": "fs-read", "tier": "primitive", "value": "clamp(17px,.72vw,18.5px)"},
       {"name": "fs-h1", "tier": "primitive", "value": "32px"}
     ]},
     {"id": "space", "tokens": [
@@ -53,8 +53,8 @@
       {"name": "sp-3", "tier": "primitive", "value": "8px"},
       {"name": "sp-4", "tier": "primitive", "value": "10px"},
       {"name": "sp-5", "tier": "primitive", "value": "12px"},
-      {"name": "sp-6", "tier": "primitive", "value": "18px"},
-      {"name": "sp-7", "tier": "primitive", "value": "24px"}
+      {"name": "sp-6", "tier": "primitive", "value": "clamp(18px,.8vw,21px)"},
+      {"name": "sp-7", "tier": "primitive", "value": "clamp(24px,1.06vw,28px)"}
     ]},
     {"id": "radii", "tokens": [
       {"name": "r-xs", "tier": "primitive", "value": "5px"},
@@ -69,13 +69,13 @@
       {"name": "dur-slow", "tier": "primitive", "value": ".6s"}
     ]},
     {"id": "frame", "tokens": [
-      {"name": "hdr-h", "tier": "primitive", "value": "56px"},
       {"name": "head-h", "tier": "primitive", "value": "40px"},
       {"name": "cal-w", "tier": "primitive", "value": "clamp(260px,19vw,340px)"},
       {"name": "cols", "tier": "primitive", "value": "52px minmax(0,1.32fr) minmax(0,.9fr) minmax(0,1fr)"},
+      {"name": "cols-narrow", "tier": "role", "value": "52px minmax(0,1.75fr) minmax(0,.55fr) minmax(0,1fr)", "note": "The Floor's lane columns when the lanes are under 1280px wide (beside the spine at 1366): the Weir gives the Foundry's run track its share."},
       {"name": "w-rail", "tier": "role", "value": "228px", "note": "Width of a route's left rail: the Ledger's facets and the time strip's readout above them."},
       {"name": "w-detail", "tier": "role", "value": "344px", "note": "Width of a route's docked detail panel."},
-      {"name": "h-dock", "tier": "role", "value": "156px", "note": "Most height a page's bottom dock takes from the viewport; the toast rises above it."},
+      {"name": "h-dock", "tier": "role", "value": "232px", "note": "Most height the composer takes from the work column (the agent's line, the verdict tray, the line in); the toast rises above it."},
       {"name": "w-search", "tier": "role", "value": "clamp(220px,21vw,400px)", "note": "Width of the search field in a route's toolbar."},
       {"name": "ledger-cols", "tier": "role", "value": "54px 96px 128px 128px minmax(0,1fr) 70px 90px", "note": "Columns of an event row and its head: # · time · actor · type · subject · cost · src."},
       {"name": "h-event", "tier": "role", "value": "34px", "note": "Height of an event row in a ledger list."},
@@ -142,9 +142,9 @@
       {"name": "h-tag", "tier": "role", "value": "20px", "note": "Height of a compact tag: a channel badge, a keycap inside a tab."},
       {"name": "h-chip", "tier": "role", "value": "22px", "note": "Height of a chip or keycap."},
       {"name": "h-row", "tier": "role", "value": "28px", "note": "Height of a facet or list row."},
-      {"name": "h-control-sm", "tier": "role", "value": "30px", "note": "Height of a small button, toggle, segment, tab or group head."},
-      {"name": "h-field", "tier": "role", "value": "32px", "note": "Height of a text field, select or ghost row."},
-      {"name": "h-control", "tier": "role", "value": "36px", "note": "Height of a full button."},
+      {"name": "h-control-sm", "tier": "role", "value": "clamp(30px,1.3vw,34px)", "note": "Height of a small button, toggle, segment, tab or group head."},
+      {"name": "h-field", "tier": "role", "value": "clamp(32px,1.38vw,36px)", "note": "Height of a text field, select or ghost row."},
+      {"name": "h-control", "tier": "role", "value": "clamp(36px,1.56vw,40px)", "note": "Height of a full button."},
       {"name": "h-meter", "tier": "role", "value": "5px", "note": "Height of a proportional meter rail."},
       {"name": "size-dot", "tier": "role", "value": "7px", "note": "Diameter of a status dot."},
       {"name": "size-pip", "tier": "role", "value": "10px", "note": "Diameter of a pip in a pip row."},
@@ -176,13 +176,13 @@
     {"id": "roles-type", "tokens": [
       {"name": "fs-error", "tier": "role", "value": "12.5px", "note": "A verbatim error line."},
       {"name": "fs-control-sm", "tier": "role", "value": "13.5px", "note": "Text of a small button, a keymap legend, a hint tip."},
-      {"name": "fs-nav", "tier": "role", "value": "14.5px", "note": "Text of navigation, crumbs, facts and a toast."},
+      {"name": "fs-nav", "tier": "role", "value": "clamp(14.5px,.62vw,16px)", "note": "Text of navigation, crumbs, facts and a toast."},
       {"name": "fs-bar", "tier": "role", "value": "12.5px", "note": "Label inside a bar on a time track."},
-      {"name": "fs-title", "tier": "role", "value": "24px", "note": "Serif title of what a Projects view is showing: a project, or Runs itself."}
+      {"name": "fs-title", "tier": "role", "value": "clamp(24px,1.02vw,27px)", "note": "Serif title of what a Projects view is showing: a project, or Runs itself."}
     ]},
     {"id": "roles-mark", "tokens": [
-      {"name": "panel-ground", "tier": "role", "value": "rgba(0,0,0,.14)", "note": "Recessed ground of a route panel."},
-      {"name": "ambient", "tier": "role", "value": "radial-gradient(900px 500px at 8% -10%,rgba(34,211,238,.10),transparent 60%),radial-gradient(700px 600px at 100% 110%,rgba(139,92,246,.10),transparent 60%),radial-gradient(600px 400px at 70% 0%,rgba(16,185,129,.06),transparent 60%)", "note": "The ambient light behind every page (prototype tokens.css body::before)."},
+      {"name": "panel-ground", "tier": "role", "value": "rgba(255,255,255,.042)", "note": "Recessed ground of a route panel."},
+      {"name": "ambient", "tier": "role", "value": "radial-gradient(70% 55% at 50% 0%,rgba(103,232,249,.06),transparent 72%)", "note": "The ambient light behind every page (prototype tokens.css body::before)."},
       {"name": "hatch", "tier": "role", "value": "repeating-linear-gradient(135deg,rgba(255,255,255,.36) 0 2px,transparent 2px 5px)", "note": "Fill of an undecided or unmeasured span."},
       {"name": "warn-cut", "tier": "role", "value": "#3b0712", "note": "Cut-out mark inside the warning glyph."},
       {"name": "chan-youtube", "tier": "role", "value": "#ff8a8a", "note": "Mark colour of the YouTube channel."},
@@ -195,7 +195,7 @@
       {"name": "h-sheet-bar", "tier": "role", "value": "50px", "note": "Height of a level sheet's crumb bar."},
       {"name": "w-grab", "tier": "role", "value": "44px", "note": "Width of the grab handle on a level sheet."},
       {"name": "dur-sheet", "tier": "role", "value": ".34s", "note": "How long a level sheet takes to rise over the Floor."},
-      {"name": "sheet-ground", "tier": "role", "value": "linear-gradient(180deg,#0f131c,#0a0d14)", "note": "Ground of a level sheet: the Board over the Floor."},
+      {"name": "sheet-ground", "tier": "role", "value": "linear-gradient(180deg,#121722,#0a0c12)", "note": "Ground of a level sheet: the Board over the Floor."},
       {"name": "shadow-sheet", "tier": "role", "value": "0 -30px 80px rgba(0,0,0,.7)", "note": "The shadow a level sheet casts up over the Floor."},
       {"name": "h-commit", "tier": "role", "value": "38px", "note": "Height of the commit button that ends a desk."},
       {"name": "r-tile", "tier": "role", "value": "9px", "note": "Corner of a decision tile, a pile face and the commit button."},
@@ -247,6 +247,28 @@
       {"name": "lib-face-b", "tier": "role", "value": "#3a2537", "note": "Second ground of a designed face when the item names no palette."},
       {"name": "size-play", "tier": "role", "value": "38px", "note": "Side of the round play button on an audio preview."},
       {"name": "sp-wave-in", "tier": "role", "value": "60px", "note": "Inset of an audio preview's waveform from its left edge, clear of the play button."}
+    ]},
+    {"id": "design", "tokens": [
+      {"name": "glass", "tier": "role", "value": "rgba(255,255,255,.042)", "note": "Fill of a glass surface: a panel, the spine, the context column, the composer."},
+      {"name": "glass-hi", "tier": "role", "value": "rgba(255,255,255,.085)", "note": "Glass under the pointer, the current row of a navigation, the composer's line."},
+      {"name": "rim", "tier": "role", "value": "rgba(255,255,255,.12)", "note": "The rim of a glass surface."},
+      {"name": "shine", "tier": "role", "value": "inset 0 1px 0 rgba(255,255,255,.09)", "note": "The light on a glass surface's top edge."},
+      {"name": "cast", "tier": "role", "value": "0 36px 90px -34px rgba(0,0,0,.9)", "note": "The long shadow a floating glass surface casts on the ground."},
+      {"name": "frost", "tier": "role", "value": "blur(28px) saturate(1.3)", "note": "What glass does to the light behind it (backdrop-filter). Budgeted: few per screen."},
+      {"name": "haze", "tier": "role", "value": "blur(96px) saturate(1.7)", "note": "How far out of focus a release's sleeve stands behind its stage."},
+      {"name": "r-pill", "tier": "role", "value": "999px", "note": "A fully round end: a capsule control, a chip, a tally."},
+      {"name": "r-pane", "tier": "role", "value": "18px", "note": "Corner of a pane: the lead, a glass panel, the composer."},
+      {"name": "gutter", "tier": "role", "value": "clamp(16px,1.6vw,44px)", "note": "Side inset of the work column: grows with the viewport."},
+      {"name": "w-spine", "tier": "role", "value": "84px", "note": "Width of the app's spine: the sections, a glyph over each name."},
+      {"name": "w-context", "tier": "role", "value": "clamp(208px,11vw,280px)", "note": "Width of a route's context column beside the spine: its rooms and their stages."},
+      {"name": "w-read-col", "tier": "role", "value": "clamp(300px,21vw,520px)", "note": "The measure of one column of a step's read; the read splits into as many as fit."},
+      {"name": "fs-display", "tier": "role", "value": "clamp(30px,1.7vw,44px)", "note": "A work's own name or a lead's headline, set light (300) and tight."},
+      {"name": "h-touch", "tier": "role", "value": "44px", "note": "Height of a primary act and of the composer's line."},
+      {"name": "sp-8", "tier": "role", "value": "32px", "note": "Inset of a lead and the gap between a step's regions."},
+      {"name": "sp-9", "tier": "role", "value": "48px", "note": "Air around a lead; the reach of its glow."},
+      {"name": "dur-room", "tier": "role", "value": ".7s", "note": "How long a room's light takes to cross-fade to a new hue."},
+      {"name": "scrollbar", "tier": "role", "value": "2px", "note": "Thickness of every scrollbar in the studio, vertical and horizontal (world.css)."},
+      {"name": "dur-defer", "tier": "role", "value": ".45s", "note": "How long a loading frame or an empty state waits before it is drawn: a read that lands sooner never shows either."}
     ]}
   ]
 }

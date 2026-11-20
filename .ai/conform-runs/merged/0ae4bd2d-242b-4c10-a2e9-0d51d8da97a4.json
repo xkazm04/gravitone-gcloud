@@ -1,0 +1,41 @@
+{
+  "schema": "conform-run/1",
+  "worker": "0ae4bd2d-242b-4c10-a2e9-0d51d8da97a4",
+  "subject": "client-state",
+  "evaluatedAt": "2026-11-14T22:15:41.708940+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "client-state",
+      "context": "app-root-and-dev-inspector",
+      "reason": "withdrawn after review: reviewer (sonnet): The deviation rests on lib/useRemembered.ts and lib/identityEviction.ts, and neither is among this context's files (the context lists app/*, app/_dev-inspector/*, lib/announcer.tsx, lib/jobs.tsx and lib/pollFreshness.ts). None of those files imports or calls either one. lib/jobs.tsx only mentions id"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-14T22:15:41.708940+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "client-state"
+      ],
+      "techniques": [
+        "async-race-guards",
+        "effect-identity-and-latched-callbacks",
+        "identity-scoped-eviction",
+        "invalidation-strategy",
+        "observed-read-subscription",
+        "optimistic-write-path",
+        "persistence-and-migration",
+        "rehydration-narrowing",
+        "singleton-lifecycle",
+        "status-fsms"
+      ],
+      "deviations": 1,
+      "context": "app-root-and-dev-inspector",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

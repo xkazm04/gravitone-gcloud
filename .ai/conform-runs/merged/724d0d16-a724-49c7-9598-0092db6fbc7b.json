@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "724d0d16-a724-49c7-9598-0092db6fbc7b",
+ "subject": "test-input-generation",
+ "evaluatedAt": "2026-11-12T22:09:08.859095+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-engine-creative",
+   "subject": "test-input-generation",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "lib/foundry/scout/seeds.ts:124 The seed door is a fail-first accept-or-reject gate whose reason is the caller's instruction for what to fix, yet nothing checks that reason against a model of the rules each input breaks; its tests break one rule per hand-written case, so a wrong rule reported when two are broken, or a precedence defect, cannot be seen.",
+   "techniques": [
+    {
+     "technique": "model-based-oracle",
+     "verdict": "deviation",
+     "evidence": "lib/foundry/scout/museDoor.ts:122 The muse door also returns the first rule it hits. Its tests (scout-muse-idea.test.ts:155-187) pin one recorded reason per input that breaks one rule. The technique says that kind of suite can never see a wrong-rule or precedence defect. A model that predicts the set of broken rules, run over combinations, is missing."
+    },
+    {
+     "technique": "negative-space-generation",
+     "verdict": "conformant",
+     "evidence": "tests/next-server/scout-seeds.test.ts:95 Invalid inputs are valid briefs with one field pushed just past its limit (SEED_SENTENCE_MAX is 200, MAX_SEED_BATCH + 1, age 24 against a minimum of 25, 51 against a maximum of 50). Each test asserts the specific reason, and line 104 asserts nothing was written."
+    },
+    {
+     "technique": "generator-bounds-the-space",
+     "verdict": "not-applicable",
+     "evidence": "tests/next-server/scout-seeds.test.ts:93 Inputs are built by hand-written helpers like brief(). There is no randomized generator whose reach could be bounded; no fast-check, Math.random or fuzz turned up in lib/foundry/scout."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-input-generation",
+   "context": "cull-run-desk",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-12T22:09:08.859095+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-input-generation"
+   ],
+   "techniques": [
+    "generator-bounds-the-space",
+    "model-based-oracle",
+    "negative-space-generation"
+   ],
+   "deviations": 1,
+   "context": "scout-engine-creative",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

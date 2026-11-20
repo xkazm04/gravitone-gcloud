@@ -1,0 +1,12 @@
+/* RoomLight.tsx: one wash per kind, the current one lit; the sleeve's glow under them. Tokens only. */
+.room{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.field{--k:var(--cyan);position:absolute;inset:0;opacity:0;transition:opacity var(--dur-room) var(--ease);background:radial-gradient(58% 62% at 50% 6%,color-mix(in srgb,var(--k) 21%,transparent),transparent 72%),radial-gradient(46% 40% at 50% 104%,color-mix(in srgb,var(--k) 9%,transparent),transparent 70%)}
+.field[data-on]{opacity:1}
+.field[data-kind="block"]{--k:var(--rose)}
+.field[data-kind="warn"]{--k:var(--amber)}
+.field[data-kind="agent"]{--k:var(--actor-agent)}
+.field[data-kind="ready"]{--k:var(--emerald)}
+.field[data-kind="clear"][data-on]{opacity:.5}
+.field[data-kind="neutral"]{background:var(--ambient)}
+.glow{position:absolute;left:50%;top:4%;width:70%;aspect-ratio:1.6;background-size:cover;background-position:center;opacity:.34;filter:var(--haze);transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){.field{transition:none}}

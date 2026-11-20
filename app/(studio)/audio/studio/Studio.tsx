@@ -13,14 +13,20 @@ import { sunoApiStatus } from "../../../../lib/suno/api/client.ts";
 import { readPresence } from "./_live/presence.ts";
 import { StudioHost } from "./_host/StudioHost.tsx";
 import type { StudioUrl } from "./url.ts";
+import { readRelease } from "../_release/read.ts";
+import { applyReleaseAct, createReleaseAct, releaseThisAct } from "../_release/acts.ts";
+import type { ReactNode } from "react";
 
-export async function StudioSection({ url, port }: { readonly url: StudioUrl; readonly port?: StudioPort }) {
+import { LazyPackaging } from "./_package/LazyPackaging.tsx";
+
+// `cover`: the desk's overview drawn in the conversation's place (../_overview/Overview.tsx); make only.
+export async function StudioSection({ url, port, cover }: { readonly url: StudioUrl; readonly port?: StudioPort; readonly cover?: ReactNode }) {
   const read = await (port ?? (url.source === "fixture" ? fixturePort : ledgerPort)).read();
   const presence = read.source === "live" ? readPresence() : "listening";
   // Spark suno-api: the token file only, no network; the reason is the client's own sentence.
   const grant = await sunoApiStatus();
   const connection = grant.connected ? ({ connected: true } as const) : ({ connected: false, reason: grant.reason } as const);
-  return (
+  const host = (
     <StudioHost
       url={url}
       sessions={read.sessions}
@@ -32,6 +38,12 @@ export async function StudioSection({ url, port }: { readonly url: StudioUrl; re
       takes={read.takes ?? {}}
       taste={read.taste ?? []}
       connection={connection}
+      {...(cover !== undefined ? { cover } : {})}
     />
   );
+  // Spark studio-to-release: in package and release the conversation stays, beside the release's steps.
+  if (url.stage === undefined || url.stage === "make") return host;
+  const release = await readRelease({ source: url.source === "fixture" ? "fixture" : "real", release: url.release ?? null });
+  const acts = url.source === "fixture" ? null : { releaseThis: releaseThisAct, create: createReleaseAct, apply: applyReleaseAct };
+  return <LazyPackaging url={url} read={release} thread={host} acts={acts} />;
 }

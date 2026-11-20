@@ -4,14 +4,18 @@
 //
 // No visible word: the frame is marks only, and the busy state and the section's name are the
 // non-visual channel. The root carries the section's root class, so the frame fills the studio
-// frame exactly as the loaded screen does.
+// frame exactly as the loaded screen does. It is drawn only after --dur-defer, and holds still (frames.module.css
+// `.frame`, the loading baseline).
 import type { ReactNode } from "react";
 
 import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
+import { cx } from "@gt/ui/components/cx.ts";
+
+import p from "./frames.module.css";
 
 export function Frame({ name, className, children }: { readonly name: string; readonly className: string; readonly children: ReactNode }) {
   return (
-    <div className={className} aria-busy="true" data-frame={name}>
+    <div className={cx(className, p.frame)} aria-busy="true" data-frame={name}>
       <SrOnly text={`${name} loading`} />
       {children}
     </div>

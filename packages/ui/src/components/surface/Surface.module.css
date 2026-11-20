@@ -1,0 +1,5 @@
+/* Surface.tsx: glass, raise, well. Tokens only. */
+.surface{border-radius:var(--r-pane);min-width:0}
+.glass{border:1px solid var(--rim);background:var(--glass);box-shadow:var(--shine),var(--cast);backdrop-filter:var(--frost)}
+.raise{border:1px solid var(--rim);background:var(--ink-2);box-shadow:var(--shine),var(--cast)}
+.well{border:1px solid var(--hair);background:var(--ink);box-shadow:inset 0 1px 0 var(--shadow)}

@@ -41,7 +41,6 @@
 .dtSeq{font-family:var(--mono);color:var(--ink-bright);letter-spacing:0}
 .close{display:none;width:var(--h-chip);height:var(--h-chip);border-radius:var(--r-chip);color:var(--muted);font-size:var(--fs-h2);line-height:1}
 .close:hover{color:var(--ink-bright);background:var(--wash-hi)}
-.dtEmpty{padding:var(--sp-7) var(--sp-wide);color:var(--faint);font:600 var(--fs-micro)/1.4 var(--mono)}
 .dt{padding:var(--sp-loose) var(--sp-wide) var(--sp-7);display:grid;gap:var(--sp-loose);align-content:start}
 .dtType{font:700 var(--fs-h2)/1.1 var(--mono);letter-spacing:-.01em;color:var(--ink-bright);word-break:break-all}
 .dtType.cyan{color:var(--cyan)}

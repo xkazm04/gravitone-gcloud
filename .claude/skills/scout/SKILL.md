@@ -188,6 +188,13 @@ Each data episode is an 8 s strip authored in code on the seat from REAL numbers
 `reel-motion <night> [--dry]` fills in an older night's); a kept one makes its full cut due
 (`reel-cut`, 30-120 s, sized by how many beats the data holds).
 
+**A data reel is code, always.** No image model, no video model and no supporting image ever makes or dresses a
+reel: the seat writes the page and the page draws the numbers it was given. The lint refuses a page whose
+`strip-data` block is not the brief's `data` unchanged (`lib/foundry/strips/lint.ts stripDataEquals`), so put the
+data in as it is - no rounding, no added rows, no dropped ones. A reel that seems to need a picture needs a
+different chart form. For one reel taken by hand from an idea to a 30-60 s Short and a 2-4 min cut, with its table
+measured against the continuity gate first, use `/reel` (`docs/reel.md`).
+
 1. **The source first.** The spec names it (Our World in Data, FAO, a Wikipedia table, a UN revision). Fetch the
    table on the seat (curl the CSV or read the page), extract the series, and check every dated event in the spec
    against a public page; an event you cannot confirm is dropped, never guessed. **D2**: the real baseline line comes
@@ -344,6 +351,7 @@ interrupted job ids.
 - Do not edit `night.json`, `styles.json` or a PATTERNS.md by hand.
 - Do not push. Do not stage anything in step 0 but `knowledge/` and `.ai/registry-leads.jsonl`.
 - Do not re-read a source the doctor or the ingest refused through another tool.
+- Do not make, order or attach a generated picture, texture or clip for a data reel, by any tool.
 - Do not research a stats idea's real data on the night that proposes it, and never send an ideas-door brief
   that is not `illustrative: true`: real data goes through `reel`, for a KEPT idea only.
 - **Do not run a full-video act for an idea without a kept storyboard** - the idea must be under

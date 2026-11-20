@@ -9,7 +9,7 @@ import { familyAnnotations, opsOf, REGISTRY } from "./registry.ts";
 
 // THE PROJECTION - how the one registry (./registry.ts) is published (catalog-projection-modes).
 //
-//   family     five routing tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend`, `gt_songlab`, each taking
+//   family     six routing tools, `gt_read`, `gt_launch`, `gt_job`, `gt_spend`, `gt_songlab`, `gt_release`, each taking
 //              `{op, ...args}`; its inputSchema is the ops' doors as one JSON-Schema `oneOf`
 //              discriminated by `op`, its annotations the most severe of its ops'. The default:
 //              a model choosing among five tools reads five descriptions.
@@ -49,6 +49,8 @@ const FAMILY_WORDS: { readonly [F in McpFamily]: { readonly title: string; reado
   job: { title: "Act on jobs", lead: "Pause, resume, retry, reorder, re-route or cancel a job; acknowledge a held lane." },
   spend: { title: "Spend requests", lead: "Spend requests this token filed, and the operator's verdicts." },
   // The YuE2 song lab (spark yue2-song-lab): renders, scores, post-chains and blind pairs; never a verdict.
+  // A release's packaging (spark studio-to-release): read it with what the session knows, propose field values.
+  release: { title: "Releases", lead: "A release's packaging: read it with what the conversation knows; propose field values the operator accepts or dismisses." },
   songlab: { title: "Song lab", lead: "YuE2 song lab, $0: render, list scored takes, post-chain, queue blind pairs, draw a knockout, answer the owner's directions." },
 };
 

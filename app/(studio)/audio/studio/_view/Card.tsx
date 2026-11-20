@@ -167,7 +167,7 @@ function Answer({ v, card, latest, onOpen, agentOpen, blocked, answer }: CardPro
           {ctx.slot("candidates", (c) => c.kind === "candidates" && !("stem" in c.for && onCard.has(c.for.stem)))}
         </div>
       ) : (
-        !strip && !suno && desk.measures.length === 0 && <p className={s.working}>This answer is words only; nothing to play.</p>
+        !strip && !suno && desk.measures.length === 0 && desk.release.length === 0 && <p className={s.working}>This answer is words only; nothing to play.</p>
       )}
       {desk.track.length === 0 && desk.measures.length > 0 && <div className={s.chips}>{ctx.slot("measures")}</div>}
       {ctx.slot("taste")}
@@ -213,6 +213,8 @@ function Answer({ v, card, latest, onOpen, agentOpen, blocked, answer }: CardPro
         </>
       )}
       {promptAt === "foot" && ctx.slot("suno_prompt")}
+      {/* Spark studio-to-release: the agent's pre-flight review of a release, at the card's foot. */}
+      {ctx.slot("release")}
       {(notes !== null || more.length > 0) && (
         <section className={s.notes} aria-label="notes on this answer">
           {notes !== null && <b className={s.noteHead}>{notes.summary}</b>}

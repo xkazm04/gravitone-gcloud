@@ -3,6 +3,8 @@
 // (./_audio/desk.ts) and its kind - music or sfx - in the URL beside the section; each section
 // reads on the server and hands one client island its data and its Server Actions.
 //
+//   overview  where the desk opens (design baseline P4, 2026-11-17): the rooms as cards in the studio's place,
+//             the studio's dock kept, a message sent from it opening the conversation in compose (./_overview);
 //   compose   the audio studio (spark audio-agent-studio, stage S2): a person says what they want
 //             in the dock, an outside agent answers with a track, its parts and its next steps
 //             (./studio/); `?s=studio` is an alias. It retired the seed composer, the say-it /
@@ -18,19 +20,20 @@
 //   batch     N identical briefs priced through a receipt, to measure a provider's spread;
 //   song lab  the YuE2 knockout (spark yue2-song-lab S2): the agent seeds a bracket of lyric-gate
 //             passers and books every match, the owner judges blind matches and keeps or removes
-//             the agent's proposals (./_songlab); music only, so the kind rail is not drawn.
+//             the agent's proposals (./_songlab); music only, so the kind rail is not drawn;
+//   release   kept takes gathered into a single, EP or album with a distributor's metadata, rights,
+//             sleeve, one-click master and channels (spark audio-distribution S1, ./_release).
 // What the desk does not do is judge: keep and reject belong to the Board's audio triage.
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { TabRail } from "@gt/ui/components/tabrail/TabRail.tsx";
 
 import { audibleIds } from "../../../lib/audio/atlas.ts";
 import { warmWorkers } from "../../../lib/audio/renderWorker.ts";
 import { editRows, moveCard } from "./_audio/arrangeActs.ts";
 import { deskEngines, finalizedCount, readArrange } from "./_audio/arrangeRead.ts";
-import { deskHref, KINDS, parseDeskUrl, SECTIONS } from "./_audio/desk.ts";
-import { LazyArrange, LazyBatch, LazyHunt, LazyRubric, LazyStrengths } from "./_audio/Lazy.tsx";
+import { parseDeskUrl, type Section as DeskSection } from "./_audio/desk.ts";
+import { LazyArrange, LazyBatch, LazyHunt, LazyRelease, LazyRubric, LazyStrengths } from "./_audio/Lazy.tsx";
 import { audioNow } from "./_audio/read.ts";
 import { crownTake, draftHuntLesson, draftHuntMap, renderLeaves } from "./_hunt/acts.ts";
 import { readHunt } from "./_hunt/read.ts";
@@ -44,12 +47,17 @@ import { readCoverDesk } from "./_cover/read.ts";
 import { fileSunoCoverAct, sendSunoCoverAct } from "./_cover/sunoActs.ts";
 import { batchConfirm, batchReceipt, scoreTake } from "./_insight/acts.ts";
 import { readBatch, readRubricPile, readStrengths, unscoredCount } from "./_insight/read.ts";
+import { readRelease } from "./_release/read.ts";
+import { parseReleaseUrl } from "./_release/url.ts";
 import { openMatches } from "./_songlab/read.ts";
 import { SongLabSection } from "./_songlab/Section.tsx";
 import { parseSongLabUrl } from "./_songlab/url.ts";
+import { Overview } from "./_overview/Overview.tsx";
 import { StudioSection } from "./studio/Studio.tsx";
 import { parseStudioUrl } from "./studio/url.ts";
 import s from "./_audio/audio.module.css";
+import { ContextColumn } from "../_shell/ContextColumn.tsx";
+import { audioRooms, type NavTally } from "../_shell/navModel.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Audio" };
 
@@ -61,23 +69,26 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   const registry = deskEngines();
   const lab = parseSongLabUrl(q);
   const [final, unscored, open] = await Promise.all([finalizedCount(url.kind), unscoredCount(url.kind), openMatches(lab)]);
-  const tabs = SECTIONS.map((x) => ({
-    id: x.id,
-    label: x.label,
-    href: deskHref({ ...url, section: x.id }),
-    ...(x.id === "arrange" && final.ok ? { tally: { value: final.value, label: "final" } } : {}),
-    ...(x.id === "rubric" && unscored.ok ? { tally: { value: unscored.value, label: "unscored" } } : {}),
-    ...(x.id === "songlab" && open !== undefined ? { tally: { value: open, label: "open" } } : {}),
-  }));
-  const kinds = KINDS.map((k) => ({ id: k, label: k, href: deskHref({ ...url, kind: k }) }));
+  // What the address cannot say: the rooms' tallies, read here (../_shell/navModel.ts builds the rest).
+  const tallies: Partial<Record<DeskSection, NavTally>> = {
+    ...(final.ok ? { arrange: { value: final.value, label: "final" } } : {}),
+    ...(unscored.ok ? { rubric: { value: unscored.value, label: "unscored" } } : {}),
+    ...(open !== undefined ? { songlab: { value: open, label: "open" } } : {}),
+  };
+  const rooms = audioRooms(q, tallies);
   let body: ReactNode;
-  if (url.section === "arrange") body = <LazyArrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
+  if (url.section === "overview") body = <StudioSection url={{ ...parseStudioUrl(q), stage: "make" }} cover={<Overview rooms={rooms} />} />;
+  else if (url.section === "arrange") body = <LazyArrange view={await readArrange(url.kind)} acts={{ moveCard, editRows }} />;
   else if (url.section === "cover") body = <CoverDesk view={await readCoverDesk(q)} acts={{ launch: launchCoverAct, brief: briefCoverAct, pick: pickCoverAct, saveStyles: saveCoverStylesAct, sendSuno: sendSunoCoverAct, fileSuno: fileSunoCoverAct }} />;
   else if (url.section === "hunt") body = <LazyHunt view={await readHunt(url.kind, huntParam(q))} acts={{ draftHuntMap, renderLeaves, crownTake, draftHuntLesson, confirmLessonAct }} nowMs={audioNow()} />;
   else if (url.section === "lessons") body = <Lessons view={await readLessons(url.kind)} />;
   else if (url.section === "strengths") body = <LazyStrengths key={url.kind} view={await readStrengths(url.kind)} lessonDoor={confirmLessonAct} />;
   else if (url.section === "rubric") body = <LazyRubric key={url.kind} view={await readRubricPile(url.kind)} acts={{ scoreTake }} />;
   else if (url.section === "songlab") body = <SongLabSection url={lab} />;
+  else if (url.section === "release") {
+    const rel = parseReleaseUrl(q);
+    body = <LazyRelease read={await readRelease(rel)} url={rel} />;
+  }
   else if (url.section === "batch") body = <LazyBatch key={url.kind} view={readBatch(url.kind, registry)} nowMs={audioNow()} acts={{ batchReceipt, batchConfirm }} />;
   else {
     // The studio: one way in to composing. Its candidates are auditioned on this machine's samples,
@@ -87,11 +98,8 @@ export default async function AudioPage({ searchParams }: { readonly searchParam
   }
   return (
     <div className={s.desk}>
-      <div className={s.bar}>
-        <TabRail label="audio desk" mode="audio" tabs={tabs} current={url.section} />
-        {url.section !== "compose" && url.section !== "cover" && url.section !== "songlab" && <TabRail label="kind" mode="audio" tabs={kinds} current={url.kind} />}
-      </div>
-      {body}
+      <ContextColumn rooms={rooms} />
+      <div className={s.work}>{body}</div>
     </div>
   );
 }

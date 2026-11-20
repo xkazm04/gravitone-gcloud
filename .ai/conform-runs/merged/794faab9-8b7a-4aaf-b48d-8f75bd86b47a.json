@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "794faab9-8b7a-4aaf-b48d-8f75bd86b47a",
+ "subject": "live-response-latency-budgeting",
+ "evaluatedAt": "2026-11-15T22:29:42.377688+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-studio-host",
+   "subject": "live-response-latency-budgeting",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/audio/studio/_host/live.ts:17 The Studio tab is a private, asynchronous text conversation between one operator and an outside agent that polls an inbox (audio.say gets filed, then an audio.turn comes back), with no live audience, no spoken host and no broadcast; a case-insensitive search of the context's files for audience, viewer, broadcast, stall, sign-off, latency, first word, tts and speech found nothing, so neither the response clock nor the silence clock this subject governs exists here.",
+   "techniques": [
+    {
+     "technique": "first-word-budget-decomposition",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/studio/_live/say.ts:8 The technique's own 'when not to use' covers this case: the interaction is asynchronous by design, with answers read later from an inbox queue, so there is no first audible word to budget."
+    },
+    {
+     "technique": "say-gap-ceiling",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/studio/_live/presence.ts:15 The agent works on a poll cadence of tens of seconds with one operator waiting on it; no stream exists whose dead air could be measured."
+    },
+    {
+     "technique": "in-character-stalling",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/studio/_host/conversation.ts:9 The only wait cover is a fixture 'thinking' delay shown on the dock pill. No in-character host voice exists to stall with."
+    }
+   ],
+   "absenceTerms": [
+    "audience",
+    "broadcast",
+    "viewer",
+    "stall",
+    "latency"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-15T22:29:42.377688+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "live-response-latency-budgeting"
+   ],
+   "techniques": [
+    "first-word-budget-decomposition",
+    "in-character-stalling",
+    "say-gap-ceiling"
+   ],
+   "deviations": 0,
+   "context": "audio-studio-host",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

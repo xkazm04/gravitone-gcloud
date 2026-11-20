@@ -1,0 +1,28 @@
+/* Packaging layout "dock" (spark studio-to-release, WP6): the release step in the main frame, the conversation
+   folded into the dock under it. Folded, only the host's dock (`data-dock`) and banner (`role="status"`) are drawn;
+   open, the whole host rises as a drawer over the bottom of the frame with the step still above it, its share of
+   the frame `--dock-share` (the grip's value). The host is not unmounted by a fold (display only). `overflow:clip`,
+   not hidden: the host scrolls its newest card into view, and a clipped box is no scroll container for that to
+   move. Tokens only. */
+.layout{--dock-share:64%;position:relative;isolation:isolate;flex:1;min-height:0;min-width:0;display:flex;flex-direction:column}
+.step{flex:1;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:var(--sp-4);padding:var(--sp-6) var(--gutter) var(--sp-6)}
+
+.handle{flex:none;position:relative;display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-2) var(--gutter) 0}
+
+/* The grip: the handle's top edge, a band to catch the pointer, a bar to see it by. */
+.grip{position:absolute;left:0;right:0;top:calc(var(--sp-2) * -1);height:calc(var(--sp-2) * 2);cursor:row-resize;touch-action:none;z-index:var(--z-docked)}
+.grip::after{content:"";position:absolute;left:50%;top:50%;width:calc(var(--sp-7) * 2);height:var(--stroke-bar);border-radius:var(--r-meter);background:var(--muted);transform:translate(-50%,-50%);transition:background var(--dur-fast)}
+.grip:hover::after,.grip:active::after{background:var(--cyan)}
+.grip:focus-visible{outline:none}
+.grip:focus-visible::after{background:var(--cyan);outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge)}
+
+.thread{flex:none;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:clip}
+.thread > *{flex:1;min-height:0;min-width:0}
+.thread[data-open="true"]{flex-basis:var(--dock-share);background:none}
+.thread[data-open="false"] > * > :not([data-dock]):not([role="status"]){display:none}
+/* Folded, the composer is the agent's line and the line in; the verdict waits in the open conversation (the
+   fold's tally says what is proposed, PLAN.md R6). */
+.thread[data-open="false"] [data-dock] > [role="group"][aria-label^="verdict on"]{display:none}
+.thread[data-open="false"] [role="status"]{padding-bottom:var(--sp-2)}
+
+@media (prefers-reduced-motion:reduce){.grip::after{transition:none}}

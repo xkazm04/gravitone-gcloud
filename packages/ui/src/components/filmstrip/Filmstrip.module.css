@@ -1,0 +1,37 @@
+/* ./Filmstrip.tsx - a film's twelve stills in a row. Tokens only. The cells share the row's width equally and keep
+   the film's aspect, so a row's height follows its width; a `tall` strip is a phone film's. */
+.strip{position:relative;min-width:0;padding:var(--sp-1);border-radius:var(--r-sm);background:var(--letterbox);box-shadow:inset 0 0 0 1px var(--hair)}
+.cells{margin:0;padding:0;list-style:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--sp-hair)}
+.cell{--i:0;position:relative;aspect-ratio:16 / 9;min-width:0;border-radius:var(--r-xs);overflow:hidden;background:var(--ink-3);animation:rise var(--dur-slow) var(--ease) both;animation-delay:calc(var(--i) * var(--dur-fast) / 4)}
+.tall .cell{aspect-ratio:9 / 16}
+/* a row strip in a narrow place folds to two rows of six, so a still stays big enough to read */
+.strip:not(.rail){container:strip / inline-size}
+@container strip (max-width: 30rem){
+  .cells{grid-auto-flow:row;grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+.blank{background:repeating-linear-gradient(135deg,var(--ink-2) 0 var(--sp-2),var(--ink-3) var(--sp-2) var(--sp-4));opacity:.7}
+.img{display:block;width:100%;height:100%;object-fit:cover;user-select:none}
+
+/* the loupe: a hovered still lifts above its neighbours, grown from its foot */
+.loupe .cell{overflow:visible}
+.loupe .img{border-radius:var(--r-xs);transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease);transform-origin:50% 100%}
+.loupe .cell:hover{z-index:2}
+.loupe .cell:hover .img{transform:scale(2.6);box-shadow:var(--cast),0 0 0 1px var(--rim)}
+.loupe .cell:first-child .img{transform-origin:0 100%}
+.loupe .cell:last-child .img{transform-origin:100% 100%}
+
+/* the rail under a player: frames are buttons */
+.rail{padding:var(--sp-2);border-radius:var(--r)}
+.pick{display:block;width:100%;height:100%;padding:0;border:0;background:none;cursor:pointer;opacity:.62;transition:opacity var(--dur-fast) var(--ease)}
+.pick:hover,.lit .pick{opacity:1}
+.pick:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:calc(-1 * var(--stroke-mark))}
+.lit{box-shadow:0 0 0 1px var(--cyan)}
+
+.head{position:absolute;top:0;bottom:0;width:var(--stroke-mark);margin-left:calc(-0.5 * var(--stroke-mark));background:var(--cyan);box-shadow:0 0 var(--sp-3) var(--cyan);pointer-events:none;transition:left var(--dur-fast) linear}
+.mark{position:absolute;top:calc(-1 * var(--sp-1));width:var(--size-mark);height:var(--size-mark);margin-left:calc(-0.5 * var(--size-mark));background:var(--amber);clip-path:polygon(0 0,100% 0,50% 100%);pointer-events:auto}
+
+@keyframes rise{from{opacity:0;transform:translateY(var(--sp-2))}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .cell{animation:none}
+  .loupe .img,.head,.pick{transition:none}
+}

@@ -35,6 +35,12 @@ across pages lives in `tokens.css` and `shell.js`, so that is where the kit come
 | `Wave` | GT.Wave | F P L | tone; playhead; empty midline |
 | `FacetRow` | library `.frow`, ledger `.fr` | L G | mark check (L) / rail (G) + share bar; `nested` value with its tone (ledger `.fr.sub`) |
 | `Glyph` | shell.js `I.{ledger,search,warn,down,up,chevR,grid,doc,operator,agent,machine}` | all | only the glyphs a primitive draws; the three actor marks travel with ActorKind |
+| `SectionGlyph` | contest app-design-baseline X1 "Spine" (2026-11-17) | all | one mark per app section and shell door (kit, sign out, send, menu, talk), drawn over the name in the spine; aria-hidden, the link keeps its name |
+| `Surface` | contest app-design-baseline Y2 "Aperture" (2026-11-17) | all | glass (fill, rim, shine, cast, frost) · raise (opaque, for what is read closely) · well (recessed, for what is typed or read off); no padding, no layout |
+| `RoomLight` | Y2 "Aperture" `aperture/Packaging.tsx` | audio studio | the stage's ground washed in its lead's hue (block rose, warn amber, agent violet, ready emerald, clear, neutral); a change cross-fades by opacity; the sleeve out of focus behind it |
+| `RoomGlyph` | design baseline P4 (2026-11-17) | audio, projects | one mark per room a context column lists and an overview card names; the SectionGlyph grid and stroke; aria-hidden |
+| `Filmstrip` · `Still` | spark reel-studio (2026-11-18), no prototype counterpart | reels | a film's twelve stills in film order: `row` (inert, `loupe` lifts a hovered still) · `rail` (each frame a button seeking to its moment, playhead, pinned-note marks) · `tall` (a phone film) · empty (the cells keep their shape before a render); `Still` is one lazy decorative frame, for a poster |
+| `NavColumn` · `NavGroup` | design baseline P4 (2026-11-17), the Library rail's look | audio, library, ledger, projects | a route's left column: glass, full height, a caps head with its count, an optional toolbar; the row shape exported as classes (`navRow`) for a caller's own links: mark, capitalised word, mono count, the current one lit cyan |
 
 Built for the signal vocabulary although on one page: `Fold` (library `.fgh`), `TabRail`
 (projects `.tabrail`), `UpstreamBreak` (floor slot detail), `Provenance` (floor style detail).

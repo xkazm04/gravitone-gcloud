@@ -1,0 +1,98 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f0ed9412-af80-4961-a316-9dff597fbd02",
+ "subject": "drag-drop",
+ "evaluatedAt": "2026-11-11T22:38:59.523365+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-arrange-desk",
+   "subject": "drag-drop",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:84 The card drag's exits are pointerup, pointercancel and Escape only; there is no blur, lostpointercapture or unmount reaper, valid cells are not lit at drag start, there is no edge auto-scroll in the scrolling board, and no click/tap path moves a card, so the request posture and identity payload are sound but the lifecycle, affordance and alternative-path contracts are not met.",
+   "techniques": [
+    {
+     "technique": "drag-lifecycle",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:84 A slop threshold, a singleton and one end() reaper exist, but the only cancels are pointercancel and Escape. No window blur, lostpointercapture or unmount cleanup exists, because the hook has no useEffect. If the card re-mounts mid-drag, live.current stays started and every later press is inert."
+    },
+    {
+     "technique": "payload-and-identity",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:154 The drop is an id-anchored assignment (id, from cell, to cell, opId), not an index. The door in lib/sound/arrange.ts re-reads the store, judges the move there and refuses a stale gesture. The drop handler resolves stackOf(id) at drop time."
+    },
+    {
+     "technique": "ownership-boundaries",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:161 Request posture: the card is drawn provisional (pending/aria-busy) until the store answers. A refusal returns the card with the store's reason, and a 15 s timeout resolves a stranded pending to refused. One write per card is in flight at a time."
+    },
+    {
+     "technique": "drop-affordances",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:326 The board receives only the single hovered cell. Valid targets do not announce at drag start, and cells checkMove would refuse show no refusal during the drag (refusal only appears after the drop). The overflow:auto .arrange container has no edge auto-scroll. The grab cursor and user-select:none live in @gt/ui Arrange.module.css."
+    },
+    {
+     "technique": "keyboard-alternatives",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/audio/_audio/Arrange.tsx:281 \u21e7arrow (line 230) routes through the same move() and focus rides with the card. But moveCard has no other callers in app/lib/packages, so there is no single-pointer click/tap path (WCAG 2.5.7). Also, each \u21e7arrow step commits a request instead of previewing, and no grab/move announcements are made."
+    },
+    {
+     "technique": "cross-surface-handoff",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/audio/_audio/useCardDrag.ts:5 The card drag never leaves the board; it is pointer events, not native DnD, which is the technique's own advice. The only cross-surface drop is an OS file into the Suno return input, which the user agent owns."
+    }
+   ]
+  },
+  {
+   "context": "app-root-and-dev-inspector",
+   "subject": "drag-drop",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/_dev-inspector/DevInspector.tsx:4 A case-insensitive search of every file in this context for draggable/dataTransfer/onDrag/setPointerCapture/onDrop found nothing (the only 'drop'/'drag' hits are 'backdrop' and 'dropped' in prose/CSS); the dev inspector's pointer surface is hover (mousemove) and right-click, so no drag-and-drop exists here to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "draggable",
+    "dataTransfer",
+    "onDrag",
+    "setPointerCapture",
+    "onDrop"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-11T22:38:59.523365+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "drag-drop"
+   ],
+   "techniques": [
+    "cross-surface-handoff",
+    "drag-lifecycle",
+    "drop-affordances",
+    "keyboard-alternatives",
+    "ownership-boundaries",
+    "payload-and-identity"
+   ],
+   "deviations": 1,
+   "context": "audio-arrange-desk",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-11T22:38:59.523365+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "drag-drop"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "app-root-and-dev-inspector",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

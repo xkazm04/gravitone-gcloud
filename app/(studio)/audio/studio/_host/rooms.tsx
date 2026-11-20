@@ -11,7 +11,7 @@
 // Both hand the same Stage the shown turns, and Stage owns the one transport, the dispatch
 // (`local` kinds to the transport, `agent` kinds to the room's send) and the dock.
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { STUDIO_ACTION_GOES } from "@gt/domain/audio.studio.kinds";
 import { Dock } from "@gt/ui/components/dock/Dock.tsx";
@@ -80,6 +80,10 @@ type RoomProps = {
   readonly taste: readonly StudioTasteLine[];
   /** Spark suno-api: whether this machine holds a Suno grant (read on the server, no network). */
   readonly connection: SunoConnection;
+  /** The desk's overview (design baseline P4): drawn where the conversation would be; the dock stays. */
+  readonly cover?: ReactNode;
+  /** Called once a message the dock sent has gone (the overview moves into compose with it). */
+  readonly afterSend?: () => void;
 };
 
 const words = (r: { readonly ok: true } | { readonly ok: false; readonly error: { readonly error: string } }): string | null => (r.ok ? null : r.error.error);
@@ -233,7 +237,7 @@ function answersVerdict(turns: readonly ParsedTurn[], cursor: number, promptId: 
   return next !== undefined && next.from === "user" && next.verdict?.promptId === promptId;
 }
 
-function Stage({ session, offline, presence, renders, source, talk, suno, connection }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
+function Stage({ session, offline, presence, renders, source, talk, suno, connection, cover, afterSend }: RoomProps & { readonly source: StudioSource; readonly talk: Talk; readonly suno: SunoOps }) {
   const [draft, setDraft] = useState("");
   const transport = useMix();
   const { turns, send, setNotice } = talk;
@@ -308,9 +312,7 @@ function Stage({ session, offline, presence, renders, source, talk, suno, connec
   };
   return (
     <>
-      <div className={s.frame}>
-        <View {...props} />
-      </div>
+      <div className={s.frame}>{cover ?? <View {...props} />}</div>
       <Dock
         state={state}
         reply={props.dock.reply}
@@ -319,7 +321,10 @@ function Stage({ session, offline, presence, renders, source, talk, suno, connec
         onDraft={setDraft}
         onSend={() => {
           void send({ text: draft }).then((went) => {
-            if (went) setDraft("");
+            if (went) {
+              setDraft("");
+              afterSend?.();
+            }
           });
         }}
         dropped={props.dropped}

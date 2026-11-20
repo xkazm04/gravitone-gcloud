@@ -26,6 +26,7 @@ import { intensityCurve } from "./intensity";
 import { parseLyrics } from "./lyricsParse";
 import { buildSections, sectionsWanted } from "./sections";
 import { alignLines, boundaryDisagreement, downbeatDisagreement, liveSunoGrid, sunoBeats, sunoBpm, sunoSections, sunoStarts, sungWords, tempoDisagreement, withSunoLetters, type SunoGrid } from "./suno";
+import { buildStructure } from "./structure";
 import { estimateTempo, parseBpmPrior, tempoCurve } from "./tempo";
 import type { AnalyzeInput, TimelineLyric, TimelineV1 } from "./types";
 import { CLIP_FPS } from "./types";
@@ -180,6 +181,11 @@ export async function analyzeTrack(input: AnalyzeInput, seams: AnalyzeSeams = {}
 
   if (spans.length > 0) sections = withSunoLetters(sections, spans);
   const voice = deriveVoice(lyrics, sections, input.styleText, { mid: sp.mid, high: sp.high }, track.durationS, warnings);
+  // Phrases, bar states and clean points (structure.ts); same-tag neighbours merge and a start inside a sung line moves.
+  const st = buildStructure({ track, beats, bands: { low: sp.low, mid: sp.mid, high: sp.high, rms: sp.rms }, intensity, sections, lyrics, voice });
+  sections = st.sections;
+  lyrics = st.lyrics;
+  warnings.push(...st.warnings);
 
   return {
     v: 1,
@@ -194,6 +200,9 @@ export async function analyzeTrack(input: AnalyzeInput, seams: AnalyzeSeams = {}
     sections,
     lyrics,
     voice,
+    bars: st.bars,
+    phrases: st.phrases,
+    points: st.points,
     warnings,
   };
 }

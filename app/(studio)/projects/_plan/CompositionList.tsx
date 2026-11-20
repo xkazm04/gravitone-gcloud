@@ -16,7 +16,7 @@ import { Field } from "@gt/ui/components/field/Field.tsx";
 import { FloorGlyph } from "@gt/ui/components/floor/FloorGlyph.tsx";
 import { Plate } from "@gt/ui/components/desk/Plate.tsx";
 import { Glyph } from "@gt/ui/components/glyph/Glyph.tsx";
-import { Panel } from "@gt/ui/components/panel/Panel.tsx";
+import { NavColumn } from "@gt/ui/components/navcolumn/NavColumn.tsx";
 import { PipRow } from "@gt/ui/components/piprow/PipRow.tsx";
 import { costWords, when } from "@gt/ui/components/produce/produce.ts";
 import { STATUS } from "@gt/ui/components/status/status.ts";
@@ -87,8 +87,7 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
   const [query, setQuery] = useState("");
   const shown = query.trim() === "" ? list.projects : list.projects.filter((p) => matches(p, query));
   return (
-    <aside className={s.plist} data-component="CompositionList">
-      <Panel title="Compositions" tally={{ value: list.projects.length }} toolbar={<Button size="sm" tone="cyan" label="+ Compose" onPress={onCompose} shortcut={{ mode: "projects", verb: "compose" }} />}>
+    <NavColumn className={s.plist} component="CompositionList" title="Compositions" tally={{ value: list.projects.length }} toolbar={<Button size="sm" tone="cyan" label="+ Compose" onPress={onCompose} shortcut={{ mode: "projects", verb: "compose" }} />}>
         <div className={s.find}>
           <Field label="search projects" value={query} onChange={setQuery} placeholder="title · topic · script" keyfield="projects-search" />
         </div>
@@ -138,7 +137,6 @@ export function CompositionList({ list, current, nowMs, onCompose, floorRuns, hr
             ))}
           </div>
         )}
-      </Panel>
-    </aside>
+    </NavColumn>
   );
 }

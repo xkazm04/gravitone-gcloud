@@ -3,7 +3,7 @@
    anchored high, under the header, because both are summoned over whatever the operator was
    reading and the eye is at the top. Above the level sheet (`--z-popover`): Jump opens over the
    Board. No motion: a dialog the keyboard summons is there on the keypress. */
-.backdrop{position:fixed;inset:0;z-index:var(--z-popover);display:flex;justify-content:center;align-items:flex-start;padding:calc(var(--hdr-h) + var(--sp-7)) var(--sp-6) var(--sp-6);background:color-mix(in srgb,var(--ink) 80%,transparent)}
+.backdrop{position:fixed;inset:0;z-index:var(--z-popover);display:flex;justify-content:center;align-items:flex-start;padding:calc(var(--sp-7) * 2) var(--sp-6) var(--sp-6) calc(var(--w-spine) + var(--sp-6));background:color-mix(in srgb,var(--ink) 80%,transparent)}
 .inline{position:relative;inset:auto;z-index:auto;padding:0;background:none}
 .panel{width:min(100%,64ch);max-height:100%;overflow:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-3);padding:var(--sp-5);border-radius:var(--r-lg);border:1px solid var(--hair-2);background:var(--sheet-ground);box-shadow:0 var(--sp-4) var(--sp-7) var(--shadow)}
 .panel:focus{outline:none}

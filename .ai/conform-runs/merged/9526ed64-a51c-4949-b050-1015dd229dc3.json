@@ -1,0 +1,113 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9526ed64-a51c-4949-b050-1015dd229dc3",
+ "subject": "narrative-scroll-surface",
+ "evaluatedAt": "2026-11-11T23:20:48.022611+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-fixtures",
+   "subject": "narrative-scroll-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:284 The context is a server-only fixture data module that returns PartView records to the part editors and renders no page. I searched both context directories for the subject's scroll-binding terms and found none, so no narrative scroll surface exists here to judge.",
+   "techniques": [
+    {
+     "technique": "sequence-as-spine",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixture.ts:284 This is a data loader, not a page. Its 'spine' hits refer to a research record's spine of picks, not a drawn page spine."
+    },
+    {
+     "technique": "illustration-carries-the-claim",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/_part/fixtureExplainer.ts:16 The 'explainer' here is a produced video's fixture data (article, strips, voice), not an explanatory web page with illustrations."
+    }
+   ],
+   "absenceTerms": [
+    "useScroll",
+    "scrollYProgress",
+    "animation-timeline",
+    "view-timeline",
+    "whileInView"
+   ]
+  },
+  {
+   "context": "kit-design-system-specimens",
+   "subject": "narrative-scroll-surface",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/kit/KitNav.tsx:38 /kit is a reference document for readers who already want its content: 27 grouped specimen sections behind the studio, with a real contents index (anchor links plus scroll-spy aria-current). The subject sends documents to long-form-reading-surface, and searching the kit directory for scroll-bound or reveal terms found none.",
+   "techniques": [
+    {
+     "technique": "sequence-as-spine",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/sections.ts:6 27 sections in grouped categories (Tokens, Signal, Controls, Composition...) form a set, not a sequence. Past ~8 stations the technique itself says a reading surface applies."
+    },
+    {
+     "technique": "no-orientation-tax",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/KitNav.tsx:44 This is a genuine document contents index whose entries are readable text, a case the technique explicitly exempts ('Documents')."
+    },
+    {
+     "technique": "motion-carries-the-mechanism",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/Motion.tsx:3 Click-played state gestures from the motion vocabulary. They do not explain a mechanism."
+    },
+    {
+     "technique": "reveal-without-loss",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/page.tsx:70 Every section is server-rendered unconditionally, and there is no scroll reveal to lose content."
+    },
+    {
+     "technique": "scroll-bound-progression",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/kit/KitNav.tsx:3 Scroll only drives the 'here' marker (reading-surface scroll-spy). No station gesture is bound to scroll."
+    }
+   ],
+   "absenceTerms": [
+    "useScroll",
+    "scrollYProgress",
+    "animation-timeline",
+    "view-timeline",
+    "whileInView"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-11T23:20:48.022611+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "narrative-scroll-surface"
+   ],
+   "techniques": [
+    "illustration-carries-the-claim",
+    "sequence-as-spine"
+   ],
+   "deviations": 0,
+   "context": "part-port-fixtures",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-11T23:20:48.022611+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "narrative-scroll-surface"
+   ],
+   "techniques": [
+    "motion-carries-the-mechanism",
+    "no-orientation-tax",
+    "reveal-without-loss",
+    "scroll-bound-progression",
+    "sequence-as-spine"
+   ],
+   "deviations": 0,
+   "context": "kit-design-system-specimens",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

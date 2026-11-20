@@ -1,5 +1,5 @@
 /* tokens.css .seg. */
-.seg{display:inline-flex;border:1px solid var(--hair-2);border-radius:var(--r-control);overflow:hidden}
+.seg{display:inline-flex;border:1px solid var(--hair-2);border-radius:var(--r-pill);overflow:hidden}
 .opt{height:var(--h-control-sm);padding:0 var(--sp-4);font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);border-right:1px solid var(--hair);display:inline-flex;gap:var(--sp-2);align-items:center;white-space:nowrap}
 .opt:last-child{border-right:0}
 .opt:hover{color:var(--ink-bright);background:color-mix(in srgb,var(--wash) 75%,transparent)}

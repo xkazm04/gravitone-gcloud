@@ -31,10 +31,11 @@ import type { NeedsFacts } from "./headerFacts.ts";
 import { BACKSTOP_MS, openFeed } from "./liveFeed.ts";
 import { needsChip } from "./needsChip.ts";
 import f from "./FailedSlot.module.css";
+import sh from "./Shell.module.css";
 
 export type NeedsReread = () => Promise<ActionResult<NeedsFacts>>;
 
-export function FailedSlot({ facts, reread: ask }: { readonly facts: NeedsFacts; readonly reread: NeedsReread }) {
+export function FailedSlot({ facts, reread: ask, readout = false }: { readonly facts: NeedsFacts; readonly reread: NeedsReread; readonly readout?: boolean }) {
   const [held, setHeld] = useState(facts);
   const [seen, setSeen] = useState(facts);
   if (seen !== facts) {
@@ -57,6 +58,18 @@ export function FailedSlot({ facts, reread: ask }: { readonly facts: NeedsFacts;
 
   const chip = needsChip(held);
   if (chip === null) return null;
+  // In the spine's 84 px the chip's words do not fit: the count, its first word under it, the same door and name.
+  if (readout)
+    return (
+      <Link className={sh.readout} href={NEEDS_HREF} prefetch={false} aria-label={chip.name} data-tone={chip.tone}>
+        <span className={sh.value} aria-hidden="true">
+          {chip.label}
+        </span>
+        <span className={sh.window} aria-hidden="true">
+          {chip.value.split(" · ")[0] ?? chip.value}
+        </span>
+      </Link>
+    );
   return (
     <Link className={f.slot} href={NEEDS_HREF} prefetch={false} aria-label={chip.name}>
       <Chip label={chip.label} value={chip.value} tone={chip.tone} />

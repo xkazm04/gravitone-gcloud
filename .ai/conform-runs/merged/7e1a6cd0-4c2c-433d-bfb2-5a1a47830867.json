@@ -1,0 +1,125 @@
+{
+  "schema": "conform-run/1",
+  "worker": "7e1a6cd0-4c2c-433d-bfb2-5a1a47830867",
+  "subject": "character-voice-design",
+  "evaluatedAt": "2026-11-10T23:02:38.146240+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "audio-text-producers",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "packages/producers/src/voice/define.ts:65 The fx-line act plans one unit per line from that line's own ask. No chain exists at the voice or character level for every line to share, so a treated character's effect is not guaranteed to be identical from line to line.",
+      "techniques": [
+        {
+          "technique": "finishing-effect-layer",
+          "verdict": "deviation",
+          "evidence": "packages/producers/src/voice/define.ts:65 Each line's FX unit reads its own ask (one describe string per line). No chain is defined once per character and shared by the plan, the bake and playback."
+        },
+        {
+          "technique": "character-vocal-brief",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:10 The voice producer speaks explainer lines in an existing catalog voice. No voice is designed here, so there is no brief to write."
+        },
+        {
+          "technique": "voice-description-composition",
+          "verdict": "not-applicable",
+          "evidence": "packages/producers/src/voice/define.ts:32 This producer only runs text-to-speech in a bound engine. It never calls a text-to-voice designer, so no description is composed."
+        }
+      ]
+    },
+    {
+      "context": "cover-sound-and-producers",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/sound/cover/brief/listen.ts:63 Here a voice is only something the cover brief listens for in an existing reference song, and YUE2 renders the cover. No synthetic voice is designed. I searched lib/sound/cover, lib/producers, packages/producers/src/cover*, and lib/library/feeds for text-to-voice, voice_description, generated_voice_id, timbre and stability, with no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "text-to-voice",
+        "generated_voice_id",
+        "timbre",
+        "stability"
+      ]
+    },
+    {
+      "context": "scout-engine-creative",
+      "subject": "character-voice-design",
+      "bundle": "media-generation",
+      "state": "not-applicable",
+      "evidence": "lib/foundry/scout/characters.ts:20 Scout characters are visual (portraits and reference sheets) and are given no voice. The only audio-related field is a seed's song `vocals` facet. A search of lib/foundry/scout for voice, timbre, text-to-voice, voice_description, audition and tts found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "voice",
+        "timbre",
+        "text-to-voice",
+        "audition"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "character-voice-design",
+      "context": "audio-local-score-and-listen",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor lib/sound/voiceFx/propose.ts and lib/producers/voiceFx.ts are not among this context's files. The context's lib/audio/sidecar.ts only applies a given FxChain, and lib/sound/scorePropose.ts only mentions propose.ts in a comment. The per-line chain deviation belongs to the voice-fx and voic"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-10T23:02:38.146240+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "character-voice-design"
+      ],
+      "techniques": [
+        "finishing-effect-layer"
+      ],
+      "deviations": 1,
+      "context": "audio-local-score-and-listen",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T23:02:38.146240+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "character-voice-design"
+      ],
+      "techniques": [
+        "character-vocal-brief",
+        "finishing-effect-layer",
+        "voice-description-composition"
+      ],
+      "deviations": 1,
+      "context": "audio-text-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T23:02:38.146240+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "character-voice-design"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cover-sound-and-producers",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T23:02:38.146240+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "character-voice-design"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "scout-engine-creative",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

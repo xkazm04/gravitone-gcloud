@@ -2,11 +2,16 @@
    .weir-title, [data-component=RunTrack], [data-component=WeirCell], .piles, .weir-empty,
    .fold-row. The Floor fills the studio frame under the header; each cell scrolls in itself. */
 .floor{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--cal-w)}
+/* The lanes measure themselves (design baseline P4, 2026-11-17): beside the spine at 1366 the lanes are ~1020px and
+   the default split left the run track ~160px, every card and error cut. Narrow, the Weir - a band that is mostly
+   its colour until a packet waits, and a pile is one column wide - gives the Foundry its share. */
+.lanes{container:lanes / inline-size}
+@container lanes (max-width:1280px){.lanes > *{--cols:var(--cols-narrow)}}
 .lanes{--rows:1fr 1fr 1fr 1fr;display:grid;grid-template-rows:var(--head-h) var(--rows) auto;min-height:0;position:relative;transition:grid-template-rows var(--dur) var(--ease)}
 @media (prefers-reduced-motion:reduce){.lanes{transition:none}}
 
 .colheads{display:grid;grid-template-columns:var(--cols);min-height:0}
-.corner{border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);background:var(--ink-1)}
+.corner{border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);background:var(--glass)}
 .colhead{position:relative;display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);border-bottom:1px solid var(--hair);font:700 var(--fs-micro)/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0}
 .sub{font-weight:500;letter-spacing:.04em;color:var(--faint);text-transform:none;font-size:var(--fs-micro)}
 .cFoundry{color:var(--cyan)}

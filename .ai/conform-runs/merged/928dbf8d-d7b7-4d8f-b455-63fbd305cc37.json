@@ -1,0 +1,93 @@
+{
+ "schema": "conform-run/1",
+ "worker": "928dbf8d-d7b7-4d8f-b455-63fbd305cc37",
+ "subject": "multi-speaker-speech-production",
+ "evaluatedAt": "2026-11-11T23:11:47.775538+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "scout-engine-creative",
+   "subject": "multi-speaker-speech-production",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/foundry/scout/piece.ts:2 The scout creative stages make only image and video stills, Suno music tracks (track.ts) and LTX clips cut with their own native audio; a case-insensitive whole-word search of lib/foundry/scout and packages/producers/src/scout-* for speech, voice, speaker, pronunciation, lexicon, tts, dialogue and narration found no hits, so no scripted multi-speaker speech is ever rendered here.",
+   "techniques": [
+    {
+     "technique": "line-addressed-re-render",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/scout/piece.ts:2 There is no script of speaker lines. A piece's audio is the video clips' own audio."
+    },
+    {
+     "technique": "voice-asset-model-generation-binding",
+     "verdict": "not-applicable",
+     "evidence": "lib/foundry/scout/track.ts:1 The only generated audio is Suno music. No cloned or designed voice is stored, and the cast (cast.ts) covers visual identity only."
+    }
+   ],
+   "absenceTerms": [
+    "speaker",
+    "pronunciation",
+    "lexicon",
+    "speech",
+    "tts"
+   ]
+  },
+  {
+   "context": "scout-producers",
+   "subject": "multi-speaker-speech-production",
+   "bundle": "media-generation",
+   "state": "not-applicable",
+   "evidence": "lib/producers/scoutPieceActs.ts:30 The scout producers plan and run ingest, ideas, scenes, storyboards, reels, sheets, assets and piece cuts, and the only audio they touch is the native audio of video clips, resampled and concatenated by ffmpeg. A search of the listed scout producer files found no speech, voice, speaker, pronunciation or lexicon. Across all of lib/producers and packages/producers/src, speaker, pronunciation and lexicon have no hits; speech and voice appear only in the separate voice and production producers, which are outside this context.",
+   "techniques": [
+    {
+     "technique": "chunk-boundary-continuity",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/scoutPieceActs.ts:30 The joins are video-clip concatenations, not cuts of a script that exceeds a TTS character cap."
+    },
+    {
+     "technique": "inline-direction-dialect",
+     "verdict": "not-applicable",
+     "evidence": "lib/producers/scoutReelKinds.ts:8 Reel steps author data reels in code. No speech script carries bracketed direction tags."
+    }
+   ],
+   "absenceTerms": [
+    "speaker",
+    "pronunciation",
+    "lexicon"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-11T23:11:47.775538+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "multi-speaker-speech-production"
+   ],
+   "techniques": [
+    "line-addressed-re-render",
+    "voice-asset-model-generation-binding"
+   ],
+   "deviations": 0,
+   "context": "scout-engine-creative",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-11T23:11:47.775538+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "multi-speaker-speech-production"
+   ],
+   "techniques": [
+    "chunk-boundary-continuity",
+    "inline-direction-dialect"
+   ],
+   "deviations": 0,
+   "context": "scout-producers",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

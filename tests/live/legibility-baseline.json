@@ -25,6 +25,16 @@
     "mark div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text div.hunt-module__Q0VyqW__section > form.Hunt-module__64SjFq__idea > div.Hunt-module__64SjFq__ideaActs > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
   ],
+  "audio-package": [
+    "mark div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
+  "audio-release": [],
+  "audio-release-open": [],
+  "audio-release-stage": [
+    "mark div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
+    "text div.studio-module__u1svsW__studio > section.Dock-module__y_CUwa__dock > form.Dock-module__y_CUwa__send > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"
+  ],
   "kit": [
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "mark div.kit-module__1C-Zxa__grid > div.kit-module__1C-Zxa__spec.kit-module__1C-Zxa__wide > div.kit-module__1C-Zxa__row > button.Button-module__jSUhYG__btn[aria-disabled=true]",
@@ -124,6 +134,15 @@
   "part-script-trailer": [],
   "projects": [],
   "projects-empty": [],
+  "reels": [],
+  "reels-posters": [],
+  "reels-review": [
+    "mark div.review-module__f0BlGq__layout > aside.review-module__f0BlGq__steps > div.Steps-module__9Ybybq__steps > section.Steps-module__9Ybybq__step",
+    "mark div.review-module__f0BlGq__review > section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true]",
+    "text div.review-module__f0BlGq__review > section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true]",
+    "text section.review-module__f0BlGq__bar > div.review-module__f0BlGq__draft > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__sm.Button-module__jSUhYG__amber[aria-disabled=true] > kbd.Keycaps-module__pYObGq__cap"
+  ],
+  "reels-stages": [],
   "route:/audio": [
     "mark main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]",
     "text main.audio-module__sKegKG__main > section.Composer-module__lWpjGq__composer > div.Composer-module__lWpjGq__acts > button.Button-module__jSUhYG__btn.Button-module__jSUhYG__cyan[aria-disabled=true]"

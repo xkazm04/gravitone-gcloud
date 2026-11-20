@@ -18,4 +18,5 @@
 .why{flex-basis:100%;display:grid;gap:var(--sp-nudge);min-width:0;font:500 var(--fs-meta)/1.35 var(--sans);color:var(--text)}
 .goes{font:500 var(--fs-micro)/1.3 var(--sans);color:var(--faint)}
 .step[data-goes="agent"] .goes{color:var(--cyan)}
-.empty{margin:0;padding:var(--sp-4) var(--sp-5);color:var(--muted);font:500 var(--fs-ui)/1.4 var(--sans)}
+/* the panel's empty line, at the panel's own inset */
+.none{padding:0 var(--sp-5)}

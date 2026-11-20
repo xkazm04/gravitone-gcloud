@@ -4,6 +4,8 @@ import { COST_SOURCES } from "./event.ts";
 import { audioIntentSchema } from "./audio.intent.schema.ts";
 import { STUDIO_MAX, STUDIO_ROLES, STUDIO_TURN_VERSION, type StudioActionKind, type StudioNodeKind } from "./audio.studio.kinds.ts";
 import { SUNO_FIELDS, SUNO_LIMITS, SUNO_MODELS, TASTE_LEANS, VERDICT_CLIPS, VERDICT_OFF } from "./audio.suno.ts";
+import { RELEASE_ID_RE } from "./release.record.ts";
+import { RELEASE_STATUSES } from "./release.ts";
 
 // THE AUDIO STUDIO'S TURN - the closed contract between the agent that drives the studio from outside
 // (Athena or Claude Code through the MCP door; spark audio-agent-studio) and the page that renders it.
@@ -132,6 +134,20 @@ export const STUDIO_NODE_SCHEMAS = {
     because: line.optional(),
   }),
   taste: z.strictObject({ ...nodeBase, kind: z.literal("taste"), rows: z.array(studioTasteRowSchema).min(1).max(STUDIO_MAX.taste) }),
+  /** The agent's pre-flight review of a release (spark studio-to-release): its readiness as counts, read from
+   *  `release_read` (blocks and warnings from the release's live problems, pending = proposals not yet decided).
+   *  A reading of one moment - it does not carry into later cards - and never an act: the operator opens the
+   *  release's package stage from it, accepts or dismisses, and schedules there. */
+  release: z.strictObject({
+    ...nodeBase, kind: z.literal("release"),
+    releaseId: z.string().regex(RELEASE_ID_RE, "a release id is rel- and 12 hex digits"),
+    title: z.string().trim().min(1).max(200),
+    releaseKind: z.enum(["single", "ep", "album"]),
+    blocks: z.number().int().min(0).max(999),
+    warns: z.number().int().min(0).max(999),
+    status: z.enum(RELEASE_STATUSES),
+    pending: z.number().int().min(0).max(999),
+  }),
 } as const satisfies Record<StudioNodeKind, z.ZodType>;
 
 export type StudioNodeOf<K extends StudioNodeKind> = z.output<(typeof STUDIO_NODE_SCHEMAS)[K]>;

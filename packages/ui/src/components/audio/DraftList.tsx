@@ -9,6 +9,7 @@
 // triage (owner ruling 2026-10-17): this list links there and never keeps or rejects itself.
 import { SrOnly } from "../a11y/SrOnly.tsx";
 import { Chip } from "../chip/Chip.tsx";
+import { Empty } from "../empty/Empty.tsx";
 import { CapsHeading } from "../heading/CapsHeading.tsx";
 import { EntryPill } from "../status/StatusPill.tsx";
 import type { StatusEntry } from "../status/status.ts";
@@ -57,7 +58,7 @@ export function DraftList({ drafts, triageHref }: DraftListProps) {
         {awaiting > 0 && <Chip label="awaiting" value={awaiting} tone="cyan" />}
       </div>
       {drafts.length === 0 ? (
-        <p className={s.emptyLine}>nothing sent</p>
+        <Empty compact label="nothing sent" />
       ) : (
         <ul className={s.drafts}>
           {drafts.map((d) => (

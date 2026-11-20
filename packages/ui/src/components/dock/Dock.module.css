@@ -1,14 +1,21 @@
-/* The studio's bottom dock: a top rule, the reply over the line in, never taller than --h-dock (the
+/* The studio's composer: the reply over the line in, never taller than --h-dock (the
    toast rises above that height). Tokens only. */
-.dock{flex:none;display:grid;gap:var(--sp-3);max-height:var(--h-dock);overflow:auto;padding:var(--sp-4) var(--sp-loose);border-top:1px solid var(--hair-2);background:var(--ink-1)}
-.said{display:flex;gap:var(--sp-4);align-items:flex-start;min-width:0}
-.reply{margin:0;min-width:0;flex:1;font:400 var(--fs-ui)/1.45 var(--sans);color:var(--ink-bright);overflow-wrap:anywhere}
+/* Design baseline: the composer - glass along the foot of the work column (not the window), the agent's line on one
+   row, the verdict tray, and the line in as a capsule with Send lit inside it. */
+.dock{flex:none;display:grid;gap:var(--sp-3);max-height:var(--h-dock);overflow:auto;margin:var(--sp-3) var(--gutter) var(--sp-4);padding:var(--sp-4) var(--sp-4) var(--sp-3);border:1px solid var(--rim);border-radius:calc(var(--r-pane) + var(--sp-2));background:var(--glass);box-shadow:var(--shine),var(--cast);backdrop-filter:var(--frost)}
+.said{display:flex;gap:var(--sp-4);align-items:center;min-width:0;padding:0 var(--sp-2)}
+.reply{margin:0;min-width:0;flex:1;font:400 var(--fs-ui)/1.45 var(--sans);color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .dock[data-dock="offline"] .reply{color:var(--muted)}
 .notice{margin:0;font:400 var(--fs-meta)/1.4 var(--sans);color:var(--amber)}
 .dropped{font:400 var(--fs-meta)/1.4 var(--sans);color:var(--muted)}
 .dropped summary{cursor:pointer;color:var(--illustrative-text)}
 .dropped summary:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
 .dropped ul{margin:var(--sp-1) 0 0;padding-left:var(--sp-6);display:grid;gap:var(--sp-1);overflow-wrap:anywhere}
-.send{display:flex;gap:var(--sp-3);align-items:center}
+.notice,.dropped{padding:0 var(--sp-2)}
+/* the line in never scrolls out of the composer: what is above it scrolls under it */
+.send{position:sticky;bottom:0;display:flex;gap:var(--sp-3);align-items:center;min-height:calc(var(--h-touch) + var(--sp-2));padding:var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-6);border:1px solid var(--rim);border-radius:var(--r-pill);background:var(--ink-3);box-shadow:var(--shine);transition:border-color var(--dur-fast)}
+.send:focus-within{border-color:var(--focus-line)}
 .field{flex:1;min-width:0;display:grid}
-.field input{width:100%}
+.field input{width:100%;height:var(--h-touch);padding:0;border:0;background:none;font-size:var(--fs-read)}
+.field input:focus-visible{outline:none}
+@media (prefers-reduced-motion:reduce){.send{transition:none}}

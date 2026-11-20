@@ -82,6 +82,44 @@ export interface TimelineVoice {
   confirmed: false;
 }
 
+/** How a bar moves: calm under 0.35 intensity, active from 0.55, building or dropping on the slope between. */
+export type BarState = "calm" | "building" | "active" | "dropping";
+
+export interface TimelineBar {
+  bar: number;
+  startS: number;
+  endS: number;
+  /** Mean intensity over the bar. */
+  energy: number;
+  /** Mean low band over the bar. */
+  low: number;
+  state: BarState;
+  /** The beat where the low band comes back (crosses 0.25 upward) inside this bar. */
+  lowIn?: number;
+  /** The first beat without it after it was there. */
+  lowOut?: number;
+}
+
+export interface TimelinePhrase {
+  startS: number;
+  endS: number;
+  bars: number;
+  /** The cues that put a boundary at its start: voice gap, energy, low in/out, section start, prior. */
+  why: string[];
+}
+
+/** A clean point to cut on: an exit no sung line runs across, an entry, both, or the song's stop. */
+export interface TimelinePoint {
+  t: number;
+  bar: number;
+  kind: "entry" | "exit" | "both" | "stop";
+  stateBefore: BarState;
+  stateAfter: BarState;
+  why: string[];
+  /** The stop only: when the decay falls under the floor for good. */
+  decayEndS?: number;
+}
+
 export interface TimelineV1 {
   v: 1;
   track: TimelineTrack;
@@ -97,6 +135,10 @@ export interface TimelineV1 {
   sections: TimelineSection[];
   lyrics: TimelineLyric[];
   voice: TimelineVoice[];
+  /** lib/music-clip/structure.ts; absent in a timeline analysed before it. */
+  bars?: TimelineBar[];
+  phrases?: TimelinePhrase[];
+  points?: TimelinePoint[];
   warnings: string[];
 }
 

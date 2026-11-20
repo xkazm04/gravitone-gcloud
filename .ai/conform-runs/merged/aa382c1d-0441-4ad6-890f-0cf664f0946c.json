@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "aa382c1d-0441-4ad6-890f-0cf664f0946c",
+ "subject": "connector-catalog",
+ "evaluatedAt": "2026-11-14T22:48:00.293444+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ui-tokens-and-catalog",
+   "subject": "connector-catalog",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "packages/catalog/src/partOptions.ts:3 The catalog in this context holds creative content (presets, recipes, styles, projects, deck art, library areas) plus PART_OPTIONS, a code-constant table of model options by work kind. None of it is a registry of external integration types: there is no auth schema, no credential form, no probe recipe, no operator-writable store and no foreign-name resolver. A search of packages/catalog and packages/ui for authSchema, auth_schema, apiKey, api_key and connectorId found 0 files. The only 'connector' and 'credential' hits in packages/ui/src are a bracket line connector and an identity-refresh comment.",
+   "techniques": [
+    {
+     "technique": "catalog-as-data",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/partOptions.ts:111 Rows are data keyed by a provider string, but they describe model options (lane, pace, usage units) per work kind, not integration types with identity, auth, probe and taxonomy. This is closer to model-routing/cost-metering."
+    },
+    {
+     "technique": "shipped-vs-operator-ownership",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/projects.ts:2 Catalog entries are compiled constants. No refresh writes shipped rows into an operator-editable store, so there is no two-writer table."
+    },
+    {
+     "technique": "schema-driven-forms",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/partOptions.ts:57 The only vendor-specific declaration is a voice id. No row declares credential fields or a probe, so there is no form or vacuous-green question."
+    },
+    {
+     "technique": "matching-and-ranking",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/partOptions.ts:76 Lookup is an exact internal key match. No foreign vocabulary is resolved to catalog identity, so tiers and no-match guards do not arise."
+    },
+    {
+     "technique": "adapter-normalization",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/partOptions.ts:8 Provider translation (producers, router) lives outside this context, in packages/kernel and lib/producers. This context holds no adapter code."
+    },
+    {
+     "technique": "catalog-lifecycle",
+     "verdict": "not-applicable",
+     "evidence": "packages/catalog/src/partOptions.ts:64 The nearest lifecycle fact is a dated vendor-voice expiry kept in a comment. With no installed rows and no dependent credential instances, there are no tombstones and no set difference to compute."
+    }
+   ],
+   "absenceTerms": [
+    "authSchema",
+    "auth_schema",
+    "apiKey",
+    "api_key",
+    "connectorId"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-14T22:48:00.293444+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "connector-catalog"
+   ],
+   "techniques": [
+    "adapter-normalization",
+    "catalog-as-data",
+    "catalog-lifecycle",
+    "matching-and-ranking",
+    "schema-driven-forms",
+    "shipped-vs-operator-ownership"
+   ],
+   "deviations": 0,
+   "context": "ui-tokens-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

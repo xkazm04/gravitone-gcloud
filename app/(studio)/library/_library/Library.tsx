@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import type { LibraryAct, LibraryKindName, LibrarySort } from "@gt/domain/library";
 import type { LibraryCard } from "@gt/ui/components/library/LibraryTile.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
-import { Panel } from "@gt/ui/components/panel/Panel.tsx";
+import { NavColumn } from "@gt/ui/components/navcolumn/NavColumn.tsx";
 import { DetailPanel } from "@gt/ui/components/library/DetailPanel.tsx";
 import { backStep, count, stepTo, type Density, type Step, type View } from "@gt/ui/components/library/library.ts";
 import type { KindId } from "@gt/ui/components/library/LibraryGlyph.tsx";
@@ -247,8 +247,7 @@ export function Library({ url: u, page, detail: first, port, head }: LibraryProp
   const newest = newestOf(u.sort, page.items);
   return (
     <div ref={root} className={s.lib} data-component="Library" data-detail={detailOn} data-rail={railOpen} data-narrow={narrow}>
-      <aside className={s.nav} id="lib-rail" aria-label="Library vocabulary">
-        <Panel title="Library" tally={{ value: count(page.everything) }}>
+      <NavColumn className={s.nav} id="lib-rail" label="Library vocabulary" title="Library" tally={{ value: count(page.everything) }}>
           <Rail
             kind={u.kind}
             kindCounts={page.kindCounts}
@@ -260,8 +259,7 @@ export function Library({ url: u, page, detail: first, port, head }: LibraryProp
             onFold={(g, open) => setClosed((x) => (open ? new Set([...x].filter((k) => k !== g)) : new Set(x).add(g)))}
             onMore={(g, all) => setExpanded((x) => (all ? new Set(x).add(g) : new Set([...x].filter((k) => k !== g))))}
           />
-        </Panel>
-      </aside>
+      </NavColumn>
       <section className={s.center} aria-label="Results">
         <Toolbar
           u={u}

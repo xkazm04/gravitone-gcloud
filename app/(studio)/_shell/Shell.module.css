@@ -1,67 +1,68 @@
-/* The (studio) world's frame and header: tokens.css `body` + `[data-component=StudioHeader]`,
-   `.brand`, `.nav`, `.hdr-right`, `.kit-link`. Every value is a token, a colour derived from
-   one, or (marked PAGE MEASURE) a typographic length with no token yet - see the report's
-   open question on a countable local-constant hatch. */
+/* The (studio) world's frame and its spine (./Spine.tsx; design baseline, docs/next/design-baseline/PLAN.md §1a).
+   The world is a row: the spine on the left edge, the work beside it. The ground is the deep near-black light falls
+   into (--ink) with one quiet wash (--ambient, world.css); the spine is glass. Tokens only. */
 
-/* The world root: the prototype's body. A fixed frame; each route scrolls inside itself. */
-.world{position:relative;isolation:isolate;height:100vh;display:flex;flex-direction:column;overflow:clip;background:var(--ink);color:var(--text);font:var(--fs-body)/1.5 var(--sans);-webkit-font-smoothing:antialiased}
-.main{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+/* The world root: a fixed frame; each route scrolls inside itself. */
+.world{position:relative;isolation:isolate;height:100vh;display:flex;flex-direction:row;overflow:clip;background:var(--ink);color:var(--text);font:var(--fs-body)/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+.main{flex:1;min-width:0;min-height:0;position:relative;display:flex;flex-direction:column}
+/* A screen arriving (the loading baseline, frames/frames.module.css): it rises from nothing over --dur-fast, so the
+   frame-to-screen swap is a fade, not a cut. No fill: once run the page keeps no animation and so no stacking
+   context, and a soft navigation that keeps the page mounted (a searchParams change) does not replay it. */
+.main > :not([data-frame]){animation:land var(--dur-fast) var(--ease)}
+@keyframes land{from{opacity:0}}
 
 .skip{position:absolute;z-index:var(--z-toast);left:var(--sp-wide);top:var(--sp-3);padding:var(--sp-2) var(--sp-4);border-radius:var(--r-control);background:var(--ink-4);color:var(--ink-bright);transform:translateY(-200%)}
 .skip:focus-visible{transform:none}
 
-.header{position:relative;z-index:var(--z-header);flex:none;height:var(--hdr-h);display:flex;align-items:center;gap:var(--sp-6);padding:0 var(--sp-wide);border-bottom:1px solid var(--hair);background:color-mix(in srgb,var(--ink) 86%,transparent);backdrop-filter:blur(var(--sp-4))}
-
-/* .brand: serif 20px in the prototype; the type scale has no 20 and this is its one use, so it
-   sits on --fs-h2 (19px). Logged as a 1px delta. */
-.brand{display:flex;align-items:center;gap:var(--sp-4);font:600 var(--fs-h2)/1 var(--serif);color:var(--ink-bright);letter-spacing:-.01em}
-.brand:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge);border-radius:var(--r-control)}
-.mark{flex:none}
+/* the spine: glyph over name, the place you are on a lifted ground with an accent bar */
+.spine{position:relative;z-index:var(--z-header);flex:none;width:var(--w-spine);height:100%;display:flex;flex-direction:column;align-items:stretch;gap:var(--sp-5);padding:var(--sp-5) var(--sp-2);overflow-y:auto;scrollbar-width:none;border-right:1px solid var(--rim);background:var(--glass);box-shadow:var(--shine)}
+.brand{display:grid;place-items:center;min-height:var(--h-control);border-radius:var(--r-control)}
+.brand:hover{background:var(--wash)}
+.brand:focus-visible{outline:var(--stroke-mark) solid var(--cyan);outline-offset:var(--sp-nudge)}
+.mark{flex:none;width:calc(var(--sp-7) + var(--sp-2));height:calc(var(--sp-7) + var(--sp-2))}
 .markRim{stroke:var(--hair-3)}
 .markBars{stroke:var(--cyan);stroke-width:var(--stroke-mark);stroke-linecap:round}
 .markWall{stroke:var(--amber);stroke-width:calc(var(--stroke-mark) * 1.1)}
 
-.nav{display:flex;gap:1px;min-width:0}
-.nav a{white-space:nowrap;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-control);font:500 var(--fs-nav)/1 var(--sans);color:var(--muted);display:inline-flex;gap:var(--sp-snug);align-items:center}
-.nav a[href]:hover{color:var(--ink-bright);background:var(--wash)}
-.nav [aria-current=page]{color:var(--ink-bright);box-shadow:inset 0 calc(-1 * var(--stroke-mark)) 0 var(--cyan)}
-.nav [aria-disabled=true]{color:var(--faint);cursor:not-allowed}
-/* A clicked section whose route is still being read (./NavLink.tsx): the current mark's line,
-   drawn at half strength and growing from the left. Always in the box, so pending moves nothing;
-   it enters after --dur-fast, so a navigation that commits sooner never shows it. Under reduced
-   motion world.css drops every animation, delay included, so the mark is drawn whole at once: a
-   static state, at the price of also showing on a quick commit. */
+.nav{display:flex;flex-direction:column;gap:var(--sp-1)}
+.foot{margin-top:auto;display:flex;flex-direction:column;align-items:stretch;gap:var(--sp-2);padding-top:var(--sp-4);border-top:1px solid var(--hair)}
+.item{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-1);min-height:calc(var(--h-control) + var(--sp-5));padding:var(--sp-3) var(--sp-1);border-radius:var(--r-control);color:var(--muted);text-align:center;transition:color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.item:hover{color:var(--ink-bright)}
+.item:hover:not([aria-current]){background:var(--wash)}
+.item[aria-current=page]{color:var(--ink-bright)}
+.item[aria-current=page] .glyph{color:var(--cyan)}
+.item[aria-disabled=true]{color:var(--faint);cursor:not-allowed}
+.here{position:absolute;inset:0;z-index:-1;border-radius:var(--r-control);background:var(--glass-hi);box-shadow:var(--shine)}
+.here::before{content:"";position:absolute;left:calc(var(--sp-2) * -1);top:var(--sp-4);bottom:var(--sp-4);width:var(--stroke-mark);border-radius:var(--r-meter);background:var(--cyan)}
+.glyph{width:var(--size-glyph-btn);height:var(--size-glyph-btn);flex:none;transition:color var(--dur-fast)}
+.label{font:500 var(--fs-micro)/1.15 var(--sans);letter-spacing:.01em;white-space:nowrap}
+.foot .item{min-height:calc(var(--h-control) + var(--sp-2))}
+.dev{display:flex;justify-content:center}
+.needs{display:flex;justify-content:center}
+.needs:empty{display:none}
+
+/* the spend: a recessed readout, a door to the Ledger */
+.readout{display:flex;flex-direction:column;align-items:center;gap:var(--sp-nudge);padding:var(--sp-3) var(--sp-1);border:1px solid var(--hair);border-radius:var(--r-control);background:var(--ink);color:var(--ink-bright)}
+.readout:hover{border-color:var(--hair-3)}
+.readout[data-tone=rose] .value{color:var(--rose)}
+.readout[data-tone=amber] .value{color:var(--amber)}
+.value{font:700 var(--fs-meta)/1 var(--mono);font-variant-numeric:tabular-nums}
+.window{font:600 var(--fs-micro)/1 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+/* A clicked link whose route is still being read (./NavLink.tsx): the current mark's line, drawn at half strength
+   and growing from the left. Always in the box, so pending moves nothing; it enters after --dur-fast, so a
+   navigation that commits sooner never shows it. Under reduced motion world.css drops every animation, delay
+   included, so the mark is drawn whole at once. */
 .nav a{position:relative}
 .pending{position:absolute;left:0;right:0;bottom:0;height:var(--stroke-mark);background:color-mix(in srgb,var(--cyan) 55%,transparent);opacity:0;transform:scaleX(0);transform-origin:left;pointer-events:none}
 .pending[data-pending]{animation:navPending var(--dur-slow) var(--ease) var(--dur-fast) both}
 .nav a[aria-busy=true]{color:var(--ink-bright);cursor:progress}
 @keyframes navPending{to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.pending[data-pending]{opacity:1;transform:none}}
-/* tokens.css `.nav .n`: a nav item's count. The header names no Board item (./nav.ts), so only
-   the kit's specimen draws it (kit/ContractHooks.tsx). */
-.n{font:700 var(--fs-micro)/1 var(--mono);color:var(--amber);background:var(--amber-a);border-radius:var(--r-xs);padding:var(--sp-hair) var(--sp-tight)}
+
+/* A nav item's count and a group separator, as the kit's specimen of the old header draws them
+   (kit/ContractHooks.tsx). */
+.n{font:700 var(--fs-micro)/1 var(--mono);color:var(--amber);background:var(--amber-a);border-radius:var(--r-pill);padding:var(--sp-hair) var(--sp-tight)}
 .sep{width:1px;height:calc(var(--sp-4) * 2);background:var(--hair-2);margin:0 var(--sp-1);align-self:center}
 
-.right{margin-left:auto;display:flex;gap:var(--sp-3);align-items:center}
-/* The spend sizes to its content (the prototype's chips did). NEXT and the ledger delta sat beside
-   it until 2026-10-24; NEXT is the Scout header's now (scout/_scout/ScoutHead.tsx). */
-.slotSpend{display:flex;flex:none}
-
-.kitLink{font:600 var(--fs-micro)/1 var(--mono);color:var(--faint);padding:var(--sp-2) var(--sp-3);border-radius:var(--r-chip);border:1px solid var(--hair)}
-.kitLink:hover{color:var(--ink-bright);border-color:var(--hair-3)}
-.kitLink[aria-current=page]{color:var(--ink-bright);border-color:var(--hair-3)}
-
-@media (max-width:1500px){ .nav a{padding:var(--sp-3) var(--sp-snug);font-size:var(--fs-ui)} .header{gap:var(--sp-5)}  }
-@media (max-width:1180px){ .brand span{display:none} .sep{display:none} .nav a{padding:var(--sp-3) var(--sp-2)} .kitLink{display:none} }
-/* A phone (seen at 390 px by L35, L38, L42): the nav's links overprinted the dev-auth chip and NEXT,
-   because `.nav` shrank (min-width:0) without clipping what no longer fit. The header stays ONE row
-   at --hdr-h (the sheets and Compose hang from that height), so the nav scrolls inside its own box,
-   the brand keeps only its mark, and the kit link gives way. The spend gives way too: the nav is
-   the phone's one way between sections, and the Scout header still carries the spend. */
-@media (max-width:760px){
-  .header{gap:var(--sp-3);padding:0 var(--sp-wide)}
-  .nav{flex:1 1 0;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
-  .nav::-webkit-scrollbar{display:none}
-  .right{flex:0 1 auto;min-width:0;margin-left:0;gap:var(--sp-2)}
-  .slotSpend{display:none}
-}
+@media (prefers-reduced-motion:reduce){.item,.glyph{transition:none}}

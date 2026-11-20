@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d01b2e57-5eef-45e4-a954-280d2c33cbf9",
+ "subject": "production-pipeline-phasing",
+ "evaluatedAt": "2026-11-17T23:16:28.861263+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "production-pipeline-phasing",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/_part/real.ts:48 Part acts run as kernel jobs and answer 'running' rather than blocking. The view lists upstream parts that are not ready, script beats carry seconds against the project's targetS, and edits are versioned through an append-only op log, so four techniques are realised in this context's own code.",
+   "techniques": [
+    {
+     "technique": "long-run-as-background-job",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:48 The confirm waits ACT_WAIT_MS, then answers with the job still running. A duplicate confirm resolves to the same job (real.ts:178). An interrupted job is not counted as running and is shown as failed with its own error (realScene.ts:71, :90)."
+    },
+    {
+     "technique": "phase-order-and-graduation",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/realScene.ts:108 The view lists the upstream parts (part.after) whose verdict is not 'ready', computed from each part's own records. A module's own needs refuse an act at receipt time (real.ts moduleNeeds)."
+    },
+    {
+     "technique": "shared-clock-across-phases",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:65 Script beats carry a start and a duration in seconds, closed against the project's targetS (realScene.ts:51)."
+    },
+    {
+     "technique": "asset-vs-disposable-render",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/real.ts:27 Human edits are versioned and never overwritten in place, and undo is refused when a job has since rewritten the record. The script record keeps the adopted render apart from its candidates (realScript.ts:25). The bounded retention of candidates was not checked."
+    },
+    {
+     "technique": "worst-news-first-progress",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/_part/scriptView.ts:54 The gate view carries 'unmeasured' (and notEngaged) as its own count beside passes and violations, so 'could not test' is never folded into pass."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "plan-and-import",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "production-pipeline-phasing",
+   "context": "scout-producers",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-17T23:16:28.861263+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "production-pipeline-phasing"
+   ],
+   "techniques": [
+    "asset-vs-disposable-render",
+    "long-run-as-background-job",
+    "phase-order-and-graduation",
+    "shared-clock-across-phases",
+    "worst-news-first-progress"
+   ],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

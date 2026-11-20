@@ -1,0 +1,95 @@
+{
+ "schema": "conform-run/1",
+ "worker": "67676aae-3833-461b-bfbe-02a1e3961fca",
+ "subject": "client-fetch-cache",
+ "evaluatedAt": "2026-11-14T22:03:28.302012+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ledger-screen",
+   "subject": "client-fetch-cache",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:131 The detail paints from the list row, but the history count, which the row does not carry, shows a definite 1 (zero other acts) until the related read lands, and keeps showing it if that read fails, so an unknown is displayed as zero.",
+   "techniques": [
+    {
+     "technique": "sibling-entry-warmth",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:131 The borrowed row (byseq/extra in Ledger.tsx:180) is used for the paint, which is correct, and the deep-link cold twin is p.selected from the server. But a field the row lacks (bySubject) renders as 0+1 rather than unknown, which breaks 'never zero'."
+    },
+    {
+     "technique": "warm-remount-caches",
+     "verdict": "deviation",
+     "evidence": "app/(studio)/ledger/loading.tsx:5 Nothing fetched outlives the view: no module-scoped last-result slot exists (grep for cache/Map/memo in the context finds only per-render state). Older pages and related answers die on unmount, and a return to /ledger paints the frame ghost until the server read finishes. No staleTimes is set in next.config."
+    },
+    {
+     "technique": "cache-key-discipline",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/page.tsx:36 Client-held rows and older pages are keyed by the full answer-changing filter identity plus order (identity() at filter.ts:131 drops only the windowing axes ev and view), so a different filter can never show another filter's pages."
+    },
+    {
+     "technique": "swr-design",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:211 Arrivals invalidate, and the refresh runs in a transition, so stale rows stay painted while revalidating. Stream failure goes to the freshness edge beside the rows and evicts nothing. Lifetime is event-driven, so no fresh/stale TTL pair is named."
+    },
+    {
+     "technique": "portable-read-definitions",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/read.ts:12 The fetcher (readPage) and the key parse (parseParams over the URL search) are plain module values. The server render, the Server Action (actions.ts:36), app/api/ledger/route.ts and the MCP read tool all import them, so nothing re-declares them."
+    },
+    {
+     "technique": "prefetch-and-defer",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/feed.ts:179 The live stream is deferred past first paint and its timer is cancelled on teardown. The related read is debounced 120 ms and cleared on unmount (Detail.tsx). There is no intent prefetch, which the rule does not require."
+    },
+    {
+     "technique": "parse-and-derive-caches",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:179 The derivation is keyed by input reference and evaporates with its input. The recomputation path is the expression itself."
+    },
+    {
+     "technique": "in-flight-dedup",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:145 No read has two concurrent identical callers: older pages are latched per call site, related is a single latest-wins caller, and refreshes are coalesced. There is no shared fetch layer to install dedup in."
+    },
+    {
+     "technique": "similarity-keyed-admission",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Detail.tsx:104 The only kept answer is matched by exact seq identity. Nothing is keyed by resemblance."
+    },
+    {
+     "technique": "plural-policy-claims",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/ledger/_ledger/Ledger.tsx:140 Held data is component-local with a single claimant. No shared entry receives competing cache options."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-14T22:03:28.302012+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "client-fetch-cache"
+   ],
+   "techniques": [
+    "cache-key-discipline",
+    "in-flight-dedup",
+    "parse-and-derive-caches",
+    "plural-policy-claims",
+    "portable-read-definitions",
+    "prefetch-and-defer",
+    "sibling-entry-warmth",
+    "similarity-keyed-admission",
+    "swr-design",
+    "warm-remount-caches"
+   ],
+   "deviations": 1,
+   "context": "ledger-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

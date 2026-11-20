@@ -1,0 +1,121 @@
+{
+ "schema": "conform-run/1",
+ "worker": "12f64082-7843-4d85-b969-8da00ccf8f90",
+ "subject": "translation-pipeline-topology",
+ "evaluatedAt": "2026-11-12T22:29:27.433303+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-port-real-and-contract",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/[id]/_part/contract.ts:23 The part port only declares edit, undo, receipt and act verbs over kernel part views, and a grep of the context for i18n, hreflang, useTranslations, pseudo-locale and targetLang found nothing, so there is no translation store, language registry or MT request here for the topology to govern.",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "hreflang",
+    "useTranslations",
+    "pseudo-locale",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "projects-index-port",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/projects/_port/contract.ts:93 The produce port serves project lists, launches, choices and reroutes from kernel stores or fixtures, and a grep of the context for i18n, hreflang, useTranslations, pseudo-locale and targetLang found nothing, so no translated content is committed, derived or served here.",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "hreflang",
+    "useTranslations",
+    "pseudo-locale",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "landing-cosmos-shell",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/_landing/cosmos/Cosmos.tsx:87 The landing shell puts its few strings in as literal English in JSX, with no catalog, locale switcher or derived translation store, and a grep of app/_landing for i18n, hreflang, useTranslations, pseudo-locale and targetLang found nothing (the only 'translat' hits are CSS transform: translate), so the topology has nothing to apply to.",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "hreflang",
+    "useTranslations",
+    "pseudo-locale",
+    "targetLang"
+   ]
+  },
+  {
+   "context": "library-port",
+   "subject": "translation-pipeline-topology",
+   "bundle": "localization",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/_port/contract.ts:62 The library port maps index rows to cards and details for one display language, and a grep of the context for i18n, hreflang, useTranslations, pseudo-locale and targetLang found nothing (the 'locale' hits are String.localeCompare sorts, and fixtureData.ts:93 only lists registry subject slugs as fixture data), so no translation pipeline exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "i18n",
+    "hreflang",
+    "useTranslations",
+    "pseudo-locale",
+    "targetLang"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-12T22:29:27.433303+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "part-port-real-and-contract",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:29:27.433303+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "projects-index-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:29:27.433303+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "landing-cosmos-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-12T22:29:27.433303+00:00",
+   "bundle": "localization",
+   "subjects": [
+    "translation-pipeline-topology"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "library-port",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

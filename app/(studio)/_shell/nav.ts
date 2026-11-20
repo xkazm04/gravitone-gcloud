@@ -17,7 +17,7 @@
 import { SCOUT_PILE_SOURCES } from "./facts.ts";
 
 export type Section = {
-  readonly id: "floor" | "projects" | "runs" | "scout" | "library" | "audio" | "ledger" | "kit";
+  readonly id: "floor" | "projects" | "runs" | "scout" | "reels" | "library" | "audio" | "ledger" | "kit";
   readonly label: string;
   readonly href: string;
   readonly built: boolean;
@@ -34,6 +34,9 @@ export const SECTIONS: readonly Section[] = [
   // The Scout module (operator, 2026-10-23: "add item in header menu to access the route"): /scout is the
   // decision graph over every night and seed batch, linking the packets waiting for triage (../scout/page.tsx).
   { id: "scout", label: "Scout", href: "/scout", built: true, group: "work" },
+  // The reel studio (spark reel-studio, owner 2026-11-18: "new /reels route, own nav section"): a stat reel from a
+  // question to its Calendar slot - the films, their review and the steps that move them (../reels/page.tsx).
+  { id: "reels", label: "Reels", href: "/reels", built: true, group: "work" },
   { id: "library", label: "Library", href: "/library", built: true, group: "record" },
   { id: "audio", label: "Audio", href: "/audio", built: true, group: "record" },
   { id: "ledger", label: "Ledger", href: "/ledger", built: true, group: "record" },

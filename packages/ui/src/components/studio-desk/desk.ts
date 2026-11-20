@@ -20,6 +20,8 @@ export const DESK_CARRY: Readonly<Record<StudioNodeKind, boolean>> = {
   track: true, sections: true, stems: true, heard: true, candidates: false, pull: false, duel: false, measures: false,
   // The living Suno prompt stands until a newer version replaces it; proposed taste belongs to its turn.
   suno_prompt: true, taste: false,
+  // A release's pre-flight review is a reading of one moment (its counts move as proposals are decided).
+  release: false,
 };
 
 // Every kind, typed so a kind added to the vocabulary and missed here is a type error, not a silent absence.

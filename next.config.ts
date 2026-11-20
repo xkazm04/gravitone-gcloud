@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
 
 /** The studio's top-level routes: the directories of app/(studio) that are addresses (not `_private`, not `@slot`).
  *  tests/next-server/permissions-policy.test.ts holds this list to the directory. */
-export const STUDIO_ROUTES = ["articles", "audio", "board", "calendar", "floor", "foundry", "kit", "ledger", "library", "local-draws", "playground", "projects", "scout", "studio"] as const;
+export const STUDIO_ROUTES = ["articles", "audio", "board", "calendar", "floor", "foundry", "kit", "ledger", "library", "local-draws", "playground", "projects", "reels", "scout", "studio"] as const;
 /** Every path but the studio's: `/floor` and `/floor/...` are excluded, `/floorplan` is not. */
 export const NOT_STUDIO_SOURCE = `/:path((?!(?:${STUDIO_ROUTES.join("|")})(?:/|$)).*)`;
 

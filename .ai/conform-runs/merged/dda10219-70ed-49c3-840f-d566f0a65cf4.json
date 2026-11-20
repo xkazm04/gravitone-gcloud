@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "dda10219-70ed-49c3-840f-d566f0a65cf4",
+ "subject": "review-iteration-loops",
+ "evaluatedAt": "2026-11-10T22:27:31.791717+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "part-editor-media-cut-score",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:96 The media editors take a direction pass as a per-row proposal that is accepted, refused or reverted by op, revise one noted section of a take, and keep a take's row with a 'gone' mark after its bytes are lost, so review capital is kept instead of regenerated.",
+   "techniques": [
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:96 The direction pass is a proposal accepted per unit, with human layers kept by default (overwrite: false). Revert row/pass ops restore a checkpoint."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:86 A beat the pass refused shows the validator's own reason in place of ops, and that row has no accept button."
+    },
+    {
+     "technique": "partial-regeneration-seams",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:96 A revision targets one noted section of a take. The producer (packages/producers/src/score/define.ts:12-14, outside this context) sends that section at 'medium' and every other section as 'keep'. Adherence is fixed at 'medium', not set per note."
+    },
+    {
+     "technique": "gate-record-outlives-the-media",
+     "verdict": "conformant",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/ScoreTakes.tsx:59 When a take's bytes are gone, its row and keep/reject mark stay and the row says the bytes are gone. Only the 'record the destruction in the item' part was checked."
+    },
+    {
+     "technique": "critique-carries-its-fix",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/projects/[id]/[part]/_edit/FramesInspector.tsx:210 Shot-review findings go straight to a human reader. The technique says not to demote findings for a reader who decides rather than acts."
+    }
+   ]
+  },
+  {
+   "context": "frames-picture-composition",
+   "subject": "review-iteration-loops",
+   "bundle": "media-generation",
+   "state": "conformant",
+   "evidence": "lib/frames/directionPlan.ts:203 directionPlan.ts turns the scene-direction answer into typed EditOps. Rows are accepted one at a time, unaccepted frames are returned by reference, human layers are kept, existing fact bindings are carried forward, and refusals plus untouched beats are listed, so a pass cannot silently overwrite reviewed frames.",
+   "techniques": [
+    {
+     "technique": "edit-plan-over-regeneration",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:203 acceptProposal applies ops only to accepted rows. Every other frame is the same object, and a checkpoint lets the whole pass or one row be reverted."
+    },
+    {
+     "technique": "refusal-as-valid-outcome",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:47 The proposal lists unmentioned beats as explicitly untouched (`missing`), and refused beats carry `rejected` with a reason (line 42)."
+    },
+    {
+     "technique": "attribution-share-accounting",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:26 keepFactId carries the existing fact binding through a text rewrite, so the edit amends attribution instead of re-deriving it. Only this amendment rule was checked; share-splitting does not apply to frames."
+    },
+    {
+     "technique": "partial-regeneration-seams",
+     "verdict": "conformant",
+     "evidence": "lib/frames/directionPlan.ts:157 Human-touched layers are kept by reference while pass layers are replaced. A subject change marks the plate stale instead of re-rendering it (lines 144-147). No declared seam adherence or anchor-region rule was found."
+    },
+    {
+     "technique": "critique-carries-its-fix",
+     "verdict": "not-applicable",
+     "evidence": "lib/frames/shotReview.ts:66 Shot-list findings are rendered for a human who decides. No automated stage acts on them, so the fix-or-demote rule does not apply."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "review-iteration-loops",
+   "context": "part-editor-writing-research",
+   "reason": "evidence leans on _part/schema.ts, which is not a tracked file"
+  },
+  {
+   "subject": "review-iteration-loops",
+   "context": "audio-composer-briefs",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "review-iteration-loops",
+   "context": "domain-audio-cover-yue2",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-10T22:27:31.791717+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "critique-carries-its-fix",
+    "edit-plan-over-regeneration",
+    "gate-record-outlives-the-media",
+    "partial-regeneration-seams",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 0,
+   "context": "part-editor-media-cut-score",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T22:27:31.791717+00:00",
+   "bundle": "media-generation",
+   "subjects": [
+    "review-iteration-loops"
+   ],
+   "techniques": [
+    "attribution-share-accounting",
+    "critique-carries-its-fix",
+    "edit-plan-over-regeneration",
+    "partial-regeneration-seams",
+    "refusal-as-valid-outcome"
+   ],
+   "deviations": 0,
+   "context": "frames-picture-composition",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

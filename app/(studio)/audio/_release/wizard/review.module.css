@@ -1,0 +1,31 @@
+/* The review step (StepReview.tsx): what is wrong, grouped and each a door to its step; beside it,
+   what Schedule commits - the release in brief, the Calendar slots, the act. */
+.review{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:var(--sp-7);align-items:start}
+.problems{display:flex;flex-direction:column;gap:var(--sp-6);min-width:0}
+.group{display:flex;flex-direction:column;gap:var(--sp-4)}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-2)}
+.problem{display:grid;grid-template-columns:var(--size-dot) minmax(0,1fr) auto;align-items:center;gap:var(--sp-4);width:100%;padding:var(--sp-4) var(--sp-5);border-radius:var(--r-control);border:1px solid var(--hair-2);background:none;color:var(--ink-bright);font:500 var(--fs-ui)/1.35 var(--sans);text-align:left;cursor:pointer}
+.problem:hover{background:var(--wash-hi)}
+.group[data-tone="rose"] .problem{border-color:color-mix(in srgb,var(--rose) 40%,transparent);background:var(--rose-a)}
+.group[data-tone="amber"] .problem{border-color:color-mix(in srgb,var(--amber) 40%,transparent);background:var(--amber-a)}
+.dot{width:var(--size-dot);height:var(--size-dot);border-radius:50%}
+.group[data-tone="rose"] .dot{background:var(--rose)}
+.group[data-tone="amber"] .dot{background:var(--amber)}
+.text{min-width:0}
+.pendingRow{display:flex;flex-direction:column;gap:var(--sp-2)}
+.pendingWhere{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);padding:0;border:0;background:none;color:var(--ink-bright);font:600 var(--fs-ui)/1.3 var(--sans);text-align:left;cursor:pointer}
+.pendingWhere:hover .where{color:var(--text)}
+.pendingWhere:focus-visible{outline:var(--stroke-mark) solid var(--focus-line);outline-offset:var(--sp-nudge);border-radius:var(--r-xs)}
+.where{font:500 var(--fs-meta)/1.2 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(var(--w-rail) * 1.6)}
+.side{display:flex;flex-direction:column;gap:var(--sp-6);padding:var(--sp-6);border:1px solid var(--hair-2);border-radius:var(--r-lg);background:var(--panel-ground);position:sticky;top:var(--sp-5)}
+.side section{display:flex;flex-direction:column;gap:var(--sp-4)}
+.summary{display:grid;grid-template-columns:calc(var(--w-thumb) * 2.4) minmax(0,1fr);gap:var(--sp-6);align-items:start}
+.art{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r)}
+.slots{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--hair)}
+.slot{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:var(--sp-2) var(--sp-5);padding:var(--sp-4) 0;border-bottom:1px solid var(--hair)}
+.slotName{font:600 var(--fs-ui)/1.2 var(--sans);color:var(--ink-bright)}
+.slotAt{font:500 var(--fs-meta)/1 var(--mono);color:var(--violet)}
+.slotDetail{grid-column:1 / -1;font:500 var(--fs-meta)/1.35 var(--mono);color:var(--muted)}
+.commit{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-5);padding-top:var(--sp-5);border-top:1px solid var(--hair)}
+
+@media (max-width:1300px){.review{grid-template-columns:minmax(0,1fr)}.side{position:static}}

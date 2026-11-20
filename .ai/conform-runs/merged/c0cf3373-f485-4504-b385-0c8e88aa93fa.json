@@ -1,0 +1,39 @@
+{
+  "schema": "conform-run/1",
+  "worker": "c0cf3373-f485-4504-b385-0c8e88aa93fa",
+  "subject": "platform-format-adaptation",
+  "evaluatedAt": "2026-11-11T23:24:34.663092+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [],
+  "declined": [
+    {
+      "subject": "platform-format-adaptation",
+      "context": "part-editor-writing-research",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "platform-format-adaptation",
+      "context": "music-clip-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The cited code contradicts the claim: gpuShot.ts:176 is only `const fps = opts.fps ?? 30`, and the function is `renderSpan`, which renders a start-to-end span of the track rather than the whole master, with width and height as caller options (the 1920x1080 default is just a fallback), so the not-app"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-11T23:24:34.663092+00:00",
+      "bundle": "media-generation",
+      "subjects": [
+        "platform-format-adaptation"
+      ],
+      "techniques": [
+        "format-as-measured-template",
+        "hook-shape-selection",
+        "sound-off-first-design"
+      ],
+      "deviations": 0,
+      "context": "music-clip-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

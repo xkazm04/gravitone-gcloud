@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "da237a86-d96f-468b-95a7-4f85f560ed88",
+ "subject": "agent-browser-control",
+ "evaluatedAt": "2026-11-12T22:45:52.888645+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "library-browser-screen",
+   "subject": "agent-browser-control",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "app/(studio)/library/_library/Library.tsx:3 This context is a screen a person uses to browse the asset library, so 'browser' here means the asset browser and not a browser that an agent drives as a tool; a search of app/(studio)/library for playwright, puppeteer, chromium, daemon, headless and cdp found no matches, so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "persistent-browser-daemon",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:3 No browser process is launched or kept alive. The context is a React client component that a person operates."
+    },
+    {
+     "technique": "references-over-selectors",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/page.tsx:4 This is a Next.js page that renders for a human. Nothing here resolves agent element references against a page."
+    },
+    {
+     "technique": "agent-actionable-errors",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/fixture-tone/route.ts:7 The only route here serves a fixture WAV file. No browser-command failure can reach an agent from it."
+    },
+    {
+     "technique": "effect-classed-commands",
+     "verdict": "not-applicable",
+     "evidence": "app/(studio)/library/_library/Library.tsx:21 The only commands are human keymap bindings. There is no registry of browser commands for an agent."
+    }
+   ],
+   "absenceTerms": [
+    "playwright",
+    "puppeteer",
+    "chromium",
+    "daemon",
+    "headless"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-12T22:45:52.888645+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-browser-control"
+   ],
+   "techniques": [
+    "agent-actionable-errors",
+    "effect-classed-commands",
+    "persistent-browser-daemon",
+    "references-over-selectors"
+   ],
+   "deviations": 0,
+   "context": "library-browser-screen",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
