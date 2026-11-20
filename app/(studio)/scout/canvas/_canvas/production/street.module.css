@@ -1,6 +1,6 @@
 /* THE PRODUCTION STREET - the surface docked under the map at street zoom over a production's river (spark
    character-cores S1): its bar (title, cast, state tally, the variant switch), the node tile every variant draws, the
-   drift badge, the cores tray and the swap's preview. Over the @gt/ui tokens; tints by color-mix, no colour typed here.
+   drift badge and the swap's preview. Over the @gt/ui tokens; tints by color-mix, no colour typed here.
    States: made (hair), stale (amber hatch, never rose), pending (cyan dashed), failed (rose). Drift is advisory: violet,
    never the verdict's emerald or rose. */
 
@@ -57,20 +57,6 @@
 .why { display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: var(--z-tooltip); width: max-content; max-width: 280px; padding: 6px 8px; border-radius: var(--r-xs); border: 1px solid var(--violet-line); background: var(--ink-2); font: 12px/1.4 var(--sans); color: var(--text); white-space: normal; pointer-events: none; }
 .why b { display: block; font: 600 11.5px var(--mono); color: var(--violet); margin-bottom: 2px; }
 .tile:hover .why, .tile:focus-visible .why { display: block; }
-
-/* ── the cores tray ──────────────────────────────────────────────────── */
-.tray { position: absolute; top: 0; right: 0; bottom: 0; width: min(420px, 100%); z-index: 2; display: flex; flex-direction: column; background: var(--ink-1); border-left: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); }
-.trayLeft { left: 0; right: auto; border-left: 0; border-right: 1px solid var(--hair-3); }
-.trayHead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--hair); }
-.trayHead h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
-.cores { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; padding: 12px 14px; align-content: start; }
-.core { display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--ink-2); text-align: left; color: var(--text); }
-.core:hover { border-color: var(--hair-3); background: var(--ink-3); }
-.core img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-xs); display: block; background: var(--letterbox); }
-.core b { font-weight: 600; font-size: 13px; color: var(--ink-bright); line-height: 1.25; }
-.core small { font: 11.5px/1.35 var(--mono); color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.core[aria-current="true"] { border-color: var(--cyan-line); }
-.core[aria-current="true"] b::after { content: " · cast"; color: var(--cyan); font: 12px var(--mono); }
 
 /* ── the swap's preview ──────────────────────────────────────────────── */
 .swap { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; width: min(980px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: var(--ink-1); border: 1px solid var(--hair-3); border-radius: var(--r-sm); box-shadow: var(--shadow-sheet); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }

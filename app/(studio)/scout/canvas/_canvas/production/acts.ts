@@ -49,7 +49,7 @@ export function setTray(st: CanvasStore, open: boolean): void {
   st.changed("ui");
 }
 
-/** Esc inside the street: the preview, then the tray, then the street itself. Answers whether it closed anything. */
+/** Esc inside the street: the preview, then the core picker, then the street itself. Answers whether it closed anything. */
 export function streetBack(st: CanvasStore): boolean {
   const s = st.ui.street;
   if (st.ui.surface?.kind !== "street") return false;

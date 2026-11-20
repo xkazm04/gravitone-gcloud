@@ -4,7 +4,7 @@
 // the way the desk docks: the map's bottom inset is its height, so the camera keeps the river framed above it. Its bar
 // names the production, its cast and its states, and switches the drawing (A river of stations, B timeline street,
 // C film strip; V cycles). Under the drawing, the focused node's own words: its label, place, inputs, prompt and the
-// eye's reason, verbatim. The cores tray (C) and the swap's preview float inside it.
+// eye's reason, verbatim. The swap's preview floats inside it; the core picker (C) opens over the whole page.
 
 import { useEffect, useRef } from "react";
 
@@ -22,7 +22,8 @@ import { clock, countLine, counts, driftName, STATION_NAME, VARIANT_NAME, VARIAN
 import type { StreetProps } from "./parts.tsx";
 import { Review } from "./Review.tsx";
 import { RiverStreet } from "./RiverStreet.tsx";
-import { CoresTray, SwapPanel } from "./Swap.tsx";
+import { CorePicker } from "./CorePicker.tsx";
+import { SwapPanel } from "./Swap.tsx";
 import { TimelineStreet } from "./TimelineStreet.tsx";
 import s from "./street.module.css";
 
@@ -96,6 +97,7 @@ export function Street() {
   useArrival(st);
   const p = streetOf(st);
   const ref = useRef<HTMLElement>(null);
+  const castRef = useRef<HTMLButtonElement>(null);
   const open = p?.id ?? null;
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export function Street() {
     <section ref={ref} data-role="street" data-variant={u.variant} aria-label={`${p.title}, street`} className={s.street}>
       <div className={s.bar}>
         <h2>{p.title}</h2>
-        <button type="button" className={s.cast} onClick={() => setTray(st, true)} aria-label={`Cast ${p.cast.name}; cores`}>
+        <button ref={castRef} type="button" className={s.cast} data-role="street-cast" onClick={() => setTray(st, true)} aria-label={`Cast ${p.cast.name}; cores`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={p.cast.portrait} alt="" />
           {p.cast.name}
@@ -158,7 +160,7 @@ export function Street() {
         <div className={s.review}>
           <Review st={st} p={p} />
         </div>
-        {u.tray && <CoresTray cores={st.prod.cores} cast={p.cast.id} left={u.variant === "c"} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
+        {u.tray && <CorePicker cores={st.prod.cores} cast={p.cast.id} castRef={castRef} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
         {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
       </div>
       {focus !== null && <Detail n={focus} p={p} />}

@@ -1,44 +1,17 @@
 "use client";
 
-// THE SWAP - the cores tray (every core a production can cast: portrait, name, where it came from; a click or a drag
-// onto the cast card asks the preview) and the preview itself: the take-start frames redrawn with the new core beside
-// the frames as cast now, the eye's reading on each, and the redo the swap would queue, priced in the work's own
-// units. Accept changes the cast and makes stale what the port names; Keep current changes nothing. A frame the
-// experiment has not drawn yet is pending, never the old frame passed off as the new one.
+// THE SWAP'S PREVIEW - asked by a core picked in CorePicker.tsx or dragged onto the cast card: the take-start frames
+// redrawn with the new core beside the frames as cast now, the eye's reading on each, and the redo the swap would
+// queue, priced in the work's own units. Accept changes the cast and makes stale what the port names; Keep current
+// changes nothing. A frame the experiment has not drawn yet is pending, never the old frame passed off as the new one.
 
 import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
 
-import { cx, Gl, Kbd } from "../ui/kit.tsx";
+import { cx, Kbd } from "../ui/kit.tsx";
 import k from "../ui/kit.module.css";
 import { caption, clock, hours, receipt, redoMinutes } from "./model.ts";
-import { dragCore } from "./parts.tsx";
 import { Tile } from "./Tile.tsx";
 import s from "./street.module.css";
-
-/** `left` keeps the cast card (pinned at the right in the film strip) uncovered while a core is dragged onto it. */
-export function CoresTray({ cores, cast, left = false, onPick, onClose }: { readonly cores: readonly CoreRef[]; readonly cast: string; readonly left?: boolean; readonly onPick: (core: string) => void; readonly onClose: () => void }) {
-  return (
-    <aside className={cx(s.tray, left && s.trayLeft)} aria-label={`Cores, ${cores.length}`} data-role="cores-tray">
-      <div className={s.trayHead}>
-        <h3>Cores · {cores.length}</h3>
-        <span className={s.grow} />
-        <button type="button" className={s.iconbtn} onClick={onClose} aria-label="Close cores">
-          <Gl name="x" />
-        </button>
-      </div>
-      <div className={s.cores}>
-        {cores.map((c) => (
-          <button key={c.id} type="button" className={s.core} aria-current={c.id === cast ? true : undefined} draggable onDragStart={(e) => dragCore(e, c)} onClick={() => onPick(c.id)} aria-label={`${c.name}${c.id === cast ? ", cast now" : ""}; ${c.origin}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={c.portrait} alt="" loading="lazy" decoding="async" />
-            <b>{c.name}</b>
-            <small>{c.origin}</small>
-          </button>
-        ))}
-      </div>
-    </aside>
-  );
-}
 
 type PanelProps = {
   readonly p: Production;
