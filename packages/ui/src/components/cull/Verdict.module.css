@@ -69,6 +69,9 @@
 .noteField{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2)}
 .noteField input{flex:1 1 0;min-width:0}
 .noteCount{font:500 var(--fs-micro)/1 var(--mono);color:var(--muted)}
+/* a reject's note (RejectNote): under the reasons, as wide as the pick */
+.rejectNote{display:flex;min-width:var(--w-pair-thumb)}
+.rejectNote input{flex:1 1 0;min-width:0}
 
 @media (prefers-reduced-motion: reduce){.nudge{animation:none;box-shadow:0 0 0 var(--ring-halo) var(--rose)}}
 .stage{height:56vh;min-height:0;border-radius:var(--r-control);overflow:hidden;background:var(--ink-2)}

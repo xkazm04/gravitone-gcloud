@@ -212,6 +212,7 @@ describe("keyTable is drawn from the same rows", () => {
       { keys: ["⇧1", "⇧2"], does: "item" },
       { keys: ["Z"], does: "zoom" },
       { keys: ["T"], does: "tab" },
+      { keys: ["V"], does: "verdict mode" },
       { keys: ["⌫"], does: "undo" },
       { keys: ["⏎"], does: "commit" },
     ]);

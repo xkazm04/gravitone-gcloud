@@ -33,9 +33,12 @@ export type IdeaListProps = {
   readonly noting?: { readonly cell: number; readonly field: ReactNode };
   /** The tab it lists (its grid's name): `ideas`, or `storyboards` for a words-only board. */
   readonly label?: string;
+  /** A source that keeps a note: a rejected row writes its note in place (./RejectNote.tsx). */
+  readonly onNote?: (cell: number, text: string) => void;
+  readonly noteMax?: number;
 };
 
-export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting, label = "ideas" }: IdeaListProps) {
+export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, reasons, asked, onFocus, onVerdict, noting, label = "ideas", onNote, noteMax = 0 }: IdeaListProps) {
   const required = reasons.required === true;
   return (
     <div className={s.ideas} role="grid" aria-label={label}>
@@ -50,6 +53,7 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
               const id = cells[i]?.id ?? "";
               const w = wordsOf(id);
               const v = verdicts[id];
+              const inField = onNote !== undefined && noteMax > 0 && v?.verdict === "reject";
               return (
                 <article
                   key={id}
@@ -64,9 +68,9 @@ export function IdeaList({ categories, cells, verdicts, wordsOf, cur, nudged, re
                     <p className={s.ideaClaim}>{w.label}</p>
                     {w.prompt !== undefined && <WordsBody text={w.prompt} className={s.ideaQuote} />}
                     {w.meta !== undefined && <span className={s.ideaMeta}>{w.meta}</span>}
-                    {noting?.cell === i ? noting.field : v?.note !== undefined && <NoteText text={v.note} />}
+                    {noting?.cell === i ? noting.field : v?.note !== undefined && !inField && <NoteText text={v.note} />}
                   </div>
-                  <VerdictPick label={w.label} verdict={v} reasons={{ ...reasons, list: reasonsOf(reasons, run.group) }} onChange={(nv) => onVerdict(i, nv)} size="sm" keyed ask={asked === i} />
+                  <VerdictPick label={w.label} verdict={v} reasons={{ ...reasons, list: reasonsOf(reasons, run.group) }} onChange={(nv) => onVerdict(i, nv)} size="sm" keyed ask={asked === i} {...(inField ? { note: { max: noteMax, onSave: (t: string) => onNote(i, t) } } : {})} />
                 </article>
               );
             }),

@@ -65,9 +65,11 @@ export type RunDeskInput = {
   readonly wordy?: (run: Run) => boolean;
   /** Every tab with its runs in walking order: the walk carries on into the next tab, a key switches tabs. */
   readonly lanes?: readonly Lane[];
+  /** V: the verdict pass over every run of the packet (MatrixCull's sweep). */
+  readonly sweep?: () => void;
 };
 
-export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, refuse: showRefusal, keys, columns, arrange, wordy, lanes = [] }: RunDeskInput) {
+export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce, refuse: showRefusal, keys, columns, arrange, wordy, lanes = [], sweep }: RunDeskInput) {
   const { view, present } = packet;
   const required = view.reasons.required === true;
   /** The source commits in parts: undecided runs go on to the remainder packet instead of blocking the commit. */
@@ -215,10 +217,15 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   };
   const saveNote = () => {
     if (noting === null) return;
-    const id = cells[noting]?.id ?? "";
-    const act = noteAct(verdicts[id], draft, noteMax);
-    const members = runs[runAt(runs, noting)]?.members ?? [noting];
+    const cell = noting;
     finishNote();
+    writeNote(cell, draft);
+  };
+  /** A note written on `cell` (a run's note cell): E's field saving, or a reject's own field (./RejectNote.tsx). */
+  const writeNote = (cell: number, text: string) => {
+    const id = cells[cell]?.id ?? "";
+    const act = noteAct(verdicts[id], text, noteMax);
+    const members = runs[runAt(runs, cell)]?.members ?? [cell];
     if (act.kind === "refuse") return refuse(act.why);
     const label = wordsOf(id).label;
     decide([id], act.verdict, label);
@@ -227,7 +234,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
       for (const m of members) {
         const other = cells[m]?.id ?? "";
         const held = verdicts[other];
-        if (m === noting || held?.note === undefined) continue;
+        if (m === cell || held?.note === undefined) continue;
         const { note: _was, ...bare } = held;
         decide([other], bare, label);
       }
@@ -298,6 +305,7 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
         if (to !== null) toRun(to);
       },
       note: startNote,
+      sweep: () => sweep?.(),
       "save-note": saveNote,
       "cancel-note": finishNote,
       undo: () => {
@@ -333,5 +341,5 @@ export function useRunDesk({ packet, verdicts, decide, undo, onCommit, announce,
   const note = noting === null ? undefined : { cell: noting, draft, setDraft, save: saveNote, max: noteMax };
   const cancelNote = finishNote;
   const gate = commitGate(cells, verdicts, required, partial);
-  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, reasonless: notDoneOf(cells, verdicts, required).reasonless.length, later: gate.kind === "go" ? gate.later : 0, reasonsFor, ask };
+  return { cells, runs, run, runIx, cur, setCur, open, setOpen, nudged, refusals, commit, wordsOf, openRun, decideCells, decideItem, note, cancelNote, writeNote, noteMax, reasonless: notDoneOf(cells, verdicts, required).reasonless.length, later: gate.kind === "go" ? gate.later : 0, reasonsFor, ask };
 }

@@ -73,7 +73,7 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
   const words = CULL.present.items["the-exit/signal-ledger"] ?? { label: "signal ledger" };
   return (
     <Section id="board">
-      <Spec names={["LevelSheet", "BoardDesk", "PacketRail", "MatrixCull"]} source="index.html :389-572 · floor.css board desk" wide>
+      <Spec names={["LevelSheet", "BoardDesk", "PacketRail", "MatrixCull", "KindsBar"]} source="index.html :389-572 · floor.css board desk" wide>
         <div className={b.stage}>
           <LevelSheet trail={[{ label: "Floor", onPress: noop }, { label: "Board", onPress: noop }, { label: "Image", onPress: noop }]} here="Forge sweep-01" mode="board.cull" back="Floor" onClose={noop} specimen>
             <BoardDesk rail={<PacketRail packets={RAIL} current="pkt:forge:sweep-01" hrefOf={(id) => `/board/${encodeURIComponent(id)}`} onOpen={noop} />}>
@@ -96,6 +96,11 @@ export function BoardSection({ data }: { readonly data: BoardKitData }) {
       <Spec names={["VerdictPick", "Tip"]} source="a reason's meaning, on hover and focus (2026-10-23) · keys 2-4 on the first three (2026-10-24)" wide>
         <div className={b.pick}>
           <VerdictPick label="replica 2" verdict={{ verdict: "reject", reasons: ["craft"] }} reasons={SCOUT} onChange={noop} seededTip="use case" keyed />
+        </div>
+      </Spec>
+      <Spec names={["VerdictPick", "RejectNote"]} source="a reject's note beside its reasons, always at hand (2026-11-20)" wide>
+        <div className={b.pick}>
+          <VerdictPick label="the whole run" verdict={{ verdict: "reject", reasons: ["story"], note: "the reveal lands in beat 2, not 5" }} reasons={{ ...SCOUT, list: ["story", "generic", "use case"] }} onChange={noop} size="sm" keyed note={{ max: SCOUT.noteMax, onSave: noop }} />
         </div>
       </Spec>
       <Spec names={["IdeaList"]} source="words-only runs, decided in place (2026-10-22)" wide>

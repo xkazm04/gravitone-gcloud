@@ -68,6 +68,9 @@ const board: Binding[] = [
   { mode: "board.cull", keys: ["Z"], verb: "zoom", does: "zoom" },
   // T carries the cursor to the next tab's first run (storyboards, reels, images ... wrapping round).
   { mode: "board.cull", keys: ["T"], verb: "next-tab", does: "tab", when: "tabs" },
+  // V: one verdict pass over EVERY run of the packet, opened one after another across the tabs (operator,
+  // 2026-11-20: "one button to enter verdict mode for all items in the run").
+  { mode: "board.cull", keys: ["V"], verb: "sweep", does: "verdict mode" },
   // A note on the decision under the cursor (spark scout-decision-graph), for a source that keeps one:
   // E opens the row's one-line field, ⏎ in it saves the note with the verdict, Esc leaves it unsaved.
   { mode: "board.cull", keys: ["E"], verb: "note", does: "note", when: "notes" },

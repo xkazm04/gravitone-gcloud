@@ -18,6 +18,7 @@ import { cx } from "../cx.ts";
 import { Tip } from "../hint/Tip.tsx";
 import { capsFor } from "../keycaps/caps.ts";
 import keycap from "../keycaps/Keycaps.module.css";
+import { RejectNote } from "./RejectNote.tsx";
 import s from "./Verdict.module.css";
 
 export type VerdictPickProps = {
@@ -34,20 +35,22 @@ export type VerdictPickProps = {
   readonly keyed?: boolean;
   /** A reject with no reason waits on a chip: the chips are ringed. */
   readonly ask?: boolean;
+  /** A source that keeps a note: a reject draws its note field under the reasons (./RejectNote.tsx). */
+  readonly note?: { readonly max: number; readonly onSave: (text: string) => void };
 };
 
 /** The slice of a packet view's vocabulary a verdict by click needs (PacketView.reasons is one); `required`
  *  marks a source whose reject is not done until it names a reason. */
 export type VerdictReasons = Pick<ReasonVocabulary, "list" | "max" | "meaning" | "required" | "by">;
 
-export function VerdictPick({ label, verdict, reasons, onChange, size = "md", seededTip, keyed = false, ask = false }: VerdictPickProps) {
+export function VerdictPick({ label, verdict, reasons, onChange, size = "md", seededTip, keyed = false, ask = false, note }: VerdictPickProps) {
   const v = verdict?.verdict;
   const picked = verdict?.reasons ?? [];
   const caps = keyed ? capsFor("board.cull", "reason") : [];
   const toggle = (r: string) => {
     const has = picked.includes(r);
     if (!has && picked.length >= reasons.max) return;
-    onChange({ verdict: "reject", reasons: has ? picked.filter((x) => x !== r) : [...picked, r] });
+    onChange({ verdict: "reject", reasons: has ? picked.filter((x) => x !== r) : [...picked, r], ...(verdict?.note === undefined ? {} : { note: verdict.note }) });
   };
   return (
     <div className={cx(s.pick, size === "sm" && s.sm)}>
@@ -86,6 +89,7 @@ export function VerdictPick({ label, verdict, reasons, onChange, size = "md", se
           })}
         </div>
       )}
+      {v === "reject" && note !== undefined && note.max > 0 && <RejectNote label={label} text={verdict?.note} max={note.max} onSave={note.onSave} />}
     </div>
   );
 }

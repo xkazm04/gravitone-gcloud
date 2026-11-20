@@ -16,10 +16,11 @@ import { useRef, type ReactNode } from "react";
 
 import type { BoardVerdict } from "../../board/boardGate.ts";
 import { useLayer } from "../../layers/useLayer.ts";
+import { Button } from "../button/Button.tsx";
 import { Chip } from "../chip/Chip.tsx";
 import { Plate } from "../desk/Plate.tsx";
 import { Keycap } from "../keycaps/Keycaps.tsx";
-import { VerdictPick, type VerdictReasons } from "./VerdictPick.tsx";
+import { VerdictPick, type VerdictPickProps, type VerdictReasons } from "./VerdictPick.tsx";
 import s from "./Runs.module.css";
 
 export type RunModalProps = {
@@ -44,6 +45,10 @@ export type RunModalProps = {
   /** 5 rejected the run without a reason: its chips are asked for. */
   readonly ask?: boolean;
   readonly onRunVerdict: (v: BoardVerdict | null) => void;
+  /** The whole run's reject note (./RejectNote.tsx), where the source keeps one. */
+  readonly rejectNote?: VerdictPickProps["note"];
+  /** The verdict pass (MatrixCull's sweep): the previous and the next run of the whole packet. */
+  readonly onStep?: (dir: -1 | 1) => void;
   /** The note on the variant under the cursor: its words, or its field while it is being written. */
   readonly note?: ReactNode;
   readonly onClose: () => void;
@@ -53,7 +58,7 @@ export type RunModalProps = {
   readonly children: ReactNode;
 };
 
-export function RunModal({ category, label, position, use, aim, prompt, checks, channel, logline, beats, reference, runVerdict, reasons, ask = false, onRunVerdict, note, onClose, live = true, foot, children }: RunModalProps) {
+export function RunModal({ category, label, position, use, aim, prompt, checks, channel, logline, beats, reference, runVerdict, reasons, ask = false, onRunVerdict, rejectNote, onStep, note, onClose, live = true, foot, children }: RunModalProps) {
   const panel = useRef<HTMLDivElement | null>(null);
   useLayer(live, { kind: "zoom", panelRef: panel, onClose });
   // A run with no reference leaves the head's right half empty; the outline takes it, so the frames keep their height.
@@ -97,7 +102,13 @@ export function RunModal({ category, label, position, use, aim, prompt, checks, 
             )}
           </dl>
           <div className={s.headActs}>
-            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} onChange={onRunVerdict} size="sm" keyed ask={ask} />
+            <VerdictPick label="the whole run" verdict={runVerdict} reasons={reasons} onChange={onRunVerdict} size="sm" keyed ask={ask} {...(rejectNote === undefined ? {} : { note: rejectNote })} />
+            {onStep !== undefined && (
+              <span className={s.steps}>
+                <Button label="previous run" glyph="up" size="sm" shortcut={{ mode: "board.cull", verb: "row-up" }} onPress={() => onStep(-1)} />
+                <Button label="next run" glyph="down" size="sm" shortcut={{ mode: "board.cull", verb: "row-down" }} onPress={() => onStep(1)} />
+              </span>
+            )}
             <button type="button" className={s.close} onClick={onClose} aria-label="back to the runs">
               <Keycap mode="board.cull" verb="zoom" />
             </button>

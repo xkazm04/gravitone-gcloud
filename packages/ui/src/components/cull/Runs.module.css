@@ -11,7 +11,11 @@
 .mosaic{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-s),1fr));gap:var(--sp-3)}
 .mosaicWide{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-lib-tile-m),1fr));gap:var(--sp-4)}
 .mosaicWave{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w-tile-audio),1fr));gap:var(--sp-4)}
-.tabs{padding:var(--sp-loose) var(--sp-6) 0}
+.tabs{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--sp-4);padding:var(--sp-loose) var(--sp-6) 0}
+/* every output kind of the packet, decided over open (a StackBar each), beside the verdict pass's button */
+.kinds{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-3)}
+.kind{display:inline-flex;flex-direction:column;align-items:stretch;gap:var(--sp-1)}
+.steps{display:inline-flex;gap:var(--sp-2)}
 
 /* the run card: picture edge to edge, label and pips laid over its foot */
 .card{position:relative;display:block;width:100%;aspect-ratio:1/1;padding:0;border-radius:var(--r-tile);overflow:hidden;background:var(--ink-3);border:var(--stroke-mark) solid transparent;text-align:left;transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}

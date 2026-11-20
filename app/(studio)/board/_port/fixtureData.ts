@@ -15,6 +15,8 @@ import { LOAD_BAND, LOAD_STRIP_MS, type LoadResource, type LoadSummary } from "@
 import type { PacketMode, PacketSource } from "@gt/domain/source";
 import type { Presentation } from "@gt/ui/board/port";
 
+import { channelNight } from "./fixtureNight.ts";
+
 export type SeedItem = { readonly id: string; readonly row?: string; readonly url: string; readonly mime: string };
 export type SeedVerdict = { readonly candidate: string; readonly verdict: "keep" | "reject"; readonly reasons: readonly string[] };
 
@@ -328,6 +330,7 @@ export function seeds(): readonly Seed[] {
         load: NIGHT_21,
       },
     },
+    channelNight(),
     {
       id: "pkt:scout:2026-10-20",
       lane: "image",
