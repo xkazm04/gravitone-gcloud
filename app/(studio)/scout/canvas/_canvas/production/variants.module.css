@@ -94,3 +94,8 @@
   .film { width: 200px; }
   .cutBar { margin: 0 12px 14px; }
 }
+/* the look across the street and the cut's bar are presses (S1.5 WP7) */
+button.span { cursor: pointer; text-align: left; }
+button.span:hover { border-color: var(--text); }
+.lookSpan { left: 0; right: 0; bottom: auto; top: 2px; height: 14px; font-size: 11px; }
+.spanOn { outline: 2px solid var(--ink-bright); outline-offset: 1px; }

@@ -38,9 +38,10 @@ export function setVariant(st: CanvasStore, v: Variant): void {
 
 export const cycleVariant = (st: CanvasStore): void => setVariant(st, nextVariant(st.ui.street.variant));
 
-/** A node's own words under the drawing; the same node again closes them. */
-export function focusNode(st: CanvasStore, id: string): void {
-  st.ui.street.focus = st.ui.street.focus === id ? null : id;
+/** The node whose overlay is open over the street (S1.5 WP7), or none. */
+export function openNode(st: CanvasStore, id: string | null): void {
+  if (st.ui.street.focus === id) return;
+  st.ui.street.focus = id;
   st.changed("ui");
 }
 

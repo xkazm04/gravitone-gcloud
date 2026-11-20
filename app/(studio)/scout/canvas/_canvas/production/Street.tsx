@@ -3,24 +3,24 @@
 // THE PRODUCTION STREET (spark character-cores S1) - docked under the map at street zoom over a production's river,
 // the way the desk docks: the map's bottom inset is its height, so the camera keeps the river framed above it. Its bar
 // names the production, its cast and its states, and switches the drawing (A river of stations, B timeline street,
-// C film strip; V cycles). Under the drawing, the focused node's own words: its label, place, inputs, prompt and the
-// eye's reason, verbatim. The swap's preview floats inside it; the core picker (C) opens over the whole page.
+// C film strip; V cycles). The street is read-and-click: a node clicked opens its overlay over the whole page
+// (NodeOverlay.tsx, S1.5 WP7 - a take's verdict is given there), and nothing grows under the drawing. The swap's
+// preview floats inside it; the core picker (C) opens over the whole page.
 
 import { useEffect, useRef } from "react";
 
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
-import type { Production, ProductionNode } from "@gt/domain/productionGraph";
 
 import { clampCam } from "../render/camera.ts";
 import type { CanvasStore } from "../store.ts";
 import { levelOf } from "../tables.ts";
 import { Gl, Kbd, Seg } from "../ui/kit.tsx";
 import { useCanvas } from "../useCanvas.ts";
-import { acceptSwap, focusNode, frameStreet, keepCast, openStreet, previewCore, setTray, setVariant, streetOf } from "./acts.ts";
+import { acceptSwap, frameStreet, keepCast, openNode, openStreet, previewCore, setTray, setVariant, streetOf } from "./acts.ts";
 import { FilmStrip } from "./FilmStrip.tsx";
-import { clock, countLine, counts, driftName, STATION_NAME, VARIANT_NAME, VARIANTS, type Variant } from "./model.ts";
+import { countLine, counts, VARIANT_NAME, VARIANTS, type Variant } from "./model.ts";
+import { NodeOverlay } from "./NodeOverlay.tsx";
 import type { StreetProps } from "./parts.tsx";
-import { Review } from "./Review.tsx";
 import { RiverStreet } from "./RiverStreet.tsx";
 import { CorePicker } from "./CorePicker.tsx";
 import { SwapPanel } from "./Swap.tsx";
@@ -61,37 +61,6 @@ function useArrival(st: CanvasStore): void {
   }, [st, here, open]);
 }
 
-function Detail({ n, p }: { readonly n: ProductionNode; readonly p: Production }) {
-  const from = n.madeFrom.map((id) => p.nodes.find((m) => m.id === id)?.label ?? id);
-  return (
-    <div className={s.detail} data-role="street-detail">
-      <span className={s.k}>{STATION_NAME[n.station]}</span>
-      <span>
-        <b>{n.label}</b>
-        {n.at !== undefined && ` · ${clock(n.at)}${n.dur === undefined ? "" : `–${clock(n.at + n.dur)}`}`} · {n.state}
-      </span>
-      {from.length > 0 && (
-        <>
-          <span className={s.k}>from</span>
-          <span>{from.join(" · ")}</span>
-        </>
-      )}
-      {n.prompt !== undefined && (
-        <>
-          <span className={s.k}>prompt</span>
-          <q>{n.prompt}</q>
-        </>
-      )}
-      {n.drift !== undefined && (
-        <>
-          <span className={s.k}>{n.drift.by}</span>
-          <span>{driftName(n.drift)}</span>
-        </>
-      )}
-    </div>
-  );
-}
-
 export function Street() {
   const st = useCanvas();
   useArrival(st);
@@ -114,6 +83,8 @@ export function Street() {
       ro.disconnect();
       setInset(st, 0);
       clampCam(st);
+      // A street closed with an overlay open does not reopen on it.
+      st.ui.street.focus = null;
     };
   }, [st, open]);
 
@@ -121,11 +92,17 @@ export function Street() {
   const u = st.ui.street;
   const focus = u.focus === null ? null : (p.nodes.find((n) => n.id === u.focus) ?? null);
   const rippling = u.ripple === null ? null : new Set(u.ripple.ids);
+  // The cast's door is the core picker, from anywhere: an overlay's "from" too.
+  const go = (id: string): void => {
+    if (p.nodes.find((n) => n.id === id)?.station !== "cast") return openNode(st, id);
+    openNode(st, null);
+    setTray(st, true);
+  };
   const props: StreetProps = {
     p,
     focus: u.focus,
     rippling,
-    onPick: (n) => focusNode(st, n.id),
+    onPick: (n) => go(n.id),
     onSwap: () => setTray(st, true),
     onDropCore: (core) => void previewCore(st, core),
   };
@@ -157,13 +134,10 @@ export function Street() {
       )}
       <div className={s.body}>
         <Draw {...props} />
-        <div className={s.review}>
-          <Review st={st} p={p} />
-        </div>
         {u.tray && <CorePicker cores={st.prod.cores} cast={p.cast.id} castRef={castRef} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
         {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
       </div>
-      {focus !== null && <Detail n={focus} p={p} />}
+      {focus !== null && !u.tray && <NodeOverlay st={st} p={p} n={focus} onGo={(id) => go(id)} onClose={() => openNode(st, null)} />}
     </section>
   );
 }

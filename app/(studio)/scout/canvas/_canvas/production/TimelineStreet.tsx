@@ -4,6 +4,8 @@
 // lines run along the bottom, and the stations stand above it as lanes - the look's plates where each is first used,
 // the cast across the whole track, every keyframe at the moment it plays, the takes and the cut as spans. A stale
 // keyframe sits where it plays, so a swap's damage reads as a stretch of the song. The ripple runs along the clock.
+// Every node on it is a press that opens the node's overlay (S1.5 WP7): the keyframes, the plates and the look, the
+// takes, the cut; the cast opens the core picker. The street's rows never grow.
 //
 // The ruler is drawn here, minimally: @gt/ui's track-locked Timeline (spark character-cores WP3) did not exist when this
 // street was drawn. When it lands, this ruler is the one to replace with it (a recorded duplication).
@@ -11,7 +13,7 @@
 import type { CSSProperties } from "react";
 
 import { cx } from "../ui/kit.tsx";
-import { caption, clock, countLine, counts, lanesOf, NODE_STATE, posterOf, rulerOf, STATION_NAME, type Lane } from "./model.ts";
+import { caption, clock, countLine, counts, lanesOf, NODE_STATE, nodeName, posterOf, rulerOf, STATION_NAME, type Lane } from "./model.ts";
 import type { StreetProps } from "./parts.tsx";
 import { Tile } from "./Tile.tsx";
 import v from "./variants.module.css";
@@ -46,19 +48,19 @@ function LaneRow({ lane, props }: { readonly lane: Lane; readonly props: StreetP
           }
           if (n.id === "look") {
             return (
-              <span key={n.id} className={cx(v.span, n.state !== "made" && v[n.state])} style={{ left: 0, right: 0, bottom: "auto", height: 14, top: 2, fontSize: 11 }} aria-hidden="true">
+              <button key={n.id} type="button" className={cx(v.span, v.lookSpan, n.state !== "made" && v[n.state], focus === n.id && v.spanOn)} onClick={() => onPick(n)} aria-label={nodeName(n)} data-node={n.id}>
                 {n.label}
-              </span>
+              </button>
             );
           }
           if (lane.station === "clip" || lane.station === "cut") {
             const style: CSSProperties = { left: pct(x0), width: pct(Math.max(0.004, x1 - x0)) };
             if (lane.station === "cut") {
               return (
-                <span key={n.id} className={cx(v.span, n.state !== "made" && v[n.state])} style={style}>
+                <button key={n.id} type="button" className={cx(v.span, n.state !== "made" && v[n.state], focus === n.id && v.spanOn)} style={style} onClick={() => onPick(n)} aria-label={nodeName(n)} data-node={n.id}>
                   {n.label} · {clock(n.dur ?? 0)}
                   {n.state !== "made" && <b className={v.amberText}>{NODE_STATE[n.state].word}</b>}
-                </span>
+                </button>
               );
             }
             return (

@@ -136,6 +136,10 @@ export const SCREENS = {
   "scout-canvas-cores": { url: "/scout/canvas?street=unlatched&v=a&tray=1" },
   "scout-canvas-swap": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An01-elif" },
   "scout-canvas-swap-pending": { url: "/scout/canvas?street=unlatched&v=c&swap=chr%3An03-kaori" },
+  // the timeline street's overlays (S1.5 WP7): a keyframe, a take with its verdict, a plate - each a press on the street
+  "scout-canvas-kf-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "B07, keyframes" },
+  "scout-canvas-clip-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "K02, clips" },
+  "scout-canvas-plate-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "SETUP-C, look" },
   "scout-canvas-stale": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An02-mirela", open: "Accept" },
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.

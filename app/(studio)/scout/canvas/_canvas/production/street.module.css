@@ -15,12 +15,6 @@
 .switch { display: inline-flex; align-items: center; gap: 6px; }
 .err { padding: 6px 18px 0; flex: none; }
 .body { position: relative; flex: 1; min-height: 0; overflow: auto; }
-/* The cut's review under the street: the timeline's 16:9 frame is held to a readable width inside the dock. */
-.review { border-top: 1px solid var(--hair); padding: 10px 18px 14px; max-width: 960px; }
-.detail { flex: none; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 8px 18px; border-top: 1px solid var(--hair); background: var(--ink-1); font-size: 13px; max-height: 30%; overflow: auto; }
-.detail b { color: var(--ink-bright); font-weight: 600; }
-.detail .k { font: 12px var(--mono); color: var(--muted); }
-.detail q { font-family: var(--serif); color: var(--reading); }
 
 /* the cast chip in the bar */
 .cast { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 3px; border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-3); color: var(--text); font: 12.5px var(--mono); }
@@ -75,7 +69,6 @@
   .street { height: 86%; }
   .bar { padding: 8px 12px; }
   .bar h2 { font-size: 17px; }
-  .detail { grid-template-columns: 1fr; padding: 8px 12px; }
   .pairs { grid-template-columns: 1fr; }
   .acts { margin-left: 0; width: 100%; }
 }

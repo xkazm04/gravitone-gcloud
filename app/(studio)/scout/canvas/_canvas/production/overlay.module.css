@@ -1,0 +1,52 @@
+/* THE STREET'S OVERLAYS (spark character-cores S1.5 WP7) - a node opened from the timeline street, over the whole page
+   under the studio header, on the core picker's ground: the picture as large as the viewport allows on the left, the
+   node's words on a column to its right (stacked under it at phone width). Over the @gt/ui tokens; no colour typed. */
+
+.overlay { position: fixed; inset: var(--hdr-h) 0 0 0; z-index: var(--z-popover); display: flex; flex-direction: column; background: var(--sheet-ground); border-top: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); outline: none; }
+.head { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 22px; border-bottom: 1px solid var(--hair); }
+.head h2 { margin: 0; font: 400 20px var(--serif); color: var(--reading-bright); white-space: nowrap; }
+.station { font: 12.5px var(--mono); color: var(--muted); margin-right: 4px; }
+.facts { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font: 12.5px var(--mono); color: var(--muted); }
+.grow { flex: 1; }
+.steps { display: inline-flex; gap: 6px; }
+.btn { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink-3); color: var(--text); }
+.btn:hover { border-color: var(--hair-3); }
+.btn:focus-visible { outline: 2px solid var(--focus-line); outline-offset: 1px; }
+
+.body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); }
+.body.wordsOnly { grid-template-columns: minmax(0, 860px); justify-content: center; }
+.media { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 16px 22px; background: var(--letterbox); }
+.still { display: block; width: 100%; height: 100%; max-height: calc(100vh - var(--hdr-h) - 100px); object-fit: contain; }
+.none { font: 13px var(--mono); color: var(--muted); }
+.aside { min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 22px 24px; border-left: 1px solid var(--hair); }
+.facts2 { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: start; font-size: 13px; }
+.k { font: 12px/24px var(--mono); color: var(--muted); }
+.drift { display: flex; flex-direction: column; gap: 6px; }
+.axes { display: flex; flex-wrap: wrap; gap: 4px; }
+.reason { color: var(--reading); line-height: 1.45; }
+.nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.prompt { font: 14px/1.5 var(--serif); color: var(--reading); quotes: none; white-space: pre-wrap; }
+
+/* a take on the master clock */
+.player { width: 100%; max-width: calc((100vh - var(--hdr-h) - 150px) * 16 / 9); display: flex; flex-direction: column; gap: 8px; }
+.frame { position: relative; aspect-ratio: 16 / 9; background: var(--letterbox); border-radius: var(--r-xs); overflow: hidden; }
+.take { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; visibility: hidden; }
+.take.on { visibility: visible; }
+.transport { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.clock { font: 12.5px var(--mono); color: var(--muted); white-space: nowrap; }
+.clock b { color: var(--ink-bright); font-weight: 600; }
+.section { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--violet); }
+.progress { flex: 1 1 120px; height: 4px; border-radius: 2px; background: var(--hair-2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--cyan); }
+
+@media (max-width: 700px) {
+  .head { padding: 8px 12px; }
+  .head h2 { font-size: 17px; }
+  .body { grid-template-columns: minmax(0, 1fr); align-content: start; overflow: auto; }
+  .media { padding: 10px 12px; }
+  .still { height: auto; max-height: 60vh; }
+  .player { max-width: 100%; }
+  .aside { overflow: visible; border-left: 0; border-top: 1px solid var(--hair); padding: 12px 12px 20px; }
+  .facts2 { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .k { line-height: 1.6; }
+}

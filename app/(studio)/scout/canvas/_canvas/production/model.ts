@@ -210,3 +210,35 @@ export function unfed(p: Production): ProductionNode[] {
   const fed = new Set(p.nodes.filter((n) => n.station === "clip").flatMap((n) => n.madeFrom));
   return p.nodes.filter((n) => n.station === "keyframe" && !fed.has(n.id)).sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
 }
+
+/* ── the overlays (S1.5 WP7) ─────────────────────────────────────────── */
+
+const isPlate = (n: ProductionNode): boolean => n.station === "look" && n.id !== "look";
+
+/** The run an overlay steps through from `n` (← →): its own kind's nodes in the order they play - the keyframes, the
+ *  takes, the plates (the look apart from its plates). A node with no place on the clock comes last, in file order. */
+export function runOf(p: Production, n: ProductionNode): ProductionNode[] {
+  const same = p.nodes.filter((m) => m.station === n.station && isPlate(m) === isPlate(n));
+  return same
+    .map((m, i) => ({ m, i, at: playsAt(p, m) ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => a.at - b.at || a.i - b.i)
+    .map((x) => x.m);
+}
+
+/** The node `step` places along `n`'s run (wrapping), or `n` itself when the run is only it. */
+export function stepRun(p: Production, n: ProductionNode, step: 1 | -1): ProductionNode {
+  const run = runOf(p, n);
+  const at = run.findIndex((m) => m.id === n.id);
+  if (at < 0 || run.length < 2) return n;
+  return run[(at + step + run.length) % run.length] ?? n;
+}
+
+/** The nodes made from `n`, in the order they play: a plate's keyframes, a keyframe's takes. The look is under every
+ *  node, so its users are its plates only. */
+export function usedBy(p: Production, n: ProductionNode): ProductionNode[] {
+  return p.nodes
+    .filter((m) => m.madeFrom.includes(n.id) && (n.id !== "look" || isPlate(m)))
+    .map((m, i) => ({ m, i, at: playsAt(p, m) ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => a.at - b.at || a.i - b.i)
+    .map((x) => x.m);
+}
