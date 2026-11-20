@@ -4,7 +4,7 @@ import "server-only";
 // as a prop (a reference per action crosses, never the module) - /scout's own shape (../../_port/wire.ts).
 import type { CanvasPort } from "./contract.ts";
 
-import { canvasAudioAction, canvasCommitAction, canvasGoalAction, canvasNoteAction, canvasPauseAction, canvasSplitAction, canvasUndoAction, canvasUnnoteAction, canvasVerdictsAction } from "./actions.ts";
+import { canvasCoresAction, canvasProductionVerdictAction, canvasProductionsAction, canvasSwapAcceptAction, canvasSwapPreviewAction, canvasAudioAction, canvasCommitAction, canvasGoalAction, canvasNoteAction, canvasPauseAction, canvasSplitAction, canvasUndoAction, canvasUnnoteAction, canvasVerdictsAction } from "./actions.ts";
 
 export const CANVAS_PORT: CanvasPort = {
   verdicts: canvasVerdictsAction,
@@ -16,4 +16,9 @@ export const CANVAS_PORT: CanvasPort = {
   pause: canvasPauseAction,
   split: canvasSplitAction,
   audio: canvasAudioAction,
+  productions: canvasProductionsAction,
+  cores: canvasCoresAction,
+  swapPreview: canvasSwapPreviewAction,
+  swapAccept: canvasSwapAcceptAction,
+  productionVerdict: canvasProductionVerdictAction,
 };

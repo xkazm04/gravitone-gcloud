@@ -52,6 +52,13 @@ const unnoteAction = action("canvas unnote", z.object({ id: z.string().min(1).ma
 const goalAction = action("canvas goal", goalIn, (i) => serverCanvas().goal(i));
 const pauseAction = action("canvas pause", z.object({ ref: z.string().min(1).max(200), paused: z.boolean() }), (i, who) => serverCanvas().pause(i.ref, i.paused, by(who)));
 const splitAction = action("canvas split", z.object({ audience: z.record(z.string().min(1).max(40), z.number()) }), (i, who) => serverCanvas().split(shares(i.audience), by(who)));
+const swapIn = z.object({ production: z.string().min(1).max(120), core: z.string().min(1).max(120) });
+const productionVerdictIn = z.object({ production: z.string().min(1).max(120), node: nodeId, verdict: z.enum(["keep", "reject"]).nullable(), reasons: z.array(reason).max(11), note: z.string().max(2000).optional() });
+const productionsAction = action("canvas productions", z.object({}), () => serverCanvas().productions());
+const coresAction = action("canvas cores", z.object({}), () => serverCanvas().cores());
+const swapPreviewAction = action("canvas swap preview", swapIn, (i) => serverCanvas().swapPreview(i));
+const swapAcceptAction = action("canvas swap accept", swapIn, (i) => serverCanvas().swapAccept(i));
+const productionVerdictAction = action("canvas production verdict", productionVerdictIn, (i) => serverCanvas().productionVerdict({ production: i.production, node: i.node, verdict: i.verdict, reasons: i.reasons, ...(i.note === undefined ? {} : { note: i.note }) }));
 const audioAction = action("canvas audio", audioIn, (i) => serverCanvas().audio(i));
 
 export async function canvasVerdictsAction(input: In<"verdicts">): Out<"verdicts"> {
@@ -80,4 +87,19 @@ export async function canvasSplitAction(input: In<"split">): Out<"split"> {
 }
 export async function canvasAudioAction(input: In<"audio">): Out<"audio"> {
   return audioAction(input);
+}
+export async function canvasProductionsAction(): Out<"productions"> {
+  return productionsAction({});
+}
+export async function canvasCoresAction(): Out<"cores"> {
+  return coresAction({});
+}
+export async function canvasSwapPreviewAction(input: In<"swapPreview">): Out<"swapPreview"> {
+  return swapPreviewAction(input);
+}
+export async function canvasSwapAcceptAction(input: In<"swapAccept">): Out<"swapAccept"> {
+  return swapAcceptAction(input);
+}
+export async function canvasProductionVerdictAction(input: In<"productionVerdict">): Out<"productionVerdict"> {
+  return productionVerdictAction(input);
 }

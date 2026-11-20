@@ -8,7 +8,7 @@
 // next night's taste brief.
 //
 // The field is unnamed to the keymap on purpose: a digit typed into it is text, not a verdict key (keymap/target.ts).
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Field } from "../field/Field.tsx";
 import s from "./Verdict.module.css";
@@ -26,7 +26,11 @@ export function RejectNote({ label, text, max, onSave }: RejectNoteProps) {
   const held = text ?? "";
   const [draft, setDraft] = useState(held);
   // A note written elsewhere (E's field, an undo) is what the field shows next.
-  useEffect(() => setDraft(held), [held]);
+  const [was, setWas] = useState(held);
+  if (was !== held) {
+    setWas(held);
+    setDraft(held);
+  }
   const save = () => {
     if (draft.trim() !== held) onSave(draft);
   };

@@ -7,7 +7,9 @@ import "server-only";
 
 import type { Result } from "@gt/domain/errors";
 
-import type { AudioInput, AudioState, CanvasView, CommitDone, RoundGoal, ScoutNote, VerdictInput } from "./contract.ts";
+import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
+
+import type { ProductionVerdictInput, SwapInput, AudioInput, AudioState, CanvasView, CommitDone, RoundGoal, ScoutNote, VerdictInput } from "./contract.ts";
 import type { AnchorKind, Stance } from "../_canvas/tables.ts";
 import { fixtureCanvas } from "./fixture.ts";
 import { realCanvas } from "./real.ts";
@@ -28,6 +30,11 @@ export type ServerCanvas = {
   readonly pause: (group: string, paused: boolean, by: string) => Promise<Result<{ readonly paused: readonly string[] }>>;
   readonly split: (audience: Readonly<Record<string, number>>, by: string) => Promise<Result<{ readonly split: Readonly<Record<string, number>> }>>;
   readonly audio: (input: AudioInput) => Promise<Result<AudioState>>;
+  readonly productions: () => Promise<Result<{ readonly productions: readonly Production[] }>>;
+  readonly cores: () => Promise<Result<{ readonly cores: readonly CoreRef[] }>>;
+  readonly swapPreview: (input: SwapInput) => Promise<Result<SwapPreview>>;
+  readonly swapAccept: (input: SwapInput) => Promise<Result<{ readonly production: Production }>>;
+  readonly productionVerdict: (input: ProductionVerdictInput) => Promise<Result<{ readonly production: Production }>>;
 };
 
 export function serverCanvas(): ServerCanvas {

@@ -36,7 +36,6 @@ export function MapCanvas() {
     if (cv === null) return;
     return mountMap(st, cv, { setTip, setDragging, setPointy, placeTip, mouse });
     // placeTip reads refs only; the engine mounts once per store.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st]);
 
   return (

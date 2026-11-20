@@ -13,6 +13,7 @@ import { fixtureScout } from "../../_port/fixture.ts";
 import type { AudioState, CanvasChannel, CanvasView, RoundGoal, ScoutNote } from "./contract.ts";
 import type { ServerCanvas } from "./port.ts";
 import { step, type ReelInfo } from "./reelRoad.ts";
+import { fixtureProductions } from "./fixtureProduction.ts";
 
 const DAY0 = "2026-11-19";
 
@@ -135,4 +136,5 @@ export const fixtureCanvas: ServerCanvas = {
     road = r.value;
     return ok(road);
   },
+  ...fixtureProductions,
 };

@@ -33,7 +33,6 @@ import { RunMosaic } from "./RunMosaic.tsx";
 import { RunView } from "./RunView.tsx";
 import { SeriesBadge } from "./SeriesBadge.tsx";
 import { useRunDesk } from "./useRunDesk.ts";
-import s from "./Runs.module.css";
 
 export type { MatrixCullProps } from "./props.ts";
 
@@ -84,10 +83,8 @@ export function MatrixCull({ packet, verdicts, decide, undo, onCommit, busy = fa
   const tab = tabOfRun(d.run);
   const here = tabs.find((t) => t.tab === tab) ?? tabs[0];
   const { setOpen } = d;
-  // The run closed (Z, Esc, the cap): the pass is over.
-  useEffect(() => {
-    if (sweep && !d.open) setSweep(false);
-  }, [sweep, d.open]);
+  // The run closed (Z, Esc, the cap): the pass is over (adjusted during render, React's pattern for derived resets).
+  if (sweep && !d.open) setSweep(false);
   // A words-only run never opens outside the pass: it is decided where it lies.
   const open = d.open && d.run !== undefined && !wordy(d.run);
   /** The shown tab's categories, only the runs that are (or are not) words. */

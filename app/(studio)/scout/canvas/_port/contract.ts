@@ -4,6 +4,7 @@
 // screen needs to redraw. docs/scout-canvas-port.md is the plan; the tables the screen draws by are ../_canvas/tables.ts.
 
 import type { ScoutGraph } from "@gt/domain/scoutGraph";
+import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
 import type { Channel, Episode } from "@gt/domain/channel";
 
 import type { ActionResult } from "../../../../_server/actionCore.ts";
@@ -117,7 +118,20 @@ export type CanvasPort = {
    * `publish` act on a slot. Answers with the reels' audio and the slots as they now stand.
    */
   readonly audio: (input: AudioInput) => Promise<ActionResult<AudioState>>;
+  /** The production basin (spark character-cores): the productions the canvas drives, as graphs. */
+  readonly productions: () => Promise<ActionResult<{ readonly productions: readonly Production[] }>>;
+  /** The character cores a production can cast. */
+  readonly cores: () => Promise<ActionResult<{ readonly cores: readonly CoreRef[] }>>;
+  /** A swap's preview: 2-3 frames redrawn with the new core, what it would make stale, and the redo it would queue. */
+  readonly swapPreview: (input: SwapInput) => Promise<ActionResult<SwapPreview>>;
+  /** Accept the swap: the cast changes, everything downstream goes stale, the redo queues. */
+  readonly swapAccept: (input: SwapInput) => Promise<ActionResult<{ readonly production: Production }>>;
+  /** A verdict on one node of a production's review round (timeline or gallery), with reasons and a note. */
+  readonly productionVerdict: (input: ProductionVerdictInput) => Promise<ActionResult<{ readonly production: Production }>>;
 };
+
+export type SwapInput = { readonly production: string; readonly core: string };
+export type ProductionVerdictInput = { readonly production: string; readonly node: string; readonly verdict: "keep" | "reject" | null; readonly reasons: readonly string[]; readonly note?: string };
 
 export type AudioInput =
   | { readonly verb: "brief"; readonly nodes: readonly string[] }

@@ -135,6 +135,14 @@ const config = [
   },
 
   {
+    // The scout canvas shows judged candidates and reels as their own bytes, served by the file door from the
+    // night's folders: next/image would re-encode the very pixels the operator is judging (the same reason as
+    // packages/ui/src/components/desk/Plate.tsx). Scoped to the four files that draw them.
+    files: ["app/(studio)/scout/canvas/_canvas/ui/{audio/ReelRow,gallery/Stage,gallery/Wall,sheet/shared}.tsx"],
+    rules: { "@next/next/no-img-element": "off" },
+  },
+
+  {
     // The Node-side probe harness and the pipeline drivers are scripts, not app
     // code: they run under tsx/node, use `process`, and are never bundled for the
     // browser. React/Next rules do not apply to them.

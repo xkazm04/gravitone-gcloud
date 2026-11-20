@@ -28,6 +28,8 @@ import type { CanvasView, ScoutNote, VerdictInput } from "./contract.ts";
 import { mediaOf, type OpenCell } from "./media.ts";
 import type { ServerCanvas } from "./port.ts";
 
+/** The production basin is S1 (fixture side only); the kernel production manifest is S2 (spark character-cores). */
+export const PRODUCTION_REFUSAL = "not built yet: a production's graph lives on the fixture side until the kernel production manifest lands (spark character-cores S2)";
 export const AUDIO_REFUSAL = "not built yet: a data reel cannot become a production (no reel source kind), so audio cannot be generated or laid for it here (docs/scout-canvas-port.md Phase 4b)";
 export const DISPATCH_REFUSAL = "a night runs as a /scout seat session; dispatching it from here is not built yet (docs/scout-canvas-port.md Phase 5)";
 
@@ -178,4 +180,9 @@ export const realCanvas: ServerCanvas = {
     return r.ok ? ok({ split: r.value.split?.audience ?? audience }) : r;
   },
   audio: async () => err("refused", AUDIO_REFUSAL),
+  productions: async () => ok({ productions: [] }),
+  cores: async () => ok({ cores: [] }),
+  swapPreview: async () => err("refused", PRODUCTION_REFUSAL),
+  swapAccept: async () => err("refused", PRODUCTION_REFUSAL),
+  productionVerdict: async () => err("refused", PRODUCTION_REFUSAL),
 };
