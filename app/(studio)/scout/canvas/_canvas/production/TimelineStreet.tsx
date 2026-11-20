@@ -1,6 +1,7 @@
 "use client";
 
-// B · THE TIMELINE STREET - the track's master clock IS the street: its sections, beats (every fourth a bar) and lyric
+// THE TIMELINE STREET - the production's street (the river of stations and the film strip it was drawn beside were
+// retired 2026-11-20, WP9). The track's master clock IS the street: its sections, beats (every fourth a bar) and lyric
 // lines run along the bottom, and the stations stand above it as lanes - the look's plates where each is first used,
 // the cast across the whole track, every keyframe at the moment it plays, the takes and the cut as spans. A stale
 // keyframe sits where it plays, so a swap's damage reads as a stretch of the song. The ripple runs along the clock.
@@ -12,11 +13,22 @@
 
 import type { CSSProperties } from "react";
 
+import type { Production, ProductionNode } from "@gt/domain/productionGraph";
+
 import { cx } from "../ui/kit.tsx";
 import { caption, clock, countLine, counts, lanesOf, NODE_STATE, nodeName, posterOf, rulerOf, STATION_NAME, type Lane } from "./model.ts";
-import type { StreetProps } from "./parts.tsx";
 import { Tile } from "./Tile.tsx";
-import v from "./variants.module.css";
+import v from "./timeline.module.css";
+
+export type StreetProps = {
+  readonly p: Production;
+  readonly focus: string | null;
+  /** The ids the last accept made stale, while the ripple plays. */
+  readonly rippling: ReadonlySet<string> | null;
+  readonly onPick: (n: ProductionNode) => void;
+  /** The cast's door: the core picker. */
+  readonly onSwap: () => void;
+};
 
 /** The ripple runs the clock's length in this long. */
 const RUN_MS = 1500;
@@ -129,7 +141,7 @@ function Ruler({ props }: { readonly props: StreetProps }) {
 export function TimelineStreet(props: StreetProps) {
   const lanes = lanesOf(props.p).reverse();
   return (
-    <div className={v.tl} data-variant="b">
+    <div className={v.tl}>
       {lanes.map((lane) => (
         <LaneRow key={lane.station} lane={lane} props={props} />
       ))}

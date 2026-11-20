@@ -8,7 +8,7 @@
 // store's own sentence.
 //
 // The production basin (spark character-cores S1) is read here too: the productions and the cores a production can
-// cast. A link can arrive on a production's street (`?street=<id>&v=a|b|c`, `&tray=1` for the cores, `&swap=<core>`
+// cast. A link can arrive on a production's street (`?street=<id>`, `&tray=1` for the cores, `&swap=<core>`
 // for a swap's preview, asked here so the street opens on it).
 import type { Metadata } from "next";
 import { connection } from "next/server";
@@ -22,7 +22,6 @@ import { isScoutPacket, ScoutHead } from "../_scout/ScoutHead.tsx";
 import { serverCanvas } from "./_port/port.ts";
 import { CANVAS_PORT } from "./_port/wire.ts";
 import { Canvas, type CanvasProds } from "./_canvas/ui/Canvas.tsx";
-import { isVariant } from "./_canvas/production/model.ts";
 
 export const metadata: Metadata = { title: "Gravitone · Scout canvas" };
 
@@ -41,13 +40,13 @@ async function prodsOf(raw: Search): Promise<CanvasProds> {
   const cores = cs.ok ? cs.value.cores : [];
   const street = one(raw, "street");
   if (street === undefined || !productions.some((p) => p.id === street)) return { productions, cores };
-  const v = one(raw, "v");
+  // An old link's `v=a|b|c` (the retired street variants) is read as nothing: it opens the timeline street.
   const swap = one(raw, "swap");
   const pv = swap === undefined ? null : await side.swapPreview({ production: street, core: swap });
   return {
     productions,
     cores,
-    open: { production: street, variant: isVariant(v) ? v : "a", tray: one(raw, "tray") === "1", preview: pv !== null && pv.ok ? pv.value : null, error: pv !== null && !pv.ok ? pv.error.message : null },
+    open: { production: street, tray: one(raw, "tray") === "1", preview: pv !== null && pv.ok ? pv.value : null, error: pv !== null && !pv.ok ? pv.error.message : null },
   };
 }
 

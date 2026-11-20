@@ -1,20 +1,12 @@
-// THE PRODUCTION STREET'S SHAPES - pure (spark character-cores S1). A production (@gt/domain/productionGraph) read three
-// ways for the street's three variants: by station (A, the river of stations), on the track's master clock (B, the
-// timeline street: lanes over a ruler of sections, beats and lyric lines), and as scenes (C, the film strip: each take
-// with the keyframe it starts from). Also the words the street says about a node, a drift and a swap's redo, so the
-// three variants never say them three ways. Unit-tested in tests/next-server/scout-canvas-production.test.ts.
+// THE PRODUCTION STREET'S SHAPES - pure (spark character-cores S1). A production (@gt/domain/productionGraph) read on
+// the track's master clock (the timeline street: lanes over a ruler of sections, beats and lyric lines; the river of
+// stations and the film strip readings retired with their drawings, 2026-11-20), the runs its overlays step through,
+// and the words the street says about a node, a drift and a swap's redo, so the street and its overlays never say them
+// two ways. Unit-tested in tests/next-server/scout-canvas-production.test.ts.
 
 import { DRIFT_AXES, PRODUCTION_STATIONS, type Drift, type DriftAxis, type Production, type ProductionNode, type ProductionNodeState, type ProductionStation, type Redo, type TrackMap } from "@gt/domain/productionGraph";
 
 import type { Tone } from "../tables.ts";
-
-/* ── the variants ─────────────────────────────────────────────────────── */
-
-export const VARIANTS = ["a", "b", "c"] as const;
-export type Variant = (typeof VARIANTS)[number];
-export const VARIANT_NAME: Readonly<Record<Variant, string>> = { a: "River", b: "Timeline", c: "Film strip" };
-export const isVariant = (v: unknown): v is Variant => typeof v === "string" && (VARIANTS as readonly string[]).includes(v);
-export const nextVariant = (v: Variant): Variant => VARIANTS[(VARIANTS.indexOf(v) + 1) % VARIANTS.length] ?? "a";
 
 /* ── words ────────────────────────────────────────────────────────────── */
 
@@ -106,22 +98,7 @@ export function becameStale(before: Production, after: Production): string[] {
   return after.nodes.filter((n) => n.state === "stale" && was.get(n.id) !== "stale").map((n) => n.id);
 }
 
-/* ── A: the river of stations ────────────────────────────────────────── */
-
-export type StationCol = { readonly station: ProductionStation; readonly nodes: readonly ProductionNode[]; readonly counts: Counts };
-
-/** The stations in their order, each with its nodes (keyframes and clips by their place on the clock). */
-export function stationsOf(p: Production): StationCol[] {
-  return PRODUCTION_STATIONS.map((station) => {
-    const nodes = p.nodes.filter((n) => n.station === station).slice().sort((a, b) => (a.at ?? -1) - (b.at ?? -1));
-    return { station, nodes, counts: counts(nodes) };
-  });
-}
-
-/** How far downstream a node sits (its station's index): the ripple's delay, one step per station. */
-export const stationIx = (n: ProductionNode): number => PRODUCTION_STATIONS.indexOf(n.station);
-
-/* ── B: the timeline street ──────────────────────────────────────────── */
+/* ── the timeline street ─────────────────────────────────────────────── */
 
 /** Where a node plays: its own `at`, else the earliest place a node made from it plays (a plate plays where it is used). */
 export function playsAt(p: Production, n: ProductionNode): number | null {
@@ -181,35 +158,6 @@ export function lanesOf(p: Production): Lane[] {
 
 /** The section a moment falls in. */
 export const sectionAt = (t: TrackMap, s: number): string => t.sections.find((x) => s >= x.start && s < x.end)?.name ?? "";
-
-/* ── C: the film strip ───────────────────────────────────────────────── */
-
-export type FilmScene = {
-  readonly clip: ProductionNode;
-  /** The keyframe the take starts from (its first keyframe input). */
-  readonly first: ProductionNode | null;
-  readonly keyframes: readonly ProductionNode[];
-  readonly section: string;
-};
-
-/** Each take in clock order with the keyframes it was made from. */
-export function scenesOf(p: Production): FilmScene[] {
-  const by = new Map(p.nodes.map((n) => [n.id, n]));
-  return p.nodes
-    .filter((n) => n.station === "clip")
-    .slice()
-    .sort((a, b) => (a.at ?? 0) - (b.at ?? 0))
-    .map((clip) => {
-      const keyframes = clip.madeFrom.map((id) => by.get(id)).filter((n): n is ProductionNode => n !== undefined && n.station === "keyframe");
-      return { clip, first: keyframes[0] ?? null, keyframes, section: sectionAt(p.track, clip.at ?? 0) };
-    });
-}
-
-/** The keyframes no take is made from (the storyboard before the first take, and any orphan). */
-export function unfed(p: Production): ProductionNode[] {
-  const fed = new Set(p.nodes.filter((n) => n.station === "clip").flatMap((n) => n.madeFrom));
-  return p.nodes.filter((n) => n.station === "keyframe" && !fed.has(n.id)).sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
-}
 
 /* ── the overlays (S1.5 WP7) ─────────────────────────────────────────── */
 

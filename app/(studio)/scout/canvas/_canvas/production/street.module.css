@@ -1,5 +1,5 @@
 /* THE PRODUCTION STREET - the surface docked under the map at street zoom over a production's river (spark
-   character-cores S1): its bar (title, cast, state tally, the variant switch), the node tile every variant draws, the
+   character-cores S1): its bar (title, cast, state tally), the node tile the timeline draws, the
    drift badge and the swap's preview. Over the @gt/ui tokens; tints by color-mix, no colour typed here.
    States: made (hair), stale (amber hatch, never rose), pending (cyan dashed), failed (rose). Drift is advisory: violet,
    never the verdict's emerald or rose. */
@@ -12,7 +12,6 @@
 .facts { font: 12.5px var(--mono); color: var(--muted); }
 .iconbtn { flex: none; width: 32px; height: 32px; border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink-3); display: grid; place-items: center; color: var(--muted); }
 .iconbtn:hover { color: var(--text); border-color: var(--hair-3); }
-.switch { display: inline-flex; align-items: center; gap: 6px; }
 .err { padding: 6px 18px 0; flex: none; }
 .body { position: relative; flex: 1; min-height: 0; overflow: auto; }
 

@@ -7,7 +7,6 @@
 import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
 
 import type { CanvasPort, CanvasSlot, CanvasView, RoundGoal, ScoutNote } from "../_port/contract.ts";
-import type { Variant } from "./production/model.ts";
 import { buildScene } from "./scene/index.ts";
 import type { Anchor } from "./scene/scopes.ts";
 import type { Hit, Item, Port, Scene, Scope } from "./scene/types.ts";
@@ -26,9 +25,8 @@ export type Surface =
 /** The productions the side holds and the cores a production can cast (the production basin, spark character-cores). */
 export type Prods = { productions: Production[]; readonly cores: readonly CoreRef[] };
 
-/** The production street's state: the variant drawn, the cores tray, a swap's preview, the stale ripple, a refusal. */
+/** The production street's state: the cores tray, a swap's preview, the stale ripple, a refusal. */
 export type StreetUi = {
-  variant: Variant;
   tray: boolean;
   /** The core being previewed while its preview is asked for. */
   asking: string | null;
@@ -125,7 +123,7 @@ export class CanvasStore {
       sheetOpen: false, surface: null, menu: null, keysOpen: false, notes: [...view.notes], goal: view.goal, mode: "dry", until: "06:00",
       split: { ...split }, splitSet: view.split !== undefined, assume: { views: 1500, rpm: 0.05 }, projOpen: false,
       log: [], slots: view.slots.filter((s) => s.state !== "cancelled"), flyers: [], cadence: 2, autoSlot: true, toast: null, error: null, busy: 0,
-      street: { variant: "a", tray: false, asking: null, preview: null, ripple: null, error: null, focus: null },
+      street: { tray: false, asking: null, preview: null, ripple: null, error: null, focus: null },
     };
   }
 

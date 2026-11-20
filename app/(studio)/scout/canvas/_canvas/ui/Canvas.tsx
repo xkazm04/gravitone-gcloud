@@ -13,8 +13,7 @@ import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGrap
 
 import type { CanvasPort, CanvasView } from "../../_port/contract.ts";
 import { pause } from "../acts.ts";
-import { cycleVariant, setTray, streetBack } from "../production/acts.ts";
-import type { Variant } from "../production/model.ts";
+import { setTray, streetBack } from "../production/acts.ts";
 import { Street } from "../production/Street.tsx";
 import { flyBox, flyTo, goLevel, home, levelUp, pan } from "../render/camera.ts";
 import { blockPoints, blocksUnder, scopeName, scopeOf } from "../scene/scopes.ts";
@@ -92,10 +91,6 @@ function useMapKeys(st: CanvasStore): void {
     },
     brief: () => st.openSurface({ kind: "brief" }),
     find: () => openFind(st),
-    "street-variant": () => {
-      if (st.ui.surface?.kind === "street") cycleVariant(st);
-      else st.say("street zoom on a production");
-    },
     cores: () => {
       if (st.ui.surface?.kind === "street") setTray(st, !st.ui.street.tray);
       else st.say("street zoom on a production");
@@ -115,7 +110,7 @@ function useMapKeys(st: CanvasStore): void {
 export type CanvasProds = {
   readonly productions: readonly Production[];
   readonly cores: readonly CoreRef[];
-  readonly open?: { readonly production: string; readonly variant: Variant; readonly tray: boolean; readonly preview: SwapPreview | null; readonly error: string | null };
+  readonly open?: { readonly production: string; readonly tray: boolean; readonly preview: SwapPreview | null; readonly error: string | null };
 };
 
 function newStore(view: CanvasView, port: CanvasPort, prod: CanvasProds | undefined): CanvasStore {
@@ -123,7 +118,7 @@ function newStore(view: CanvasView, port: CanvasPort, prod: CanvasProds | undefi
   const o = prod?.open;
   if (o !== undefined && st.prod.productions.some((p) => p.id === o.production)) {
     st.ui.surface = { kind: "street", production: o.production };
-    Object.assign(st.ui.street, { variant: o.variant, tray: o.tray, preview: o.preview, error: o.error });
+    Object.assign(st.ui.street, { tray: o.tray, preview: o.preview, error: o.error });
   }
   return st;
 }

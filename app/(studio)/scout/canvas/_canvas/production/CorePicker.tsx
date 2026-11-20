@@ -9,16 +9,15 @@
 // beneath is paused while it is open, and Esc reaches it as the stack's close. Focus is moved to the cast control
 // first, so the stack captures THAT as the opener and returns focus there on every close (C opens the picker with
 // focus anywhere on the map). Tab is held inside; the grid is one tab stop and the arrows walk it by its drawn rows.
-// A pick is `previewCore`, unchanged: the picker closes and the swap's preview opens. A card dragged out fades the
-// picker and lets the pointer through, so a drop on the cast card under it (variants A and C) still asks the preview.
+// A pick is `previewCore`, unchanged: the picker closes and the swap's preview opens. The picker is the only way to
+// swap: the drop-a-core-on-the-cast-card target lived in the river and film-strip streets, retired 2026-11-20 (WP9).
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 
 import { useLayer } from "@gt/ui/layers/useLayer";
 import type { CoreRef } from "@gt/domain/productionGraph";
 
-import { Chip, cx, Gl, Kbd } from "../ui/kit.tsx";
-import { dragCore } from "./parts.tsx";
+import { Chip, Gl, Kbd } from "../ui/kit.tsx";
 import s from "./picker.module.css";
 
 type Props = {
@@ -60,7 +59,7 @@ function stepTo(cards: readonly HTMLElement[], at: number, key: string): number 
   return best ?? at;
 }
 
-function Card({ c, cast, tab, onPick, onFocus, onDrag }: { readonly c: CoreRef; readonly cast: boolean; readonly tab: boolean; readonly onPick: () => void; readonly onFocus: () => void; readonly onDrag: (on: boolean) => void }) {
+function Card({ c, cast, tab, onPick, onFocus }: { readonly c: CoreRef; readonly cast: boolean; readonly tab: boolean; readonly onPick: () => void; readonly onFocus: () => void }) {
   const idn = useId();
   return (
     <button
@@ -73,12 +72,6 @@ function Card({ c, cast, tab, onPick, onFocus, onDrag }: { readonly c: CoreRef; 
       aria-disabled={cast ? true : undefined}
       aria-label={`${c.name}${cast ? ", cast now" : ""}; ${c.origin}`}
       aria-describedby={idn}
-      draggable={!cast}
-      onDragStart={(e) => {
-        dragCore(e, c);
-        onDrag(true);
-      }}
-      onDragEnd={() => onDrag(false)}
       onFocus={onFocus}
       onClick={() => {
         if (!cast) onPick();
@@ -108,7 +101,6 @@ export function CorePicker({ cores, cast, castRef, onPick, onClose }: Props) {
   const grid = useRef<HTMLDivElement | null>(null);
   const first = Math.max(0, cores.findIndex((c) => c.id !== cast));
   const [at, setAt] = useState(first);
-  const [dragging, setDragging] = useState(false);
 
   // Before the layer captures its opener: the cast control is where every close returns.
   useEffect(() => {
@@ -146,13 +138,8 @@ export function CorePicker({ cores, cast, castRef, onPick, onClose }: Props) {
     all[to]?.focus();
   };
 
-  // Fade on the next frame: a style change inside dragstart itself can cancel the drag in Chromium.
-  const onDrag = (on: boolean): void => {
-    requestAnimationFrame(() => setDragging(on));
-  };
-
   return (
-    <section ref={panel} className={cx(s.picker, dragging && s.dragging)} role="dialog" aria-modal="true" aria-labelledby={head} data-role="core-picker" onKeyDown={onKey}>
+    <section ref={panel} className={s.picker} role="dialog" aria-modal="true" aria-labelledby={head} data-role="core-picker" onKeyDown={onKey}>
       <div className={s.head}>
         <h2 id={head}>Cores · {cores.length}</h2>
         <span className={s.grow} />
@@ -163,7 +150,7 @@ export function CorePicker({ cores, cast, castRef, onPick, onClose }: Props) {
       </div>
       <div ref={grid} className={s.grid} role="group" aria-labelledby={head}>
         {cores.map((c, i) => (
-          <Card key={c.id} c={c} cast={c.id === cast} tab={i === at} onPick={() => onPick(c.id)} onFocus={() => setAt(i)} onDrag={onDrag} />
+          <Card key={c.id} c={c} cast={c.id === cast} tab={i === at} onPick={() => onPick(c.id)} onFocus={() => setAt(i)} />
         ))}
       </div>
     </section>

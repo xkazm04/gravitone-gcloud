@@ -2,8 +2,8 @@
 
 // THE PRODUCTION STREET (spark character-cores S1) - docked under the map at street zoom over a production's river,
 // the way the desk docks: the map's bottom inset is its height, so the camera keeps the river framed above it. Its bar
-// names the production, its cast and its states, and switches the drawing (A river of stations, B timeline street,
-// C film strip; V cycles). The street is read-and-click: a node clicked opens its overlay over the whole page
+// names the production, its cast and its states; the drawing is the timeline street (TimelineStreet.tsx - the river of
+// stations and the film strip beside it were retired 2026-11-20, WP9). The street is read-and-click: a node clicked opens its overlay over the whole page
 // (NodeOverlay.tsx, S1.5 WP7 - a take's verdict is given there), and nothing grows under the drawing. The swap's
 // preview floats inside it; the core picker (C) opens over the whole page.
 
@@ -14,20 +14,15 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 import { clampCam } from "../render/camera.ts";
 import type { CanvasStore } from "../store.ts";
 import { levelOf } from "../tables.ts";
-import { Gl, Kbd, Seg } from "../ui/kit.tsx";
+import { Gl, Kbd } from "../ui/kit.tsx";
 import { useCanvas } from "../useCanvas.ts";
-import { acceptSwap, frameStreet, keepCast, openNode, openStreet, previewCore, setTray, setVariant, streetOf } from "./acts.ts";
-import { FilmStrip } from "./FilmStrip.tsx";
-import { countLine, counts, VARIANT_NAME, VARIANTS, type Variant } from "./model.ts";
+import { acceptSwap, frameStreet, keepCast, openNode, openStreet, previewCore, setTray, streetOf } from "./acts.ts";
+import { countLine, counts } from "./model.ts";
 import { NodeOverlay } from "./NodeOverlay.tsx";
-import type { StreetProps } from "./parts.tsx";
-import { RiverStreet } from "./RiverStreet.tsx";
 import { CorePicker } from "./CorePicker.tsx";
 import { SwapPanel } from "./Swap.tsx";
-import { TimelineStreet } from "./TimelineStreet.tsx";
+import { TimelineStreet, type StreetProps } from "./TimelineStreet.tsx";
 import s from "./street.module.css";
-
-const DRAW: Readonly<Record<Variant, (p: StreetProps) => React.JSX.Element>> = { a: RiverStreet, b: TimelineStreet, c: FilmStrip };
 
 const setInset = (st: CanvasStore, h: number): boolean => {
   if (st.ui.inset.b === h) return false;
@@ -104,11 +99,9 @@ export function Street() {
     rippling,
     onPick: (n) => go(n.id),
     onSwap: () => setTray(st, true),
-    onDropCore: (core) => void previewCore(st, core),
   };
-  const Draw = DRAW[u.variant];
   return (
-    <section ref={ref} data-role="street" data-variant={u.variant} aria-label={`${p.title}, street`} className={s.street}>
+    <section ref={ref} data-role="street" aria-label={`${p.title}, street`} className={s.street}>
       <div className={s.bar}>
         <h2>{p.title}</h2>
         <button ref={castRef} type="button" className={s.cast} data-role="street-cast" onClick={() => setTray(st, true)} aria-label={`Cast ${p.cast.name}; cores`}>
@@ -119,10 +112,6 @@ export function Street() {
         </button>
         <span className={s.facts}>{countLine(counts(p.nodes))}</span>
         <span className={s.grow} />
-        <span className={s.switch}>
-          <Seg label="Street" value={u.variant} options={VARIANTS.map((key) => ({ key, name: `${key.toUpperCase()} ${VARIANT_NAME[key]}` }))} onPick={(v) => setVariant(st, v)} />
-          <Kbd verb="street-variant" />
-        </span>
         <button type="button" className={s.iconbtn} onClick={() => st.closeSurface()} aria-label="Close street">
           <Gl name="x" />
         </button>
@@ -133,7 +122,7 @@ export function Street() {
         </div>
       )}
       <div className={s.body}>
-        <Draw {...props} />
+        <TimelineStreet {...props} />
         {u.tray && <CorePicker cores={st.prod.cores} cast={p.cast.id} castRef={castRef} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
         {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
       </div>

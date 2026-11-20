@@ -1,6 +1,6 @@
 "use client";
 
-// A PRODUCTION NODE AS A TILE - the one shape every street variant draws a node with: its picture (or the take, or a
+// A PRODUCTION NODE AS A TILE - the one shape the street draws a node with: its picture (or the take, or a
 // hatch where nothing is drawn yet), its label and state, the eye's drift badge (identity · room · wardrobe, holds or
 // drifts) with the eye's reason on hover and focus, and an accessible name that says all of it. Pictures are the
 // file door's own bytes (next/image would re-encode the frames being judged: the scout canvas's reason, eslint scope).

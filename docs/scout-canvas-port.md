@@ -171,19 +171,18 @@ basin is drawn only on the fixture side; nothing here spends or regenerates.
 | Basin / town | one synthetic river per production (`prod:<id>`, province "Music clips") with its six station marks; a click on it or a station opens the street | `scene/build.ts` `River.prod`, `store.ts` `openSheet` |
 | Street | **the street**, docked under the map like the desk (the map's bottom inset), opened on arrival at street zoom over the river, on a click, or by a link | `_canvas/production/` |
 
-The street, three ways behind one switch (`V` cycles; the only new chrome):
+**The timeline street is the production's street** - the only drawing, no switch. The master clock is the street: a
+ruler of sections, beats (every fourth a bar), lyric lines and clock marks, with the stations as lanes above it (plates
+where first used, the cast across the track, keyframes where they play, takes and the cut as spans). The ripple runs
+along the clock. Every node on it is a press that opens its overlay (S1.5 WP7). **The ruler is drawn locally**: WP3's
+`@gt/ui` Timeline did not exist yet; replace this ruler with it when it lands (recorded duplication).
 
-- **A · River** - the six stations as columns on one river line, each with its nodes; a station's mark hatches while any
-  node in it is stale. The ripple steps station by station.
-- **B · Timeline** - the master clock is the street: a ruler of sections, beats (every fourth a bar), lyric lines and
-  clock marks, with the stations as lanes above it (plates where first used, the cast across the track, keyframes where
-  they play, takes and the cut as spans). The ripple runs along the clock. **The ruler is drawn locally**: WP3's
-  `@gt/ui` Timeline did not exist yet; replace this ruler with it when it lands (recorded duplication).
-- **C · Film strip** - the takes as frames of film (the start keyframe, clock, section, its keyframes, the eye's
-  reading), the storyboard no take is made from as one ghost frame before them, the look and the cast pinned above. A
-  core dragged from the tray onto the cast card asks the preview (the tray docks left in C so the card stays uncovered).
+Retired (picked 2026-11-20, WP9): **A · River** (the stations as columns on one river line) and **C · Film strip** (the
+takes as frames of film), with the switch, `V`, the store's variant and the `v=` link param. An old link's `v=a|b|c`
+is read as nothing and opens the timeline street. The drop-a-core-on-the-cast-card target lived only in A and C and
+went with them: the core picker is the way to swap.
 
-The swap, common to all three: the cast chip or card (or `C`) opens the cores tray → a core → `swapPreview` → the take
+The swap: the cast chip in the bar or the cast lane (or `C`) opens the core picker → a core → `swapPreview` → the take
 starts as cast now beside the same frames redrawn with the core (WP4's experiment frames; a frame not drawn yet is
 **pending**, never the old frame passed off as new), the eye's drift badge on each, and the redo receipt in the work's
 units (`34 keyframes × ~4 min · 6 clips × ~25 min · 1 cut`, `~4 h 46 min`) → **Accept** (`swapAccept`: the port's
@@ -197,9 +196,9 @@ dashed), **failed** (rose). Drift is advisory: three marks (identity · room · 
 never the verdict's emerald or rose; the eye's reason on hover and focus and in every tile's accessible name. A tile
 picked shows the node's own words under the drawing: inputs, the prompt verbatim, the eye's reading.
 
-Links (also the `cx-screens.mjs` ids `scout-canvas-street-{a,b,c}`, `-cores`, `-swap`, `-swap-pending`, `-stale`):
-`/scout/canvas?street=unlatched&v=a|b|c`, `&tray=1`, `&swap=<core id>` (the preview is asked on the server). The
+Links (also the `cx-screens.mjs` ids `scout-canvas-street`, `-cores`, `-swap`, `-swap-pending`, the three
+`-*-overlay` ids and `-stale`): `/scout/canvas?street=unlatched`, `&tray=1`, `&swap=<core id>` (the preview is asked on the server). The
 `-stale` id accepts a swap; the fixture holds it for the dev server's life, so it is captured last.
 
-Pure readings in `_canvas/production/model.ts` (stations, lanes and ruler, scenes, receipt, drift words), tested on the
+Pure readings in `_canvas/production/model.ts` (lanes and ruler, overlay runs, receipt, drift words), tested on the
 fixture in `tests/next-server/scout-canvas-production.test.ts`.

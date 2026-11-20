@@ -1,5 +1,5 @@
 // THE STREET'S ACTS - the production basin's moves over the store and the canvas port (spark character-cores S1):
-// open a production's street, cycle its variant, open the cores tray, ask a swap's preview, accept it (the cast
+// open a production's street, open the cores tray, ask a swap's preview, accept it (the cast
 // changes, what the port names goes stale, the ripple plays once) or keep the current cast. A refusal lands in the
 // street as the side's own sentence (ErrorLine), never reworded.
 
@@ -7,9 +7,9 @@ import type { ActionResult } from "../../../../../_server/actionCore.ts";
 import { flyTo } from "../render/camera.ts";
 import type { CanvasStore } from "../store.ts";
 import { LEVELS } from "../tables.ts";
-import { becameStale, nextVariant, type Variant } from "./model.ts";
+import { becameStale } from "./model.ts";
 
-/** Long enough for the slowest variant's ripple to run downstream and settle. */
+/** Long enough for the ripple to run along the clock and settle. */
 const RIPPLE_MS = 3200;
 
 /** The production the street is open on, as the store holds it now. */
@@ -30,13 +30,6 @@ export function frameStreet(st: CanvasStore, production: string): void {
 export function openStreet(st: CanvasStore, production: string): void {
   st.openSurface({ kind: "street", production });
 }
-
-export function setVariant(st: CanvasStore, v: Variant): void {
-  st.ui.street.variant = v;
-  st.changed("ui");
-}
-
-export const cycleVariant = (st: CanvasStore): void => setVariant(st, nextVariant(st.ui.street.variant));
 
 /** The node whose overlay is open over the street (S1.5 WP7), or none. */
 export function openNode(st: CanvasStore, id: string | null): void {

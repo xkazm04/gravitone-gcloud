@@ -127,20 +127,19 @@ export const SCREENS = {
   scout: { url: "/scout" },
   // scout-canvas   the same graph as a map (docs/scout-canvas-port.md): basins, rivers, weirs, the toolbar and docks.
   "scout-canvas": { url: "/scout/canvas" },
-  // the production basin's street (spark character-cores S1, fixture side): Unlatched's first minute drawn three ways,
-  // its cores tray, a swap's preview (elif: frames drawn by the experiment; kaori: none drawn yet, pending), and the
-  // stale state after an accept (mirela; the accept holds for the dev server's life, so this id comes last).
-  "scout-canvas-street-a": { url: "/scout/canvas?street=unlatched&v=a" },
-  "scout-canvas-street-b": { url: "/scout/canvas?street=unlatched&v=b" },
-  "scout-canvas-street-c": { url: "/scout/canvas?street=unlatched&v=c" },
-  "scout-canvas-cores": { url: "/scout/canvas?street=unlatched&v=a&tray=1" },
-  "scout-canvas-swap": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An01-elif" },
-  "scout-canvas-swap-pending": { url: "/scout/canvas?street=unlatched&v=c&swap=chr%3An03-kaori" },
+  // the production basin's street (spark character-cores S1, fixture side): Unlatched's first minute on the timeline
+  // street (the production's only street since 2026-11-20; the river and film-strip ids retired with them), its core
+  // picker, a swap's preview (elif: frames drawn by the experiment; kaori: none drawn yet, pending), and the stale state
+  // after an accept (mirela; the accept holds for the dev server's life, so this id comes last).
+  "scout-canvas-street": { url: "/scout/canvas?street=unlatched" },
+  "scout-canvas-cores": { url: "/scout/canvas?street=unlatched&tray=1" },
+  "scout-canvas-swap": { url: "/scout/canvas?street=unlatched&swap=chr%3An01-elif" },
+  "scout-canvas-swap-pending": { url: "/scout/canvas?street=unlatched&swap=chr%3An03-kaori" },
   // the timeline street's overlays (S1.5 WP7): a keyframe, a take with its verdict, a plate - each a press on the street
-  "scout-canvas-kf-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "B07, keyframes" },
-  "scout-canvas-clip-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "K02, clips" },
-  "scout-canvas-plate-overlay": { url: "/scout/canvas?street=unlatched&v=b", open: "SETUP-C, look" },
-  "scout-canvas-stale": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An02-mirela", open: "Accept" },
+  "scout-canvas-kf-overlay": { url: "/scout/canvas?street=unlatched", open: "B07, keyframes" },
+  "scout-canvas-clip-overlay": { url: "/scout/canvas?street=unlatched", open: "K02, clips" },
+  "scout-canvas-plate-overlay": { url: "/scout/canvas?street=unlatched", open: "SETUP-C, look" },
+  "scout-canvas-stale": { url: "/scout/canvas?street=unlatched&swap=chr%3An02-mirela", open: "Accept" },
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },

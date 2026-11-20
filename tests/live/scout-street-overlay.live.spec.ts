@@ -12,9 +12,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function openStreet(page: Page): Promise<void> {
-  await page.goto("/scout/canvas?street=unlatched&v=b", { waitUntil: "domcontentloaded" });
+  await page.goto("/scout/canvas?street=unlatched", { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("dev-auth-banner")).toBeVisible();
-  await expect(page.locator('[data-role="street"][data-variant="b"]')).toBeVisible();
+  await expect(page.locator('[data-role="street"]')).toBeVisible();
 }
 
 test("a keyframe opens its overlay, the arrows step it, Esc returns focus to the tile", async ({ page }) => {
@@ -37,9 +37,9 @@ test("a keyframe opens its overlay, the arrows step it, Esc returns focus to the
   await expect(page.getByRole("dialog", { name: /B08/ })).toBeVisible();
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("dialog", { name: /B07/ })).toBeVisible();
-  // The canvas keymap is paused: V (cycle the street's variant) does nothing while the dialog is open.
-  await page.keyboard.press("v");
-  await expect(page.locator('[data-role="street"][data-variant="b"]')).toBeVisible();
+  // The canvas keymap is paused: C (the cast's core picker) does nothing while the dialog is open.
+  await page.keyboard.press("c");
+  await expect(page.locator('[data-role="core-picker"]')).toHaveCount(0);
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);

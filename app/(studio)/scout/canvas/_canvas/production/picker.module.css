@@ -1,11 +1,10 @@
 /* THE CORE PICKER - a full-page dialog over everything under the studio header (spark character-cores S1.5): the grid
    of cores at twice the old tray's card (a column of at least 236 px, two columns at phone width), each card her
    portrait with her reference sheet in its corner, her name, origin and identity block. The cast now is marked cyan
-   and not pickable. While a card is dragged the picker fades and lets the pointer through to the cast card below.
+   and not pickable.
    Over the @gt/ui tokens; tints by color-mix, no colour typed here. */
 
 .picker { position: fixed; inset: var(--hdr-h) 0 0 0; z-index: var(--z-popover); display: flex; flex-direction: column; background: var(--sheet-ground); border-top: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); transition: opacity var(--dur) var(--ease); }
-.dragging { opacity: .12; pointer-events: none; }
 .head { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px 22px; border-bottom: 1px solid var(--hair); }
 .head h2 { margin: 0; font: 400 20px var(--serif); color: var(--reading-bright); }
 .grow { flex: 1; }

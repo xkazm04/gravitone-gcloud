@@ -6,10 +6,10 @@ import type { ScoutGraph } from "@gt/domain/scoutGraph";
 import type { CanvasView } from "../../app/(studio)/scout/canvas/_port/contract.ts";
 import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
 import { buildScene } from "../../app/(studio)/scout/canvas/_canvas/scene/index.ts";
-import { basinFacts, becameStale, clock, countLine, counts, driftName, hours, lanesOf, nextVariant, playsAt, receipt, redoMinutes, rulerOf, scenesOf, sectionAt, stationsOf, unfed } from "../../app/(studio)/scout/canvas/_canvas/production/model.ts";
+import { basinFacts, becameStale, clock, countLine, counts, driftName, hours, lanesOf, playsAt, receipt, redoMinutes, rulerOf, sectionAt } from "../../app/(studio)/scout/canvas/_canvas/production/model.ts";
 
 // The production street (spark character-cores S1) on the fixture WP1 imported from the Unlatched clip's first 1:46:
-// what a recast makes stale, and the three readings the street's variants draw (stations, lanes on the clock, scenes).
+// what a recast makes stale, and the timeline street's reading (lanes on the clock over the track's ruler).
 
 const P = (imported as unknown as { production: Production }).production;
 const ids = (st: string): string[] => P.nodes.filter((n) => n.station === st).map((n) => n.id);
@@ -49,15 +49,7 @@ describe("a recast's stale set on the Unlatched fixture", () => {
 });
 
 describe("the street's readings", () => {
-  it("A: six stations in order, keyframes by their place on the clock", () => {
-    const cols = stationsOf(P);
-    expect(cols.map((c) => c.station)).toEqual(["track", "look", "cast", "keyframe", "clip", "cut"]);
-    const kf = cols[3]?.nodes.map((n) => n.at ?? -1) ?? [];
-    expect(kf).toHaveLength(37);
-    expect([...kf].sort((a, b) => a - b)).toEqual(kf);
-  });
-
-  it("B: a keyframe sits where it plays, a take spans its seconds, a plate stands where it is first used", () => {
+  it("a keyframe sits where it plays, a take spans its seconds, a plate stands where it is first used", () => {
     const lanes = lanesOf(P);
     expect(lanes.map((l) => l.station)).toEqual(["look", "cast", "keyframe", "clip", "cut"]);
     const kf = lanes[2]?.items.find((i) => i.node.id === "kf:K00");
@@ -69,7 +61,7 @@ describe("the street's readings", () => {
     expect(lanes[1]?.items[0]).toMatchObject({ x0: 0, x1: 1 });
   });
 
-  it("B: the ruler's sections, a tick per beat (every fourth a bar) and a mark every ten seconds", () => {
+  it("the ruler's sections, a tick per beat (every fourth a bar) and a mark every ten seconds", () => {
     const r = rulerOf(P.track);
     expect(r.sections[0]).toEqual({ name: "Verse 1", x0: 0, x1: 40 / 107 });
     expect(r.beats).toHaveLength(P.track.beats.length);
@@ -78,28 +70,12 @@ describe("the street's readings", () => {
     expect(r.lyrics).toHaveLength(P.track.lyrics.length);
   });
 
-  it("C: six takes in clock order, each with the keyframe it starts from and its section", () => {
-    const sc = scenesOf(P);
-    expect(sc.map((x) => x.clip.id)).toEqual(["clip:K00", "clip:K01", "clip:K02", "clip:K03", "clip:K04", "clip:K05"]);
-    expect(sc.map((x) => x.first?.id)).toEqual(["kf:K00", "kf:K01", "kf:K02", "kf:K03", "kf:K04", "kf:K05"]);
-    expect(sc[0]?.section).toBe(sectionAt(P.track, 38.1));
-    expect(sc[0]?.keyframes.map((n) => n.id)).toEqual(["kf:K00", "kf:B10", "kf:C101", "kf:C102", "kf:C103"]);
-  });
-
-  it("C: the storyboard before the first take feeds no take", () => {
-    const before = unfed(P);
-    expect(before.length).toBeGreaterThan(0);
-    for (const n of before) expect(n.at ?? 0).toBeLessThan(38.1);
-    expect(before.map((n) => n.id)).not.toContain("kf:B10");
-  });
-
   it("speaks the clock, the drift and the basin's facts in one voice", () => {
     expect(clock(106.375)).toBe("1:46");
     expect(clock(0)).toBe("0:00");
     expect(driftName({ identity: "holds", room: "drifts", wardrobe: "holds", reason: "door shut", by: "fable-5.2" })).toBe("identity holds · room drifts · wardrobe holds: door shut");
     expect(basinFacts(P)[0]).toBe(`${P.title} · cast ${P.cast.name}`);
-    expect(nextVariant("a")).toBe("b");
-    expect(nextVariant("c")).toBe("a");
+    expect(sectionAt(P.track, 0)).toBe("Verse 1");
   });
 });
 

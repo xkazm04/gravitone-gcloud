@@ -1,0 +1,43 @@
+/* THE TIMELINE STREET (spark character-cores S1; the production's only street since 2026-11-20, when the river of
+   stations and the film strip were retired): lanes over the track's ruler. Over the @gt/ui tokens; the tile, drift
+   badge and state marks are ./street.module.css. */
+
+.h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.amberText { color: var(--amber); }
+
+.tl { position: relative; display: grid; grid-template-columns: 96px minmax(1200px, 1fr); align-content: start; }
+.lname { position: sticky; left: 0; z-index: 1; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--hair); background: var(--ink-1); }
+.lane { position: relative; border-bottom: 1px solid var(--hair); margin: 0 34px; }
+.lane.kf { height: 64px; }
+.lane.look { height: 56px; }
+.lane.cast { height: 44px; }
+.lane.clip { height: 74px; }
+.lane.cut { height: 36px; }
+.at { position: absolute; top: 6px; }
+.lane.kf .at { width: 54px; }
+.lane.kf .at:nth-child(even) { top: 30px; }
+.lane.look .at { width: 66px; top: 18px; }
+.span { position: absolute; top: 6px; bottom: 6px; min-width: 6px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: var(--r-xs); border: 1px solid var(--hair-3); background: var(--ink-3); font: 12px var(--mono); color: var(--text); overflow: hidden; white-space: nowrap; }
+.span img { height: calc(100% - 4px); aspect-ratio: 1; border-radius: 50%; object-fit: cover; }
+.span.stale { border-color: var(--amber); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--amber) 30%, transparent) 0 2px, var(--ink-3) 2px 7px); }
+.span.pending { border-style: dashed; border-color: var(--cyan); }
+.clipSpan { position: absolute; top: 6px; bottom: 6px; }
+.clipSpan > button { width: 100%; height: 100%; }
+.clipSpan > button > span:first-child { aspect-ratio: auto; height: 100%; }
+.ruler { position: relative; height: 92px; margin: 0 34px; }
+.sec { position: absolute; top: 0; height: 22px; padding: 0 6px; border-left: 1px solid var(--hair-3); font: 12px/22px var(--mono); color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); overflow: hidden; white-space: nowrap; }
+.sec:nth-child(even) { background: color-mix(in srgb, var(--text) 13%, transparent); }
+.beat { position: absolute; top: 26px; width: 1px; height: 8px; background: var(--muted); }
+.beat.bar { height: 14px; background: var(--text); }
+.lyric { position: absolute; top: 44px; width: 2px; height: 10px; background: var(--reading); }
+.lyricText { position: absolute; top: 56px; font: 11.5px var(--serif); color: var(--reading); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.clockMark { position: absolute; bottom: 0; font: 11.5px var(--mono); color: var(--muted); transform: translateX(-50%); }
+
+@media (max-width: 700px) {
+  .tl { grid-template-columns: 72px minmax(1200px, 1fr); }
+}
+/* the look across the street and the cut's bar are presses (S1.5 WP7) */
+button.span { cursor: pointer; text-align: left; }
+button.span:hover { border-color: var(--text); }
+.lookSpan { left: 0; right: 0; bottom: auto; top: 2px; height: 14px; font-size: 11px; }
+.spanOn { outline: 2px solid var(--ink-bright); outline-offset: 1px; }
