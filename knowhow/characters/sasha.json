@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.067Z",
+ "card": {
+  "age": 31,
+  "look": "pale skin, a long black braid, sharp grey eyes, athletic build, an orange flight jacket with a fur collar",
+  "name": "Sasha"
+ },
+ "id": "chr:sasha",
+ "identity": "Sasha, aged 31: pale skin, a long black braid, sharp grey eyes, athletic build, an orange flight jacket with a fur collar.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/sasha/portrait.jpg",
+     "hash": "cfd6df70a2b9208ebafc50aa2eb901c857cd45bf3552e348a2db3bb7b40fb2bd",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/sasha/sheet.jpg",
+     "hash": "8c30e44d5113a4aa3ad65a13d54765c658efe18685ac2fdd470be6eb138aa28d",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

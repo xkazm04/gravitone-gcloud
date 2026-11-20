@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-24T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-24 · night 2026-10-24 (2 h round)",
+ "id": "scout:lesson:5f3b5ef63421",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "A worker started before a new producer landed never claims its jobs and logs nothing about it (the 10:14 worker left\n`scout-storyboard` pending all night). After a spark adds a producer, the operator restarts the worker BETWEEN nights;\nthe night's doctor should name a queued head no binding reaches. Argues a change in lib/foundry/scout/doctor.ts.",
+ "v": 1
+}

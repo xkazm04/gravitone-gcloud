@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 1.0.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:e7c2af73431c",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Gemini line times were onset-accurate to ~95 s and drifted 15-40 s late after it in one run, not in the next; a line time may confirm a boundary, never move one alone (lib/music-clip/anchor.ts).",
+ "v": 1
+}

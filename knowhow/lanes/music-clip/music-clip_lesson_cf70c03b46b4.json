@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.1.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:cf70c03b46b4",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The bake-off was never run: the treatment stage needed a renderer at once, ours reached the GPU, and every approved frame came from it. The operator retired the bake-off: quality, not render speed, decides; perfect the proven stack scene by scene.",
+ "v": 1
+}

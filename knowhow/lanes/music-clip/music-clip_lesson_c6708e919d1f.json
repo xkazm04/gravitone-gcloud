@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:c6708e919d1f",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Hold the box out of standby for the render (`tools/keep-awake.py`): display-off Modern Standby made the same step 2.7x slower. Check the step time against Kernel-Power 506/507 before tuning a model. Proven over one day's chain, not over a night.",
+ "v": 1
+}

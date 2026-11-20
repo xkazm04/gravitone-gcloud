@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.055Z",
+ "card": {
+  "age": 34,
+  "look": "light skin, shoulder-length wavy black hair with one dyed crimson streak, a small mole under the right eye, petite build, an oversized vintage satin bomber",
+  "name": "Mei"
+ },
+ "id": "chr:mei",
+ "identity": "Mei, aged 34: light skin, shoulder-length wavy black hair with one dyed crimson streak, a small mole under the right eye, petite build, an oversized vintage satin bomber.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/mei/portrait.jpg",
+     "hash": "47881704eb0bd3785683bdc9a147064bcc3c496683cd7226dc339d7eed0add8d",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/mei/sheet.jpg",
+     "hash": "afd9e11c6057eaa6ee8cdd7544e6d6203c6742b396ee7e25ba381d8a35e6c6ee",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

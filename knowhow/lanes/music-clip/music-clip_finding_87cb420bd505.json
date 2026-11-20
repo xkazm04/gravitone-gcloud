@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, What drifted",
+ "id": "music-clip:finding:87cb420bd505",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**The camera arc of the per-take plates was not honoured.** The K01 and K02 outputs read close to the frontal master rather than the plates' arc. The chained K00, drawn on `P-K00`, likely pulls the room back toward its own camera.",
+ "v": 1
+}

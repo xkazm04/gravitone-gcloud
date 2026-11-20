@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Setup",
+ "id": "music-clip:finding:b07632e2e5d8",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Cores**:\n- `unlatched-lead`: the baseline.\n- `n01-elif`: game concept art.\n- `n02-mirela`: a cinematic photograph.",
+ "v": 1
+}

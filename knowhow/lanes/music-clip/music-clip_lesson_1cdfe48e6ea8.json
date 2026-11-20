@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.0.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:1cdfe48e6ea8",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Research-first + Board T (3-4 treatments, GPU keyframes at shared times, one Opus builder per treatment iterating on its own PNGs) lifted every treatment from slide to film still in one round; the operator picked unit-0451 (\"looks great\").",
+ "v": 1
+}

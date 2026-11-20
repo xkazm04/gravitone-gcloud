@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Setup",
+ "id": "music-clip:finding:e03d7d1fbd8c",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Prompt shape**: look line, then \"image N is ...\", then the identity block (no clothes), then the director's state, then \"keep the room of image 1 exactly ... take only who she is from image 2; her clothes are the ones written above, not the clothes in image 2; the drawing style is image 1's\".",
+ "v": 1
+}

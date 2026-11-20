@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.049Z",
+ "card": {
+  "age": 33,
+  "look": "fair skin, straight platinum hair in a high ponytail, an angular jaw, a thin scar through the left eyebrow, lean build, a black leather jacket",
+  "name": "Nadia"
+ },
+ "id": "chr:nadia",
+ "identity": "Nadia, aged 33: fair skin, straight platinum hair in a high ponytail, an angular jaw, a thin scar through the left eyebrow, lean build, a black leather jacket.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/nadia/portrait.jpg",
+     "hash": "0230a4458f00b07dacadc614bbd2ea1b40da823de6610d207d88db1f8feca7e4",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/nadia/sheet.jpg",
+     "hash": "956f93da1c193d697e404838df8a8ace0ea688c2746f3ea68101e08167b4384a",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

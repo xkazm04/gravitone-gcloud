@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.9.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:539fde4960bf",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "An Image Reference locks composition and ignores prompt fixes; redesigns go without a reference, two variants each.",
+ "v": 1
+}

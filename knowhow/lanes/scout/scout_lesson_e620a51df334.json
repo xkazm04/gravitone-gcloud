@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-24T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-24 · night 2026-10-24 (2 h round)",
+ "id": "scout:lesson:e620a51df334",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "`open --tracks 0` is refused (\"needs a positive number\") although SKILL.md says to pass it while music is paused: open\nwithout the flag and launch no track. Argues a fix in pipeline/scout.mts `num()` (0 is a valid cap) or in SKILL.md.",
+ "v": 1
+}

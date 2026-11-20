@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-27T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-27-2 night",
+ "id": "scout:lesson:bfc974b8a03b",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The pre-push gate's next-unit failed on scout-graph (3 cases) because tests/next-server/scout-cli-harness.ts never\nset SCOUT_MUSE_STORE_DIR: on this box the test read the operator's foundry-out/scout-muse, empty in CI. Fixed.",
+ "v": 1
+}

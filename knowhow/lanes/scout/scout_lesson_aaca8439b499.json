@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-25T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 · night 2026-10-24-2 (storyboards + clips)",
+ "id": "scout:lesson:aaca8439b499",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "With Flux (~53 GB) and LTX loaded, the commit charge sits above the admission mark (95 GB of 112) and the worker holds\nevery gpu.local job, while physical RAM is ~50%. One night should not mix many storyboards and clips; run boards, unload,\nthen clips. Argues a look at packages/kernel admission (commit vs resident) - not a cap change.",
+ "v": 1
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-08-27T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-08-27 · second pass — the grouping critique, and what each model's eye is worth",
+ "id": "scout:lesson:00606cee6967",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "`gemini-3.6-flash`: 11/11 valid; the separating signal is THERE (`particle_fx` splits gritty from clean,\n`finish` splits pristine from weathered) — deterministic partition alone still 67% vs expert (transitive\nchaining), which is why the reasoner stays the decider.",
+ "v": 1
+}

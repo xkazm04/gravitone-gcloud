@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-27T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-27-2 night",
+ "id": "scout:lesson:1fb7eb7a107d",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "SUPERSEDED 2026-11-08 (perfect suno-stops-failing-doctor): `doctor` now passes `tracks` only when `--tracks` is named, so the suno\nline is a note and exit 0 while music is paused; `doctor --tracks N` (N>0) still blocks. The old rule read: `doctor` exits 1 on the suno\nline whenever music is paused, and when suno is the only failing line the night goes on. Any exit 1 now means stop, as SKILL.md says.",
+ "v": 1
+}

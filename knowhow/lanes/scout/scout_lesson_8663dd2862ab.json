@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-24T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-24 · night 2026-10-24 (2 h round)",
+ "id": "scout:lesson:8663dd2862ab",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Storyboards draw nothing on this box: the Flux 2 weights (flux2_dev_fp8mixed, mistral_3_small_flux2_fp8, flux2-vae) are\nnot under ComfyUI's models; the doctor's `flux weights` note says so. Send no storyboard brief until the operator has\nput them there - a failed board can be redone, but it fills the packet with a loss.",
+ "v": 1
+}

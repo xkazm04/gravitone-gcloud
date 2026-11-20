@@ -1,0 +1,32 @@
+{
+ "at": "2026-11-20T21:12:38.985Z",
+ "card": {
+  "look": "a slim, athletic Asian woman about 25 with a dancer's build and posture, long straight black hair, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers",
+  "name": "Unlatched lead (S2)"
+ },
+ "id": "chr:unlatched-lead",
+ "identity": "a slim, athletic Asian woman about 25 with a dancer's build and posture, long straight black hair, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/unlatched-lead/portrait.jpg",
+     "hash": "ce17bb28eca86ee5f0bf7ffc426602a870e397684c177d6e1a2ba5492f83cc74",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/unlatched-lead/sheet.jpg",
+     "hash": "45c755bc1129e2ede6d0e47a4f49ee39b41df99f6d90dd1b30cb05bd1f6098e5",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-25T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 · night 2026-10-24-2 (storyboards + clips)",
+ "id": "scout:lesson:00758d853de5",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The doctor's Leonardo line reads the WEB pool; Flare spends the API pool (`/me` apiSubscriptionTokens), which was 0 until\n2026-11-19 - every scene, style and concept failed \"Insufficient tokens\" with 9530 \"credits\" shown. Argues a change in\nlib/foundry/scout/doctor.ts (read apiSubscriptionTokens + apiPaidTokens). While it is empty, .env.local carries\nSCOUT_REPLICA_GENERATOR=comfy-flux2 and replicas draw on local Flux.",
+ "v": 1
+}

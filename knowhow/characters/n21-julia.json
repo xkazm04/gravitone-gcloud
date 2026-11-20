@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.026Z",
+ "card": {
+  "age": 31,
+  "look": "fair skin, chestnut hair in a high sleek ponytail, hazel eyes, athletic build, a yellow rain jacket",
+  "name": "Julia"
+ },
+ "id": "chr:n21-julia",
+ "identity": "Julia, aged 31: fair skin, chestnut hair in a high sleek ponytail, hazel eyes, athletic build, a yellow rain jacket.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n21-julia/portrait.jpg",
+     "hash": "586151ea0bc8dc4bb4ac3d4bbd846d1336e45b7c6b34cd92f97925901e084640",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n21-julia/sheet.jpg",
+     "hash": "9cfa40e58807fa19655e2922b847608471f9eadd22ba61e800d92faa39e24a3a",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

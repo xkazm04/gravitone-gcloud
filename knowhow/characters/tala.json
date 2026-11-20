@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.088Z",
+ "card": {
+  "age": 29,
+  "look": "warm tan skin, long straight black hair with a blunt fringe, almond eyes, slim fit build, a tailored cream blazer with rolled sleeves",
+  "name": "Tala"
+ },
+ "id": "chr:tala",
+ "identity": "Tala, aged 29: warm tan skin, long straight black hair with a blunt fringe, almond eyes, slim fit build, a tailored cream blazer with rolled sleeves.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/tala/portrait.jpg",
+     "hash": "dfff804028d05f7282cfc55d8b7f34b164b9062413bfd41bf3e129dfcbc2342c",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/tala/sheet.jpg",
+     "hash": "44dc8edb155c4718043b38d98b161d1a007960d1a6c07a611c7ce3ed6b931e04",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

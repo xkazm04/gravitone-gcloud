@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-31T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.3.0 - 2026-10-31 - gravitone-gcloud",
+ "id": "music-clip:lesson:9244ed49376c",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Film v2 approved except the outro: the s13 cycle ran twice, so \"visors going off\" and \"Signal lost\" played again 13 s after they happened, and the last 0.69 s was a hard-cut fragment. The fix was the opening's fix: the ending is one take (`tailTake`), the bars before it each carry one story beat.",
+ "v": 1
+}

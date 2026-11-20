@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.029Z",
+ "card": {
+  "age": 30,
+  "look": "fair skin, dark blonde shoulder-length waves, light brown eyes, slim build, a black leather biker jacket over a white tee",
+  "name": "Vera"
+ },
+ "id": "chr:n24-vera",
+ "identity": "Vera, aged 30: fair skin, dark blonde shoulder-length waves, light brown eyes, slim build, a black leather biker jacket over a white tee.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n24-vera/portrait.jpg",
+     "hash": "96fef7c01d0718d3199a09dc8e9d49745d5064659c382cd06f7019147a1d68f5",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n24-vera/sheet.jpg",
+     "hash": "23a0453460b95b9610577bd3fa73d4e1711f9e43ebf9f01adcdb77231f887660",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

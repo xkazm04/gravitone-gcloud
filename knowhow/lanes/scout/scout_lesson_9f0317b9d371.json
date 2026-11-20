@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-26T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 night (scout 2.3.0)",
+ "id": "scout:lesson:9f0317b9d371",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "2026-10-26 night (first channel night): **never restart ComfyUI under a live worker.** A watchdog restarted ComfyUI to\nclear its resident commit charge in the gap after admission let a storyboard start; that storyboard and the next 17\nfailed in under a minute (\"ComfyUI is not reachable\"), because the storyboard producer fails a panel at once when\nComfyUI does not answer and the gpu.local queue then drains through every job. Failed storyboards still count to the\nnight's storyboardCap, so the episodes (back to outline-kept, nothing lost) had to be relaunched on a second night.\nThe admission deadlock it tried to work around is real (MACHINE_MEM_HIGH 0.9 against a commit limit that shrank from\n~124 to 112 GB: 102 projected vs 100.8 mark); the fixes belong in code - a resident-aware ComfyUI charge in\nadmission, and a storyboard that waits for ComfyUI rather than failing on a short outage\n(lib/imaging/local/flux2.ts reachability, lib/producers/scoutStoryboardActs.ts).\nStopping the background task did NOT stop it: TaskStop ended the harness's handle, but the `bash watchdog.sh`\nprocess lived on and restarted ComfyUI again at 00:52, failing 14 more storyboards on the second night. A\nbackground loop that acts on the box is killed by its process id (find it by command line), and its script is\nrenamed so nothing re-runs it; then check its log stops growing. Better: never start a loop that acts on the box.\nRestarting the worker: `schtasks /End /TN \"Gravitone worker\"` ends the PowerShell wrapper, not `node\nworkers\\runner.mts` - after `/Run` two runners were live, the old one still on the night's env. After a restart,\nlist `runner.mts` processes and kill any whose start time predates the restart (only when no job runs).",
+ "v": 1
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:0cbc2eb3f07f",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "To resume: `tools/film5-step.sh <take>` from the track folder, one take at a time; `tools/post-film5.py .` rebuilds the cut. K06 on needs `REFS` entries in `tools/film5-h3.py` (K00-K05 have them; a take with none errors); `film5/ctrl-K05..K13-depth.mp4` and `film5/plan.json` (door clause, camera words) are ready. O01 must be rebuilt: film3's outro has film 3's timing (film 5 needs O01 f0 at global frame 3579, seeded by K13 f95-116). The mesh `t5-t2_00001_.glb` and its mask stay in ComfyUI `output/gravitone`: film5-control.py reads them.",
+ "v": 1
+}

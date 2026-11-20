@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Setup",
+ "id": "music-clip:finding:649724eada1f",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Director** (`director/bible.md`, `director/prompts.json`): Fable 5.2 ran headless and read the plates itself. It wrote six prompts that describe state only: pose, eyes, wardrobe, position against named furniture and framing. None of them describes the face.",
+ "v": 1
+}

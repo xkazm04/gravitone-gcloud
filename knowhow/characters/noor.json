@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.094Z",
+ "card": {
+  "age": 41,
+  "look": "rich brown skin, dark hair in a loosely wrapped silk headscarf, deep-set amber eyes, tall slim build, a heavy gold-thread embroidered shawl",
+  "name": "Noor"
+ },
+ "id": "chr:noor",
+ "identity": "Noor, aged 41: rich brown skin, dark hair in a loosely wrapped silk headscarf, deep-set amber eyes, tall slim build, a heavy gold-thread embroidered shawl.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/noor/portrait.jpg",
+     "hash": "af67748624c316f561b389f34d1801fff3238b36f796f063c0bebc53d6871695",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/noor/sheet.jpg",
+     "hash": "c6f028be2754a5031620fb4d9b716db5516a4cc370b2cff10d046a6621e36179",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

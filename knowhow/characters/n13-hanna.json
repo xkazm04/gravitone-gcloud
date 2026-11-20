@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.010Z",
+ "card": {
+  "age": 30,
+  "look": "fair skin, ash-brown straight hair with blunt bangs, light blue eyes, slim build, a black turtleneck and a thin gold chain",
+  "name": "Hanna"
+ },
+ "id": "chr:n13-hanna",
+ "identity": "Hanna, aged 30: fair skin, ash-brown straight hair with blunt bangs, light blue eyes, slim build, a black turtleneck and a thin gold chain.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n13-hanna/portrait.jpg",
+     "hash": "f83e8fbf8f02e8404b6a26b86a7251b8e830da877f1fed924b86175a14cda72a",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n13-hanna/sheet.jpg",
+     "hash": "2f8ec47091e4ad6a2403088b68d58c112990094ff9a28f21de56d312a4fb5304",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

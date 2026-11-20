@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.10.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:07e761f095fb",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Unlatched (2026-11-02): three Image References of one character (portrait, medium, wide) plus the sentence \"the reference images show only who she is ... take nothing else from them - the room, the camera angle, the distance, her pose and the framing are new\" did NOT lock composition on Sunburst: five new angles (overhead, floor-level, extreme close profile, far wide through a door) kept face, outfit and headphones. 17 credits at Small Low (8 + 3 per reference). The single-reference lock from Count Us All is a one-reference, no-instruction result.",
+ "v": 1
+}

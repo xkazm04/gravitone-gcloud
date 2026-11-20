@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.2.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:93e44b84be81",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "A contact sheet of shot midpoints did not show the pile-up or the clipping hand: both read only in motion or at full size. Shoot the start, middle and end of every shot that has contact (hands on props, crowds that stop) at 1080p and open them.",
+ "v": 1
+}

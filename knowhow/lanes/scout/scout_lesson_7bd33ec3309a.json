@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-11-20 night",
+ "id": "scout:lesson:7bd33ec3309a",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The eye's router steps to Gemini only when Ollama is DOWN; when Ollama answers but holds no model (`/api/tags` empty),\nevery judged act fails with \"ollama returned 404 for POST /api/chat\" while `doctor` passes (its line only notes\nOLLAMA_HOST). All six sheets failed this way. The doctor's ollama line should list the models and fail on an empty\nlist, and the router should treat a 404 as down (lib/foundry/scout/doctorOllama.ts, lib/text/providers/ollama.ts).",
+ "v": 1
+}

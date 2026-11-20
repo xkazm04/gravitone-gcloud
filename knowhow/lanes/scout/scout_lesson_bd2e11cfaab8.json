@@ -1,0 +1,10 @@
+{
+ "at": "2026-08-27T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-08-27 · second pass — the grouping critique, and what each model's eye is worth",
+ "id": "scout:lesson:bd2e11cfaab8",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "local `qwen3.8:27b` (Ollama): 11/11 valid, 55% — reads `finish=clean-smooth` on nearly everything (no grit\nsensitivity), but `particle_fx` works and its `medium` axis is good (read the Arcane piece as\n`2d-digital-painting`, better than Gemini). **Verdict: prompt adjustments do help the local eye, but it cannot\ncarry fidelity grouping; keep the cloud eye for extraction, use qwen at most as a free pre-filter.**",
+ "v": 1
+}

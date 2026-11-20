@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-31T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.3.0 - 2026-10-31 - gravitone-gcloud",
+ "id": "music-clip:lesson:ef391bf464dd",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The Suno wav and the mp3 lined up to the sample (lag 0 ms, r 0.999); the master goes under the picture as one AAC generation (320 kb/s; 384 kb/s from 2.4.0) instead of mp3 -> AAC.",
+ "v": 1
+}

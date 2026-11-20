@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.007Z",
+ "card": {
+  "age": 33,
+  "look": "golden tan skin, dark brown hair in a sleek middle part to the shoulders, brown eyes, curvy fit build, a red silk blouse",
+  "name": "Marisol"
+ },
+ "id": "chr:n10-marisol",
+ "identity": "Marisol, aged 33: golden tan skin, dark brown hair in a sleek middle part to the shoulders, brown eyes, curvy fit build, a red silk blouse.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n10-marisol/portrait.jpg",
+     "hash": "72f91540ee796337a004659348ac02675d3a96029d6e187093eefce7fc317c32",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n10-marisol/sheet.jpg",
+     "hash": "20c38d3dfc1367abdcbd3ae948eee7624500bcd77f65b2f778a90f62d80aa9e1",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

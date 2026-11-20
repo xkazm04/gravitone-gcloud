@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-16T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-11-16 night",
+ "id": "scout:lesson:0470b3462bf4",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The 10-23 title lesson covers PROCESS words too, not only medium words: a source titled \"Day in the Life of Casting a\nBell, Part 2\" failed both clip scenes in about a minute (\"the scene recipe names \"casting\" (the source's title or\nchannel)\"), since any frame of a pour makes the recipe say casting. Title a video source by its series or episode label only\n(\"S1 EP2, Part 2\") and put the subject in `why`; a source's title can't be changed after add-source, so a bad title costs\nevery scene drawn from it. This argues for the same change in lib/foundry/scout/scene.ts.",
+ "v": 1
+}

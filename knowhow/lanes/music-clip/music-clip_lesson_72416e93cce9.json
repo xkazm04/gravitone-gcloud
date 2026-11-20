@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.0.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:72416e93cce9",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The operator's win condition is music in the BODIES: beat-locked head nodding in the refrains. Stills cannot show it; cut.mts renders a span with the audio (0.46 s/frame, NVENC).",
+ "v": 1
+}

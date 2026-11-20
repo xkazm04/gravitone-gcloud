@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:38.990Z",
+ "card": {
+  "age": 31,
+  "look": "warm olive skin, dark brown hair in a low messy bun with face-framing strands, hazel eyes, slim build, a rust suede jacket",
+  "name": "Elif"
+ },
+ "id": "chr:n01-elif",
+ "identity": "Elif, aged 31: warm olive skin, dark brown hair in a low messy bun with face-framing strands, hazel eyes, slim build, a rust suede jacket.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n01-elif/portrait.jpg",
+     "hash": "a6879fdc3958474b24526b2395c7bde3ab5ec515292aa4663d27df0aa30215f9",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n01-elif/sheet.jpg",
+     "hash": "ab295e1a2a5f44a6f0cf7e05247ddab281adb247ce4b00639e37345560077305",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

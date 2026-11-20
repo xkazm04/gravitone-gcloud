@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.016Z",
+ "card": {
+  "age": 31,
+  "look": "light tan skin, black hair in a sharp asymmetric bob, dark eyes, slim fit build, a long charcoal duster coat with brass buttons",
+  "name": "Ana"
+ },
+ "id": "chr:n17-ana",
+ "identity": "Ana, aged 31: light tan skin, black hair in a sharp asymmetric bob, dark eyes, slim fit build, a long charcoal duster coat with brass buttons.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n17-ana/portrait.jpg",
+     "hash": "1793a55c0e2fd84f394a130fa081c4b69a7b7244df263a8457b523f486948dd9",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n17-ana/sheet.jpg",
+     "hash": "66073f2f994b1dca4c07186067a5ab1c2d78f4190a58217695a99c75da21d1e8",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

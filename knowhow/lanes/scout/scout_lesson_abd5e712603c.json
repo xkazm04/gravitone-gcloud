@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-23T00:00:00.000Z",
+ "evidence": "scout LESSONS, 1.2.0 - 2026-10-23 - night 2026-10-23-3",
+ "id": "scout:lesson:abd5e712603c",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "A source title the skill writes is read by the scene's craft-not-content check: titling two stop-motion shorts\n\"Stop-motion ... film\" made both scene recipes refuse themselves for naming \"stop-motion\" (c-52, c-53). Keep the\nmedium and the technique OUT of a source's `title` and `channel` (put them in `why`) - argues a change in\nlib/foundry/scout/scene.ts: a craft word (stop-motion, cel, risograph) is not content and should not trip the check.",
+ "v": 1
+}

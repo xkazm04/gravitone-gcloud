@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:38.999Z",
+ "card": {
+  "age": 30,
+  "look": "light skin, glossy black hair in a sleek low ponytail, dark almond eyes, slender build, a white high-collar shirt with a thin black ribbon tie",
+  "name": "Kaori"
+ },
+ "id": "chr:n03-kaori",
+ "identity": "Kaori, aged 30: light skin, glossy black hair in a sleek low ponytail, dark almond eyes, slender build, a white high-collar shirt with a thin black ribbon tie.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n03-kaori/portrait.jpg",
+     "hash": "57528e4796ceeb491841231128f86d1fe222718fdb1900ddaa145d878f093338",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n03-kaori/sheet.jpg",
+     "hash": "234979dd698e9d3530b695cba9880a1be27daf690cc5315fec696ae4c5e0c19f",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

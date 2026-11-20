@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-23T00:00:00.000Z",
+ "evidence": "scout LESSONS, 1.2.0 - 2026-10-23 - night 2026-10-23-3",
+ "id": "scout:lesson:e2f96bb5eb5c",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "`ideas` / `style` / `scene` launched with `--detach` are run by the worker only: start the worker with its keys\n(`node --env-file-if-exists=.env.local workers/runner.mts`) before the first launch, and never restart it mid-night -\neach restart leaves jobs `interrupted` and their paid lanes held until retried and acknowledged (2026-10-23: the reels\nand five style runs sat queued behind three lane holds for two hours).",
+ "v": 1
+}

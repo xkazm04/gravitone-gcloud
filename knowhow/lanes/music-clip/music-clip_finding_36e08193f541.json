@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, What drifted",
+ "id": "music-clip:finding:36e08193f541",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**The office chair.** It is the one prop that moves, in 5 of 15 chained frames. It jumps from in front of the door to the right of the door.",
+ "v": 1
+}

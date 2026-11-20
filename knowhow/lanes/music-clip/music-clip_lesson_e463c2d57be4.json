@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:e463c2d57be4",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Ref2VA (MiniMax H3 reference mode, 4-step turbo) with AddGuide seed frames and Fun ControlNet at 1280x704, 311 frames: 24-25 min a take with the box awake, against 38-46 min for FL2VA 8-step awake and about 1.7 h for FL2VA in display-off standby. The character sheet and an empty room as references held the room through six takes, as FL2VA did not. It has no `last_frame`: use `MiniMaxH3AddGuide`. A painted field as a third reference gave the dissolve its destination, on the beat, about half a second long. The history of a run also lists LoadVideo's inputs: filter the output by prefix and `type == \"output\"`.",
+ "v": 1
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-25T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 night (scout 2.3.0)",
+ "id": "scout:lesson:fc06b49e30f0",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The skill's music pause says `open --tracks 0`, but the CLI's `num()` refuses 0 (\"--tracks needs a positive number\"), and `doctor` FAILs\nthe suno line unless `--tracks` > 0 is accepted. The paused music seeds keep their doors shut, so the night ran on the\ndefault cap with the doctor's one expected FAIL. Argues pipeline/scout.mts `num` accepting 0 for caps (tracks, visualizers)\nand the doctor skipping suno at tracks 0.",
+ "v": 1
+}

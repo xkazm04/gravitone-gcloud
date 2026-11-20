@@ -1,0 +1,1035 @@
+{
+ "at": "2026-11-20T21:04:31.622Z",
+ "cast": "chr:sofia",
+ "id": "unlatched",
+ "look": "The Long Way: Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last.",
+ "nodes": [
+  {
+   "at": 0,
+   "dur": 107,
+   "id": "track",
+   "label": "Leave the Door Unlatched",
+   "madeFrom": [],
+   "media": {
+    "at": "production-fixture/unlatched/track-0-107s.mp3",
+    "hash": "3bab0e27e3b5d50d9428cacd1fb41c82e8716e084ccd0bbdb23ede631324feab",
+    "kind": "audio"
+   },
+   "state": "made",
+   "station": "track"
+  },
+  {
+   "id": "look",
+   "label": "The Long Way",
+   "madeFrom": [],
+   "prompt": "The Long Way: Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last.",
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:ROOM-master",
+   "label": "ROOM-master",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/ROOM-master.jpg",
+    "hash": "c74bc4e74835345d25989bb14a35e8cfafdedcae24d2bc22f4fce47206676443",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:SETUP-B",
+   "label": "SETUP-B",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/SETUP-B.jpg",
+    "hash": "6b018cbb6f2542b54b8b04fcf6fb7b297db0ed1e2ef0e8f9b2f624bd94219f94",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:SETUP-C",
+   "label": "SETUP-C",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/SETUP-C.jpg",
+    "hash": "ecc0ca70b78f6162139bac6ebd8a2469d56c767847dd192e036d3c5a8b4407b0",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:SETUP-D",
+   "label": "SETUP-D",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/SETUP-D.jpg",
+    "hash": "fcacef64afc4fdaf5f59756268d8b12856366be76d49e5504e6e077304e5c6b0",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K00",
+   "label": "P-K00",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K00.jpg",
+    "hash": "f7cceb629de6c33e6a0318a179a5100cdfe1f09332e15ed1acbd51294a1fe14d",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K01",
+   "label": "P-K01",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K01.jpg",
+    "hash": "f0f696f47090850120f7cc030c1471c00534f69a9a9af364a9eb1a0cea349c2a",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K02",
+   "label": "P-K02",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K02.jpg",
+    "hash": "ad9b8eb42c6f8eb13c8a7e4cd1a3a00483d4efe0ae01f6bafb17306fa0693a70",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K03",
+   "label": "P-K03",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K03.jpg",
+    "hash": "eb37b890495959bd5d254f6a2cb44cae9cc17678339c43df6a5a75cb3a42fd16",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K04",
+   "label": "P-K04",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K04.jpg",
+    "hash": "ec76e6cbd99012d3cd82372a3256172ea53ff38ae48e850310cee6ab2fc94cc9",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "plate:P-K05",
+   "label": "P-K05",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/plates/P-K05.jpg",
+    "hash": "ebf2e437464d57e97a6983f721eaab78ba3effe51fe941639f1716b66ed32a55",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "look"
+  },
+  {
+   "id": "cast",
+   "label": "Sofia",
+   "madeFrom": [],
+   "media": {
+    "at": "production-fixture/cores/sofia/portrait.jpg",
+    "hash": "33c76ce4dcc3cb7c0565b8c3b2ee7fd781e1725b3d37f6caa380248a05f0da4b",
+    "kind": "image"
+   },
+   "state": "made",
+   "station": "cast"
+  },
+  {
+   "at": 0,
+   "id": "kf:E01a",
+   "label": "E01a",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/E01a.jpg",
+    "hash": "c4bef31735384055bc9a17f6f636a7cda3f27a36a7a937d05a485011d0898087",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. No people. The dark landing outside an apartment door at night, the door open a crack, a thin blade of teal light from inside across the worn floorboards, a stairwell rail and a rainy stairwell window. Eye level, the gap of the door in the centre.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 5.84,
+   "id": "kf:E01m",
+   "label": "E01m",
+   "madeFrom": [
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/E01m.jpg",
+    "hash": "a9bbd1888a33d14d40c8a827e33cb6aaf97a7d62c5ac4e6ad3eb533633acb1e8",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. No people. Inside the apartment: a short dark hallway with a coat hook holding one dark coat and one empty wooden hanger, a tiny kitchen nook to one side, and at the end a bedroom door standing open, teal monitor light and violet window light spilling out of it onto the floor. Eye level, looking down the hallway to the open door.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 10.9,
+   "id": "kf:E01b",
+   "label": "E01b",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/E01b.jpg",
+    "hash": "1d7825d8e4f3c8dc38cb4cba6ee77b964dd655c95f49da1c2f3ca556030c6b08",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1 (from just inside the door). She sits in the black office chair at the desk, seen from behind and slightly to the side, typing at the keyboard, the blue cup steaming beside the keyboard, the kettle steaming.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 15.94,
+   "id": "kf:B02",
+   "label": "B02",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B02.jpg",
+    "hash": "9ab8dd9ee32e6e8b62c00a55fc5418a4e75b0debe8164c93ec848a6d82f53b57",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. The chipped blue enamel cup steams in sharp focus in the foreground; behind it, soft, she sits typing, seen from the side, the white headphones catching the teal light.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 18.47,
+   "id": "kf:B03",
+   "label": "B03",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B03.jpg",
+    "hash": "cb81bd06cbe80b88278f8978ad38e803ee4651364633c1ed2e62c2bb6bf4278f",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Camera close beside the desk, as in image 1, turned toward her: she sits in profile facing the monitor, eyes on the screen, teal monitor light on her face, a slight nod to the beat, the kettle and the blue cup beside the keyboard.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 21,
+   "id": "kf:B04",
+   "label": "B04",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-B"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B04.jpg",
+    "hash": "b3a3d3a8b3699ecddeb7b37d3f895bd946efbf07db9f3b7d0066931247085c5d",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1 (from the window toward the door). She leans back in the desk chair, head nodding to the beat, eyes half closed, one foot up on the chair edge, the door behind her.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 26.05,
+   "id": "kf:B05",
+   "label": "B05",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-D"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B05.jpg",
+    "hash": "213e0d7b00d021961c00d062602a5f7c0961e2eac202c7b9fbba7822ede6d7c0",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Camera low by the desk, near the floor: her black sneaker taps the beat on the floorboards under the desk, the chair wheels and the hem of the baggy sweatpants, wet teal and red reflections on the boards; the room behind as in image 1.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 28.58,
+   "id": "kf:B06",
+   "label": "B06",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-B"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B06.jpg",
+    "hash": "6db3700f1e6725aac0e768c0fb24f3de40232ec1cf674e8eaf4a3bac885e2005",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She sits at the desk with her head turned toward the door, which stands open a crack with a thin line of light, eyes open, thoughtful, headphones on.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 31.1,
+   "id": "kf:B07",
+   "label": "B07",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B07.jpg",
+    "hash": "ab5d793d270eb985b7bc58cf4226827ee05244bf1617a00ffc8bad89cd3b835c",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She has rolled the desk chair back from the desk and stretches both arms high over her head, eyes closed, the open hoodie falling back.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 33.62,
+   "id": "kf:B08",
+   "label": "B08",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B08.jpg",
+    "hash": "6b236926425c117695cef5ae90600d27ac3c49edf5e390a74fa3bb9b85caa1f1",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Close three-quarter front view of her at the desk, the room soft behind her as in image 1: eyes closed, head nodding hard to the beat, black hair swinging across the white headphones, a small smile, teal light on her face.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 36.15,
+   "id": "kf:B09",
+   "label": "B09",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-B"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B09.jpg",
+    "hash": "8a3f9b4dee5bcda46e5c7594b009c65d8ba1467b09d3297ea760784f11301aee",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She rises from the desk chair, eyes closed, shoulders rolling, the chair rolling back behind her.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 38.68,
+   "id": "kf:B10",
+   "label": "B10",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-D"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/B10.jpg",
+    "hash": "d5973d46109289c61fba528c9550b70202f41e1ca23842de9454bb62de174528",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1 (low, across the rug). She stands still in the middle of the rug, eyes closed, head bowed, arms loose, holding her breath; the edges of the room around her shimmer faintly, as if about to melt into paint.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 41.2,
+   "id": "kf:C101",
+   "label": "C101",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C101.jpg",
+    "hash": "44155562c8b069b0ff4a8586d3daeab7138e899cee6634da945f609c9ccbc0bf",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Wide, from the door: she bursts into dance on the rug, eyes closed, arms opening, hair swinging, a small smile.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 43.73,
+   "id": "kf:C102",
+   "label": "C102",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C102.jpg",
+    "hash": "19b65abd77c4d585d920872741a81a55a876d7435249a6468dae760850a402bf",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Close on her face: eyes closed, a wide smile, hair swinging across the white headphones, painted strokes drifting behind her.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 46.26,
+   "id": "kf:C103",
+   "label": "C103",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C103.jpg",
+    "hash": "c40d1cf8b45516842863ae868c0919b7c58e1d004383dd5570d8569519eeffba",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Medium: a dancer's body roll with both arms unfolding up over her head, eyes closed, the window frame behind her bending into flowing brushstrokes.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 51.31,
+   "id": "kf:C104",
+   "label": "C104",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C104.jpg",
+    "hash": "1acf4ca0f2949aa98786b2ce6a6a367721e87975638d484b339a489e0257a3a9",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. She dances across the rug toward the camera, eyes closed, hips swaying; the bed and the shelves behind her are only loose painted outlines.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 56.36,
+   "id": "kf:C105",
+   "label": "C105",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C105.jpg",
+    "hash": "331e0ef672635bfb810ac6fb1b9e23f5957765389dd792f49f005debccd52595",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. She spins on the rug, hair flying; behind her the door swings open as a painted shape spilling warm light.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 58.89,
+   "id": "kf:C106",
+   "label": "C106",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C106.jpg",
+    "hash": "eab3e27dd644e02e6a3a03e76b80c5471fec3a4c8e88c6a620b0cacd6a20577a",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Low angle: she jumps, both feet off the floor, and paint strokes burst up around her like a crowd of raised arms.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 61.42,
+   "id": "kf:C107",
+   "label": "C107",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C107.jpg",
+    "hash": "4b527845b59ab1afe77308789b773cdd159e0deb30666d1c0de824d92b0a4972",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Close on her black sneakers sliding sideways across wet painted floorboards in a smooth dance step, teal and red strokes trailing behind them.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 63.94,
+   "id": "kf:C108",
+   "label": "C108",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C108.jpg",
+    "hash": "609fe554118c5f062b46f97e5505d7b561ba18153cec82ce6d7ac9acb4ee145e",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is her ROOM (the set it starts from). Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. Her eyes are closed and her room is dissolving into her own world: the walls, window frame, furniture and shelves loosen into loose painted outlines and floating violet, teal and red brushstrokes, the city lights drift off the window as soft paint dots; the room still reads. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Overhead shot looking straight down: she spins in the middle of the rug, hair fanned out in a circle, arms flung wide, the rug turning into a painted circle.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 66.47,
+   "id": "kf:C109",
+   "label": "C109",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C109.jpg",
+    "hash": "97b3fff2b4bfebbc6ac2af48b17fe042434ade8e59abdf8eb49555b3b36a6bb1",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She stands on the rug, eyes open, breathing, a half smile; the room is whole and real again.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 71.5,
+   "id": "kf:V201",
+   "label": "V201",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-B"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/V201.jpg",
+    "hash": "c6c1a8bc4abe6b643a64c2aee746490ee395ee815856b506c6f6182d7afbd446",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She dances lightly near the door; beside the door a wall coat hook holds one empty wooden hanger. Eyes closed, gliding steps.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 76.57,
+   "id": "kf:V202",
+   "label": "V202",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/V202.jpg",
+    "hash": "3e71024d8594a89b23e3ec7d5d0d180e98c927453a78c45bb3dc5445edc22a26",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. At the rainy window, close: she stands with her forehead near the glass, one hoodie sleeve raised to her face, eyes closed, a slow smile, rain running down the pane, the room soft behind her as in image 1.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 81.62,
+   "id": "kf:V203",
+   "label": "V203",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/V203.jpg",
+    "hash": "97bafcb72c988ba6e091d4caffe952335a838b0cc94de62ace25f42b21f134d5",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Over her shoulder out of the rainy window: far below, a lit railway station with a train pulling out under the rain; she nods to the beat in the foreground, seen from behind, the white headphones sharp.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 86.67,
+   "id": "kf:V204",
+   "label": "V204",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:ROOM-master"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/V204.jpg",
+    "hash": "e596239fd3f5c455acc2ab4102dbee87ddca529e675725ab98eb5729274ca8a1",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Keep the camera exactly as in image 1. She stands by the desk swaying to the beat, eyes closed; the chipped blue cup on the desk has no steam now.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 91.72,
+   "id": "kf:P201",
+   "label": "P201",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/P201.jpg",
+    "hash": "5bd87572a7767c48034adce7ca1ffdf5a37afe3da190ba6b7f07ee8f1450897d",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones on her ears. Camera beside the desk as in image 1, with one change: a large hand-inked city map is pinned to the wall above the desk, careful sepia roads and red ink routes. She stands looking up at it, seen from behind, headphones on, nodding.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 94.21,
+   "id": "kf:P202",
+   "label": "P202",
+   "madeFrom": [
+    "look",
+    "plate:SETUP-C"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/P202.jpg",
+    "hash": "dfc2a317ebf0c3d8b84ad0ea696665b80daeca454f610c0e7717b534633d15ee",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. No people. Close on the hand-inked city map pinned to the wall above the desk, careful sepia roads and red ink routes, one corner of the paper curling away from the wall, teal monitor light and red neon across it.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 96.76,
+   "id": "kf:P203",
+   "label": "P203",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-D"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/P203.jpg",
+    "hash": "10eb67ba5bef92555402023f3209788633b6448a5775eecee5555c433cd60481",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones pulled down around her neck. Keep the camera exactly as in image 1 (low, across the rug toward the hi-fi). She walks toward the hi-fi between the two tall speakers, the white headphones pulled down around her neck.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 99.29,
+   "id": "kf:P204",
+   "label": "P204",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:SETUP-D"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/P204.jpg",
+    "hash": "4acbf1e521efa36dface345a7ccac3d39a93e87e8676d0aa552ae3747b8be11d",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: image 1 is the ROOM (the set): keep it - the desk, black office chair, teal monitor, desk lamp, steel kettle, chipped blue enamel cup, monstera plant, worn rug, record shelf with the hi-fi amplifier between two tall black speakers, bed with grey blanket and knitted throw, wall shelves with plants, the door, and the large rainy window with the red neon sign - the same colours and light. Images 2-4 are character references of the woman: take only her identity (face, hair, body) from them, nothing else. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a dark charcoal hoodie unzipped at the front over a plain white t-shirt, black sneakers, white full-size over-ear headphones pulled down around her neck. Close on the hi-fi amplifier's big glowing volume knob, her fingertips at its edge at natural scale, the tall speaker cone beside it starting to glow teal; the rest as in image 1, soft.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 101.84,
+   "id": "kf:C201",
+   "label": "C201",
+   "madeFrom": [
+    "cast",
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C201.jpg",
+    "hash": "8c198b4704912c204d16fe189628a5804bb8a21e6d5eef152b50517a0aee9eed",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: images 1-3 are character references of the woman: take only her identity (face, hair, body) from them; she is NOT wearing the hoodie, nothing else. The room is gone: she is in her own world, an open field of swirling violet, teal and signal-red paint strokes and floating paint dots, the two speakers only as tall glowing painted shapes; no walls, no furniture. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a plain white t-shirt with bare arms (NO hoodie, NO jacket), black sneakers, white full-size over-ear headphones around her neck. Overhead shot: she flings the dark charcoal hoodie off and it flies through the air beside her, arms out, eyes closed, hair fanned; the room around her bursts into swirling paint.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 104.37,
+   "id": "kf:C202",
+   "label": "C202",
+   "madeFrom": [
+    "cast",
+    "look"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/keyframes/C202.jpg",
+    "hash": "04c0b13a940c890dcf68129c6e7fa5884f6caca7068b89c45865c09cf7775a20",
+    "kind": "image"
+   },
+   "prompt": "Rotoscoped animation still, painted over live action, soft painterly brushwork over flat cel shapes, visible brush texture, misty violet and teal night with one small signal-red accent, cinematic framing, no text. Attached: images 1-3 are character references of the woman: take only her identity (face, hair, body) from them; she is NOT wearing the hoodie, nothing else. The room is gone: she is in her own world, an open field of swirling violet, teal and signal-red paint strokes and floating paint dots, the two speakers only as tall glowing painted shapes; no walls, no furniture. The woman: a slim, athletic Asian woman about 25 with a dancer's build, long straight black hair, a heart-shaped face with a small pointed chin, gently arched brows, monolid eyes and a light dusting of freckles across her nose, dark navy baggy sweatpants, a plain white t-shirt with bare arms (NO hoodie, NO jacket), black sneakers, white full-size over-ear headphones around her neck. Wide: she dances big in the middle of the paint field, arms open, knees bent, eyes closed, the two speakers as tall glowing painted shapes on either side.",
+   "state": "stale",
+   "station": "keyframe"
+  },
+  {
+   "at": 38.1,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Sheet's face, wavy centre-part hair and slim build; plate's furniture, light and camera kept; hoodie, tee, navy sweats, no scarf.",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K00",
+   "label": "K00 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K00"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K00.png",
+    "hash": "9c8b58eef04ae32ed3c400788ed1d09068ed1bd636ff72e1f650e7f417b9021f",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body shot, head to feet, eye-height camera left of centre looking toward the door and desk. She stands still on the dark floor between the office chair and the desk, three-quarter to camera, head bowed, eyes closed, lips closed, breath held, arms hanging loose, hands empty. Dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. Teal monitor light rims her desk side. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 49.267,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Same wavy dark hair, freckles, slim build; furniture, door glow, light and camera match plate; hoodie, tee, navy sweats, headphones as named",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K01",
+   "label": "K01 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K01"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K01.png",
+    "hash": "341bb90605d77409028d04768b52cf4f2ea95c7c18a574f8c7defda85bcc4a47",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body shot, head to feet, eye-height camera near centre. She is on the far half of the rug, mid-frame, facing camera, caught mid wide side-step: knees bent, weight on the leading foot, trailing foot just lifting, elbows out, loose fists at chest height, head tipped with the beat. Eyes closed, lips parted, absorbed. Dark charcoal hoodie unzipped and swinging open over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. Hands empty. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 60.433,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Same wavy dark hair, face and slim build; bed, shelves, door, chair, desk and light match the plate; hoodie, tee, navy sweats, no scarf.",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K02",
+   "label": "K02 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K02"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K02.png",
+    "hash": "45fec6dbe283dad5bd555b4b8a9c2010136ff230d17da136f89759a99aa21247",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body shot, head to feet, eye-height camera right of centre, the door mid-frame. She is between the door and the rug, left of the office chair, mid wide side-step back toward the rug, body turning away from the door, the hand that reached for it dropping to her side, other arm out for balance. Eyes closed, faint smile. Dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. Hands empty. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 71.6,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Sheet's long dark wavy hair and slim build; room, light and camera match the plate; hoodie, white tee, navy sweats, sneakers, no scarf.",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K03",
+   "label": "K03 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K03"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K03.png",
+    "hash": "060466541f7e55307a490309f0f8cdbacf9f700306f0a324d8409722edeb23c1",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body master shot, head to feet, frontal eye-height camera. She is at the right edge of the rug, just in front of the office chair, mid light stride toward the desk on the right, three-quarter profile facing right, arms swinging easily, hands empty. Eyes open, looking at the desk, soft smile, loose after dancing. Dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. The chipped blue cup sits on the desk beside the kettle. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 82.767,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Same wavy dark hair, olive skin, slim build; room, light and camera match the plate; hoodie, tee, sweatpants, sneakers, headphones as named.",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K04",
+   "label": "K04 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K04"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K04.png",
+    "hash": "028420990b92a588aa909b7255ba541c6f5e465739199ff0a60e77c4ebef8387",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body master shot, head to feet, frontal eye-height camera. She has just left the desk and is mid-stride leftward on the right half of the rug, in front of the office chair, three-quarter profile facing left toward the hi-fi on the record shelf. Eyes open, looking at it, small purposeful smile, arms swinging, hands empty. Dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. The chipped blue cup is back on the desk. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 93.933,
+   "drift": {
+    "by": "fable-5.2",
+    "identity": "holds",
+    "reason": "Same face and long wavy hair; room, light and camera kept (wall painting hidden behind her); white tee, navy sweats, hoodie on forearms.",
+    "room": "holds",
+    "wardrobe": "holds"
+   },
+   "id": "kf:K05",
+   "label": "K05 start",
+   "madeFrom": [
+    "cast",
+    "look",
+    "plate:P-K05"
+   ],
+   "media": {
+    "at": "production-fixture/keyframes/unlatched/sofia/K05.png",
+    "hash": "123b9a5dfee4f89a960dae98f46fb7b062a1f239b7ad441311c1cd739f1595a2",
+    "kind": "image"
+   },
+   "prompt": "Image 1 is the set. Image 2 is a reference sheet of who she is. Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Wide full-body master shot, head to feet, frontal eye-height camera. She stands on the dark floor in front of the hi-fi on the record shelf, the bed just to her right, three-quarter to camera. Both arms raised: the dark charcoal hoodie has just cleared her head and is bunched around her forearms above her, face fully visible, eyes open, half-smile. White t-shirt, dark navy baggy sweatpants, black sneakers with white soles, no headphones on her; the white headphones lie on top of the hi-fi. Keep the room of image 1 exactly: same furniture, same positions, same light, same camera. Take only who she is from image 2 (face, hair, build); her clothes are the ones written above, not the clothes in image 2 and none of the garments her description names, and the drawing style is the painted look of image 1. Exactly one woman in the frame.",
+   "state": "made",
+   "station": "keyframe"
+  },
+  {
+   "at": 38.1,
+   "dur": 12.958,
+   "id": "clip:K00",
+   "label": "K00",
+   "madeFrom": [
+    "kf:K00",
+    "kf:B10",
+    "kf:C101",
+    "kf:C102",
+    "kf:C103"
+   ],
+   "media": {
+    "at": "production-fixture/takes/unlatched/sofia/K00.mp4",
+    "hash": "d6e942fcdb150dfcb300e9880502f24519dde795af5cc2c4b7d6a32d950069b2",
+    "kind": "video"
+   },
+   "prompt": "Use <Picture 1> as the reference for the woman's face, hair and body proportions: fully preserved, the same height and the same long-haired slim figure. Use <Picture 2> as the reference for the room, its objects and its painted texture and light: fully preserved. Use <Picture 3> as the reference for her painted look and her clothes: fully preserved. Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim. The same continuous shot. The setting: her room exactly as it is in the dim violet night: the desk lamp, the teal glow of the monitor, the red glow behind the bed, the dark shining floor; the bed, shelves, door, desk, chair, rug and hi-fi never move or change; the only change is a faint stir of painted violet strokes at the far edges of the walls. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, white over-ear headphones. 0-1 s: she stands beside the desk. 1-3 s: she stands still beside the desk, eyes closed, head bowed, holding her breath. 3-6 s: she bursts into dance, arms flung up and open. 6-8 s: she dances out onto the rug, fists pumping. 8-11 s: a body roll, both arms unfolding over her head. 11-13 s: wide side steps on the beat. The camera glides slowly in an arc to the right at the same distance from her, keeping her whole in frame, head to feet. Her eyes stay closed. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "made",
+   "station": "clip"
+  },
+  {
+   "at": 49.267,
+   "dur": 12.958,
+   "id": "clip:K01",
+   "label": "K01",
+   "madeFrom": [
+    "kf:K01",
+    "kf:C104",
+    "kf:C105",
+    "kf:C106",
+    "clip:K00"
+   ],
+   "media": {
+    "at": "production-fixture/takes/unlatched/sofia/K01.mp4",
+    "hash": "0e2d79fe94fff5edaa1942b959384185fb2d1366fa1bbc5ed778214fc8dc1d6a",
+    "kind": "video"
+   },
+   "prompt": "Use <Picture 1> as the reference for the woman's face, hair and body proportions: fully preserved, the same height and the same long-haired slim figure. Use <Picture 2> as the reference for the room, its objects and its painted texture and light: fully preserved. Use <Picture 3> as the reference for her painted look and her clothes: fully preserved. Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim. The same continuous shot. The setting: her room exactly as it is in the dim violet night: the desk lamp, the teal glow of the monitor, the red glow behind the bed, the dark shining floor; the bed, shelves, door, desk, chair, rug and hi-fi never move or change; the only change is a faint stir of painted violet strokes at the far edges of the walls. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, white over-ear headphones. 0-2 s: wide side steps on the beat. 2-5 s: she spins once on the rug, arms out. 5-7 s: she dances toward the door, fists pumping, head nodding hard. 7-10 s: she reaches one open hand toward the door. 10-12 s: wide side steps back to the rug on the beat. 12-13 s: a body roll, both arms unfolding over her head. The camera drifts gently at the same distance from her, keeping her whole in frame, head to feet. Her eyes stay closed. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "made",
+   "station": "clip"
+  },
+  {
+   "at": 60.433,
+   "dur": 12.959,
+   "id": "clip:K02",
+   "label": "K02",
+   "madeFrom": [
+    "kf:K02",
+    "kf:C107",
+    "kf:C108",
+    "kf:C109",
+    "kf:V201",
+    "clip:K01"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/takes/K02.mp4",
+    "hash": "2dcdde65ec2610f2aca5dad9faf006f5c6d53dc9a0f21a36736ff7bd9f94dc4c",
+    "kind": "video"
+   },
+   "prompt": "Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: a narrow face, long straight black hair, slim. The same continuous shot. The setting: her room exactly as it is in the dim violet night: the desk lamp, the teal glow of the monitor, the red glow behind the bed, the dark shining floor; the bed, shelves, door, desk, chair, rug and hi-fi never move or change; the only change is a faint stir of painted violet strokes at the far edges of the walls. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, white over-ear headphones. 0-1 s: wide side steps back to the rug on the beat. 1-4 s: a body roll, both arms unfolding over her head. 4-6 s: she sways, arms swinging softly, the dance easing. 6-9 s: she slows to stillness, eyes closed, arms lowering. 9-11 s: she opens her eyes, back in her room at night, and sways lightly, smiling. 11-13 s: she walks lightly back to the desk. The camera glides slowly in an arc to the left at the same distance from her, keeping her whole in frame, head to feet. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "stale",
+   "station": "clip"
+  },
+  {
+   "at": 71.6,
+   "dur": 12.958,
+   "id": "clip:K03",
+   "label": "K03",
+   "madeFrom": [
+    "kf:K03",
+    "kf:V202",
+    "kf:V203",
+    "clip:K02"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/takes/K03.mp4",
+    "hash": "607a92770a77a7400775db296ba57329334801ce186f703b1a26bb2fc7868ddc",
+    "kind": "video"
+   },
+   "prompt": "Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: a narrow face, long straight black hair, slim. The same continuous shot. The setting: her room at night, solid again but still painted: the same dim violet and teal light from the desk lamp and the monitor, the dark floor shining, the walls, bed, desk, shelves and hi-fi exactly where they are. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, white over-ear headphones. 0-3 s: she walks lightly back to the desk. 3-5 s: she lifts the chipped blue cup from the desk and drinks. 5-8 s: she holds the cup in both hands and sips again, looking across the room, swaying a little. 8-10 s: she sets the cup down on the desk. 10-13 s: she walks over to the hi-fi. The camera drifts gently at the same distance from her, keeping her whole in frame, head to feet. Her eyes are open. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "stale",
+   "station": "clip"
+  },
+  {
+   "at": 82.767,
+   "dur": 12.958,
+   "id": "clip:K04",
+   "label": "K04",
+   "madeFrom": [
+    "kf:K04",
+    "kf:V204",
+    "kf:P201",
+    "clip:K03"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/takes/K04.mp4",
+    "hash": "544910900c5643c13cb606189ac3ff4c4750261c9efed58b9cb52ac4b3286789",
+    "kind": "video"
+   },
+   "prompt": "Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: a narrow face, long straight black hair, slim. The same continuous shot. The setting: her room at night, solid again but still painted: the same dim violet and teal light from the desk lamp and the monitor, the dark floor shining, the walls, bed, desk, shelves and hi-fi exactly where they are. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, white over-ear headphones. 0-2 s: she walks over to the hi-fi. 2-4 s: she switches the hi-fi on and turns the volume knob up; the speaker cones start to pulse. 4-7 s: she lifts the white headphones off her head. 7-9 s: she puts the headphones down on top of the hi-fi. 9-12 s: she pulls the dark hoodie off over her head. 12-13 s: she drops the hoodie onto the bed beside her. The camera glides slowly in an arc to the right at the same distance from her, keeping her whole in frame, head to feet. Her eyes are open. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "stale",
+   "station": "clip"
+  },
+  {
+   "at": 93.933,
+   "dur": 12.959,
+   "id": "clip:K05",
+   "label": "K05",
+   "madeFrom": [
+    "kf:K05",
+    "kf:P202",
+    "kf:P203",
+    "kf:P204",
+    "kf:C201",
+    "kf:C202",
+    "clip:K04"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/takes/K05.mp4",
+    "hash": "362cf49e213dd6bb1d8a62b3014dbed7fb5e31b01b3d26576c4df44fc08550cd",
+    "kind": "video"
+   },
+   "prompt": "Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. She is the same woman throughout: a narrow face, long straight black hair, slim. The same continuous shot. The setting: her room at night, solid again but still painted: the same dim violet and teal light from the desk lamp and the monitor, the dark floor shining, the walls, bed, desk, shelves and hi-fi exactly where they are, the door stands ajar, a thin line of orange-red light down its edge. She wears dark navy baggy sweatpants, a dark charcoal hoodie unzipped over a white t-shirt, no headphones. 0-1 s: she pulls the dark hoodie off over her head. 1-3 s: she drops the hoodie onto the bed beside her. 3-6 s: in her white t-shirt she walks out onto the rug, the speakers thumping. 6-9 s: the music swells; she stands on the rug, hands gathered at her chest, ready. 9-11 s: she bursts out dancing, arms flung up. 11-13 s: she jumps on the beat, both arms high, hair flying. At 9 s, the room dissolves around her into an open field of swirling violet, teal and signal-red paint. The camera glides slowly in an arc to the left at the same distance from her, keeping her whole in frame, head to feet. Her eyes are open. She stays whole and keeps her outline, face and painted cel shading from the first frame to the last. One continuous shot, no cuts.",
+   "state": "stale",
+   "station": "clip"
+  },
+  {
+   "at": 0,
+   "dur": 106.375,
+   "id": "cut",
+   "label": "film 5 so far",
+   "madeFrom": [
+    "clip:K00",
+    "clip:K01",
+    "clip:K02",
+    "clip:K03",
+    "clip:K04",
+    "clip:K05"
+   ],
+   "media": {
+    "at": "production-fixture/unlatched/cut/film5-so-far-720p.mp4",
+    "hash": "349481b7d11e1c2b48a7d8764c98f4404da6701fe80db19f250c8964681d744d",
+    "kind": "video"
+   },
+   "state": "stale",
+   "station": "cut"
+  }
+ ],
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "ownerName": "archemond",
+ "title": "Leave the Door Unlatched",
+ "v": 1
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, What held",
+ "id": "music-clip:finding:06768ac953ce",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Wardrobe held in 18 of 18 frames.** Each core arrived in its own clothes: a rust suede jacket, a double-breasted peacoat. Each was drawn in the clip's hoodie, tee and sweats. The clause \"not the clothes in image 2\" was enough. None of the core's clothes leaked into a frame.",
+ "v": 1
+}

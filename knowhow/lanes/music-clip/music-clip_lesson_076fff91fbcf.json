@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:076fff91fbcf",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Not tried: Fun ControlNet's `mask` and `source_video` inputs as a repair pass over bad regions; a choreography that avoids handing objects; the two-stage render (needs ComfyUI 0.44). A breakthrough worth returning for is one that fixes objects and identity over a chain, not only speed.",
+ "v": 1
+}

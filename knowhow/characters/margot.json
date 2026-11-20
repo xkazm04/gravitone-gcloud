@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.052Z",
+ "card": {
+  "age": 48,
+  "look": "pale skin, copper-red hair in a loose chignon, a strong aquiline nose, tall build, a dark double-breasted trench coat",
+  "name": "Margot"
+ },
+ "id": "chr:margot",
+ "identity": "Margot, aged 48: pale skin, copper-red hair in a loose chignon, a strong aquiline nose, tall build, a dark double-breasted trench coat.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/margot/portrait.jpg",
+     "hash": "b01b20120264dfa5bdd57b5b297ce0e4ee52c0c6d5e2b02bdd56e52477b2888a",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/margot/sheet.jpg",
+     "hash": "ad2f3a5cb244f211aa4b145de9d90540a8b177353ee7793ae4a84c7db515c344",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

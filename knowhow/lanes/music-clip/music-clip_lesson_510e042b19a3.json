@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-31T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.4.0 - 2026-10-31 - gravitone-gcloud",
+ "id": "music-clip:lesson:510e042b19a3",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Break the Sequence shipped after three note rounds (v1 \"almost oneshotted\", v2 outro only, v3 \"very well done\"). Every note was a timestamp plus a symptom and every fix landed in a set or the plan; the skill now carries the round as a procedure (Stage 3, Note rounds).",
+ "v": 1
+}

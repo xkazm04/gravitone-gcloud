@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.10.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:f9cc8388af08",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Break the Sequence graphic-novel validation (3 keyframes, 9 LTX clips): ink survives LTX when the motion line pins the palette; colour changes (visor to green, a green wave through a crowd) render as beams and fog unless the line forbids glow, and then a crowd-wide change does not happen at all - cut between two keyframes instead. A stencilled serial spreads to neighbours by 3-4 s.",
+ "v": 1
+}

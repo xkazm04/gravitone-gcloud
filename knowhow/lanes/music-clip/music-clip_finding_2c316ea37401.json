@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Setup",
+ "id": "music-clip:finding:2c316ea37401",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Plates**: K00-K02 used their per-take plates `P-K0x`. K03-K05 used the master `RMT2`, because their reprojected plates have holes.",
+ "v": 1
+}

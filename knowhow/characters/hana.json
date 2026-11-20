@@ -1,0 +1,25 @@
+{
+ "at": "2026-11-20T21:12:39.045Z",
+ "card": {
+  "age": 31,
+  "look": "fair skin, a sleek black bob with blunt bangs, narrow rectangular glasses, slender build, a charcoal turtleneck",
+  "name": "Hana"
+ },
+ "id": "chr:hana",
+ "identity": "Hana, aged 31: fair skin, a sleek black bob with blunt bangs, narrow rectangular glasses, slender build, a charcoal turtleneck.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/hana/portrait.jpg",
+     "hash": "c39ded1ccae6c1ddf834bd77a57b0f0ea12a842618ef0baab49702576cb6703e",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

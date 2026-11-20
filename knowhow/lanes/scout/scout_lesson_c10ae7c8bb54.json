@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-26T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 night (scout 2.3.0)",
+ "id": "scout:lesson:c10ae7c8bb54",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "2026-10-26 (measurement night, operator: \"measure clearly how efficient is our resource balancing\"):\n- **A worker restart mid-night interrupts every job on a paid lane and HOLDS that lane** until an operator acks it\n  (packages/kernel/src/job-queue.ts holdLaneIn). Three style runs on cloud.google sat held behind one restart, and\n  seat.text had been held since 2026-10-24 by an interrupted reels job - no reel or draft ran for two nights. Preflight\n  should read the lane holds; never restart the worker while cloud.* or seat.text jobs run.\n- **Commit charge, not RAM or GPU, is the binding resource.** ComfyUI with Flux resident holds ~56 GB of commit (RAM\n  working set ~2 GB), Ollama's qwen3.8:27b ~26 GB while loaded (the style runs' vision recognize loads it), the rest of\n  the box ~39 GB, against a 119-125 GB limit - commit sat at 96-123 GB with 20 GB of physical RAM free. ComfyUI `/free`\n  releases RAM, not commit (so S6's unload-on-hold does not lift a commit hold); only a ComfyUI restart did (95 -> 43 GB).\n- **Admission deadlocked gpu.local twice**: the hysteresis held until commit < 75%, unreachable while ComfyUI is\n  resident; then the 6.6 GB ComfyUI job charge landed on a reading that already holds ComfyUI's peak (101.8 vs 101.0 GB).\n  Tonight ran on MACHINE_MEM_HIGH=0.9 / MACHINE_MEM_LOW=0.9 in .env.local (revert after). The lasting fix is a\n  resident-aware charge for comfy jobs (lib/resources/profiles + packages/domain/src/resource.ts admit).\n- **The night-fill's band test is all-resources**: with the GPU at 96% it launched nothing all night, while CPU sat at\n  ~20% and the 12 queued Ollama drafts (CPU/unified-memory work) waited. A per-lane or per-resource test would fill it.",
+ "v": 1
+}

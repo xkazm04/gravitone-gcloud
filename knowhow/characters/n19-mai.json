@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.023Z",
+ "card": {
+  "age": 30,
+  "look": "light skin, dark brown hair in a low messy bun with face-framing strands, warm brown eyes, petite slim build, a lavender oversized hoodie",
+  "name": "Mai"
+ },
+ "id": "chr:n19-mai",
+ "identity": "Mai, aged 30: light skin, dark brown hair in a low messy bun with face-framing strands, warm brown eyes, petite slim build, a lavender oversized hoodie.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n19-mai/portrait.jpg",
+     "hash": "45e6fc4364aa40ad00387fd3485ef83b222807b602d17c98f2f21fb48bd5a9b9",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n19-mai/sheet.jpg",
+     "hash": "ddeaccb5be00751851232b3c1ee0b8740f19eb2b7b443fdc1c24f5ef2d8e756f",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

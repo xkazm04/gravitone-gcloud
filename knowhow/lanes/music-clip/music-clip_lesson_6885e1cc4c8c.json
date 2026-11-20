@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:6885e1cc4c8c",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "STATE: the operator stopped film 5 on 2026-11-07: \"the amount of effort for the output quality and need of retakes is currently not worthy\". They will revisit \"once PC without plan or new technological breakthrough achieved for the video control and editting\". Do not resume unasked. The track stays as it is: `film5/film5-so-far.mp4` in the Unlatched folder, 1:46 of 3:22 with the master (I01, T1, T2, K00-K05). Not shipped. Done: K00-K05. Not rendered: K06-K13 and an outro to the new timing. Known defect left in: K05 at 1:35-1:37 she puts the hoodie back on, then it melts off; K05's prompt still said she wore it. K04 at 1:33-1:34 the headphones turn to rings.",
+ "v": 1
+}

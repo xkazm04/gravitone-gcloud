@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.020Z",
+ "card": {
+  "age": 34,
+  "look": "fair skin, platinum blonde hair in a sleek low knot, pale grey eyes, tall slim build, a camel tailored trench coat",
+  "name": "Greta"
+ },
+ "id": "chr:n18-greta",
+ "identity": "Greta, aged 34: fair skin, platinum blonde hair in a sleek low knot, pale grey eyes, tall slim build, a camel tailored trench coat.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n18-greta/portrait.jpg",
+     "hash": "7db7ac76568653a8f3d67276a976c8f5f0ff154774e2902c18eac8518fcf5ce5",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n18-greta/sheet.jpg",
+     "hash": "25a529621a5301a27638125f186bbdb98975184071c4315212f1a87f0823ed79",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

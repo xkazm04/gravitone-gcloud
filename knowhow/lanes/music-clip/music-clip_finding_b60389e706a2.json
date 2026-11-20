@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, What drifted",
+ "id": "music-clip:finding:b60389e706a2",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**K05 risk.** The hoodie bundle sits just above the face. This is the frame type where identity is hardest to judge (reference-shows-only-invariants: peak action is where identity yields).",
+ "v": 1
+}

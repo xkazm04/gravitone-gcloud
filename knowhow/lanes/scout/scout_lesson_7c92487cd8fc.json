@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-25T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 · night 2026-10-24-2 (storyboards + clips)",
+ "id": "scout:lesson:7c92487cd8fc",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "A scene's first steps run on cloud.leonardo even with a local clip, so the worker claims them at once: a scene launched\nwhile the WORKER lacks an env switch runs with the worker's engines, not the shell's. Set the switch for the worker.",
+ "v": 1
+}

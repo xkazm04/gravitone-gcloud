@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.9.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:95175f3ee313",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The note \"closeups with slow or no movement\" came from motion lines that said what stays still; the \"lag\" at cuts came from a 0.1-0.27 s held last frame (5.04 s clips in 5.2 s scenes). Fixes: continuous-action motion lines, a trim offset for short scenes, slow-to-fill instead of hold, freezedetect before handover.",
+ "v": 1
+}

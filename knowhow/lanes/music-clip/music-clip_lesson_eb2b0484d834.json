@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-31T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.4.0 - 2026-10-31 - gravitone-gcloud",
+ "id": "music-clip:lesson:eb2b0484d834",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The upload: 513 MB for 4:10 (H.264 16 Mb/s, AAC 384 kb/s); YouTube's cap is 256 GB / 12 h.",
+ "v": 1
+}

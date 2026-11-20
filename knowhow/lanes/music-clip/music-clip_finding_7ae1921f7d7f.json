@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Times",
+ "id": "music-clip:finding:7ae1921f7d7f",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "These times are well under the 3-5 min per frame recorded on 2026-11-02.",
+ "v": 1
+}

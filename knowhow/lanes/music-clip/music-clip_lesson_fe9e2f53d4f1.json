@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.9.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:fe9e2f53d4f1",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Count Us All went generated-first with no three.js baseline: 48 bar-grid scenes, Leonardo Studio keyframes (round 1 Small Low for approval, round 2 Medium Low with round 1 as Image Reference), local LTX at 3 seeds overnight, two note rounds, ending \"the final output looks great\".",
+ "v": 1
+}

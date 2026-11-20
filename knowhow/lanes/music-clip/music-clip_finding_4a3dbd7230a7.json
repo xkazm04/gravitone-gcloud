@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, What held",
+ "id": "music-clip:finding:4a3dbd7230a7",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**The sheet did not override staging.** Every core hit the briefed pose: a side-step, a stride, the hoodie half off. The three rows are near-identical compositions per take. On Codex, the director's state text plus the plate decides the frame, and the sheet decides only the face. reference-admitted-late's replacement failure did not appear, even though Codex has no control over when a reference is admitted. My hypothesis: the sheet is a multi-view card on a neutral field, not a staged shot, and image 1 owns the composition.",
+ "v": 1
+}

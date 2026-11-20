@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.064Z",
+ "card": {
+  "age": 44,
+  "look": "light skin, grey-streaked black hair in a high knot pinned with a wooden comb, high cheekbones, slender build, an indigo kimono jacket with a wave pattern",
+  "name": "Aiko"
+ },
+ "id": "chr:aiko",
+ "identity": "Aiko, aged 44: light skin, grey-streaked black hair in a high knot pinned with a wooden comb, high cheekbones, slender build, an indigo kimono jacket with a wave pattern.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/aiko/portrait.jpg",
+     "hash": "f6bd7951bf399b0ec39bfb6d8b8c6c609411c8eafb704cba50601ad3f0264d76",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/aiko/sheet.jpg",
+     "hash": "ac18de299d85a1f7b178b8b4dc58fd5bf861a89fce980507ccac31263fc40a5e",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

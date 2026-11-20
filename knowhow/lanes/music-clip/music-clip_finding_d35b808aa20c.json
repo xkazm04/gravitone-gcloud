@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Times",
+ "id": "music-clip:finding:d35b808aa20c",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "One attempt failed: n02-mirela/K00 exited with code 0 but produced no file. The retry passed in 50 s.",
+ "v": 1
+}

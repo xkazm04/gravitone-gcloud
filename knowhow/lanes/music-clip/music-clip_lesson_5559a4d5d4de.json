@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-07T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.11.0 - 2026-11-07 - gravitone-gcloud - Unlatched PAUSED: state and what was learned",
+ "id": "music-clip:lesson:5559a4d5d4de",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "\"She became too tall\" was ours, twice over. Skeleton: fit its joints on the real frame (hips were 50 px high). Camera: keys that were floor points also lowered the camera as it moved closer. Then a prompt: \"the camera glides closer\" outgrew the pose until her feet left frame, though the camera really held its distance (K04 v1 and v2, same seed, only that sentence changed). Describe only camera moves the pose data really has. Overlay the control on the output: a pose sheet shows none of this.",
+ "v": 1
+}

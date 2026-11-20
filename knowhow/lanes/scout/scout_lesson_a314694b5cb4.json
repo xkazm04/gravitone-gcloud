@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-27T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-27-2 night",
+ "id": "scout:lesson:a314694b5cb4",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**GPU memory deadlocks the storyboards, not commit.** nvidia-smi reports a 62.5 GB GPU on this unified-memory box\n(ComfyUI sees 117.8 GB). After a board, ComfyUI keeps Flux resident (~50 GB); admission adds the next board's\ncharge on top (56.5 projected vs the 53.1 mark) and then holds gpu.local until under 46.9 GB, which a resident Flux\nnever reaches. One board ran per ComfyUI `/free`. Tonight ran a bounded helper that POSTs `/free` only while\nComfyUI's queue is empty and the worker's last line says a gpu.local job waits on vram (never a restart). Lasting\nfixes: `MACHINE_VRAM_GB` from ComfyUI's `vram_total` in lib/resources/probe.ts, and the resident-aware ComfyUI\ncharge in packages/domain/src/resource.ts admit already named above.",
+ "v": 1
+}

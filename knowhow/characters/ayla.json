@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.071Z",
+ "card": {
+  "age": 27,
+  "look": "light olive skin, wild curly black hair, a small silver nose ring, average build, an oversized faded denim jacket",
+  "name": "Ayla"
+ },
+ "id": "chr:ayla",
+ "identity": "Ayla, aged 27: light olive skin, wild curly black hair, a small silver nose ring, average build, an oversized faded denim jacket.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/ayla/portrait.jpg",
+     "hash": "3fb177d832598ce73380889c866486445fbb1ccc1bce3d49608e800009d03a5a",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/ayla/sheet.jpg",
+     "hash": "2a4795998d0ed454968de0c47d269c33b38e835f0710dd47083978723a09659c",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

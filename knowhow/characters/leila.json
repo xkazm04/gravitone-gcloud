@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.058Z",
+ "card": {
+  "age": 39,
+  "look": "olive skin, thick dark eyebrows, long glossy black curls, dark eyes, an hourglass build, a high-necked lapis-blue velvet gown",
+  "name": "Leila"
+ },
+ "id": "chr:leila",
+ "identity": "Leila, aged 39: olive skin, thick dark eyebrows, long glossy black curls, dark eyes, an hourglass build, a high-necked lapis-blue velvet gown.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/leila/portrait.jpg",
+     "hash": "60926d45e5fd8e3967d076ea06204633114cd6ecd184e053fc8c2625e81544f7",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/leila/sheet.jpg",
+     "hash": "76a001ff832303a41b1845921ee762eeee40a2c0e5e67f29cc39b21499836e9b",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

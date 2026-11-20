@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:38.996Z",
+ "card": {
+  "age": 33,
+  "look": "fair skin, straight chestnut hair to the collarbone, grey-green eyes, a defined jaw, athletic build, a charcoal wool peacoat",
+  "name": "Mirela"
+ },
+ "id": "chr:n02-mirela",
+ "identity": "Mirela, aged 33: fair skin, straight chestnut hair to the collarbone, grey-green eyes, a defined jaw, athletic build, a charcoal wool peacoat.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n02-mirela/portrait.jpg",
+     "hash": "48b6d3895c3f0c9256d304912b7c29c15d2b0cb6184f1cf0c48cddbce7b2fa1e",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n02-mirela/sheet.jpg",
+     "hash": "6cb662691178c55b353fae968f2007942e34afd41b5e3d6d2c48c0da0811edda",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

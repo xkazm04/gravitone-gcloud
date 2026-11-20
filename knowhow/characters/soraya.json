@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.085Z",
+ "card": {
+  "age": 30,
+  "look": "light brown skin, long straight black hair with a side part, kohl-lined dark eyes, slender build, a burgundy tailored waistcoat",
+  "name": "Soraya"
+ },
+ "id": "chr:soraya",
+ "identity": "Soraya, aged 30: light brown skin, long straight black hair with a side part, kohl-lined dark eyes, slender build, a burgundy tailored waistcoat.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/soraya/portrait.jpg",
+     "hash": "c2f72974d48ee46cca647a94b20ae23c38d170561514a087ab4ea0aca3cb08e8",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/soraya/sheet.jpg",
+     "hash": "c4783af7e137006cceb8d7c0d01da514400d22f93e0784a40d01f68b02703f47",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.9.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:a3f15f194996",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Incident 2026-10-31: a studio dry run's cleanup deleted 50 of the operator's Leonardo uploads by deleting every id it saw in traffic. The rule is now in Rules: one id, the run's own, count-checked, never in a dry run.",
+ "v": 1
+}

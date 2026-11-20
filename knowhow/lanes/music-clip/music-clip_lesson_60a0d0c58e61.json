@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.1.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:60a0d0c58e61",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The operator's edit rule for this track: no shot over 3 s, something always happens; army only in refrains and the intense second half. Made enforceable as data (shotplan -> shotlist, `shots` refuses >3 s): 139 shots, longest 2.0 s.",
+ "v": 1
+}

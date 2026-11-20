@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.081Z",
+ "card": {
+  "age": 35,
+  "look": "fair skin with rosy cheeks, thick strawberry-blonde braids pinned in a crown, a strong straight nose, curvy fit build, a moss-green apron over a cream blouse",
+  "name": "Ingrid"
+ },
+ "id": "chr:ingrid",
+ "identity": "Ingrid, aged 35: fair skin with rosy cheeks, thick strawberry-blonde braids pinned in a crown, a strong straight nose, curvy fit build, a moss-green apron over a cream blouse.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/ingrid/portrait.jpg",
+     "hash": "4273631131af23ab578c826ce098a194ebc8510612869431cbaf20a7dc6f0612",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/ingrid/sheet.jpg",
+     "hash": "582716ad421bc98579e50d54167bf97183238db45d03a9b9ea540dd23743dfdb",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

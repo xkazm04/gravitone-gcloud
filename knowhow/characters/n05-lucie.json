@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.003Z",
+ "card": {
+  "age": 29,
+  "look": "fair skin with light freckles, honey-blonde hair in a loose low braid, blue eyes, slim build, a navy striped knit sweater",
+  "name": "Lucie"
+ },
+ "id": "chr:n05-lucie",
+ "identity": "Lucie, aged 29: fair skin with light freckles, honey-blonde hair in a loose low braid, blue eyes, slim build, a navy striped knit sweater.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n05-lucie/portrait.jpg",
+     "hash": "e350a6bd1a10c173191cfc1ea901958ee74164a4e1ac09190501d20e3494a265",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n05-lucie/sheet.jpg",
+     "hash": "69b6a20d19bcd11c440a4a75407154a69a87842fcbcecb69513437a6177d2c05",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

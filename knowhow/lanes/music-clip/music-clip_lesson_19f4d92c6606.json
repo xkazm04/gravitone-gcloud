@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.10.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:19f4d92c6606",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Unlatched (2026-11-02): Codex CLI (`codex exec`, ChatGPT login, built-in image_gen on gpt-image-2) replaces Leonardo when its credits run out: 1672x941, ~3-5 min a frame, 3 in parallel. Pass the prompt after `--` (`-i` takes several files and swallows it otherwise). A master room plate attached as \"image 1 = the set\" plus the character references holds the set across edits and reverse angles: the fix for \"the surroundings change with each clip\".",
+ "v": 1
+}

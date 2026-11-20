@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.013Z",
+ "card": {
+  "age": 33,
+  "look": "light skin, long straight dark hair with a side part, narrow dark eyes, slender build, a jade-green mandarin-collared jacket",
+  "name": "Lin"
+ },
+ "id": "chr:n14-lin",
+ "identity": "Lin, aged 33: light skin, long straight dark hair with a side part, narrow dark eyes, slender build, a jade-green mandarin-collared jacket.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/n14-lin/portrait.jpg",
+     "hash": "79db3aa5626e3a8e2055f4af6e8d5d26940df51c54f979d36eef7cb3e527aa5b",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/n14-lin/sheet.jpg",
+     "hash": "c5e895e329d4b416fbe272218e02da6645a1820000c42cde4354685af8b98528",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

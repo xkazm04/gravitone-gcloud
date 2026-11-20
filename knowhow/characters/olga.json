@@ -1,0 +1,33 @@
+{
+ "at": "2026-11-20T21:12:39.077Z",
+ "card": {
+  "age": 37,
+  "look": "pale skin, ash-blonde hair in an undercut, ice-blue eyes, very tall lean build, a long red wool scarf",
+  "name": "Olga"
+ },
+ "id": "chr:olga",
+ "identity": "Olga, aged 37: pale skin, ash-blonde hair in an undercut, ice-blue eyes, very tall lean build, a long red wool scarf.",
+ "looks": {},
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/olga/portrait.jpg",
+     "hash": "6df0102c99a20a43412c72848b85c26daad09571405c55f8ffa400b89279c6af",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/olga/sheet.jpg",
+     "hash": "8ac17a25b79c12d7842365d2f65bfdf86560e1133a7d1902db5cc9e572f7da99",
+     "kind": "image"
+    }
+   }
+  ]
+ }
+}

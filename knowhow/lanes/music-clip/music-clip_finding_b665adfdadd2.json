@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-20T00:00:00.000Z",
+ "evidence": "core-to-scene experiment FINDINGS, Setup",
+ "id": "music-clip:finding:b665adfdadd2",
+ "kind": "finding",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "**Ref order**:\n- K00: image 1 is the plate (the set), image 2 is the sheet, and image 3 is a closer identity view. The lead got `S2-P` as image 3. The other two cores had no third ref.\n- K01-K05: image 1 is the plate, image 2 is the sheet, and image 3 is the core's own K00 (the chain).",
+ "v": 1
+}

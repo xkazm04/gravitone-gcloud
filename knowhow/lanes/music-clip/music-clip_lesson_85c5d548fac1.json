@@ -1,0 +1,10 @@
+{
+ "at": "2026-11-01T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.10.0 - 2026-11-01 - gravitone-gcloud",
+ "id": "music-clip:lesson:85c5d548fac1",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Unlatched (2026-11-02), references in the studio: upload a reference set ONCE and select it from Your Uploads by id per frame (Select Media is a multi-select; tick each tile, Confirm). Uploading per frame piled up 126 duplicates: the UploadImage `uploadId` is not the library's init-image id, and REST DELETE answers 200 for an unknown id, so the \"cleanup\" deleted nothing. A real delete answers with the id it removed; verify against GetViewerUploads.",
+ "v": 1
+}

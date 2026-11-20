@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 1.0.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:6c7e461bfa56",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "The strips' GPU-off Chromium was reused for scenes; headless Chromium here reaches the RTX Spark via `--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist`, and `file://` refuses ES module scripts - serve the clip folder on 127.0.0.1.",
+ "v": 1
+}

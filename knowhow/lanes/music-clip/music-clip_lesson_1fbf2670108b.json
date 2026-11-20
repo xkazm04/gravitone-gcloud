@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-30T00:00:00.000Z",
+ "evidence": "music-clip LESSONS, 2.2.0 - 2026-10-30 - gravitone-gcloud",
+ "id": "music-clip:lesson:1fbf2670108b",
+ "kind": "lesson",
+ "lane": "music-clip",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "Film v1 (139 shots, 4:10, 48 min on NVENC) came back \"almost oneshotted\"; the operator's notes were all set-level: a pile-up where a line stopped (1:12, 1:30), a hand clipping through a lever grip (2:10), white-slab inserts, an unreadable outro, and an intro that cut where the music does not build.",
+ "v": 1
+}

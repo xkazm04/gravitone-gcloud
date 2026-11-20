@@ -1,0 +1,10 @@
+{
+ "at": "2026-10-25T00:00:00.000Z",
+ "evidence": "scout LESSONS, 2026-10-25 · night 2026-10-24-2 (storyboards + clips)",
+ "id": "scout:lesson:edc35e503487",
+ "kind": "lesson",
+ "lane": "scout",
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "text": "A job cancelled in the kernel leaves its scout candidate `pending` (and a clip scene keeps holding a clip slot): there\nis no settle path. Argues one in lib/producers/scoutScene.ts (ended on cancel) or in acts.ts.",
+ "v": 1
+}

@@ -1,0 +1,56 @@
+{
+ "at": "2026-11-20T21:04:28.412Z",
+ "card": {
+  "age": 29,
+  "look": "olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf",
+  "name": "Sofia"
+ },
+ "id": "chr:sofia",
+ "identity": "Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf.",
+ "looks": {
+  "the-long-way": {
+   "portraitPrompt": "Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Image 1 is her portrait and image 2 her reference sheet: take only who she is from them, not their drawing style. Redraw her in this look: The Long Way: Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. Keep her face and identity exactly; the look changes the medium, never who she is. A head-and-shoulders portrait of her at rest, facing the camera, neutral expression, neutral light, plain ground, no text. Dress her in the song's outfit: dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. Leave out every garment her description names (scarf, jacket, accessory): the song's outfit replaces them.",
+   "sheetPrompt": "Sofia, aged 29: olive skin, long dark wavy hair with a centre part, faint freckles across the nose, slim build, an emerald silk scarf. Image 1 is her portrait and image 2 her reference sheet: take only who she is from them, not their drawing style. Redraw her in this look: The Long Way: Rotoscoped animation painted over live action, soft painterly brushwork over flat cel shapes, muted dark colours, a dim misty violet night with teal monitor light and one small signal-red accent, the same look from the first frame to the last. Keep her face and identity exactly; the look changes the medium, never who she is. An invariant reference sheet of her on one plain ground: full-body front, three-quarter, side and back views, and two head close-ups at rest; neutral light, no labels, no text. Dress her in the song's outfit: dark charcoal hoodie unzipped over a white t-shirt, dark navy baggy sweatpants, black sneakers with white soles, white over-ear headphones on. Leave out every garment her description names (scarf, jacket, accessory): the song's outfit replaces them."
+  }
+ },
+ "owner": "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b",
+ "v": 1,
+ "visuals": {
+  "dev:ea0f3c65-5e5b-43d9-ad42-5aa803454a6b": [
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/sofia/portrait.jpg",
+     "hash": "33c76ce4dcc3cb7c0565b8c3b2ee7fd781e1725b3d37f6caa380248a05f0da4b",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/sofia/sheet.jpg",
+     "hash": "87f5737e9a8c0d3ad40865fc3a1cc90bb59504a3d4ca1c54d83598f01fcac1da",
+     "kind": "image"
+    }
+   },
+   {
+    "kind": "portrait",
+    "media": {
+     "at": "production-fixture/cores/sofia/styled/unlatched/portrait.png",
+     "hash": "ed456e61fb96176f2fce47977f64e4655cd7f1694cffd4ba8ec11e944f3d000e",
+     "kind": "image"
+    },
+    "style": "the-long-way"
+   },
+   {
+    "kind": "sheet",
+    "media": {
+     "at": "production-fixture/cores/sofia/styled/unlatched/sheet.png",
+     "hash": "952638ff8216cbebaa59d621cd030db620b3ac1c473d6c66bbcee86ff20dd5e6",
+     "kind": "image"
+    },
+    "style": "the-long-way"
+   }
+  ]
+ }
+}
