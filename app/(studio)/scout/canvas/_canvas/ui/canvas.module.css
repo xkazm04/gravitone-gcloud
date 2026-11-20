@@ -1,4 +1,4 @@
-/* The canvas fills what the scout's title section leaves: the toolbar on top (the winner's header, var(--hdr-h)),
+/* The canvas fills what the scout's title section leaves: the toolbar on top (the winner's header, var(--h-sheet-bar)),
    the stage below it holding the map and everything that floats over it. */
 .canvas { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }

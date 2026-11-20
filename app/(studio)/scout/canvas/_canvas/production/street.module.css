@@ -4,73 +4,73 @@
    States: made (hair), stale (amber hatch, never rose), pending (cyan dashed), failed (rose). Drift is advisory: violet,
    never the verdict's emerald or rose. */
 
-.street { position: absolute; left: 0; right: 0; bottom: 0; height: min(70%, 760px); z-index: var(--z-sheet); background: var(--sheet-ground); border-top: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; animation: rise var(--dur-sheet) var(--ease); }
+.street { position: absolute; left: 0; right: 0; bottom: 0; height: min(70%, 47.5rem); z-index: var(--z-sheet); background: var(--sheet-ground); border-top: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; animation: rise var(--dur-sheet) var(--ease); }
 @keyframes rise { from { transform: translateY(30%); opacity: 0; } }
-.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 8px 18px; border-bottom: 1px solid var(--hair); flex: none; }
-.bar h2 { margin: 0; font: 400 20px var(--serif); color: var(--reading-bright); white-space: nowrap; }
+.bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3) var(--sp-5); padding: var(--sp-3) var(--sp-wide); border-bottom: 1px solid var(--hair); flex: none; }
+.bar h2 { margin: 0; font: 400 var(--fs-h2) var(--serif); color: var(--reading-bright); white-space: nowrap; }
 .grow { flex: 1; }
-.facts { font: 12.5px var(--mono); color: var(--muted); }
-.iconbtn { flex: none; width: 32px; height: 32px; border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink-3); display: grid; place-items: center; color: var(--muted); }
+.facts { font: var(--fs-bar) var(--mono); color: var(--muted); }
+.iconbtn { flex: none; width: var(--sp-8); height: var(--sp-8); border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink-3); display: grid; place-items: center; color: var(--muted); }
 .iconbtn:hover { color: var(--text); border-color: var(--hair-3); }
-.err { padding: 6px 18px 0; flex: none; }
+.err { padding: var(--sp-2) var(--sp-wide) 0; flex: none; }
 .body { position: relative; flex: 1; min-height: 0; overflow: auto; }
 
 /* the cast chip in the bar */
-.cast { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 3px; border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-3); color: var(--text); font: 12.5px var(--mono); }
+.cast { display: inline-flex; align-items: center; gap: var(--sp-3); height: var(--sp-8); padding: 0 var(--sp-4) 0 var(--sp-hair); border-radius: var(--r-pill); border: 1px solid var(--hair-2); background: var(--ink-3); color: var(--text); font: var(--fs-bar) var(--mono); }
 .cast:hover { border-color: var(--hair-3); }
-.cast img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: block; }
+.cast img { width: var(--size-badge); height: var(--size-badge); border-radius: 50%; object-fit: cover; display: block; }
 
 /* ── a node's tile ───────────────────────────────────────────────────── */
 .tile { position: relative; display: block; padding: 0; margin: 0; border: 1px solid var(--muted); border-radius: var(--r-xs); background: var(--letterbox); overflow: visible; color: var(--text); text-align: left; }
 .tile:hover { border-color: var(--text); }
-.tile.on { outline: 2px solid var(--ink-bright); outline-offset: 1px; }
+.tile.on { outline: var(--stroke-mark) solid var(--ink-bright); outline-offset: 1px; }
 .pic { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: inherit; background: var(--letterbox); }
 .pic img, .pic video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tile .cap { position: absolute; left: 3px; bottom: 3px; padding: 0 4px; border-radius: 3px; background: var(--ink-veil); font: 11.5px/1.5 var(--mono); color: var(--text); white-space: nowrap; }
-.tile .st { position: absolute; right: 3px; top: 3px; padding: 0 4px; border-radius: 3px; background: var(--ink-veil); font: 600 11.5px/1.5 var(--mono); }
+.tile .cap { position: absolute; left: var(--sp-hair); bottom: var(--sp-hair); padding: 0 var(--sp-1); border-radius: var(--r-meter); background: var(--ink-veil); font: var(--fs-micro)/1.5 var(--mono); color: var(--text); white-space: nowrap; }
+.tile .st { position: absolute; right: var(--sp-hair); top: var(--sp-hair); padding: 0 var(--sp-1); border-radius: var(--r-meter); background: var(--ink-veil); font: 600 var(--fs-micro)/1.5 var(--mono); }
 .stale { border-color: var(--amber); }
-.stale .pic::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--amber) 32%, transparent) 0 2px, transparent 2px 8px); }
+.stale .pic::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--amber) 32%, transparent) 0 0.125rem, transparent 0.125rem 0.5rem); }
 .stale .st { color: var(--amber); }
 .pending { border: 1px dashed var(--cyan); }
 .pending .st { color: var(--cyan); }
 .failed { border-color: var(--rose); }
 .failed .st { color: var(--rose); }
-.empty { display: grid; place-items: center; width: 100%; height: 100%; font: 12px var(--mono); color: var(--muted); background: var(--hatch-future), var(--ink-2); }
-.pendingPic { display: grid; place-items: center; width: 100%; height: 100%; font: 600 12px var(--mono); color: var(--cyan); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 18%, transparent) 0 2px, transparent 2px 8px), var(--ink-2); }
+.empty { display: grid; place-items: center; width: 100%; height: 100%; font: var(--fs-micro) var(--mono); color: var(--muted); background: var(--hatch-future), var(--ink-2); }
+.pendingPic { display: grid; place-items: center; width: 100%; height: 100%; font: 600 var(--fs-micro) var(--mono); color: var(--cyan); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 18%, transparent) 0 0.125rem, transparent 0.125rem 0.5rem), var(--ink-2); }
 
 /* the ripple: once, downstream, then the stale state holds */
-.ripple { animation: ripple 900ms var(--ease) both; animation-delay: var(--delay, 0ms); }
-@keyframes ripple { 0% { box-shadow: 0 0 0 0 var(--amber); } 40% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--amber) 60%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.ripple { --delay: 0ms; animation: ripple 900ms var(--ease) both; animation-delay: var(--delay, 0ms); }
+@keyframes ripple { 0% { box-shadow: 0 0 0 0 var(--amber); } 40% { box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--amber) 60%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
 @media (prefers-reduced-motion: reduce) { .ripple, .street { animation: none; } }
 
 /* ── the drift badge: three marks, identity · room · wardrobe ───────── */
-.drift { position: absolute; left: 3px; top: 3px; display: inline-flex; gap: 2px; padding: 2px; border-radius: 3px; background: var(--ink-veil); }
-.drift i { width: 7px; height: 7px; border-radius: 1px; border: 1.5px solid var(--muted); }
+.drift { position: absolute; left: var(--sp-hair); top: var(--sp-hair); display: inline-flex; gap: var(--sp-nudge); padding: var(--sp-nudge); border-radius: var(--r-meter); background: var(--ink-veil); }
+.drift i { width: var(--size-dot); height: var(--size-dot); border-radius: 1px; border: var(--stroke-glyph) solid var(--muted); }
 .drift i.dr { background: var(--violet); border-color: var(--violet); }
-.why { display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: var(--z-tooltip); width: max-content; max-width: 280px; padding: 6px 8px; border-radius: var(--r-xs); border: 1px solid var(--violet-line); background: var(--ink-2); font: 12px/1.4 var(--sans); color: var(--text); white-space: normal; pointer-events: none; }
-.why b { display: block; font: 600 11.5px var(--mono); color: var(--violet); margin-bottom: 2px; }
+.why { display: none; position: absolute; left: 0; top: calc(100% + var(--sp-1)); z-index: var(--z-tooltip); width: max-content; max-width: 17.5rem; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-xs); border: 1px solid color-mix(in srgb, var(--violet) 50%, transparent); background: var(--ink-2); font: var(--fs-micro)/1.4 var(--sans); color: var(--text); white-space: normal; pointer-events: none; }
+.why b { display: block; font: 600 var(--fs-micro) var(--mono); color: var(--violet); margin-bottom: var(--sp-nudge); }
 .tile:hover .why, .tile:focus-visible .why { display: block; }
 
 /* ── the swap's preview ──────────────────────────────────────────────── */
-.swap { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; width: min(980px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: var(--ink-1); border: 1px solid var(--hair-3); border-radius: var(--r-sm); box-shadow: var(--shadow-sheet); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-.swapHead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
-.swapHead img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; display: block; border: 1px solid var(--hair-2); }
+.swap { position: absolute; left: 50%; bottom: var(--sp-5); transform: translateX(-50%); z-index: 3; width: min(61.25rem, calc(100% - var(--size-kind-badge))); max-height: calc(100% - var(--size-kind-badge)); overflow: auto; background: var(--ink-1); border: 1px solid var(--hair-3); border-radius: var(--r-sm); box-shadow: var(--shadow-sheet); padding: var(--sp-5) var(--sp-loose); display: flex; flex-direction: column; gap: var(--sp-4); }
+.swapHead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); }
+.swapHead img { width: var(--h-hours); height: var(--h-hours); border-radius: 50%; object-fit: cover; display: block; border: 1px solid var(--hair-2); }
 .swapHead b { color: var(--ink-bright); font-weight: 600; }
-.arrow { color: var(--muted); font: 14px var(--mono); }
-.pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.pair figcaption { grid-column: 1 / -1; font: 12px var(--mono); color: var(--muted); }
-.receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 12.5px var(--mono); color: var(--text); padding-top: 8px; border-top: 1px solid var(--hair); }
+.arrow { color: var(--muted); font: var(--fs-meta) var(--mono); }
+.pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(16.25rem, 1fr)); gap: var(--sp-4); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-1); }
+.pair figcaption { grid-column: 1 / -1; font: var(--fs-micro) var(--mono); color: var(--muted); }
+.receipt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-5); font: var(--fs-bar) var(--mono); color: var(--text); padding-top: var(--sp-3); border-top: 1px solid var(--hair); }
 .receipt .amberText { color: var(--amber); }
-.acts { display: flex; gap: 8px; margin-left: auto; }
+.acts { display: flex; gap: var(--sp-3); margin-left: auto; }
 
 @media (max-width: 700px) {
   .street { height: 86%; }
-  .bar { padding: 8px 12px; }
-  .bar h2 { font-size: 17px; }
+  .bar { padding: var(--sp-3) var(--sp-5); }
+  .bar h2 { font-size: var(--fs-h3); }
   .pairs { grid-template-columns: 1fr; }
   .acts { margin-left: 0; width: 100%; }
 }
 
 /* a foreign production's media, held on its owning device (spark device-metadata-sync KS3): a placeholder, never a broken picture */
-.away { display: grid; place-items: center; width: 100%; height: 100%; padding: 0 4px; font: 12px var(--mono); color: var(--text); text-align: center; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--violet) 16%, transparent) 0 2px, transparent 2px 9px), var(--ink-2); }
+.away { display: grid; place-items: center; width: 100%; height: 100%; padding: 0 var(--sp-1); font: var(--fs-micro) var(--mono); color: var(--text); text-align: center; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--violet) 16%, transparent) 0 0.125rem, transparent 0.125rem 0.5625rem), var(--ink-2); }

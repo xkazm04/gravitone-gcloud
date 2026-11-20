@@ -7,7 +7,7 @@
 .map.drag { cursor: grabbing; }
 .map.pointy { cursor: pointer; }
 
-.tip { position: fixed; z-index: var(--z-tooltip); pointer-events: none; max-width: 340px; background: var(--ink-3); border: 1px solid var(--hair-3); border-radius: var(--r-sm); padding: 8px 10px; box-shadow: 0 10px 30px var(--shadow); display: block; }
+.tip { position: fixed; z-index: var(--z-tooltip); pointer-events: none; max-width: 21.25rem; background: var(--ink-3); border: 1px solid var(--hair-3); border-radius: var(--r-sm); padding: var(--sp-3) var(--sp-4); box-shadow: 0 0.625rem 1.875rem var(--shadow); display: block; }
 .tip .l { color: var(--text); }
-.tip .m { margin-top: 4px; color: var(--muted); font: 12px var(--mono); }
-.tip .k { margin-top: 6px; display: flex; gap: 10px; color: var(--faint); font: 12px var(--mono); align-items: center; }
+.tip .m { margin-top: var(--sp-1); color: var(--muted); font: var(--fs-micro) var(--mono); }
+.tip .k { margin-top: var(--sp-2); display: flex; gap: var(--sp-4); color: var(--faint); font: var(--fs-micro) var(--mono); align-items: center; }

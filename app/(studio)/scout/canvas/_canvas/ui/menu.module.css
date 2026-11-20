@@ -1,19 +1,19 @@
 /* THE MENU: the right-click popover. The note field comes first. The winner's styles.css (#menu), byte for byte over
    the @gt/ui tokens (contest scout-canvas-v2-r2 A/1). Fixed to the viewport: its x / y are a pointer's client point. */
 
-.menu { position: fixed; z-index: var(--z-popover); width: 320px; background: var(--ink-2); border: 1px solid var(--hair-3); border-radius: var(--r); box-shadow: 0 18px 50px var(--shadow); padding: 10px; }
-.hd { display: flex; align-items: baseline; gap: 8px; padding: 0 2px 8px; }
+.menu { position: fixed; z-index: var(--z-popover); width: 20rem; background: var(--ink-2); border: 1px solid var(--hair-3); border-radius: var(--r); box-shadow: 0 1.125rem 3.125rem var(--shadow); padding: var(--sp-4); }
+.hd { display: flex; align-items: baseline; gap: var(--sp-3); padding: 0 var(--sp-nudge) var(--sp-3); }
 .hd b { font-weight: 600; color: var(--ink-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.hd span { font: 12px var(--mono); color: var(--faint); white-space: nowrap; }
-.menu textarea { width: 100%; min-height: 58px; border-color: var(--violet-line); }
-.stance { display: flex; gap: 4px; margin: 8px 0; }
-.stance button { flex: 1 1 auto; white-space: nowrap; padding: 0 6px; height: 28px; border-radius: var(--r-chip); border: 1px solid var(--hair-2); background: var(--ink-3); font: 12px var(--mono); color: var(--muted); }
+.hd span { font: var(--fs-micro) var(--mono); color: var(--faint); white-space: nowrap; }
+.menu textarea { width: 100%; min-height: 3.625rem; border-color: color-mix(in srgb, var(--violet) 50%, transparent); }
+.stance { display: flex; gap: var(--sp-1); margin: var(--sp-3) 0; }
+.stance button { flex: 1 1 auto; white-space: nowrap; padding: 0 var(--sp-2); height: var(--h-row); border-radius: var(--r-chip); border: 1px solid var(--hair-2); background: var(--ink-3); font: var(--fs-micro) var(--mono); color: var(--muted); }
 .stance button.on { border-color: var(--violet); color: var(--violet); background: var(--violet-a); }
-.go { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.list { margin: 8px -4px 0; padding-top: 6px; border-top: 1px solid var(--hair); display: flex; flex-direction: column; }
-.list button { display: flex; align-items: center; gap: 9px; height: var(--h-control-sm); padding: 0 8px; border: 0; border-radius: var(--r-xs); background: none; text-align: left; color: var(--text); }
+.go { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.list { margin: var(--sp-3) calc(var(--sp-1) * -1) 0; padding-top: var(--sp-2); border-top: 1px solid var(--hair); display: flex; flex-direction: column; }
+.list button { display: flex; align-items: center; gap: var(--sp-control); height: var(--h-control-sm); padding: 0 var(--sp-3); border: 0; border-radius: var(--r-xs); background: none; text-align: left; color: var(--text); }
 .list button:hover, .list button:focus-visible { background: var(--wash-hi); }
-.list button .n { margin-left: auto; font: 12px var(--mono); color: var(--amber); }
+.list button .n { margin-left: auto; font: var(--fs-micro) var(--mono); color: var(--amber); }
 .list button kbd { margin-left: auto; }
-.list button .n + kbd { margin-left: 6px; }
+.list button .n + kbd { margin-left: var(--sp-2); }
 .list .amber { color: var(--amber); }

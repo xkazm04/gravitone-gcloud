@@ -1,11 +1,11 @@
 /* THE TOAST - the winner's styles.css #toast, byte for byte over the @gt/ui tokens (contest scout-canvas-v2-r2 A/1),
    at the bottom of the canvas root (absolute) rather than the viewport. The refusal row is new: the winner had none. */
 
-.toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; z-index: var(--z-toast); background: var(--ink-3); border: 1px solid var(--hair-3); border-radius: var(--r); padding: 10px var(--sp-wide); font-size: var(--fs-nav); transition: all var(--dur) var(--ease); pointer-events: none; max-width: 620px; }
+.toast { position: absolute; left: 50%; bottom: var(--sp-7); transform: translate(-50%, 1.25rem); opacity: 0; z-index: var(--z-toast); background: var(--ink-3); border: 1px solid var(--hair-3); border-radius: var(--r); padding: var(--sp-4) var(--sp-wide); font-size: var(--fs-nav); transition: all var(--dur) var(--ease); pointer-events: none; max-width: 38.75rem; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
-.err { display: flex; align-items: flex-start; gap: 8px; pointer-events: auto; }
-.toast > div + .err { margin-top: 6px; }
-.err button { flex: none; background: none; border: 0; color: var(--faint); padding: 2px; }
+.err { display: flex; align-items: flex-start; gap: var(--sp-3); pointer-events: auto; }
+.toast > div + .err { margin-top: var(--sp-2); }
+.err button { flex: none; background: none; border: 0; color: var(--faint); padding: var(--sp-nudge); }
 .err button:hover { color: var(--rose); }
 
 @media (prefers-reduced-motion: reduce) { .toast { transition: none !important; } }
