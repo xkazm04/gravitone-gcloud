@@ -122,3 +122,37 @@ Later, each its own change after the owner's manual tests:
   `GRAVITONE_STORE_PATH` and the scout store dirs to temp copies.
 - No spend: every vendor step is receipt-priced and DRY; nothing here arms live.
 - The screen does not explain itself: no sentence whose subject is the app; the work's own words stay.
+
+## Status — 2026-11-20 (the night of the port)
+
+Landed on `main` (three commits): `/scout/canvas`, tab **Canvas** beside Graph.
+
+| Exit condition (port-quality.md) | Measured |
+|---|---|
+| Fidelity | `style-contract.py` against the winner on the same real data, 1920x1080: **0 deviations on 30 roles** across four states (map 13, sheet 5, gallery 6, desk 6). Driven in a browser on both: first screen, `W` sheet, `G` gallery, `A` audio desk, `B` brief, right-click menu, Street level. |
+| Model | the scene built from the contest's real data matches the winner exactly: 367 blocking points (32 verdicts, 319 seeds, 16 silent, 0 to schedule), 61 rivers, world bounds, every river's position, height and point count. |
+| Gates | `tsc` 0, `eslint` 0 errors, `check:narration` OK, `check:type` OK, `next-structure` (boundaries, cycles, hygiene, size) 0, full `test:unit` 5,488 passed, live `studio-routes` + `legibility` on `/scout/canvas` pass. Largest new file 299 lines. |
+| Old code | `/scout` (Graph) stays until the owner promotes the canvas (Q5). |
+
+What the owner can do on the **real** side today: see every blocking point at every level; triage any open
+packet's work from the fullscreen gallery (verdicts go through the Board's own doors; commit = preview then
+commit, undecided cells left for the remainder); pin notes and set the round's goal (carried into the next
+night's `taste.md` under `## Operator notes`); read the reel road, the release calendar and the exact
+`/scout night` command.
+
+What answers with its sentence until built: the reel road past the brief (Phase 4b: a `reel` production
+source kind), the scout export → slot step (4c), dispatch (5), and the steer's split / pause (archived by the
+baseline). On the **fixture** side (`GRAVITONE_PRODUCE_SIDE=fixture`) the whole road runs in memory: five kept
+silent reel cuts → briefs → generate + lay → five dated slots every two days.
+
+Departures from the winner, each on purpose:
+- the gallery covers the window (the winner's too); every other surface lives inside the page under the studio header;
+- the legend's "dry bed" key is a plain row (the winner's disabled button was under the 4.5:1 / 3:1 floors);
+- the `W` pulse no longer draws before its start (the winner threw on a negative radius every frame of the flight);
+- the simulated night (fake lots after dispatch) is not ported: a planned function is shown as planned, never faked;
+- text controls go through `@gt/ui` `Field` / `TextArea` with the winner's look as a `skin`;
+- the kit pieces (chip, seg, keycap, stackbar, the weir pill) stay route-local until the owner's manual tests
+  settle the look; then they fold into `@gt/ui` with `/kit` specimens.
+
+Not yet verified: a verdict and a commit against a live open packet in the operator's store (no session may open
+it); the first real triage from the canvas is the owner's manual test.
