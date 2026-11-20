@@ -125,6 +125,16 @@ export const SCREENS = {
   scout: { url: "/scout" },
   // scout-canvas   the same graph as a map (docs/scout-canvas-port.md): basins, rivers, weirs, the toolbar and docks.
   "scout-canvas": { url: "/scout/canvas" },
+  // the production basin's street (spark character-cores S1, fixture side): Unlatched's first minute drawn three ways,
+  // its cores tray, a swap's preview (elif: frames drawn by the experiment; kaori: none drawn yet, pending), and the
+  // stale state after an accept (mirela; the accept holds for the dev server's life, so this id comes last).
+  "scout-canvas-street-a": { url: "/scout/canvas?street=unlatched&v=a" },
+  "scout-canvas-street-b": { url: "/scout/canvas?street=unlatched&v=b" },
+  "scout-canvas-street-c": { url: "/scout/canvas?street=unlatched&v=c" },
+  "scout-canvas-cores": { url: "/scout/canvas?street=unlatched&v=a&tray=1" },
+  "scout-canvas-swap": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An01-elif" },
+  "scout-canvas-swap-pending": { url: "/scout/canvas?street=unlatched&v=c&swap=chr%3An03-kaori" },
+  "scout-canvas-stale": { url: "/scout/canvas?street=unlatched&v=a&swap=chr%3An02-mirela", open: "Accept" },
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },

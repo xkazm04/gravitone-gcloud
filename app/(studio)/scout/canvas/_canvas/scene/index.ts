@@ -2,6 +2,8 @@
 // (./layout.ts), the water and the land (./geometry.ts). `rescene` recounts and rebuilds the rivers a change touched;
 // the client store calls it after an optimistic verdict or an audio step.
 
+import type { Production } from "@gt/domain/productionGraph";
+
 import type { CanvasView } from "../../_port/contract.ts";
 import { material } from "./build.ts";
 import { buildLand, buildRiver } from "./geometry.ts";
@@ -17,9 +19,9 @@ const recentFrom = (latest: string): string => {
   return d.toISOString().slice(0, 10);
 };
 
-export function buildScene(view: CanvasView): Scene {
-  const m = material(view);
-  const basins = newBasins();
+export function buildScene(view: CanvasView, productions: readonly Production[] = []): Scene {
+  const m = material(view, productions);
+  const basins = newBasins(productions.length > 0);
   const ctx = { down: m.down, itemBy: m.itemBy };
   const recent = recentFrom(m.latest);
   // Counted before the layout (a province orders its rivers by reach) and again after it.

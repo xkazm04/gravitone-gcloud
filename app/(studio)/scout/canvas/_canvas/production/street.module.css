@@ -1,0 +1,93 @@
+/* THE PRODUCTION STREET - the surface docked under the map at street zoom over a production's river (spark
+   character-cores S1): its bar (title, cast, state tally, the variant switch), the node tile every variant draws, the
+   drift badge, the cores tray and the swap's preview. Over the @gt/ui tokens; tints by color-mix, no colour typed here.
+   States: made (hair), stale (amber hatch, never rose), pending (cyan dashed), failed (rose). Drift is advisory: violet,
+   never the verdict's emerald or rose. */
+
+.street { position: absolute; left: 0; right: 0; bottom: 0; height: min(70%, 760px); z-index: var(--z-sheet); background: var(--sheet-ground); border-top: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); display: flex; flex-direction: column; animation: rise var(--dur-sheet) var(--ease); }
+@keyframes rise { from { transform: translateY(30%); opacity: 0; } }
+.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 8px 18px; border-bottom: 1px solid var(--hair); flex: none; }
+.bar h2 { margin: 0; font: 400 20px var(--serif); color: var(--reading-bright); white-space: nowrap; }
+.grow { flex: 1; }
+.facts { font: 12.5px var(--mono); color: var(--muted); }
+.iconbtn { flex: none; width: 32px; height: 32px; border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink-3); display: grid; place-items: center; color: var(--muted); }
+.iconbtn:hover { color: var(--text); border-color: var(--hair-3); }
+.switch { display: inline-flex; align-items: center; gap: 6px; }
+.err { padding: 6px 18px 0; flex: none; }
+.body { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.detail { flex: none; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 8px 18px; border-top: 1px solid var(--hair); background: var(--ink-1); font-size: 13px; max-height: 30%; overflow: auto; }
+.detail b { color: var(--ink-bright); font-weight: 600; }
+.detail .k { font: 12px var(--mono); color: var(--muted); }
+.detail q { font-family: var(--serif); color: var(--reading); }
+
+/* the cast chip in the bar */
+.cast { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px 0 3px; border-radius: 999px; border: 1px solid var(--hair-2); background: var(--ink-3); color: var(--text); font: 12.5px var(--mono); }
+.cast:hover { border-color: var(--hair-3); }
+.cast img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: block; }
+
+/* ── a node's tile ───────────────────────────────────────────────────── */
+.tile { position: relative; display: block; padding: 0; margin: 0; border: 1px solid var(--muted); border-radius: var(--r-xs); background: var(--letterbox); overflow: visible; color: var(--text); text-align: left; }
+.tile:hover { border-color: var(--text); }
+.tile.on { outline: 2px solid var(--ink-bright); outline-offset: 1px; }
+.pic { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: inherit; background: var(--letterbox); }
+.pic img, .pic video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .cap { position: absolute; left: 3px; bottom: 3px; padding: 0 4px; border-radius: 3px; background: var(--ink-veil); font: 11.5px/1.5 var(--mono); color: var(--text); white-space: nowrap; }
+.tile .st { position: absolute; right: 3px; top: 3px; padding: 0 4px; border-radius: 3px; background: var(--ink-veil); font: 600 11.5px/1.5 var(--mono); }
+.stale { border-color: var(--amber); }
+.stale .pic::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--amber) 32%, transparent) 0 2px, transparent 2px 8px); }
+.stale .st { color: var(--amber); }
+.pending { border: 1px dashed var(--cyan); }
+.pending .st { color: var(--cyan); }
+.failed { border-color: var(--rose); }
+.failed .st { color: var(--rose); }
+.empty { display: grid; place-items: center; width: 100%; height: 100%; font: 12px var(--mono); color: var(--muted); background: var(--hatch-future), var(--ink-2); }
+.pendingPic { display: grid; place-items: center; width: 100%; height: 100%; font: 600 12px var(--mono); color: var(--cyan); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cyan) 18%, transparent) 0 2px, transparent 2px 8px), var(--ink-2); }
+
+/* the ripple: once, downstream, then the stale state holds */
+.ripple { animation: ripple 900ms var(--ease) both; animation-delay: var(--delay, 0ms); }
+@keyframes ripple { 0% { box-shadow: 0 0 0 0 var(--amber); } 40% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--amber) 60%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .ripple, .street { animation: none; } }
+
+/* ── the drift badge: three marks, identity · room · wardrobe ───────── */
+.drift { position: absolute; left: 3px; top: 3px; display: inline-flex; gap: 2px; padding: 2px; border-radius: 3px; background: var(--ink-veil); }
+.drift i { width: 7px; height: 7px; border-radius: 1px; border: 1.5px solid var(--muted); }
+.drift i.dr { background: var(--violet); border-color: var(--violet); }
+.why { display: none; position: absolute; left: 0; top: calc(100% + 4px); z-index: var(--z-tooltip); width: max-content; max-width: 280px; padding: 6px 8px; border-radius: var(--r-xs); border: 1px solid var(--violet-line); background: var(--ink-2); font: 12px/1.4 var(--sans); color: var(--text); white-space: normal; pointer-events: none; }
+.why b { display: block; font: 600 11.5px var(--mono); color: var(--violet); margin-bottom: 2px; }
+.tile:hover .why, .tile:focus-visible .why { display: block; }
+
+/* ── the cores tray ──────────────────────────────────────────────────── */
+.tray { position: absolute; top: 0; right: 0; bottom: 0; width: min(420px, 100%); z-index: 2; display: flex; flex-direction: column; background: var(--ink-1); border-left: 1px solid var(--hair-3); box-shadow: var(--shadow-sheet); }
+.trayLeft { left: 0; right: auto; border-left: 0; border-right: 1px solid var(--hair-3); }
+.trayHead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--hair); }
+.trayHead h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.cores { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; padding: 12px 14px; align-content: start; }
+.core { display: flex; flex-direction: column; gap: 4px; padding: 4px; border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--ink-2); text-align: left; color: var(--text); }
+.core:hover { border-color: var(--hair-3); background: var(--ink-3); }
+.core img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-xs); display: block; background: var(--letterbox); }
+.core b { font-weight: 600; font-size: 13px; color: var(--ink-bright); line-height: 1.25; }
+.core small { font: 11.5px/1.35 var(--mono); color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.core[aria-current="true"] { border-color: var(--cyan-line); }
+.core[aria-current="true"] b::after { content: " · cast"; color: var(--cyan); font: 12px var(--mono); }
+
+/* ── the swap's preview ──────────────────────────────────────────────── */
+.swap { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; width: min(980px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: var(--ink-1); border: 1px solid var(--hair-3); border-radius: var(--r-sm); box-shadow: var(--shadow-sheet); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.swapHead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.swapHead img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; display: block; border: 1px solid var(--hair-2); }
+.swapHead b { color: var(--ink-bright); font-weight: 600; }
+.arrow { color: var(--muted); font: 14px var(--mono); }
+.pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.pair figcaption { grid-column: 1 / -1; font: 12px var(--mono); color: var(--muted); }
+.receipt { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 12.5px var(--mono); color: var(--text); padding-top: 8px; border-top: 1px solid var(--hair); }
+.receipt .amberText { color: var(--amber); }
+.acts { display: flex; gap: 8px; margin-left: auto; }
+
+@media (max-width: 700px) {
+  .street { height: 86%; }
+  .bar { padding: 8px 12px; }
+  .bar h2 { font-size: 17px; }
+  .detail { grid-template-columns: 1fr; padding: 8px 12px; }
+  .pairs { grid-template-columns: 1fr; }
+  .acts { margin-left: 0; width: 100%; }
+}

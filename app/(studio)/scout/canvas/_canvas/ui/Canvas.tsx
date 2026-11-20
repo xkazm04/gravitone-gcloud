@@ -9,8 +9,13 @@ import { useRef, useState } from "react";
 
 import { useKeys, type KeyHit } from "@gt/ui/keymap/dispatch";
 
+import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
+
 import type { CanvasPort, CanvasView } from "../../_port/contract.ts";
 import { pause } from "../acts.ts";
+import { cycleVariant, setTray, streetBack } from "../production/acts.ts";
+import type { Variant } from "../production/model.ts";
+import { Street } from "../production/Street.tsx";
 import { flyBox, flyTo, goLevel, home, levelUp, pan } from "../render/camera.ts";
 import { blockPoints, blocksUnder, scopeName, scopeOf } from "../scene/scopes.ts";
 import type { Hit, Scope } from "../scene/types.ts";
@@ -87,19 +92,44 @@ function useMapKeys(st: CanvasStore): void {
     },
     brief: () => st.openSurface({ kind: "brief" }),
     find: () => openFind(st),
+    "street-variant": () => {
+      if (st.ui.surface?.kind === "street") cycleVariant(st);
+      else st.say("street zoom on a production");
+    },
+    cores: () => {
+      if (st.ui.surface?.kind === "street") setTray(st, !st.ui.street.tray);
+      else st.say("street zoom on a production");
+    },
     keys: () => st.set("keysOpen", !st.ui.keysOpen),
     up: () => {
       if (st.ui.keysOpen) st.set("keysOpen", false);
       else if (st.ui.menu !== null) st.closeMenu();
       else if (st.ui.projOpen) st.set("projOpen", false);
       else if (st.ui.sheetOpen) st.closeSheet();
-      else levelUp(st);
+      else if (!streetBack(st)) levelUp(st);
     },
   }, { enabled: st.ui.surface?.kind !== "gallery" });
 }
 
-export function Canvas({ view, port }: { readonly view: CanvasView; readonly port: CanvasPort }) {
-  const [st] = useState(() => new CanvasStore(view, port));
+/** The production basin's server load: the productions, the cores, and a street to open on arrival (a link's state). */
+export type CanvasProds = {
+  readonly productions: readonly Production[];
+  readonly cores: readonly CoreRef[];
+  readonly open?: { readonly production: string; readonly variant: Variant; readonly tray: boolean; readonly preview: SwapPreview | null; readonly error: string | null };
+};
+
+function newStore(view: CanvasView, port: CanvasPort, prod: CanvasProds | undefined): CanvasStore {
+  const st = new CanvasStore(view, port, prod);
+  const o = prod?.open;
+  if (o !== undefined && st.prod.productions.some((p) => p.id === o.production)) {
+    st.ui.surface = { kind: "street", production: o.production };
+    Object.assign(st.ui.street, { variant: o.variant, tray: o.tray, preview: o.preview, error: o.error });
+  }
+  return st;
+}
+
+export function Canvas({ view, port, prod }: { readonly view: CanvasView; readonly port: CanvasPort; readonly prod?: CanvasProds }) {
+  const [st] = useState(() => newStore(view, port, prod));
   useMapKeys(st);
   return (
     <CanvasContext.Provider value={st}>
@@ -113,6 +143,7 @@ export function Canvas({ view, port }: { readonly view: CanvasView; readonly por
           <ProjDock />
           <Sheet />
           <Desk />
+          <Street />
           <Menu />
           <KeysSheet />
           <Toast />

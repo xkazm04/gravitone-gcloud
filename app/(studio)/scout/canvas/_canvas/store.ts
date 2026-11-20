@@ -4,7 +4,10 @@
 // port, and rolls back with the port's own sentence when the port refuses (./acts.ts). The camera's motion lives in
 // ../render/camera.ts over `ui.cam`.
 
+import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGraph";
+
 import type { CanvasPort, CanvasSlot, CanvasView, RoundGoal, ScoutNote } from "../_port/contract.ts";
+import type { Variant } from "./production/model.ts";
 import { buildScene } from "./scene/index.ts";
 import type { Anchor } from "./scene/scopes.ts";
 import type { Hit, Item, Port, Scene, Scope } from "./scene/types.ts";
@@ -17,7 +20,25 @@ export type Surface =
   | { readonly kind: "gallery"; readonly scope: Scope; readonly block: BlockKind | null; readonly focus: Item | null }
   | { readonly kind: "audio"; readonly scope: Scope }
   | { readonly kind: "brief" }
+  | { readonly kind: "street"; readonly production: string }
   | null;
+
+/** The productions the side holds and the cores a production can cast (the production basin, spark character-cores). */
+export type Prods = { productions: Production[]; readonly cores: readonly CoreRef[] };
+
+/** The production street's state: the variant drawn, the cores tray, a swap's preview, the stale ripple, a refusal. */
+export type StreetUi = {
+  variant: Variant;
+  tray: boolean;
+  /** The core being previewed while its preview is asked for. */
+  asking: string | null;
+  preview: SwapPreview | null;
+  /** The ids that went stale on the last accept, and when (the ripple plays once, then the stale state holds). */
+  ripple: { readonly ids: readonly string[]; readonly t0: number } | null;
+  error: string | null;
+  /** The node whose own words show under the drawing. */
+  focus: string | null;
+};
 
 /** The right-click menu: where it opened, what it is about, the note being written. */
 export type MenuState = { readonly x: number; readonly y: number; readonly anchor: Anchor | null; readonly target: Hit | null; stance: Stance; text: string } | null;
@@ -72,6 +93,7 @@ export type Ui = {
   toast: { readonly text: string; readonly at: number } | null;
   error: string | null;
   busy: number;
+  street: StreetUi;
 };
 
 export type Change = "verdict" | "commit" | "note" | "steer" | "audio" | "surface" | "camera" | "ui";
@@ -88,17 +110,22 @@ export class CanvasStore {
   private readonly subs = new Set<() => void>();
   private rev = 0;
 
+  readonly prod: Prods;
+
   constructor(
     readonly view: CanvasView,
     readonly port: CanvasPort,
+    prod: { readonly productions: readonly Production[]; readonly cores: readonly CoreRef[] } = { productions: [], cores: [] },
   ) {
-    this.scene = buildScene(view);
+    this.prod = { productions: [...prod.productions], cores: prod.cores };
+    this.scene = buildScene(view, prod.productions);
     const split = view.split ?? { adult: audShare(view, "adult"), family: audShare(view, "family"), kids: audShare(view, "kids") };
     this.ui = {
       cam: { x: 0, y: 0, z: 1 }, W: 0, H: 0, dpr: 1, inset: { r: 0, b: 0 }, hover: null, sel: null, lens: null, reveal: 0, pulse: null,
       sheetOpen: false, surface: null, menu: null, keysOpen: false, notes: [...view.notes], goal: view.goal, mode: "dry", until: "06:00",
       split: { ...split }, splitSet: view.split !== undefined, assume: { views: 1500, rpm: 0.05 }, projOpen: false,
       log: [], slots: view.slots.filter((s) => s.state !== "cancelled"), flyers: [], cadence: 2, autoSlot: true, toast: null, error: null, busy: 0,
+      street: { variant: "a", tray: false, asking: null, preview: null, ripple: null, error: null, focus: null },
     };
   }
 
@@ -142,6 +169,9 @@ export class CanvasStore {
   }
 
   openSheet(h: Hit): void {
+    // A production's river, or a station on it, opens the production's street instead of a sheet.
+    const prod = h.type === "river" ? h.ref.prod : h.type === "station" && h.ref.fam === "production" ? (this.scene.rivers.find((r) => r.prod !== null && r.cy === h.ref.y)?.prod ?? null) : null;
+    if (prod !== null) return this.openSurface({ kind: "street", production: prod.id });
     this.ui.sel = h;
     this.ui.sheetOpen = true;
     this.changed("surface");

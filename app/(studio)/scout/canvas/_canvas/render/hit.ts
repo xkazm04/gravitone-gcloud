@@ -37,7 +37,7 @@ export function pickAt(st: CanvasStore, hot: readonly Hot[], sxp: number, syp: n
     if (z >= 0.3) for (const sh of p.ships) if (wx >= sh.x && wx <= sh.x + 28 && wy >= sh.y && wy <= sh.y + LH) return P({ type: "ship", ref: sh });
   }
   if (z >= 0.45) {
-    for (const sp of s.songRiver.stationPts) {
+    for (const sp of s.rivers.flatMap((r) => r.stationPts)) {
       const [px, py] = toS(st, sp.x, sp.y);
       if (Math.abs(sxp - px) < 9 && Math.abs(syp - py) < 9) return P({ type: "station", ref: sp });
     }

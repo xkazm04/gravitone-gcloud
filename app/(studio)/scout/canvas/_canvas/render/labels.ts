@@ -4,6 +4,7 @@
 // the winner's map.js drawLabels/drawBasinTitles/drawContinentLabels.
 
 import { FAMILIES } from "../pipelines.ts";
+import { basinFacts } from "../production/model.ts";
 import { BLOCK_KINDS, STATE, type BlockKind, type ItemState } from "../tables.ts";
 import { clamp, cut, LH, LW, shortNight, smooth, sum, sx } from "../scene/geo.ts";
 import { riverY } from "../scene/geometry.ts";
@@ -108,7 +109,7 @@ function drawBasinTitles(f: Frame): void {
   const size = W < 1100 ? 20 : W < 1500 ? 24 : 30;
   for (const b of f.s.basins) {
     const kinds = BLOCK_KINDS.filter((k) => b.blocks[k] > 0);
-    const facts = b.key === "song" ? FAMILIES.song.volume.split(" · ").map((t) => t.trim()) : [`${b.live} live · ${b.failed} failed · ${b.outputs} kept outputs`];
+    const facts = b.key === "song" ? FAMILIES.song.volume.split(" · ").map((t) => t.trim()) : b.key === "production" ? b.rivers.flatMap((r) => (r.prod === null ? [] : basinFacts(r.prod))) : [`${b.live} live · ${b.failed} failed · ${b.outputs} kept outputs`];
     ctx.font = font(pal, size, "serif");
     let bw = ctx.measureText(b.name).width;
     ctx.font = font(pal, 12, "mono");

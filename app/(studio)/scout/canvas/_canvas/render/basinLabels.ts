@@ -74,7 +74,7 @@ export function drawBasinLabels(f: Frame): void {
     ctx.globalAlpha = 1;
   }
   if (z >= Z.basin * 0.9) {
-    for (const sp of f.s.songRiver.stationPts) {
+    for (const sp of f.s.rivers.flatMap((r) => r.stationPts)) {
       const [px, py] = toS(st, sp.x, sp.y);
       if (px < -60 || px > W + 60 || py < -20 || py > H + 40) continue;
       const ex = sp.s.exists;

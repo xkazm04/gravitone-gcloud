@@ -1,0 +1,96 @@
+/* THE STREET'S THREE DRAWINGS (spark character-cores S1, behind the variant switch): A the river of stations, B the
+   timeline street (lanes over the track's ruler), C the film strip (scenes, with the look and the cast pinned above).
+   Over the @gt/ui tokens; the tile, drift badge and state marks are ./street.module.css. */
+
+.h3 { margin: 0; font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.n { font: 12px var(--mono); color: var(--muted); }
+.amberText { color: var(--amber); }
+.cyanText { color: var(--cyan); }
+.roseText { color: var(--rose); }
+.read { font-family: var(--serif); font-size: 14px; line-height: 1.45; color: var(--reading); margin: 0; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.facts { font: 12px var(--mono); color: var(--muted); }
+.sw { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── A: the river of stations ────────────────────────────────────────── */
+.river { position: relative; display: grid; grid-template-columns: minmax(150px, .9fr) minmax(190px, 1.5fr) minmax(170px, 1fr) minmax(320px, 3.4fr) minmax(220px, 1.7fr) minmax(170px, 1fr); gap: 0; min-height: 100%; padding: 0 6px; }
+.river::before { content: ""; position: absolute; left: 24px; right: 24px; top: 27px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.station { position: relative; min-width: 0; padding: 14px 10px 18px; border-right: 1px solid var(--hair); }
+.station:last-child { border-right: 0; }
+.stHead { position: relative; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-left: 2px; }
+.mark { flex: none; width: 14px; height: 14px; border: 2px solid var(--text); background: var(--ink-1); }
+.mark.stale { border-color: var(--amber); background: repeating-linear-gradient(135deg, var(--amber) 0 2px, var(--ink-1) 2px 5px); }
+.stHead .h3 { background: var(--ink-1); padding: 0 4px; }
+.stHead .n { margin-left: auto; background: var(--ink-1); padding: 0 4px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.tiles.small { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 4px; }
+.tiles.one { grid-template-columns: 1fr; }
+.track { display: flex; flex-direction: column; gap: 8px; }
+.track b { color: var(--ink-bright); font-weight: 600; }
+.secbar { display: flex; height: 8px; border-radius: 2px; overflow: hidden; gap: 1px; }
+.secbar span { display: block; height: 100%; background: color-mix(in srgb, var(--text) 40%, transparent); }
+.secbar span:nth-child(even) { background: color-mix(in srgb, var(--text) 22%, transparent); }
+.castCard { display: flex; flex-direction: column; gap: 8px; }
+.castCard img { width: 100%; max-width: 180px; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--hair-2); display: block; }
+.castCard b { color: var(--ink-bright); font-weight: 600; }
+.castCard.drop { outline: 2px dashed var(--cyan); outline-offset: 3px; }
+
+/* ── B: the timeline street ──────────────────────────────────────────── */
+.tl { position: relative; display: grid; grid-template-columns: 96px minmax(1200px, 1fr); align-content: start; }
+.lname { position: sticky; left: 0; z-index: 1; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--hair); background: var(--ink-1); }
+.lane { position: relative; border-bottom: 1px solid var(--hair); margin: 0 34px; }
+.lane.kf { height: 64px; }
+.lane.look { height: 56px; }
+.lane.cast { height: 44px; }
+.lane.clip { height: 74px; }
+.lane.cut { height: 36px; }
+.at { position: absolute; top: 6px; }
+.lane.kf .at { width: 54px; }
+.lane.kf .at:nth-child(even) { top: 30px; }
+.lane.look .at { width: 66px; top: 18px; }
+.span { position: absolute; top: 6px; bottom: 6px; min-width: 6px; display: flex; align-items: center; gap: 8px; padding: 0 8px; border-radius: var(--r-xs); border: 1px solid var(--hair-3); background: var(--ink-3); font: 12px var(--mono); color: var(--text); overflow: hidden; white-space: nowrap; }
+.span img { height: calc(100% - 4px); aspect-ratio: 1; border-radius: 50%; object-fit: cover; }
+.span.stale { border-color: var(--amber); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--amber) 30%, transparent) 0 2px, var(--ink-3) 2px 7px); }
+.span.pending { border-style: dashed; border-color: var(--cyan); }
+.clipSpan { position: absolute; top: 6px; bottom: 6px; }
+.clipSpan > button { width: 100%; height: 100%; }
+.clipSpan > button > span:first-child { aspect-ratio: auto; height: 100%; }
+.ruler { position: relative; height: 92px; margin: 0 34px; }
+.sec { position: absolute; top: 0; height: 22px; padding: 0 6px; border-left: 1px solid var(--hair-3); font: 12px/22px var(--mono); color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); overflow: hidden; white-space: nowrap; }
+.sec:nth-child(even) { background: color-mix(in srgb, var(--text) 13%, transparent); }
+.beat { position: absolute; top: 26px; width: 1px; height: 8px; background: var(--muted); }
+.beat.bar { height: 14px; background: var(--text); }
+.lyric { position: absolute; top: 44px; width: 2px; height: 10px; background: var(--reading); }
+.lyricText { position: absolute; top: 56px; font: 11.5px var(--serif); color: var(--reading); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.clockMark { position: absolute; bottom: 0; font: 11.5px var(--mono); color: var(--muted); transform: translateX(-50%); }
+
+/* ── C: the film strip ───────────────────────────────────────────────── */
+.pinned { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; padding: 14px 18px 4px; }
+.card { border: 1px solid var(--hair-2); border-radius: var(--r-sm); background: var(--ink-2); padding: 10px 12px; display: flex; gap: 12px; min-width: 0; }
+.card .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.card b { color: var(--ink-bright); font-weight: 600; }
+.card .plates { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; }
+.card .portrait { width: 120px; align-self: flex-start; flex: none; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-xs); border: 1px solid var(--hair-2); display: block; }
+.card.drop { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan-line); }
+.strip { display: flex; gap: 0; padding: 12px 18px 16px; overflow-x: auto; }
+.film { flex: none; display: flex; flex-direction: column; gap: 6px; width: 250px; padding: 14px 8px; background: var(--ink-2); border-right: 2px solid var(--ink); position: relative; }
+.film::before, .film::after { content: ""; position: absolute; left: 0; right: 0; height: 8px; background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 14px); }
+.film::before { top: 3px; }
+.film::after { bottom: 3px; }
+.film .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font: 12px var(--mono); color: var(--muted); }
+.film .row b { color: var(--ink-bright); font-weight: 600; }
+.film .kfs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+.film.ghostFilm { width: 170px; background: var(--ink-1); }
+.cutBar { margin: 0 18px 16px; }
+
+@media (max-width: 700px) {
+  .river { grid-template-columns: 1fr; padding: 0; }
+  .river::before { left: 17px; right: auto; top: 20px; bottom: 20px; width: 4px; height: auto; }
+  .station { border-right: 0; border-bottom: 1px solid var(--hair); padding: 12px 12px 14px 10px; }
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+  .castCard img { max-width: 120px; }
+  .tl { grid-template-columns: 72px minmax(1200px, 1fr); }
+  .pinned { grid-template-columns: 1fr; padding: 12px 12px 4px; }
+  .strip { padding: 10px 12px 14px; }
+  .film { width: 200px; }
+  .cutBar { margin: 0 12px 14px; }
+}

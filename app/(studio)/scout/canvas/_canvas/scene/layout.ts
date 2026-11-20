@@ -3,14 +3,14 @@
 // night piles); basins stack north to south (Songs, Generated video, Data reels). Each channel's port sits on the coast
 // at its river's height with its episodes moored beside it as ships. Port of the winner's model.js layout.
 
-import { FAMILIES, FAMILY_ORDER } from "../pipelines.ts";
+import { FAMILIES, FAMILY_ORDER, WITH_PRODUCTIONS } from "../pipelines.ts";
 import { STATE } from "../tables.ts";
 import { clamp, coastX, COAST_X, GUT, hash, LH, LW, PX, PY, SEA_X, sx } from "./geo.ts";
 import type { Material } from "./build.ts";
 import type { Basin, Night, Port, Post, Province, ProvinceKey, River, Town, World } from "./types.ts";
 
-const PROV_NAME: Readonly<Record<ProvinceKey, string>> = { songs: "Suno lane", chan: "Channels", adult: "Adult", family: "Family", kids: "Kids", early: "Early nights", archive: "Archive" };
-const PROV_ORDER: Readonly<Record<Basin["key"], readonly ProvinceKey[]>> = { song: ["songs"], video: ["chan", "adult", "family", "kids", "early", "archive"], reel: ["chan", "adult", "family", "kids", "early"] };
+const PROV_NAME: Readonly<Record<ProvinceKey, string>> = { songs: "Suno lane", chan: "Channels", adult: "Adult", family: "Family", kids: "Kids", early: "Early nights", archive: "Archive", prod: "Music clips" };
+const PROV_ORDER: Readonly<Record<Basin["key"], readonly ProvinceKey[]>> = { song: ["songs"], video: ["chan", "adult", "family", "kids", "early", "archive"], reel: ["chan", "adult", "family", "kids", "early"], production: ["prod"] };
 
 export function layoutTown(t: Town): void {
   const its = t.items.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : STATE[a.state].ord - STATE[b.state].ord));
@@ -37,8 +37,8 @@ export function layoutTown(t: Town): void {
   t.nights = groups;
 }
 
-export const newBasins = (): Basin[] =>
-  FAMILY_ORDER.map((key) => ({ key, name: FAMILIES[key].name, fam: FAMILIES[key], provs: [], rivers: [], blocks: { verdict: 0, seeds: 0, audio: 0, slot: 0, n: 0 }, live: 0, open: 0, failed: 0, pending: 0, kept: 0, outputs: 0, y0: 0, y1: 0 }));
+export const newBasins = (productions = false): Basin[] =>
+  (productions ? WITH_PRODUCTIONS : FAMILY_ORDER).map((key) => ({ key, name: FAMILIES[key].name, fam: FAMILIES[key], provs: [], rivers: [], blocks: { verdict: 0, seeds: 0, audio: 0, slot: 0, n: 0 }, live: 0, open: 0, failed: 0, pending: 0, kept: 0, outputs: 0, y0: 0, y1: 0 }));
 
 const byOrder = (a: River, c: River): number =>
   (a.synthetic ? -1 : c.synthetic ? 1 : 0) || (a.dry ? 1 : 0) - (c.dry ? 1 : 0) || (a.chan !== null && c.chan !== null ? a.chan.id.localeCompare(c.chan.id) : 0) || c.reach - a.reach || c.live - a.live;
@@ -115,6 +115,7 @@ export function layoutPorts(m: Material): Port[] {
   const sr = m.songRiver;
   ports.push({ chan: null, song: true, x: coastX(sr.cy), y: sr.cy, river: sr, ships: [] });
   sr.stationPts = FAMILIES.song.stations.map((s) => ({ s, x: s.id === "publish" ? coastX(sr.cy) : sx(s.x), y: sr.cy, fam: "song" as const }));
+  for (const r of m.rivers) if (r.prod !== null) r.stationPts = FAMILIES.production.stations.map((s) => ({ s, x: sx(s.x), y: r.cy, fam: "production" as const }));
   return ports;
 }
 

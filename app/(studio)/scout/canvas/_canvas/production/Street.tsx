@@ -1,0 +1,163 @@
+"use client";
+
+// THE PRODUCTION STREET (spark character-cores S1) - docked under the map at street zoom over a production's river,
+// the way the desk docks: the map's bottom inset is its height, so the camera keeps the river framed above it. Its bar
+// names the production, its cast and its states, and switches the drawing (A river of stations, B timeline street,
+// C film strip; V cycles). Under the drawing, the focused node's own words: its label, place, inputs, prompt and the
+// eye's reason, verbatim. The cores tray (C) and the swap's preview float inside it.
+
+import { useEffect, useRef } from "react";
+
+import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
+import type { Production, ProductionNode } from "@gt/domain/productionGraph";
+
+import { clampCam } from "../render/camera.ts";
+import type { CanvasStore } from "../store.ts";
+import { levelOf } from "../tables.ts";
+import { Gl, Kbd, Seg } from "../ui/kit.tsx";
+import { useCanvas } from "../useCanvas.ts";
+import { acceptSwap, focusNode, frameStreet, keepCast, openStreet, previewCore, setTray, setVariant, streetOf } from "./acts.ts";
+import { FilmStrip } from "./FilmStrip.tsx";
+import { clock, countLine, counts, driftName, STATION_NAME, VARIANT_NAME, VARIANTS, type Variant } from "./model.ts";
+import type { StreetProps } from "./parts.tsx";
+import { RiverStreet } from "./RiverStreet.tsx";
+import { CoresTray, SwapPanel } from "./Swap.tsx";
+import { TimelineStreet } from "./TimelineStreet.tsx";
+import s from "./street.module.css";
+
+const DRAW: Readonly<Record<Variant, (p: StreetProps) => React.JSX.Element>> = { a: RiverStreet, b: TimelineStreet, c: FilmStrip };
+
+const setInset = (st: CanvasStore, h: number): boolean => {
+  if (st.ui.inset.b === h) return false;
+  st.ui.inset.b = h;
+  return true;
+};
+
+/** The production river the camera's centre is over, at street zoom. */
+function riverHere(st: CanvasStore): string | null {
+  if (levelOf(st.ui.cam.z) < 3) return null;
+  const y = st.ui.cam.y;
+  return st.scene.rivers.find((r) => r.prod !== null && y >= r.y0 && y <= r.y0 + r.h)?.prod?.id ?? null;
+}
+
+/** Street zoom over a production's river opens its street, once per arrival: closed there, it stays closed until the
+ *  camera leaves street zoom or the river. */
+function useArrival(st: CanvasStore): void {
+  const dismissed = useRef<string | null>(null);
+  const here = riverHere(st);
+  const open = st.ui.surface;
+  useEffect(() => {
+    if (here === null) {
+      dismissed.current = null;
+      return;
+    }
+    if (open?.kind === "street") {
+      dismissed.current = here;
+      return;
+    }
+    if (open === null && dismissed.current !== here) openStreet(st, here);
+  }, [st, here, open]);
+}
+
+function Detail({ n, p }: { readonly n: ProductionNode; readonly p: Production }) {
+  const from = n.madeFrom.map((id) => p.nodes.find((m) => m.id === id)?.label ?? id);
+  return (
+    <div className={s.detail} data-role="street-detail">
+      <span className={s.k}>{STATION_NAME[n.station]}</span>
+      <span>
+        <b>{n.label}</b>
+        {n.at !== undefined && ` · ${clock(n.at)}${n.dur === undefined ? "" : `–${clock(n.at + n.dur)}`}`} · {n.state}
+      </span>
+      {from.length > 0 && (
+        <>
+          <span className={s.k}>from</span>
+          <span>{from.join(" · ")}</span>
+        </>
+      )}
+      {n.prompt !== undefined && (
+        <>
+          <span className={s.k}>prompt</span>
+          <q>{n.prompt}</q>
+        </>
+      )}
+      {n.drift !== undefined && (
+        <>
+          <span className={s.k}>{n.drift.by}</span>
+          <span>{driftName(n.drift)}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function Street() {
+  const st = useCanvas();
+  useArrival(st);
+  const p = streetOf(st);
+  const ref = useRef<HTMLElement>(null);
+  const open = p?.id ?? null;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (open === null || el === null) return;
+    const fit = (): void => {
+      if (setInset(st, el.offsetHeight)) st.changed("camera");
+    };
+    fit();
+    frameStreet(st, open);
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      setInset(st, 0);
+      clampCam(st);
+    };
+  }, [st, open]);
+
+  if (p === null) return null;
+  const u = st.ui.street;
+  const focus = u.focus === null ? null : (p.nodes.find((n) => n.id === u.focus) ?? null);
+  const rippling = u.ripple === null ? null : new Set(u.ripple.ids);
+  const props: StreetProps = {
+    p,
+    focus: u.focus,
+    rippling,
+    onPick: (n) => focusNode(st, n.id),
+    onSwap: () => setTray(st, true),
+    onDropCore: (core) => void previewCore(st, core),
+  };
+  const Draw = DRAW[u.variant];
+  return (
+    <section ref={ref} data-role="street" data-variant={u.variant} aria-label={`${p.title}, street`} className={s.street}>
+      <div className={s.bar}>
+        <h2>{p.title}</h2>
+        <button type="button" className={s.cast} onClick={() => setTray(st, true)} aria-label={`Cast ${p.cast.name}; cores`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.cast.portrait} alt="" />
+          {p.cast.name}
+          <Kbd verb="cores" />
+        </button>
+        <span className={s.facts}>{countLine(counts(p.nodes))}</span>
+        <span className={s.grow} />
+        <span className={s.switch}>
+          <Seg label="Street" value={u.variant} options={VARIANTS.map((key) => ({ key, name: `${key.toUpperCase()} ${VARIANT_NAME[key]}` }))} onPick={(v) => setVariant(st, v)} />
+          <Kbd verb="street-variant" />
+        </span>
+        <button type="button" className={s.iconbtn} onClick={() => st.closeSurface()} aria-label="Close street">
+          <Gl name="x" />
+        </button>
+      </div>
+      {u.error !== null && (
+        <div className={s.err}>
+          <ErrorLine message={u.error} live />
+        </div>
+      )}
+      <div className={s.body}>
+        <Draw {...props} />
+        {u.tray && <CoresTray cores={st.prod.cores} cast={p.cast.id} left={u.variant === "c"} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
+        {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
+      </div>
+      {focus !== null && <Detail n={focus} p={p} />}
+    </section>
+  );
+}

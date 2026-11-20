@@ -10,6 +10,8 @@ import type { GraphNode } from "@gt/domain/scoutGraph";
 import type { Episode } from "@gt/domain/channel";
 
 import type { CanvasChannel, CanvasMedia, CanvasSlot, ReelAudio } from "../../_port/contract.ts";
+import type { Production } from "@gt/domain/productionGraph";
+
 import type { Family, FamilyKey, Station } from "../pipelines.ts";
 import type { BlockCounts, BlockKind, ChainKey, Decision, ItemState } from "../tables.ts";
 
@@ -90,6 +92,8 @@ export type River = {
   readonly dry: boolean;
   readonly genres: string[];
   readonly synthetic: boolean;
+  /** A production's river (the production basin): the production as the store holds it now; a swap replaces it. */
+  prod: Production | null;
   readonly items: Item[];
   towns: Town[];
   paused: boolean;
@@ -126,7 +130,7 @@ export type River = {
   stationPts: StationPt[];
 };
 
-export type ProvinceKey = "songs" | "chan" | "adult" | "family" | "kids" | "early" | "archive";
+export type ProvinceKey = "songs" | "chan" | "adult" | "family" | "kids" | "early" | "archive" | "prod";
 
 export type Province = {
   readonly key: ProvinceKey;

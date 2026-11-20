@@ -4,7 +4,7 @@
 // in stage columns (0 = seed ... 5 = output, 6.5 = the publishing coast).
 
 export type Station = { readonly id: string; readonly name: string; readonly tool: string; readonly exists: boolean; readonly x: number };
-export type FamilyKey = "song" | "video" | "reel";
+export type FamilyKey = "song" | "video" | "reel" | "production";
 export type Family = { readonly key: FamilyKey; readonly name: string; readonly engine: string; readonly volume: string; readonly stations: readonly Station[] };
 
 const st = (id: string, name: string, tool: string, x: number, exists = true): Station => ({ id, name, tool, exists, x });
@@ -47,6 +47,20 @@ export const FAMILIES: Readonly<Record<FamilyKey, Family>> = {
       st("publish", "Publish", "YouTube upload via the publish tick", 6.5),
     ],
   },
+  production: {
+    key: "production",
+    name: "Productions",
+    engine: "a music clip as a graph: Codex keyframes from the Opus seat → MiniMax H3 takes → the cut",
+    volume: "",
+    stations: [
+      st("track", "Track · timeline map", "one Gemini call", 0),
+      st("look", "Look · room plates", "Codex image_gen", 1),
+      st("cast", "Cast · character core", "kernel chr: record", 2),
+      st("keyframes", "Keyframes", "Codex image_gen", 3),
+      st("clips", "Clips · takes", "MiniMax H3 Ref2VA", 4),
+      st("cut", "Cut", "assemble.mts", 5),
+    ],
+  },
   reel: {
     key: "reel",
     name: "Data reels",
@@ -64,3 +78,5 @@ export const FAMILIES: Readonly<Record<FamilyKey, Family>> = {
 };
 
 export const FAMILY_ORDER: readonly FamilyKey[] = ["song", "video", "reel"];
+/** The production basin (spark character-cores S1) is drawn only while a side holds a production: south of the reels. */
+export const WITH_PRODUCTIONS: readonly FamilyKey[] = [...FAMILY_ORDER, "production"];

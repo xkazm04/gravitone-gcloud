@@ -3,6 +3,7 @@
 // flows in that channel's river (and so does what grew from it), the rest pile into the early or archive nights. An
 // episode no night took yet is an outline lot on its channel's river. Port of the winner's model.js material half.
 
+import type { Production } from "@gt/domain/productionGraph";
 import type { GraphNode } from "@gt/domain/scoutGraph";
 import type { Episode } from "@gt/domain/channel";
 
@@ -27,12 +28,12 @@ export type Material = {
   readonly latest: string;
 };
 
-type RiverSeed = { basin: FamilyKey; prov: ProvinceKey; name: string; aud?: string; genre?: string; group?: string; chan?: Chan; night?: boolean; dry?: boolean; synthetic?: boolean };
+type RiverSeed = { basin: FamilyKey; prov: ProvinceKey; name: string; aud?: string; genre?: string; group?: string; chan?: Chan; night?: boolean; dry?: boolean; synthetic?: boolean; prod?: Production };
 
 function newRiver(key: string, o: RiverSeed): River {
   return {
     key, basin: o.basin, prov: o.prov, name: o.name, aud: o.aud ?? null, genre: o.genre ?? null, group: o.group ?? null, chan: o.chan ?? null,
-    night: o.night === true, dry: o.dry === true, genres: [], synthetic: o.synthetic === true, items: [], towns: [], paused: false, src: SRC_X,
+    night: o.night === true, dry: o.dry === true, genres: [], synthetic: o.synthetic === true, prod: o.prod ?? null, items: [], towns: [], paused: false, src: SRC_X,
     live: 0, dead: 0, open: 0, pending: 0, failed: 0, kept: 0, rejected: 0, recent: 0, blocks: zeroBlocks(), reach: -1, extent: 0, decided: 0, rate: 0, score: 0, rank: 0,
     province: null, y0: 0, h: 0, cy: 0, amp: 0, ph: 0, pts: [], endX: 0, dryPts: null, canal: null, stationPts: [],
   };
@@ -58,7 +59,7 @@ function audioOf(view: CanvasView, id: string): ItemAudio {
   return { step: a?.step ?? 0, brief: a?.brief ?? null, decision: a?.decision ?? null, channel: a?.channel ?? null, slot, run: null, queue: [] };
 }
 
-export function material(view: CanvasView): Material {
+export function material(view: CanvasView, productions: readonly Production[] = []): Material {
   const g = view.graph;
   const byId = new Map(g.nodes.map((n) => [n.id, n]));
   const up = new Map<string, string[]>();
@@ -154,6 +155,8 @@ export function material(view: CanvasView): Material {
     }
   }
   const songRiver = river("song:pipeline", { basin: "song", prov: "songs", name: "Suno v6 → film", synthetic: true });
+  // A production is one river of stations from the track to the cut (spark character-cores S1).
+  for (const p of productions) river(`prod:${p.id}`, { basin: "production", prov: "prod", name: p.title, synthetic: true, prod: p });
   for (const r of rivers) {
     if (r.group !== null) {
       const grp = g.groups.find((x) => x.key === r.group);

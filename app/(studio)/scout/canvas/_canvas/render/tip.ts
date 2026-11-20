@@ -2,6 +2,7 @@
 // (port of the winner's chrome.js WS.tip.show). Pure; ui/MapCanvas.tsx renders it.
 
 import { FAMILIES } from "../pipelines.ts";
+import { basinFacts } from "../production/model.ts";
 import { blocksUnder, briefLine, scopeName } from "../scene/scopes.ts";
 import type { CanvasStore } from "../store.ts";
 import { BLOCK, CHAIN, STATE, isItemState } from "../tables.ts";
@@ -42,7 +43,7 @@ export function tipOf(st: CanvasStore, h: MapHit): Tip | null {
     case "river": {
       const r = h.ref;
       l = r.name + (r.paused ? " · paused" : "");
-      m = r.synthetic ? FAMILIES.song.volume : `${r.kept}/${r.decided} decided kept · ${r.open} undecided · reach ${r.reach >= 0 ? stageName(r.reach) : "none"}`;
+      m = r.prod !== null ? basinFacts(r.prod).join(" · ") : r.synthetic ? FAMILIES.song.volume : `${r.kept}/${r.decided} decided kept · ${r.open} undecided · reach ${r.reach >= 0 ? stageName(r.reach) : "none"}`;
       break;
     }
     case "bundle":

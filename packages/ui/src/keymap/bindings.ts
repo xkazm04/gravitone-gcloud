@@ -369,6 +369,9 @@ const canvas: Binding[] = [
   { mode: "canvas", keys: ["P"], verb: "pause", does: "pause · resume branch" },
   { mode: "canvas", keys: ["B"], verb: "brief", does: "next night brief" },
   { mode: "canvas", keys: ["/"], verb: "find", does: "find" },
+  // The production street (spark character-cores S1): its drawing, and the cores for its cast.
+  { mode: "canvas", keys: ["V"], verb: "street-variant", does: "street · river, timeline, film strip" },
+  { mode: "canvas", keys: ["C"], verb: "cores", does: "cores for the cast" },
   { mode: "canvas", keys: ["?"], verb: "keys", does: "keys" },
   { mode: "canvas", keys: ["Esc"], verb: "up", does: "close · one level up" },
   { mode: "canvas", keys: ["Esc"], verb: "leave-field", does: "leave", field: "*" },
