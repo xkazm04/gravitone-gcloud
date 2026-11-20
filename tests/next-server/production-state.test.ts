@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const { fixtureProductions } = await import("../../app/(studio)/scout/canvas/_port/fixtureProduction.ts");
-const { acceptSwap, getProduction, previewSwap, setVerdict } = await import("../../lib/production/ops.ts");
+const { acceptSwap, getProduction, previewSwap, setClipMedia, setVerdict } = await import("../../lib/production/ops.ts");
 const { readState, statePath } = await import("../../lib/production/state.ts");
 const { clipsPlan, keyframes, keyframesPlan, style, stylePlan } = await import("../../lib/production/draw.ts");
 const { eye, parseDrift } = await import("../../lib/production/eye.ts");
@@ -161,6 +161,26 @@ describe("keyframes, the eye and the clip plan after a recast", () => {
 
   it("refuses an id that is not a keyframe", async () => {
     expect(keyframesPlan("unlatched", { ids: ["clip:K00"] }).ok).toBe(false);
+  });
+});
+
+describe("setClipMedia", () => {
+  it("marks a clip made from a rendered take, with the take's prompt, and refuses a missing file or a non-clip", () => {
+    put("takes/unlatched/sofia/K00.mp4", "mp4");
+    put("experiment/drift.json", JSON.stringify({ "original/K00": { identity: "holds", room: "holds", wardrobe: "holds", reason: "the lead", by: "eye" } }));
+    expect(node("clip:K00")?.drift?.reason).toBe("the lead");
+    expect(acceptSwap({ production: "unlatched", core: "sofia" }).ok).toBe(true);
+    expect(setClipMedia({ production: "unlatched", node: "clip:K00", run: "takes", path: "unlatched/sofia/K01.mp4" }).ok).toBe(false);
+    expect(setClipMedia({ production: "unlatched", node: "kf:K00", run: "takes", path: "unlatched/sofia/K00.mp4" }).ok).toBe(false);
+    expect(setClipMedia({ production: "unlatched", node: "clip:K00", run: "takes", path: "../../outside.mp4" }).ok).toBe(false);
+    const r = setClipMedia({ production: "unlatched", node: "clip:K00", run: "takes", path: "unlatched/sofia/K00.mp4", prompt: "Sofia dances." });
+    expect(r.ok).toBe(true);
+    const n = node("clip:K00");
+    expect(n?.state).toBe("made");
+    expect(n?.prompt).toBe("Sofia dances.");
+    expect(n?.media).toEqual({ kind: "video", src: "/api/foundry/file?run=takes&path=unlatched%2Fsofia%2FK00.mp4&kind=production" });
+    expect(node("clip:K01")?.state).toBe("stale");
+    expect(n?.drift).toBeUndefined();
   });
 });
 

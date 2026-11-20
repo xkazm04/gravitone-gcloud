@@ -15,7 +15,7 @@ import { redoOf, staleAfter, type CoreRef, type Drift, type Production, type Pro
 
 import { productionFileUrl, productionFixtureRoot } from "../foundry/production/files.ts";
 import { CAST, isDrift, isRec } from "./check.ts";
-import { coreKey, findCore, listCores, productionIds, readState, updateState, type ProductionState } from "./state.ts";
+import { coreKey, findCore, listCores, productionIds, readOnlyRefusal, readState, updateState, type ProductionState } from "./state.ts";
 
 /** How many take-start frames a swap previews. */
 const PREVIEW_FRAMES = 3;
@@ -46,7 +46,9 @@ function withDrift(p: Production, drift: Readonly<Record<string, Drift>>): Produ
   const nodes = p.nodes.map((n) => {
     if (n.drift !== undefined) return n;
     const k = takeOf(n);
-    const d = drift[n.id] ?? (k !== null && n.station === "clip" ? drift[`original/${k}`] : undefined);
+    // the experiment read the original takes: its reading belongs to a clip only while the clip still shows one
+    const original = k !== null && n.station === "clip" && n.media?.src === productionFileUrl("unlatched", `takes/${k}.mp4`);
+    const d = drift[n.id] ?? (original ? drift[`original/${k}`] : undefined);
     return d === undefined ? n : { ...n, drift: d };
   });
   return { ...p, nodes };
@@ -107,6 +109,8 @@ function previewFrames(p: Production, core: CoreRef, drift: Readonly<Record<stri
 export function previewSwap(input: SwapInput): Result<SwapPreview> {
   const s = readState(input.production);
   if (!s.ok) return s;
+  const refused = readOnlyRefusal(s.value);
+  if (refused !== null) return refused;
   const core = swapOf(s.value, input.core);
   if (!core.ok) return core;
   const p = s.value.production;
@@ -142,6 +146,30 @@ export function setVerdict(input: VerdictInput): Result<{ readonly production: P
       const { verdict: _was, ...rest } = n;
       if (input.verdict === null) return rest;
       return { ...rest, verdict: { verdict: input.verdict, reasons: input.reasons, ...(input.note === undefined ? {} : { note: input.note }) } };
+    });
+    return ok({ ...s, production: { ...p, nodes } });
+  });
+  return w.ok ? ok({ production: shown(w.value) }) : w;
+}
+
+export type ClipMediaInput = { readonly production: string; readonly node: string; readonly run: string; readonly path: string; readonly prompt?: string };
+
+/**
+ * A take rendered off the street (pipeline/production-clips.py, WP8): the clip is made from the file `<run>/<path>` under
+ * the production root, served through the production file door, and loses the eye's reading of what it was before.
+ */
+export function setClipMedia(input: ClipMediaInput): Result<{ readonly production: Production }> {
+  if (path.extname(input.path).toLowerCase() !== ".mp4") return err("invalid", `${input.path} is not an mp4`);
+  const abs = path.resolve(productionFixtureRoot(), input.run, input.path);
+  if (!abs.startsWith(path.resolve(productionFixtureRoot()) + path.sep) || !existsSync(abs)) return err("not-found", `no take ${input.run}/${input.path} in the production fixture`);
+  const w = updateState(input.production, (s) => {
+    const p = s.production;
+    const n = p.nodes.find((x) => x.id === input.node);
+    if (n === undefined || n.station !== "clip") return err("not-found", `no clip ${input.node} in ${p.title}`);
+    const nodes = p.nodes.map((x): ProductionNode => {
+      if (x.id !== input.node) return x;
+      const { drift: _old, ...rest } = x;
+      return { ...rest, state: "made", media: { kind: "video", src: productionFileUrl(input.run, input.path.split(path.sep).join("/")) }, ...(input.prompt === undefined ? {} : { prompt: input.prompt }) };
     });
     return ok({ ...s, production: { ...p, nodes } });
   });

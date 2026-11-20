@@ -12,12 +12,15 @@
 //   npx tsx pipeline/production.mts keyframes <prod> [--ids kf:K00,..] [--all] [--dry]   Codex: the stale keyframes with the cast
 //   npx tsx pipeline/production.mts eye <prod> [--ids ..]             Fable 5.2: Drift on the cast's drawn keyframes
 //   npx tsx pipeline/production.mts clips <prod> --dry                the H3 plan for the stale takes (never run here)
+//   npx tsx pipeline/production.mts clip <prod> <clip:Kxx> <run> <path> [--prompt-file f]   a take rendered by
+//                                                                     pipeline/production-clips.py: the clip made from it
 //
 // `--json` on every verb prints the answer as JSON. A core is `chr:sofia` or `sofia`. Exit 0 done, 1 refused or failed
 // (the sentence printed), 2 usage. Codex and Claude run on the operator's seats; no vendor money is spent, and no store
 // is opened (GRAVITONE_STORE_PATH is pointed at a temp file regardless). PRODUCTION_FIXTURE_DIR moves the whole root.
 
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -26,14 +29,14 @@ import type { ProductionNode } from "../packages/domain/src/productionGraph.ts";
 import { productionFixtureRoot } from "../lib/foundry/production/files.ts";
 import { clipsPlan, keyframes, keyframesPlan, style, stylePlan, type DrawDone, type DrawPlan } from "../lib/production/draw.ts";
 import { eye, type EyeRunner } from "../lib/production/eye.ts";
-import { acceptSwap, getProduction, listCores, previewSwap, setVerdict } from "../lib/production/ops.ts";
+import { acceptSwap, getProduction, listCores, previewSwap, setClipMedia, setVerdict } from "../lib/production/ops.ts";
 import { readState } from "../lib/production/state.ts";
 import { codexImage } from "./trailer/codex.mts";
 
 process.env["GRAVITONE_STORE_PATH"] ??= path.join(os.tmpdir(), `production-cli-${process.pid}.sqlite`);
 
 const argv = process.argv.slice(2);
-const VALUED = new Set(["--ids", "--reasons", "--note"]);
+const VALUED = new Set(["--ids", "--reasons", "--note", "--prompt-file"]);
 const pos: string[] = [];
 const opt = new Map<string, string>();
 const bools = new Set<string>();
@@ -47,7 +50,7 @@ const JSON_OUT = bools.has("--json");
 const DRY = bools.has("--dry");
 const list = (name: string): string[] | undefined => opt.get(name)?.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
 
-const USAGE = "usage: production.mts status <prod> | cores | preview <prod> <core> | accept <prod> <core> | verdict <prod> <node> keep|reject|clear [--reasons a,b] [--note ..] | style <prod> <core> [--dry] | keyframes <prod> [--ids ..] [--all] [--dry] | eye <prod> [--ids ..] | clips <prod> --dry   (--json on all)";
+const USAGE = "usage: production.mts status <prod> | cores | preview <prod> <core> | accept <prod> <core> | verdict <prod> <node> keep|reject|clear [--reasons a,b] [--note ..] | style <prod> <core> [--dry] | keyframes <prod> [--ids ..] [--all] [--dry] | eye <prod> [--ids ..] | clips <prod> --dry | clip <prod> <clip:Kxx> <run> <path> [--prompt-file f]   (--json on all)";
 
 function usage(why?: string): never {
   console.error(why === undefined ? USAGE : `${why}\n${USAGE}`);
@@ -189,6 +192,16 @@ switch (verb) {
         ...v.clips.map((c) => `- ${c.take} (${c.clip}, ${c.seconds} s, ~${c.minutes} min)\n  start: ${c.start} [${c.startState}]\n  plate: ${c.plate ?? "none"}\n  sheet: ${c.sheet}`),
       ].join("\n"),
     );
+    break;
+  }
+  case "clip": {
+    const node = need(2, "clip node");
+    const pf = opt.get("--prompt-file");
+    const r = setClipMedia({ production: need(1, "production"), node, run: need(3, "run folder"), path: need(4, "path"), ...(pf === undefined ? {} : { prompt: readFileSync(pf, "utf8").trim() }) });
+    done(r, (v) => {
+      const n = v.production.nodes.find((x) => x.id === node);
+      return n === undefined ? node : nodeLine(n);
+    });
     break;
   }
   default:
