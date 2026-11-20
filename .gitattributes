@@ -8,3 +8,7 @@ pipeline/yue2/** text eol=lf
 # (pipeline/check-tokens.mts). A CRLF checkout would read as drift on every Windows clone.
 packages/ui/src/tokens.css text eol=lf
 packages/ui/src/tokens.ts text eol=lf
+
+# The know-how projection is written by lib/knowhow/export.ts with LF; a checkout that converted it would read as
+# changed on every export (spark device-metadata-sync).
+knowhow/** text eol=lf
