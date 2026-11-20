@@ -148,6 +148,27 @@ export function directorPrompts(): ReadonlyMap<string, string> {
   }
 }
 
+/**
+ * The director's plate per take, when it names one the fixture holds (unlatched/plates/<id>.jpg|png): K03-K05 name the
+ * master RMT2 because their reprojected per-take plates have holes (experiment/FINDINGS.md), so the director's pick wins.
+ */
+export function directorPlates(): ReadonlyMap<string, string> {
+  try {
+    const raw: unknown = JSON.parse(readFileSync(path.join(productionFixtureRoot(), "experiment", "director", "prompts.json"), "utf8"));
+    const frames = isRec(raw) && Array.isArray(raw["frames"]) ? (raw["frames"] as unknown[]) : [];
+    const out = new Map<string, string>();
+    for (const fr of frames) {
+      if (!isRec(fr) || typeof fr["id"] !== "string" || typeof fr["plate"] !== "string") continue;
+      const base = path.join(productionFixtureRoot(), "unlatched", "plates", fr["plate"]);
+      const file = [".jpg", ".png"].map((e) => base + e).find((x) => existsSync(x));
+      if (file !== undefined) out.set(fr["id"], file);
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
 /** The state prompt for a keyframe: the director's for its take, else its stored prompt (which still describes the old cast's face). */
 function stateOf(n: ProductionNode, director: ReadonlyMap<string, string>): { readonly text: string; readonly source: string } | null {
   const k = takeOf(n);
@@ -192,13 +213,15 @@ export function keyframesPlan(productionId: string, o: KeyframeOptions): Result<
   if (!s.ok) return s;
   const p = s.value.production;
   const director = directorPrompts();
+  const plates = directorPlates();
   const nodes = chosen(p, director, o);
   if (!nodes.ok) return nodes;
   const sheet = styledSheet(s.value);
   const dir = keyframesDir(p.id, p.cast.id);
   const frames = nodes.value.map((n): PlannedFrame => {
     const st = stateOf(n, director) as { readonly text: string; readonly source: string };
-    const plate = refFile(plateOf(p, n)?.media?.src);
+    const k = takeOf(n);
+    const plate = (k === null ? undefined : plates.get(k)) ?? refFile(plateOf(p, n)?.media?.src);
     const refs = (plate === null ? [sheet.file] : [plate, sheet.file]).slice(0, MAX_REFS);
     const prompt = plate === null ? `Image 1 is a reference sheet of who she is. ${p.cast.identity} ${st.text.trim()} The drawing style: ${noStop(lookOf(p))}. ${GUARDS_NO_ROOM}` : `${ROLES} ${p.cast.identity} ${st.text.trim()} ${GUARDS}`;
     return { id: n.id, out: path.join(dir, `${n.id.replace(/^kf:/, "")}.png`), prompt, refs, source: plate === null ? `${st.source}; no room plate` : st.source };
