@@ -140,3 +140,12 @@ and most expensively.
 - **`.vault/` is gitignored and the repo calls it disposable.** The primary source for this template
   is a file that is not versioned with it. That is the single largest fragility on this page and it is
   `c5`.
+
+## Scout findings
+
+- Build the beats on the story spine: routine, until one day, because of that, until finally, ever since. - "Until one day..." (n=1, scout 2026-10-27, https://www.sessionlab.com/methods/story-spine) <!-- scout:2026-10-27/c-08 -->
+- Build the beats on the story spine: routine, until one day, because of that, until finally, ever since. - "Until one day..." (n=1, scout 2026-10-27, https://www.sessionlab.com/methods/story-spine) <!-- scout:2026-10-27/c-09 -->
+- Build the beats on the story spine: routine, until one day, because of that, until finally, ever since. - "Until one day..." (n=1, scout 2026-10-27, https://www.sessionlab.com/methods/story-spine) <!-- scout:2026-10-27/c-10 -->
+- Build the beats on the story spine: routine, until one day, because of that, until finally, ever since. - "Until one day..." (n=1, scout 2026-10-27, https://www.sessionlab.com/methods/story-spine) <!-- scout:2026-10-27/c-11 -->
+- Build the beats on the story spine: routine, until one day, because of that, until finally, ever since. - "Until one day..." (n=1, scout 2026-10-27, https://www.sessionlab.com/methods/story-spine) <!-- scout:2026-10-27/c-12 -->
+- Make each beat quieter than the last: fewer things moving, dimmer light, sleep cues growing toward the end. - "I've included words like 'sleep', 'yawn', 'shhhh', 'tired'; and increasing their frequency of use toward the end of the book." (n=1, scout 2026-10-27-2, https://www.goodreads.com/author_blog_posts/19069217-writing-a-bedtime-book-by-abie-longstaff) <!-- scout:2026-10-27-2/c-09 -->

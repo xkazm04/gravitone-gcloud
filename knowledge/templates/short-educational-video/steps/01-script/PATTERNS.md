@@ -477,3 +477,8 @@ independently of engine and subject produces incoherence.
   never what was rejected. See q6.
 
 Open items with the source that would settle each: [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md).
+
+## Scout findings
+
+- Introduce the character in its world, confront the problem, and end by calling back to the opening frame. - "Conclusion: resolution of the problem, reference back to the original scenario." (n=1, scout 2026-10-26, https://simpleshow.com/blog/storytelling-explainer-videos/) <!-- scout:2026-10-26/c-19 -->
+- Introduce the character in its world, confront the problem, and end by calling back to the opening frame. - "Conclusion: resolution of the problem, reference back to the original scenario." (n=1, scout 2026-10-26, https://simpleshow.com/blog/storytelling-explainer-videos/) <!-- scout:2026-10-26/c-23 -->

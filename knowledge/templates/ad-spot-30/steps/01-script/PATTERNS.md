@@ -87,3 +87,7 @@ Everything in the sibling's §8, plus:
 - **The 30s rung's value over the 15s is unsettled**: one 2026 campaign, one brand (template, gap 2).
 - **The shot-cap tension is this studio's, not the doctrine's.** The registry's arithmetic assumes
   shots can be added. Six is a pipeline decision, and `s1` asks whether it holds at this length.
+
+## Scout findings
+
+- Let the product's mechanism be the visual metaphor and say nothing until the end card. - "They are also commonly used in advertising because of its ability to persuade." (n=1, scout 2026-10-27-2, https://en.wikipedia.org/wiki/Visual_metaphor) <!-- scout:2026-10-27-2/c-11 -->

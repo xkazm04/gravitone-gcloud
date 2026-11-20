@@ -132,3 +132,9 @@ last beat buys memorability instead of insight. Note the second example still ca
 - **All three are ASR captions** — no sentence-level data.
 - **No engagement data.** Nothing here is validated against retention or completion; these are craft
   observations from work that appears to succeed, and view counts are not evidence of craft.
+
+## Scout findings
+
+- Find one game and heighten it over three beats, each worse than the last; the third beat is the payoff, then cut. - "This typically happens over 3 beats, each crazier (and funnier) than the one before." (n=1, scout 2026-10-25, https://goldcomedy.com/resources/how-to-write-a-comedy-sketch/) <!-- scout:2026-10-25/c-17 -->
+- Name the one absurd game in beat one, then return to it three times, each return raising the stakes. - "In a typical comedy sketch, we'll return to the game three times." (n=1, scout 2026-10-26, https://scriptmag.com/features/improvising-screenplays-finding-funny-screenplay-using-game-scene) <!-- scout:2026-10-26/c-17 -->
+- Name the one absurd game in beat one, then return to it three times, each return raising the stakes. - "In a typical comedy sketch, we'll return to the game three times." (n=1, scout 2026-10-26, https://scriptmag.com/features/improvising-screenplays-finding-funny-screenplay-using-game-scene) <!-- scout:2026-10-26/c-22 -->

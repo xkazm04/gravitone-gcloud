@@ -198,3 +198,9 @@ super carries no new claim.
 - **Model-prompting evidence is mostly preprint**, and the template-seeding of a *model* is "a
   reasonable inference from the persona-seeding results, not a measurement".
 - **Nothing measures whether an ad works.** See the template's fourth difficulty.
+
+## Scout findings
+
+- Build every spot as the hero reveal, then the details, then the product in its world. - "the hero product reveal, the details, and the product in context." (n=1, scout 2026-10-27, https://www.manfrotto.com/global-en/stories/how-to-shoot-cinematic-tech-videos-like-apple/) <!-- scout:2026-10-27/c-04 -->
+- Build every spot as the hero reveal, then the details, then the product in its world. - "the hero product reveal, the details, and the product in context." (n=1, scout 2026-10-27, https://www.manfrotto.com/global-en/stories/how-to-shoot-cinematic-tech-videos-like-apple/) <!-- scout:2026-10-27/c-05 -->
+- Build every spot as the hero reveal, then the details, then the product in its world. - "the hero product reveal, the details, and the product in context." (n=1, scout 2026-10-27, https://www.manfrotto.com/global-en/stories/how-to-shoot-cinematic-tech-videos-like-apple/) <!-- scout:2026-10-27/c-07 -->
