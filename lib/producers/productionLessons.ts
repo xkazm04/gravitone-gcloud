@@ -26,6 +26,7 @@ import { CHANNEL_ID_RE, channelOfEpisode, EPISODE_ID_RE } from "@gt/domain/chann
 
 import { leadKey, queueEvents, type LeadEventKind } from "../foundry/scout/leads.ts";
 import { kernel } from "../kernelProcess.ts";
+import { afterWrite } from "../knowhow/hook.ts";
 import { effectsFor } from "./extract.ts";
 import { launch, PRODUCTION_CAST_LANE, seatOption, type CastLaunch, type CastLaunchInput } from "./productionCast.ts";
 import { promptSection, seatAnswer, type CastEngines } from "./productionCastActs.ts";
@@ -183,6 +184,7 @@ async function lessonsAct(store: () => Result<Store>, e: Pick<CastEngines, "seat
     fence(ctx);
     const landed = ctx.fx.tx("lessons.propose", (t) => proposeLessonsIn(t, req.productionId, proposals.value, ctx.job.mode.kind !== "live", { kind: "machine", id: ctx.job.id }));
     if (!landed.ok) throw landed.error;
+    afterWrite("lesson", req.productionId, s.value);
     return madePaid(data({ lessons: landed.value.map((l) => l.id) }), ctx);
   } catch (x) {
     if (typeof x === "object" && x !== null && (x as { code?: string }).code === "conflict") throw x;
@@ -250,6 +252,7 @@ export async function acceptLesson(store: Store, id: ProductionId, lessonId: str
   });
   if (!out.ok) return out;
   if (out.value === undefined) return err("not-found", `production: no ${id}`);
+  afterWrite("lesson", id, store);
   try {
     await queueLead(out.value.production, out.value.lesson, now);
   } catch (x) {

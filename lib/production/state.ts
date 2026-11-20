@@ -21,6 +21,7 @@ import type { CoreRef, Production } from "@gt/domain/productionGraph";
 import { productionFixtureRoot } from "../foundry/production/files.ts";
 import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
 import { mirroredCores } from "../knowhow/mirror.ts";
+import { afterWrite } from "../knowhow/hook.ts";
 import { checkFixture, checkProduction, isRec, type ProductionFixture } from "./check.ts";
 
 /** A core redrawn in one production's look: the browser URLs of her portrait and sheet, the look verbatim, when. */
@@ -183,7 +184,10 @@ export function updateState(productionId: string, change: (s: ProductionState) =
   const refused = readOnlyRefusal(s.value);
   if (refused !== null) return refused;
   const next = change(s.value);
-  return next.ok ? writeState(next.value) : next;
+  if (!next.ok) return next;
+  const w = writeState(next.value);
+  if (w.ok) afterWrite("production", productionId);
+  return w;
 }
 
 /** The file a production door URL names (`/api/foundry/file?run=..&path=..&kind=production`), or null. */

@@ -46,6 +46,7 @@ import {
 
 import { binsFrom, realSpawn, type Spawn } from "../foundry/scout/ingest.ts";
 import { blobRootOf, kernel } from "../kernelProcess.ts";
+import { afterWrite } from "../knowhow/hook.ts";
 import { blobRoute } from "../library/media.ts";
 import { isMusicConfigured } from "../music/elevenlabs";
 import { MusicError } from "../music/errors";
@@ -213,6 +214,7 @@ export function productionVoicesProducer(o: { readonly store?: () => Result<Stor
       if (!made.ok) throw made.error;
       const done = s.value.tx((t) => completeCastIn(t, { productionId: req.productionId, roundId: req.roundId, voice: req.candidateId, voiceId: made.value.voiceId, dry: made.value.dry }, { kind: "machine", id: job.id }));
       if (!done.ok) throw done.error;
+      if (done.value !== undefined) afterWrite("character", done.value.character.id, s.value);
     },
     health: vendorHealth(async () => (isMusicConfigured() ? { ok: true } : { ok: false, reason: "no ElevenLabs key is configured on this box" })),
   });

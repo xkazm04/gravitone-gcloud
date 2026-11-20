@@ -14,6 +14,7 @@ import { matchCards, type CharacterMatch } from "@gt/kernel/characters/match";
 import { characterUses, createCastCharacterIn, importCharacterIn, readCharacter, recordCharacterUseIn, saveCharacterIn, savedCharacters, sourceDigest, type CharacterImportRow, type ImportOutcome, type ImportPool, type NewCastCharacter } from "@gt/kernel/characters/store";
 import type { Store } from "@gt/kernel/store";
 
+import { afterWrite } from "../knowhow/hook.ts";
 import { blobRootOf, kernel } from "../kernelStore.ts";
 import { digestOfRow, readPool, type PoolRoots, type PoolRow } from "./characterPools.ts";
 import { mimeOf } from "./feeds/types.ts";
@@ -81,6 +82,7 @@ export async function importRows(store: Store, rows: readonly PoolRow[], ingest:
     }
     n[done.value.did]++;
     outcomes.push(done.value);
+    if (done.value.did === "added" || done.value.did === "updated") afterWrite("character", done.value.id, store);
   }
   return ok({ ...n, skipped, outcomes });
 }
@@ -108,6 +110,14 @@ const withStore = <T>(f: (store: Store) => Result<T>): Result<T> => {
   return k.ok ? f(k.value.store) : k;
 };
 
+/** A character write through the process's kernel, then its know-how export. */
+const writeCharacter = (f: (store: Store) => Result<CharacterRecord>): Result<CharacterRecord> =>
+  withStore((s) => {
+    const r = f(s);
+    if (r.ok) afterWrite("character", r.value.id, s);
+    return r;
+  });
+
 export async function characterById(id: CharacterId): Promise<Result<CharacterRecord>> {
   return withStore((s) => {
     const r = s.read((x) => readCharacter(x, id));
@@ -126,18 +136,18 @@ const asActor = (by: string, actor: ActorKind | undefined): Actor => ({ kind: ac
 /** A character designed for one production: castable there, invisible to the Library until the operator saves it. */
 export async function createCastCharacter(input: NewCastCharacter & { readonly by: string; readonly actor?: ActorKind }): Promise<Result<CharacterRecord>> {
   const { by, actor, ...character } = input;
-  return withStore((s) => s.tx((t) => createCastCharacterIn(t, character, asActor(by, actor))));
+  return writeCharacter((s) => s.tx((t) => createCastCharacterIn(t, character, asActor(by, actor))));
 }
 
 /** Design and save at once: the operator's optional save on a new pick. */
 export async function saveCastCharacter(input: NewCastCharacter & { readonly by: string; readonly actor?: ActorKind }): Promise<Result<CharacterRecord>> {
   const { by, actor, ...character } = input;
-  return withStore((s) => s.tx((t) => createCastCharacterIn(t, { ...character, save: true }, asActor(by, actor))));
+  return writeCharacter((s) => s.tx((t) => createCastCharacterIn(t, { ...character, save: true }, asActor(by, actor))));
 }
 
 /** The operator keeps an existing character in the Library. An agent is refused. */
 export async function saveCharacterToLibrary(input: { readonly id: CharacterId; readonly by: string; readonly actor?: ActorKind }): Promise<Result<CharacterRecord>> {
-  return withStore((s) => s.tx((t) => saveCharacterIn(t, input.id, asActor(input.by, input.actor))));
+  return writeCharacter((s) => s.tx((t) => saveCharacterIn(t, input.id, asActor(input.by, input.actor))));
 }
 
 /** Log a use (`character.used`), once per character and production, so the used-by list can answer. */

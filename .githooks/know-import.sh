@@ -21,7 +21,7 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
 real="--real"
 [ -n "$CLAUDECODE" ] && real=""
 if [ -x node_modules/.bin/tsx ] || [ -f node_modules/.bin/tsx.cmd ]; then
-  out=$(npx --no-install tsx pipeline/knowhow-import.mts import --quiet $real 2>&1)
+  out=$(npx --no-install tsx pipeline/knowhow.mts import --quiet $real 2>&1)
   [ -n "$out" ] && printf '%s\n' "$out"
 else
   echo "know:import skipped: tsx is not installed here (npm install, then npm run know:import)"

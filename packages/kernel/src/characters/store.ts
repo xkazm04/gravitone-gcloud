@@ -289,3 +289,21 @@ export function characterUses(r: Reader, id: string): readonly CharacterUse[] {
 export function allCharacterUses(r: Reader): ReadonlyMap<string, readonly CharacterUse[]> {
   return usesFrom(r, "");
 }
+
+/** A character as the know-how export reads it: the record, its pictures, and every source key that holds it. */
+export type CharacterExport = { readonly record: CharacterRecord; readonly images: readonly CharacterImage[]; readonly sourceKeys: readonly string[] };
+
+const exportOf = (r: Reader, row: Row): CharacterExport => {
+  const s = toStored(row);
+  const sourceKeys = r.all("SELECT source_key FROM character_sources WHERE character_id = ? ORDER BY source_key", s.record.id).map((x) => String(x["source_key"]));
+  return { ...s, sourceKeys };
+};
+
+/** Every character, saved or not, oldest first; or the one named (none when absent). */
+export function charactersForExport(r: Reader, id?: string): readonly CharacterExport[] {
+  if (id !== undefined) {
+    const row = rowOf(r, id);
+    return row === undefined ? [] : [exportOf(r, row)];
+  }
+  return r.all(`SELECT ${CHARACTER_COLUMNS} FROM characters ORDER BY created_at, id`).map((row) => exportOf(r, row));
+}

@@ -62,6 +62,8 @@ export type KnowhowProduction = {
   readonly v: 1;
   readonly id: string;
   readonly owner: DeviceId;
+  /** The owning device's name, for the read-only sentence another device shows. */
+  readonly ownerName?: string;
   readonly at: string;
   readonly title: string;
   readonly look: string;

@@ -225,3 +225,6 @@ docs/next/prototype/data/
 
 # lint ratchet cache (pipeline/lint-ratchet.mjs); regenerable
 .lint-ratchet-cache/
+
+# this machine's device identity (lib/knowhow/device.ts): minted once, never shared
+/.gravitone/
