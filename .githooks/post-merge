@@ -1,0 +1,4 @@
+#!/bin/sh
+# After a pull or merge: fold the pulled know-how into this device (never fails the merge).
+sh .githooks/know-import.sh ORIG_HEAD || true
+exit 0

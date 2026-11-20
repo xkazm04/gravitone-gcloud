@@ -191,6 +191,26 @@ export function importCharacterIn(t: Tx, row: CharacterImportRow, actor: Actor):
   return { did: "added", id };
 }
 
+/**
+ * A character another device created, by the id it was born with (spark device-metadata-sync, KS2: the know-how import).
+ * New: inserted with that id, saved, no pictures (this device draws its own). Known: its card replaced when it differs;
+ * pictures, origin and sources stay this device's. Emits `character.added` / `character.updated` only on a change.
+ */
+export function adoptCharacterIn(t: Tx, input: { readonly id: string; readonly card: CharacterCard; readonly origin: ImportPool }, actor: Actor): ImportOutcome {
+  if (!CHARACTER_ID_RE.test(input.id)) throw new AppError("invalid", `character: ${input.id} is not a character id`);
+  const card = must(parseAt("character card", characterCardSchema, input.card));
+  const held = rowOf(t, input.id);
+  if (held === undefined) {
+    t.run("INSERT INTO characters (id, origin, name, card, images, saved, created_at, updated_at) VALUES (?, ?, ?, ?, '[]', 1, ?, ?)", input.id, input.origin, card.name, canonical(card), t.at, t.at);
+    append(t, { actor, type: PRODUCTION_EVENTS.characterAdded, subject: { kind: "character", id: input.id }, data: { pool: "knowhow" } });
+    return { did: "added", id: input.id };
+  }
+  if (canonical(toStored(held).record.card) === canonical(card)) return { did: "unchanged", id: input.id };
+  t.run("UPDATE characters SET name = ?, card = ?, updated_at = ? WHERE id = ?", card.name, canonical(card), t.at, input.id);
+  append(t, { actor, type: PRODUCTION_EVENTS.characterUpdated, subject: { kind: "character", id: input.id }, data: { pool: "knowhow" } });
+  return { did: "updated", id: input.id };
+}
+
 export type NewCastCharacter = {
   readonly card: CharacterCard & { readonly age: number };
   readonly images: readonly CharacterImage[];

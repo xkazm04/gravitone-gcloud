@@ -18,7 +18,7 @@ import { MIN_PER_CLIP, type CoreRef, type Production, type ProductionNode } from
 import { productionFileUrl, productionFixtureRoot } from "../foundry/production/files.ts";
 import { isRec } from "./check.ts";
 import { keyframesDir, takeOf } from "./ops.ts";
-import { coreKey, fileOfUrl, findCore, readState, updateState, type ProductionState, type Styled } from "./state.ts";
+import { coreKey, fileOfUrl, findCore, readOnlyRefusal, readState, updateState, type ProductionState, type Styled } from "./state.ts";
 
 /** One Codex image: writes <dir>/<name>.png and <dir>/<name>.log; true when the png is there. */
 export type Drawer = (dir: string, name: string, prompt: string, refs: string[]) => Promise<boolean>;
@@ -118,6 +118,8 @@ const dressed = (w: string | null): string => (w === null ? "Of her clothes, onl
 export function stylePlan(productionId: string, coreRef: string): Result<DrawPlan> {
   const s = readState(productionId);
   if (!s.ok) return s;
+  const refused = readOnlyRefusal(s.value);
+  if (refused !== null) return refused;
   const core = findCore(coreRef);
   if (!core.ok) return core;
   const c = core.value;
@@ -239,6 +241,8 @@ function styledSheet(s: ProductionState): { readonly file: string; readonly refu
 export function keyframesPlan(productionId: string, o: KeyframeOptions): Result<DrawPlan> {
   const s = readState(productionId);
   if (!s.ok) return s;
+  const refused = readOnlyRefusal(s.value);
+  if (refused !== null) return refused;
   const p = s.value.production;
   const director = directorPrompts();
   const plates = directorPlates();

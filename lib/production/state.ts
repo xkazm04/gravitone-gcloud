@@ -6,15 +6,21 @@
 // Beside WP0's Production the file keeps what the domain type has no slot for yet: `styled`, the cores already redrawn
 // in this production's look (S2 folds it into the kernel manifest), and `failed`, the sentence a failed draw (by node id)
 // or an unreadable eye reply (`eye/<node id>`) left.
+//
+// A production another device owns (spark device-metadata-sync, KS2) is written here by the know-how import with
+// `readOnly`, `owner` and `ownerName`, plus `remoteMedia` (each node's media as the owner holds it: a hash and a logical
+// path, no bytes here). It is a lesson view: every write refuses it (`readOnlyRefusal`), and the import is its only writer.
 
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { err, ok, type Result } from "@gt/domain/errors";
+import type { MediaRef } from "@gt/domain/knowhow";
 import type { CoreRef, Production } from "@gt/domain/productionGraph";
 
 import { productionFixtureRoot } from "../foundry/production/files.ts";
 import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
+import { mirroredCores } from "../knowhow/mirror.ts";
 import { checkFixture, checkProduction, isRec, type ProductionFixture } from "./check.ts";
 
 /** A core redrawn in one production's look: the browser URLs of her portrait and sheet, the look verbatim, when. */
@@ -26,7 +32,19 @@ export type ProductionState = {
   readonly styled: Readonly<Record<string, Styled>>;
   /** A failed draw's log sentence by node id; the eye's reply when it was not the JSON (first 140 characters) by `eye/<node id>`. */
   readonly failed: Readonly<Record<string, string>>;
+  /** Present on a production another device owns: it is shown, never changed here. */
+  readonly readOnly?: true;
+  /** The owning device's id and name (a foreign production's). */
+  readonly owner?: string;
+  readonly ownerName?: string;
+  /** A foreign production's media by node id, as the owner holds it. */
+  readonly remoteMedia?: Readonly<Record<string, MediaRef>>;
 };
+
+/** A foreign production refuses every change, in one sentence; null when this device may change it. */
+export function readOnlyRefusal(s: ProductionState): Result<never> | null {
+  return s.readOnly === true ? err("refused", `${s.production.title} belongs to ${s.ownerName ?? s.owner ?? "another device"}: lessons only here`) : null;
+}
 
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -38,15 +56,43 @@ export function fixtureSeed(): Result<ProductionFixture> {
   return seed;
 }
 
+/** The fixture's cores, then every mirrored character this device holds pictures of (lib/knowhow/mirror.ts). */
 export function listCores(): Result<readonly CoreRef[]> {
   const f = fixtureSeed();
-  return f.ok ? ok(f.value.cores) : f;
+  if (!f.ok) return f;
+  const ids = new Set(f.value.cores.map((c) => c.id));
+  return ok([...f.value.cores, ...mirroredCores().filter((c) => !ids.has(c.id))]);
 }
 
-/** The productions there are: the fixture's (S2 lists the kernel's). */
+/** The state files the know-how import wrote for other devices' productions. */
+function foreignIds(): string[] {
+  const dir = path.join(productionFixtureRoot(), "state");
+  let names: string[];
+  try {
+    names = readdirSync(dir).filter((n) => n.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const n of names) {
+    const id = n.slice(0, -5);
+    if (!ID_RE.test(id)) continue;
+    try {
+      const raw: unknown = JSON.parse(readFileSync(path.join(dir, n), "utf8"));
+      if (isRec(raw) && raw["readOnly"] === true) out.push(id);
+    } catch {
+      // an unreadable file is not listed; readState names its fault when it is asked for
+    }
+  }
+  return out.sort();
+}
+
+/** The productions there are: the fixture's (S2 lists the kernel's), then other devices' read-only ones. */
 export function productionIds(): Result<readonly string[]> {
   const f = fixtureSeed();
-  return f.ok ? ok([f.value.production.id]) : f;
+  if (!f.ok) return f;
+  const own = f.value.production.id;
+  return ok([own, ...foreignIds().filter((id) => id !== own)]);
 }
 
 /** A core by `chr:<key>` or by its bare key. */
@@ -76,7 +122,11 @@ function checkState(raw: unknown, file: string): Result<ProductionState> {
   }
   const failed: Record<string, string> = {};
   if (isRec(raw["failed"])) for (const [k, v] of Object.entries(raw["failed"])) if (typeof v === "string") failed[k] = v;
-  return ok({ production: p.value, styled, failed });
+  const str = (k: string): string | undefined => (typeof raw[k] === "string" && raw[k] !== "" ? raw[k] : undefined);
+  const owner = str("owner");
+  const ownerName = str("ownerName");
+  const remote = isRec(raw["remoteMedia"]) ? (raw["remoteMedia"] as Readonly<Record<string, MediaRef>>) : undefined;
+  return ok({ production: p.value, styled, failed, ...(raw["readOnly"] === true ? { readOnly: true as const } : {}), ...(owner === undefined ? {} : { owner }), ...(ownerName === undefined ? {} : { ownerName }), ...(remote === undefined ? {} : { remoteMedia: remote }) });
 }
 
 /** The production as its file holds it now; the first read of the fixture's production writes its seed. */
@@ -126,10 +176,12 @@ export function writeState(state: ProductionState): Result<ProductionState> {
   }
 }
 
-/** Read, change, write: `change` answers the next state or refuses. */
+/** Read, change, write: `change` answers the next state or refuses. A foreign production refuses before `change` runs. */
 export function updateState(productionId: string, change: (s: ProductionState) => Result<ProductionState>): Result<ProductionState> {
   const s = readState(productionId);
   if (!s.ok) return s;
+  const refused = readOnlyRefusal(s.value);
+  if (refused !== null) return refused;
   const next = change(s.value);
   return next.ok ? writeState(next.value) : next;
 }

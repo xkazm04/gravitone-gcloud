@@ -9,7 +9,7 @@ import { ok, err, type Result } from "@gt/domain/errors";
 import { DRIFT_AXES, type Drift, type ProductionNode } from "@gt/domain/productionGraph";
 
 import { isRec } from "./check.ts";
-import { coreKey, fileOfUrl, readState, updateState } from "./state.ts";
+import { coreKey, fileOfUrl, readOnlyRefusal, readState, updateState } from "./state.ts";
 import { plateFor } from "./draw.ts";
 
 /** One headless model turn: its stdout, or the sentence it failed with. */
@@ -56,6 +56,8 @@ function drawnForCast(nodes: readonly ProductionNode[], productionId: string, ca
 export async function eye(productionId: string, o: { readonly ids?: readonly string[] }, run: EyeRunner): Promise<Result<readonly EyeRead[]>> {
   const s = readState(productionId);
   if (!s.ok) return s;
+  const refused = readOnlyRefusal(s.value);
+  if (refused !== null) return refused;
   const p = s.value.production;
   const styled = s.value.styled[p.cast.id];
   const sheet = styled === undefined ? null : fileOfUrl(styled.sheet);
