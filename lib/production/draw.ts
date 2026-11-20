@@ -9,7 +9,7 @@
 // with "not the clothes in image 2". The sheet here is the STYLED one, so the core arrives already in the look.
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { err, ok, type Result } from "@gt/domain/errors";
@@ -75,6 +75,7 @@ async function drawAll(frames: readonly PlannedFrame[], draw: Drawer): Promise<F
       const i = next++;
       const f = frames[i] as PlannedFrame;
       const dir = path.dirname(f.out);
+      mkdirSync(dir, { recursive: true });
       const name = path.basename(f.out, ".png");
       let tries = 0;
       let made = false;
