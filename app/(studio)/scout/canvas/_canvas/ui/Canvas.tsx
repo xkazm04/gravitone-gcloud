@@ -13,7 +13,7 @@ import type { CoreRef, Production, SwapPreview } from "@gt/domain/productionGrap
 
 import type { CanvasPort, CanvasView } from "../../_port/contract.ts";
 import { pause } from "../acts.ts";
-import { setTray, streetBack } from "../production/acts.ts";
+import { openNode, setTray, streetBack, streetOf } from "../production/acts.ts";
 import { Street } from "../production/Street.tsx";
 import { flyBox, flyTo, goLevel, home, levelUp, pan } from "../render/camera.ts";
 import { blockPoints, blocksUnder, scopeName, scopeOf } from "../scene/scopes.ts";
@@ -92,7 +92,9 @@ function useMapKeys(st: CanvasStore): void {
     brief: () => st.openSurface({ kind: "brief" }),
     find: () => openFind(st),
     cores: () => {
-      if (st.ui.surface?.kind === "street") setTray(st, !st.ui.street.tray);
+      // another device's production is shown, never recast: C opens its cast's overlay instead
+      if (st.ui.surface?.kind === "street" && streetOf(st)?.readOnly === true) openNode(st, "cast");
+      else if (st.ui.surface?.kind === "street") setTray(st, !st.ui.street.tray);
       else st.say("street zoom on a production");
     },
     keys: () => st.set("keysOpen", !st.ui.keysOpen),

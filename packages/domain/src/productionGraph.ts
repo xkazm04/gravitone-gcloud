@@ -48,6 +48,8 @@ export type ProductionNode = {
   readonly prompt?: string;
   /** The operator's verdict on it (review rounds), with reasons and an optional note. */
   readonly verdict?: { readonly verdict: "keep" | "reject"; readonly reasons: readonly string[]; readonly note?: string };
+  /** A foreign production's node whose media the owning device holds and this one does not (its kind); `media` is then absent. */
+  readonly remote?: ProductionMedia["kind"];
 };
 
 /** A character core: identity once, a portrait and one invariant sheet. `id` is `chr:<key>`. */
@@ -60,6 +62,10 @@ export type CoreRef = {
   readonly sheet?: string;
   /** Where the core came from: the clip's own lead, a scout keep, a Codex round. */
   readonly origin: string;
+  /** How many devices hold pictures of her, this one included; absent when only this one does (spark device-metadata-sync). */
+  readonly devices?: number;
+  /** Her pictures here were redrawn on this device from her prompts (another device made her). */
+  readonly redrawnHere?: true;
 };
 
 /** The track's map on the master clock, as much of it as the street draws. */
@@ -80,6 +86,11 @@ export type Production = {
   readonly look: string;
   readonly cast: CoreRef;
   readonly nodes: readonly ProductionNode[];
+  /** Another device's production (spark device-metadata-sync): shown as a lesson, never changed here. */
+  readonly readOnly?: true;
+  /** The owning device's id and name, on a foreign production. */
+  readonly owner?: string;
+  readonly ownerName?: string;
 };
 
 /** A swap's redo, priced in minutes per item as measured (Codex keyframe ~4 min, H3 take ~25 min). */

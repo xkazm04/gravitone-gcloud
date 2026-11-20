@@ -41,3 +41,5 @@ button.span { cursor: pointer; text-align: left; }
 button.span:hover { border-color: var(--text); }
 .lookSpan { left: 0; right: 0; bottom: auto; top: 2px; height: 14px; font-size: 11px; }
 .spanOn { outline: 2px solid var(--ink-bright); outline-offset: 1px; }
+/* a tile placed at its moment fills its slot, picture or not (a foreign tile's "on <device>" hatch has no width of its own) */
+.at > button { width: 100%; }

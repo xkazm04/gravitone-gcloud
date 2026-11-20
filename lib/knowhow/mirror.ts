@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import type { KnowhowCharacter } from "@gt/domain/knowhow";
+import type { DeviceId, KnowhowCharacter } from "@gt/domain/knowhow";
 import type { CoreRef } from "@gt/domain/productionGraph";
 
 import { productionFixtureRoot } from "../foundry/production/files.ts";
@@ -57,12 +57,26 @@ export function writeMirror(m: Mirror): void {
   writeJsonFile(mirrorPath(), m);
 }
 
-/** The mirrored characters this device can cast: those with a portrait here. */
-export function mirroredCores(): readonly CoreRef[] {
+/** The mirrored characters this device can cast: those with a portrait here, which only a redraw here gives them. */
+export function mirroredCores(mirror: Mirror = readMirror()): readonly CoreRef[] {
   const out: CoreRef[] = [];
-  for (const e of Object.values(readMirror())) {
+  for (const e of Object.values(mirror)) {
     if (e.core === undefined || e.record.identity === "") continue;
-    out.push({ id: e.record.id, name: e.record.card.name, identity: e.record.identity, portrait: e.core.portrait, ...(e.core.sheet === undefined ? {} : { sheet: e.core.sheet }), origin: "knowhow" });
+    out.push({ id: e.record.id, name: e.record.card.name, identity: e.record.identity, portrait: e.core.portrait, ...(e.core.sheet === undefined ? {} : { sheet: e.core.sheet }), origin: "knowhow", redrawnHere: true });
   }
   return out;
+}
+
+/** How many devices hold pictures of her: this one (a castable core has a portrait here) and every other with a visual. */
+export function devicesOf(record: KnowhowCharacter, self: DeviceId): number {
+  return 1 + Object.entries(record.visuals).filter(([d, vs]) => d !== self && vs.length > 0).length;
+}
+
+/** Each core another device also holds pictures of, with how many devices do (spark device-metadata-sync KS3). */
+export function markDevices(cores: readonly CoreRef[], records: Readonly<Record<string, KnowhowCharacter>>, self: DeviceId): CoreRef[] {
+  return cores.map((c) => {
+    const r = records[c.id];
+    const n = r === undefined ? 1 : devicesOf(r, self);
+    return n > 1 ? { ...c, devices: n } : c;
+  });
 }

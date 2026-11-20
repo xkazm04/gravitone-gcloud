@@ -140,6 +140,13 @@ export const SCREENS = {
   "scout-canvas-clip-overlay": { url: "/scout/canvas?street=unlatched", open: "K02, clips" },
   "scout-canvas-plate-overlay": { url: "/scout/canvas?street=unlatched", open: "SETUP-C, look" },
   "scout-canvas-stale": { url: "/scout/canvas?street=unlatched&swap=chr%3An02-mirela", open: "Accept" },
+  // another device's production (spark device-metadata-sync KS3, fixture side: Unlatched as studio-pc holds it; both
+  // rivers and studio-pc's facts sit in `scout-canvas`'s Productions basin): its street read-only, a take's overlay
+  // with studio-pc's verdict as text and its media "on studio-pc", and a swap asked by link and refused in the street's
+  // error line. (A core held by two devices is on scout-canvas-cores: Hana, whom studio-pc holds pictures of too.)
+  "scout-canvas-foreign-street": { url: "/scout/canvas?street=unlatched-studio-pc" },
+  "scout-canvas-foreign-clip": { url: "/scout/canvas?street=unlatched-studio-pc", open: "K01, clips" },
+  "scout-canvas-foreign-refused": { url: "/scout/canvas?street=unlatched-studio-pc&swap=chr%3An01-elif" },
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },

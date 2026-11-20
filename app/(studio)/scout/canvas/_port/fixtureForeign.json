@@ -1,0 +1,25 @@
+{
+ "id": "unlatched-studio-pc",
+ "owner": "dev:fixture-other",
+ "ownerName": "studio-pc",
+ "at": "2026-11-19T22:14:00.000Z",
+ "verdicts": {
+  "clip:K00": { "verdict": "keep", "reasons": ["motion"] },
+  "clip:K01": { "verdict": "reject", "reasons": ["craft", "style"], "note": "her face goes soft in the turn; hold the narrow jaw from the sheet" },
+  "clip:K02": { "verdict": "keep", "reasons": [], "note": "the rug side-step lands on the bar" }
+ },
+ "characters": [
+  {
+   "v": 1,
+   "id": "chr:hana",
+   "owner": "dev:fixture-other",
+   "at": "2026-11-19T21:40:00.000Z",
+   "card": { "name": "Hana", "age": 31, "look": "fair skin, a sleek black bob with blunt bangs, narrow rectangular glasses, slender build, a charcoal turtleneck" },
+   "identity": "Hana, aged 31: fair skin, a sleek black bob with blunt bangs, narrow rectangular glasses, slender build, a charcoal turtleneck.",
+   "looks": {},
+   "visuals": {
+    "dev:fixture-other": [{ "kind": "portrait", "media": { "kind": "image", "hash": "5e0b7b2a3c1d4e6f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7", "at": "production-fixture/cores/hana/studio-pc/portrait.png" } }]
+   }
+  }
+ ]
+}

@@ -11,6 +11,9 @@
 // focus anywhere on the map). Tab is held inside; the grid is one tab stop and the arrows walk it by its drawn rows.
 // A pick is `previewCore`, unchanged: the picker closes and the swap's preview opens. The picker is the only way to
 // swap: the drop-a-core-on-the-cast-card target lived in the river and film-strip streets, retired 2026-11-20 (WP9).
+//
+// A card's picture is always this device's (spark device-metadata-sync KS3): a core other devices also hold pictures of
+// carries how many devices do, and one another device made and this one redrew from her prompts is marked as drawn here.
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 
@@ -59,8 +62,14 @@ function stepTo(cards: readonly HTMLElement[], at: number, key: string): number 
   return best ?? at;
 }
 
+/** Her pictures beyond this device's, in words: `2 devices`, `redrawn here`. */
+export function devicesLine(c: CoreRef): string[] {
+  return [...(c.devices !== undefined && c.devices > 1 ? [`${c.devices} devices`] : []), ...(c.redrawnHere === true ? ["redrawn here"] : [])];
+}
+
 function Card({ c, cast, tab, onPick, onFocus }: { readonly c: CoreRef; readonly cast: boolean; readonly tab: boolean; readonly onPick: () => void; readonly onFocus: () => void }) {
   const idn = useId();
+  const marks = devicesLine(c);
   return (
     <button
       type="button"
@@ -70,7 +79,7 @@ function Card({ c, cast, tab, onPick, onFocus }: { readonly c: CoreRef; readonly
       tabIndex={tab ? 0 : -1}
       aria-current={cast ? true : undefined}
       aria-disabled={cast ? true : undefined}
-      aria-label={`${c.name}${cast ? ", cast now" : ""}; ${c.origin}`}
+      aria-label={`${c.name}${cast ? ", cast now" : ""}; ${c.origin}${marks.length === 0 ? "" : `; ${marks.join(", ")}`}`}
       aria-describedby={idn}
       onFocus={onFocus}
       onClick={() => {
@@ -86,6 +95,11 @@ function Card({ c, cast, tab, onPick, onFocus }: { readonly c: CoreRef; readonly
       <span className={s.name}>
         <b>{c.name}</b>
         {cast && <Chip tone="cyan">cast now</Chip>}
+        {marks.map((m) => (
+          <Chip key={m} tone={m === "redrawn here" ? "violet" : "faint"}>
+            {m}
+          </Chip>
+        ))}
       </span>
       <small className={s.origin}>{c.origin}</small>
       <span id={idn} className={s.identity}>

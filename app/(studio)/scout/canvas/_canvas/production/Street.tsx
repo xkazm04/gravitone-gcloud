@@ -6,18 +6,23 @@
 // stations and the film strip beside it were retired 2026-11-20, WP9). The street is read-and-click: a node clicked opens its overlay over the whole page
 // (NodeOverlay.tsx, S1.5 WP7 - a take's verdict is given there), and nothing grows under the drawing. The swap's
 // preview floats inside it; the core picker (C) opens over the whole page.
+//
+// Another device's production (spark device-metadata-sync KS3) opens the same street read-only: its owner is a chip in
+// the bar, the cast opens the cast's own overlay instead of the picker, and no swap, verdict or draw is drawn. A write
+// sent anyway is refused by the port, and its sentence lands here in the ErrorLine like any refusal.
 
 import { useEffect, useRef } from "react";
 
+import { SrOnly } from "@gt/ui/components/a11y/SrOnly.tsx";
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import { clampCam } from "../render/camera.ts";
 import type { CanvasStore } from "../store.ts";
 import { levelOf } from "../tables.ts";
-import { Gl, Kbd } from "../ui/kit.tsx";
+import { Chip, Gl, Kbd } from "../ui/kit.tsx";
 import { useCanvas } from "../useCanvas.ts";
 import { acceptSwap, frameStreet, keepCast, openNode, openStreet, previewCore, setTray, streetOf } from "./acts.ts";
-import { countLine, counts } from "./model.ts";
+import { castPortrait, countLine, counts, ownerOf } from "./model.ts";
 import { NodeOverlay } from "./NodeOverlay.tsx";
 import { CorePicker } from "./CorePicker.tsx";
 import { SwapPanel } from "./Swap.tsx";
@@ -87,28 +92,37 @@ export function Street() {
   const u = st.ui.street;
   const focus = u.focus === null ? null : (p.nodes.find((n) => n.id === u.focus) ?? null);
   const rippling = u.ripple === null ? null : new Set(u.ripple.ids);
-  // The cast's door is the core picker, from anywhere: an overlay's "from" too.
+  const readOnly = p.readOnly === true;
+  const portrait = castPortrait(p);
+  // The cast's door is the core picker, from anywhere: an overlay's "from" too. Another device's cast is shown, not swapped.
   const go = (id: string): void => {
-    if (p.nodes.find((n) => n.id === id)?.station !== "cast") return openNode(st, id);
+    if (readOnly || p.nodes.find((n) => n.id === id)?.station !== "cast") return openNode(st, id);
     openNode(st, null);
     setTray(st, true);
   };
+  const onCast = (): void => (readOnly ? openNode(st, "cast") : setTray(st, true));
   const props: StreetProps = {
     p,
     focus: u.focus,
     rippling,
     onPick: (n) => go(n.id),
-    onSwap: () => setTray(st, true),
+    onSwap: onCast,
   };
   return (
     <section ref={ref} data-role="street" aria-label={`${p.title}, street`} className={s.street}>
       <div className={s.bar}>
         <h2>{p.title}</h2>
-        <button ref={castRef} type="button" className={s.cast} data-role="street-cast" onClick={() => setTray(st, true)} aria-label={`Cast ${p.cast.name}; cores`}>
+        {readOnly && (
+          <span data-role="street-owner">
+            <SrOnly text="owned by " />
+            <Chip tone="violet">{ownerOf(p)}</Chip>
+          </span>
+        )}
+        <button ref={castRef} type="button" className={s.cast} data-role="street-cast" onClick={onCast} aria-label={`Cast ${p.cast.name}; ${readOnly ? "info" : "cores"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.cast.portrait} alt="" />
+          {portrait !== undefined && <img src={portrait} alt="" />}
           {p.cast.name}
-          <Kbd verb="cores" />
+          {!readOnly && <Kbd verb="cores" />}
         </button>
         <span className={s.facts}>{countLine(counts(p.nodes))}</span>
         <span className={s.grow} />
@@ -123,10 +137,10 @@ export function Street() {
       )}
       <div className={s.body}>
         <TimelineStreet {...props} />
-        {u.tray && <CorePicker cores={st.prod.cores} cast={p.cast.id} castRef={castRef} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
-        {(u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
+        {u.tray && !readOnly && <CorePicker cores={st.prod.cores} cast={p.cast.id} castRef={castRef} onPick={(core) => void previewCore(st, core)} onClose={() => setTray(st, false)} />}
+        {!readOnly && (u.preview !== null || u.asking !== null) && <SwapPanel p={p} cores={st.prod.cores} asking={u.asking} preview={u.preview} onAccept={() => void acceptSwap(st)} onKeep={() => keepCast(st)} />}
       </div>
-      {focus !== null && !u.tray && <NodeOverlay st={st} p={p} n={focus} onGo={(id) => go(id)} onClose={() => openNode(st, null)} />}
+      {focus !== null && (readOnly || !u.tray) && <NodeOverlay st={st} p={p} n={focus} onGo={(id) => go(id)} onClose={() => openNode(st, null)} />}
     </section>
   );
 }

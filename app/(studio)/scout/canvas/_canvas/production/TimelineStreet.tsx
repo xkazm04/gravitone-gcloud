@@ -16,7 +16,7 @@ import type { CSSProperties } from "react";
 import type { Production, ProductionNode } from "@gt/domain/productionGraph";
 
 import { cx } from "../ui/kit.tsx";
-import { caption, clock, countLine, counts, lanesOf, NODE_STATE, nodeName, posterOf, rulerOf, STATION_NAME, type Lane } from "./model.ts";
+import { awayName, caption, castPortrait, clock, countLine, counts, lanesOf, NODE_STATE, nodeName, posterOf, rulerOf, STATION_NAME, type Lane } from "./model.ts";
 import { Tile } from "./Tile.tsx";
 import v from "./timeline.module.css";
 
@@ -26,7 +26,7 @@ export type StreetProps = {
   /** The ids the last accept made stale, while the ripple plays. */
   readonly rippling: ReadonlySet<string> | null;
   readonly onPick: (n: ProductionNode) => void;
-  /** The cast's door: the core picker. */
+  /** The cast's door: the core picker, or on another device's production the cast's own overlay. */
   readonly onSwap: () => void;
 };
 
@@ -38,6 +38,8 @@ const pct = (x: number): string => `${(x * 100).toFixed(3)}%`;
 function LaneRow({ lane, props }: { readonly lane: Lane; readonly props: StreetProps }) {
   const { p, focus, rippling, onPick } = props;
   const name = STATION_NAME[lane.station];
+  const away = p.readOnly === true ? awayName(p) : undefined;
+  const portrait = castPortrait(p);
   const c = counts(lane.items.map((i) => i.node));
   const ripple = (id: string, x: number): number | null => (rippling?.has(id) === true ? Math.round(x * RUN_MS) : null);
   return (
@@ -51,9 +53,9 @@ function LaneRow({ lane, props }: { readonly lane: Lane; readonly props: StreetP
           const x1 = lane.station === "clip" ? Math.min(end, lane.items[i + 1]?.x0 ?? end) : end;
           if (lane.station === "cast") {
             return (
-              <button key={n.id} type="button" className={cx(v.span, n.state !== "made" && v[n.state])} style={{ left: 0, right: 0 }} onClick={props.onSwap} aria-label={`${p.cast.name}, cast across the track, ${NODE_STATE[n.state].word}; swap`}>
+              <button key={n.id} type="button" className={cx(v.span, n.state !== "made" && v[n.state])} style={{ left: 0, right: 0 }} onClick={props.onSwap} aria-label={`${p.cast.name}, cast across the track, ${NODE_STATE[n.state].word}; ${p.readOnly === true ? "info" : "swap"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.cast.portrait} alt="" />
+                {portrait !== undefined && <img src={portrait} alt="" />}
                 {p.cast.name}
               </button>
             );
@@ -77,13 +79,13 @@ function LaneRow({ lane, props }: { readonly lane: Lane; readonly props: StreetP
             }
             return (
               <span key={n.id} className={v.clipSpan} style={style}>
-                <Tile n={n} on={focus === n.id} ripple={ripple(n.id, x0)} caption={`${n.label} ${clock(n.at ?? 0)}`} poster={posterOf(p, n)} onPick={onPick} />
+                <Tile n={n} on={focus === n.id} ripple={ripple(n.id, x0)} caption={`${n.label} ${clock(n.at ?? 0)}`} poster={posterOf(p, n)} away={away} onPick={onPick} />
               </span>
             );
           }
           return (
             <span key={n.id} className={v.at} style={{ left: `calc(${pct(x0)} - ${lane.station === "look" ? 33 : 27}px)` }}>
-              <Tile n={n} on={focus === n.id} ripple={ripple(n.id, x0)} caption={caption(n)} compact onPick={onPick} />
+              <Tile n={n} on={focus === n.id} ripple={ripple(n.id, x0)} caption={caption(n)} compact away={away} onPick={onPick} />
             </span>
           );
         })}

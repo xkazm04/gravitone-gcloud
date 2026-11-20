@@ -13,13 +13,26 @@ import { cx } from "../ui/kit.tsx";
 import { drifting, NODE_STATE, nodeName } from "./model.ts";
 import s from "./street.module.css";
 
-/** A node's picture: its image, a take's video, or a hatch with the state's word where there is nothing to show. */
-export function Pic({ n, video = false, pending = false, poster }: { readonly n: ProductionNode; readonly video?: boolean; readonly pending?: boolean; readonly poster?: string | undefined }) {
+/** Where a foreign production's media is: "on <device>", the placeholder's words and its accessible name. */
+export function Away({ where, className, quiet = false }: { readonly where: string; readonly className?: string | undefined; readonly quiet?: boolean }) {
+  return (
+    <span className={cx(s.away, className)} role="img" aria-label={where} data-role="away">
+      {/* a small tile is the hatch alone: its caption needs the room, and the tile's name says where */}
+      {!quiet && where}
+    </span>
+  );
+}
+
+/** A node's picture: its image, a take's video, "on <device>" where another device holds it, or a hatch with the
+ *  state's word where there is nothing to show. */
+export function Pic({ n, video = false, pending = false, poster, away, quiet = false }: { readonly n: ProductionNode; readonly video?: boolean; readonly pending?: boolean; readonly poster?: string | undefined; readonly away?: string | undefined; readonly quiet?: boolean }) {
   const m = n.media;
   return (
     <span className={s.pic}>
       {pending ? (
         <span className={s.pendingPic}>pending</span>
+      ) : n.remote !== undefined && away !== undefined ? (
+        <Away where={away} quiet={quiet} />
       ) : m === undefined || m.kind === "audio" ? (
         <span className={s.empty}>{n.label}</span>
       ) : m.kind === "video" && video ? (
@@ -62,17 +75,19 @@ export type TileProps = {
   readonly compact?: boolean;
   /** A take's or the cut's still (model.ts posterOf). */
   readonly poster?: string | undefined;
+  /** A foreign production's "on <device>" (model.ts awayName): drawn where its media would be. */
+  readonly away?: string | undefined;
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly onPick?: (n: ProductionNode) => void;
 };
 
-export function Tile({ n, on = false, ripple = null, video = false, pending = false, caption, compact = false, poster, className, style, onPick }: TileProps) {
+export function Tile({ n, on = false, ripple = null, video = false, pending = false, caption, compact = false, poster, away, className, style, onPick }: TileProps) {
   const state = pending ? "pending" : n.state;
   const drift = pending ? undefined : n.drift;
   const st = NODE_STATE[state];
   const drifts = drift === undefined ? [] : drifting(drift);
-  const name = pending ? `${n.label}, pending` : nodeName(n);
+  const name = pending ? `${n.label}, pending` : `${nodeName(n)}${n.remote !== undefined && away !== undefined ? `, ${away}` : ""}`;
   return (
     <button
       type="button"
@@ -84,7 +99,7 @@ export function Tile({ n, on = false, ripple = null, video = false, pending = fa
       data-state={state}
       onClick={onPick === undefined ? undefined : () => onPick(n)}
     >
-      <Pic n={n} video={video} pending={pending} poster={poster} />
+      <Pic n={n} video={video} pending={pending} poster={poster} away={away} quiet={compact} />
       {drift !== undefined && <DriftBadge d={drift} />}
       {state !== "made" && !pending && !compact && <span className={s.st}>{st.word}</span>}
       {caption !== undefined && caption !== "" && <span className={s.cap}>{caption}</span>}

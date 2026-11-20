@@ -14,6 +14,7 @@ import { err, ok, type Result } from "@gt/domain/errors";
 import { redoOf, staleAfter, type CoreRef, type Drift, type Production, type ProductionNode, type SwapPreview } from "@gt/domain/productionGraph";
 
 import { productionFileUrl, productionFixtureRoot } from "../foundry/production/files.ts";
+import { localFileOf } from "../knowhow/media.ts";
 import { CAST, isDrift, isRec } from "./check.ts";
 import { coreKey, findCore, listCores, productionIds, readOnlyRefusal, readState, updateState, type ProductionState } from "./state.ts";
 
@@ -54,7 +55,29 @@ function withDrift(p: Production, drift: Readonly<Record<string, Drift>>): Produ
   return { ...p, nodes };
 }
 
-const shown = (s: ProductionState): Production => withDrift(s.production, readDrift());
+/**
+ * Another device's production as the canvas reads it (spark device-metadata-sync KS3): its owner on it, and every node
+ * whose media the owner holds but this device does not (the reference does not resolve here, `localFileOf`) marked
+ * `remote` with no `media`, so the screen draws "on <owner>" instead of a broken picture.
+ */
+function foreignView(s: ProductionState, p: Production): Production {
+  const refs = s.remoteMedia ?? {};
+  const nodes = p.nodes.map((n): ProductionNode => {
+    const ref = refs[n.id];
+    if (ref === undefined || (n.media !== undefined && localFileOf(ref) !== null)) return n;
+    const { media: _gone, ...rest } = n;
+    return { ...rest, remote: ref.kind };
+  });
+  return { ...p, nodes, readOnly: true, ...(s.owner === undefined ? {} : { owner: s.owner }), ...(s.ownerName === undefined ? {} : { ownerName: s.ownerName }) };
+}
+
+/** A production as the screen reads it: the eye's readings, and a foreign one's owner and missing media. */
+export function shownState(s: ProductionState): Production {
+  const p = withDrift(s.production, readDrift());
+  return s.readOnly === true ? foreignView(s, p) : p;
+}
+
+const shown = shownState;
 
 /** A core's frame for one take: drawn in this production's look, else the experiment's (`<key>` or the round's `new-<key>`). */
 function redrawn(productionId: string, coreId: string, take: string): { readonly src: string; readonly key: string } | null {

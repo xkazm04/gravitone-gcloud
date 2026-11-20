@@ -10,6 +10,10 @@
 //   the look    its prompt and its plates; the cut plays like a take, without a verdict.
 // ← → walk the node's own run in the order it plays (model.ts runOf); a "from" or "used by" tile moves the overlay to
 // that node, so a keyframe's plate and the plate's other keyframes are two clicks apart and the street never grows.
+//
+// On another device's production (spark device-metadata-sync KS3) the same overlay reads only: a take's verdict is its
+// owner's text (ClipVerdictText), media this device does not hold is "on <owner>", and the cast - which opens here
+// instead of the core picker - shows her portrait, identity block and origin.
 
 import { useId } from "react";
 
@@ -17,10 +21,10 @@ import { DRIFT_AXES, type Production, type ProductionNode } from "@gt/domain/pro
 
 import type { CanvasStore } from "../store.ts";
 import { Chip, cx } from "../ui/kit.tsx";
-import { ClipPlayer, ClipVerdict } from "./ClipOverlay.tsx";
-import { caption, clock, NODE_STATE, posterOf, STATION_NAME, stepRun, usedBy } from "./model.ts";
+import { ClipPlayer, ClipVerdict, ClipVerdictText } from "./ClipOverlay.tsx";
+import { awayName, caption, castPortrait, clock, NODE_STATE, posterOf, STATION_NAME, stepRun, usedBy } from "./model.ts";
 import { Overlay } from "./Overlay.tsx";
-import { Tile } from "./Tile.tsx";
+import { Away, Tile } from "./Tile.tsx";
 import o from "./overlay.module.css";
 
 type Props = {
@@ -41,14 +45,27 @@ function Nodes({ k, nodes, p, onGo }: { readonly k: string; readonly nodes: read
       <span className={o.k}>{k}</span>
       <div className={o.nodes} role="group" aria-label={`${k}, ${nodes.length}`} data-role={`overlay-${k.replace(/\s+/g, "-")}`}>
         {nodes.map((m) => (
-          <Tile key={m.id} n={m} caption={m.media === undefined ? "" : m.station === "cast" ? p.cast.name : `${caption(m)}${m.at === undefined ? "" : ` ${clock(m.at)}`}`} poster={posterOf(p, m)} compact onPick={() => onGo(m.id)} />
+          <Tile key={m.id} n={m} caption={m.media === undefined && m.remote === undefined ? "" : m.station === "cast" ? p.cast.name : `${caption(m)}${m.at === undefined ? "" : ` ${clock(m.at)}`}`} poster={posterOf(p, m)} {...(p.readOnly === true ? { away: awayName(p) } : {})} compact onPick={() => onGo(m.id)} />
         ))}
       </div>
     </>
   );
 }
 
+/** What the overlay can draw large: the node's media, the cast's portrait, or where another device holds it. */
+function pictured(p: Production, n: ProductionNode): boolean {
+  if (n.station === "cast" && castPortrait(p) !== undefined) return true;
+  if (n.remote !== undefined && p.readOnly === true) return true;
+  return n.media !== undefined && n.media.kind !== "audio";
+}
+
 function Picture({ p, n }: { readonly p: Production; readonly n: ProductionNode }) {
+  const portrait = castPortrait(p);
+  if (n.station === "cast" && portrait !== undefined) {
+    // eslint-disable-next-line @next/next/no-img-element -- her portrait, by the production's file door
+    return <img className={o.still} src={portrait} alt={p.cast.name} decoding="async" />;
+  }
+  if (n.remote !== undefined && p.readOnly === true) return <Away where={awayName(p)} className={o.away} />;
   if (n.media?.kind === "video") return <ClipPlayer key={n.id} p={p} n={n} />;
   if (n.media?.kind === "image") {
     // eslint-disable-next-line @next/next/no-img-element -- the node's own bytes, by the production's file door
@@ -86,15 +103,23 @@ export function NodeOverlay({ st, p, n, onGo, onClose }: Props) {
       onClose={onClose}
       role={n.station === "clip" || n.station === "cut" ? "clip-overlay" : n.station === "look" ? "plate-overlay" : "node-overlay"}
     >
-      <div className={cx(o.body, n.media === undefined && o.wordsOnly)} data-node={n.id}>
-        {n.media !== undefined && n.media.kind !== "audio" && (
+      <div className={cx(o.body, !pictured(p, n) && o.wordsOnly)} data-node={n.id}>
+        {pictured(p, n) && (
           <div className={o.media}>
             <Picture p={p} n={n} />
           </div>
         )}
         <div className={o.aside}>
-          {n.station === "clip" && <ClipVerdict st={st} p={p} n={n} />}
+          {n.station === "clip" && (p.readOnly === true ? <ClipVerdictText n={n} /> : <ClipVerdict st={st} p={p} n={n} />)}
           <div className={o.facts2}>
+            {n.station === "cast" && (
+              <>
+                <span className={o.k}>identity</span>
+                <span className={o.reason}>{p.cast.identity}</span>
+                <span className={o.k}>origin</span>
+                <span className={o.reason}>{p.cast.origin}</span>
+              </>
+            )}
             {n.drift !== undefined && (
               <>
                 <span className={o.k}>{n.drift.by}</span>

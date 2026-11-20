@@ -7,6 +7,9 @@
 // `productionVerdict`: the per-take review that was docked under the street (WP3) lives here now. The cut plays the
 // same way and carries no verdict (the port judges takes).
 //
+// On another device's production (spark device-metadata-sync KS3) the take's verdict, reasons and note are its owner's
+// record, read as text: no VerdictPick, no RejectNote, no direction field - a lesson, never a judging.
+//
 // The reasons are the scout source's video axes, the vocabulary the round's Board packet keys
 // (@gt/ui/board/productionReasons), so a take judged here and in the gallery speaks one language.
 
@@ -21,7 +24,7 @@ import { useMasterClock } from "@gt/ui/components/timeline/useMasterClock.ts";
 import { targetInfo } from "@gt/ui/keymap/target";
 
 import type { CanvasStore } from "../store.ts";
-import { cx, Gl } from "../ui/kit.tsx";
+import { Chip, cx, Gl } from "../ui/kit.tsx";
 import { posterOf, sectionAt } from "./model.ts";
 import o from "./overlay.module.css";
 
@@ -116,6 +119,35 @@ export function ClipVerdict({ st, p, n }: { readonly st: CanvasStore; readonly p
     <div data-role="clip-verdict">
       <ClipReview block={blockOf(p, n)} reasons={REASONS} noteMax={REASONS.noteMax} onVerdict={(v) => void judge(v)} />
       {error !== null && <ErrorLine message={error} live />}
+    </div>
+  );
+}
+
+/** Another device's verdict on a take, as text: the verdict, its reasons and its note, nothing to press. */
+export function ClipVerdictText({ n }: { readonly n: ProductionNode }) {
+  const v = n.verdict;
+  return (
+    <div className={o.facts2} data-role="clip-verdict-read" role="group" aria-label={`verdict on ${n.label}`}>
+      <span className={o.k}>verdict</span>
+      <span>{v === undefined ? <Chip tone="faint">no verdict</Chip> : <Chip tone={v.verdict === "keep" ? "emerald" : "rose"}>{v.verdict}</Chip>}</span>
+      {v !== undefined && v.reasons.length > 0 && (
+        <>
+          <span className={o.k}>reasons</span>
+          <span className={o.axes}>
+            {v.reasons.map((r) => (
+              <Chip key={r} tone="faint">
+                {r}
+              </Chip>
+            ))}
+          </span>
+        </>
+      )}
+      {v?.note !== undefined && (
+        <>
+          <span className={o.k}>note</span>
+          <q className={o.prompt}>{v.note}</q>
+        </>
+      )}
     </div>
   );
 }

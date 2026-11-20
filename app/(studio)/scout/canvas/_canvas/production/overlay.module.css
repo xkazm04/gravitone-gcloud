@@ -50,3 +50,6 @@
   .facts2 { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .k { line-height: 1.6; }
 }
+
+/* another device's media, large (spark device-metadata-sync KS3): the placeholder at the picture's size */
+.away { aspect-ratio: 16 / 9; height: auto; max-height: calc(100vh - var(--hdr-h) - 100px); font-size: 15px; border-radius: var(--r-xs); }

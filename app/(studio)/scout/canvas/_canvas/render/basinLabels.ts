@@ -8,7 +8,8 @@ import { clamp, cut, smooth } from "../scene/geo.ts";
 import { riverY } from "../scene/geometry.ts";
 import type { River, Scope, Town } from "../scene/types.ts";
 import { toS, toW } from "./camera.ts";
-import { busyUnder, font, isRef, pill, ringR, stageName, text, Z, type Frame } from "./prims.ts";
+import { ownerOf } from "../production/model.ts";
+import { busyUnder, font, isRef, pill, ringR, stageName, tag, text, Z, type Frame } from "./prims.ts";
 import { rs } from "./state.ts";
 
 const stationName = (name: string): string => (name.split(" - ")[0] ?? name).split(" (")[0] ?? name;
@@ -32,8 +33,10 @@ export function drawBasinLabels(f: Frame): void {
       const hov = isRef(f.hover, r);
       const col = hov ? c.cyan : r.reach < 0 && !r.synthetic ? c.muted : r.rank > 0 ? c["ink-bright"] : c.text;
       const w = text(f, cut(r.name, 46) + (r.paused ? "  ‖ paused" : ""), px + 6, py - 6, font(pal, 13, "sans", r.chan !== null || r.rank > 0 ? "600" : ""), col);
+      // another device's production: its owner beside its name (spark device-metadata-sync KS3)
+      const own = w > 0 && r.prod?.readOnly === true ? tag(f, ownerOf(r.prod), px + 14 + w, py - 6, c.violet) : 0;
       if (w > 0) {
-        lbl.set(r, [px, py - 22, w + 12, 36]);
+        lbl.set(r, [px, py - 22, w + 12 + (own > 0 ? own + 8 : 0), 36]);
         if (!sticky && r.h * z >= 30) second.push([r, px, py, w]);
       }
       ctx.globalAlpha = 1;

@@ -75,6 +75,25 @@ export function place(f: Frame, x: number, y: number, w: number, h: number): boo
   return true;
 }
 
+/** Tag: a small outlined chip after a label (a foreign production's owning device). Screen space, baseline `y`. Answers
+ *  its width, 0 when something else sits there. */
+export function tag(f: Frame, s: string, x: number, y: number, line: string): number {
+  const { ctx, pal } = f;
+  ctx.font = font(pal, 12, "mono");
+  const w = Math.ceil(ctx.measureText(s).width) + 14;
+  const h = 18;
+  if (!place(f, x, y - h + 4, w, h)) return 0;
+  ctx.fillStyle = pal.c["ink-2"];
+  rr(ctx, x, y - h + 4, w, h, 9);
+  ctx.fill();
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.fillStyle = pal.c.text;
+  ctx.fillText(s, x + 7, y);
+  return w;
+}
+
 export type TextOpt = { readonly h?: number; readonly align?: "center" | "right"; readonly force?: boolean; readonly pad?: number };
 /** Label: screen-space text with an ink halo, placed only where nothing else sits. Answers its width, 0 when not placed. */
 export function text(f: Frame, s: string, x: number, y: number, fnt: string, color: string, opt: TextOpt = {}): number {

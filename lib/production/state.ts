@@ -20,7 +20,8 @@ import type { CoreRef, Production } from "@gt/domain/productionGraph";
 
 import { productionFixtureRoot } from "../foundry/production/files.ts";
 import imported from "../../app/(studio)/scout/canvas/_port/fixtureProduction.json" with { type: "json" };
-import { mirroredCores } from "../knowhow/mirror.ts";
+import { thisDevice } from "../knowhow/device.ts";
+import { markDevices, mirroredCores, readMirror } from "../knowhow/mirror.ts";
 import { afterWrite } from "../knowhow/hook.ts";
 import { checkFixture, checkProduction, isRec, type ProductionFixture } from "./check.ts";
 
@@ -57,12 +58,17 @@ export function fixtureSeed(): Result<ProductionFixture> {
   return seed;
 }
 
-/** The fixture's cores, then every mirrored character this device holds pictures of (lib/knowhow/mirror.ts). */
+/** The fixture's cores, then every mirrored character this device holds pictures of (lib/knowhow/mirror.ts); each one
+ *  another device also holds pictures of says how many devices do. */
 export function listCores(): Result<readonly CoreRef[]> {
   const f = fixtureSeed();
   if (!f.ok) return f;
   const ids = new Set(f.value.cores.map((c) => c.id));
-  return ok([...f.value.cores, ...mirroredCores().filter((c) => !ids.has(c.id))]);
+  const mirror = readMirror();
+  const all = [...f.value.cores, ...mirroredCores(mirror).filter((c) => !ids.has(c.id))];
+  if (Object.keys(mirror).length === 0) return ok(all);
+  const records = Object.fromEntries(Object.entries(mirror).map(([id, e]) => [id, e.record]));
+  return ok(markDevices(all, records, thisDevice().id));
 }
 
 /** The state files the know-how import wrote for other devices' productions. */

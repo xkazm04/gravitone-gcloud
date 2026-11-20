@@ -66,11 +66,20 @@ export function posterOf(p: Production, n: ProductionNode): string | undefined {
 /** A tile's caption: the label without the take-start suffix (`K00 start` → `K00`). */
 export const caption = (n: ProductionNode): string => n.label.replace(/ start$/, "").replace(/^P-/, "");
 
+/** A foreign production's owning device, as its chip names it. */
+export const ownerOf = (p: Production): string => p.ownerName ?? p.owner ?? "another device";
+
+/** A node's media another device holds: the placeholder's words and accessible name. */
+export const awayName = (p: Production): string => `on ${ownerOf(p)}`;
+
+/** The cast's portrait when this device can show it: a cast the know-how import could not find here has none. */
+export const castPortrait = (p: Production): string | undefined => (p.cast.portrait.startsWith("knowhow:") ? undefined : p.cast.portrait);
+
 /** The facts the map prints under the basin's name and in a river's tip. */
 export function basinFacts(p: Production): string[] {
   const c = counts(p.nodes);
   const takes = p.nodes.filter((n) => n.station === "clip").length;
-  return [`${p.title} · cast ${p.cast.name}`, `${takes} takes · ${clock(p.track.seconds)} of track · ${countLine(c)}`];
+  return [`${p.title}${p.readOnly === true ? ` · ${ownerOf(p)}` : ""} · cast ${p.cast.name}`, `${takes} takes · ${clock(p.track.seconds)} of track · ${countLine(c)}`];
 }
 
 /** `34 keyframes × ~4 min · 6 clips × ~25 min · 1 cut` - the redo as it would queue, the work's own units. */

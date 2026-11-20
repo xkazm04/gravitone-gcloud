@@ -18,7 +18,7 @@
 .pics { position: relative; display: block; }
 .portrait { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-xs); display: block; background: var(--letterbox); }
 .sheet { position: absolute; right: 6px; bottom: 6px; width: 44%; max-height: 52%; object-fit: contain; border-radius: var(--r-xs); border: 1px solid var(--hair-3); background: var(--letterbox); box-shadow: var(--shadow-sheet); display: block; }
-.name { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+.name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 0 2px; }
 .name b { font-weight: 600; font-size: 15px; color: var(--ink-bright); line-height: 1.25; }
 .origin { padding: 0 2px; font: 12px/1.35 var(--mono); color: var(--muted); }
 .identity { padding: 0 2px; font: 13px/1.45 var(--sans); color: var(--reading); }
