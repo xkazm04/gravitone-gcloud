@@ -8,6 +8,7 @@ import type { RefObject } from "react";
 
 import { REASONS } from "../../tables.ts";
 import s from "../gallery.module.css";
+import { Field } from "@gt/ui/components/field/Field.tsx";
 import { cx, Gl, Kbd, kit } from "../kit.tsx";
 import { cur, verdictOf, waiting, type G } from "./model.tsx";
 
@@ -56,7 +57,7 @@ export function Foot({ g, un, noteRef, acts }: { readonly g: G; readonly un: num
           acts.onNoteDone();
         }}
       >
-        <input ref={noteRef} className={cx(kit.in, s.note)} placeholder="note" aria-label="Note on the verdict" maxLength={120} value={g.note} onChange={(e) => acts.onNote(e.target.value)} />
+        <Field inputRef={noteRef} skin={cx(kit.in, s.note)} placeholder="note" label="Note on the verdict" maxLength={120} value={g.note} onChange={(v) => acts.onNote(v)} />
       </form>
       <span className={s.grow} />
       <button type="button" className={cx(kit.btn, s.fbtn)} disabled={un === 0} onClick={acts.onUndo}>

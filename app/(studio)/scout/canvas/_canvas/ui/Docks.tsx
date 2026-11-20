@@ -6,7 +6,9 @@
 // illustrative assumptions the fans are drawn from. The right-side docks move aside for the sheet; the bottom docks
 // rise over a desk, and the legend gives way to it.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { Field } from "@gt/ui/components/field/Field.tsx";
 
 import { shortNight } from "../scene/geo.ts";
 import type { CanvasStore } from "../store.ts";
@@ -95,10 +97,10 @@ export function Legend() {
         <i />
         kept most
       </button>
-      <button type="button" className={d.dry} disabled>
+      <span className={`${d.key} ${d.dry}`}>
         <i />
         dry bed
-      </button>
+      </span>
       <button type="button" className={d.proj} onClick={proj}>
         <i />
         projected
@@ -151,8 +153,16 @@ export function MiniMap() {
 
 export function ProjDock() {
   const st = useCanvas();
-  if (!st.ui.projOpen) return null;
+  return st.ui.projOpen ? <ProjForm /> : null;
+}
+
+/** The two assumptions as typed text (a half-typed "0." stays on screen), each number written through on change. */
+function ProjForm() {
+  const st = useCanvas();
+  const [views, setViews] = useState(String(st.ui.assume.views));
+  const [rpm, setRpm] = useState(String(st.ui.assume.rpm));
   const set = (k: "views" | "rpm", v: string): void => {
+    (k === "views" ? setViews : setRpm)(v);
     st.set("assume", { ...st.ui.assume, [k]: Math.max(0, Number(v) || 0) });
   };
   return (
@@ -160,11 +170,11 @@ export function ProjDock() {
       <h4>Projected · illustrative</h4>
       <label>
         Views per published episode
-        <input type="number" min={0} step={100} defaultValue={st.ui.assume.views} autoFocus onChange={(e) => set("views", e.target.value)} />
+        <Field skin="" type="number" min={0} step={100} label="Views per published episode" value={views} autoFocus onChange={(v) => set("views", v)} />
       </label>
       <label>
         Revenue per 1,000 views ($)
-        <input type="number" min={0} step={0.01} defaultValue={st.ui.assume.rpm} onChange={(e) => set("rpm", e.target.value)} />
+        <Field skin="" type="number" min={0} step={0.01} label="Revenue per 1,000 views" value={rpm} onChange={(v) => set("rpm", v)} />
       </label>
       <div className={d.basis}>kept + ½ made episodes per port · YouTube Analytics planned</div>
     </div>

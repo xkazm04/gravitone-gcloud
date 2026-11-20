@@ -16,6 +16,7 @@ import type { Hit, River, Scope } from "../scene/types.ts";
 import type { CanvasStore } from "../store.ts";
 import { STANCES, type Stance } from "../tables.ts";
 import { useCanvas } from "../useCanvas.ts";
+import { TextArea } from "@gt/ui/components/field/Field.tsx";
 import { Chip, cx, Gl, Kbd, kit } from "./kit.tsx";
 import m from "./menu.module.css";
 
@@ -185,7 +186,7 @@ function MenuCard({ st, anchor, target, x, y }: { readonly st: CanvasStore; read
           </button>
         </div>
       ))}
-      <textarea ref={field} data-role="note-field" className={kit.in} placeholder="Next time here…" aria-label="Note for the next scouting: how to approach ideas here" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={onField} />
+      <TextArea areaRef={field} role="note-field" skin={kit.in} placeholder="Next time here…" label="Note for the next scouting: how to approach ideas here" value={text} onChange={setText} onKeyDown={onField} />
       <div className={m.stance} role="group" aria-label="Stance">
         {STANCES.map((s) => (
           <button key={s.key} type="button" data-role="stance" className={cx(stance === s.key && m.on)} aria-pressed={stance === s.key} onClick={() => setStance(stance === s.key ? "" : s.key)}>

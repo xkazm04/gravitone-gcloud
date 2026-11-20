@@ -7,6 +7,9 @@
 import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import type { CanvasStore, Ui } from "../../store.ts";
+import { Field } from "@gt/ui/components/field/Field.tsx";
+
+import { copyText } from "../../../../../_shell/clipboard.ts";
 import { Chip, cx, Kbd, kit, Seg } from "../kit.tsx";
 import d from "../desk.module.css";
 
@@ -16,12 +19,11 @@ function setUi<K extends "cadence" | "autoSlot" | "mode" | "until">(st: CanvasSt
   st.changed("ui");
 }
 
+const NL = String.fromCharCode(10);
+
 /** Copies the line; the toast quotes its first line, or the clipboard's refusal. */
 export function copyCommand(st: CanvasStore, cmd: string): void {
-  navigator.clipboard.writeText(cmd).then(
-    () => st.say(`copied · ${cmd.split("\n")[0] ?? cmd}`),
-    (e: unknown) => st.refuse(e instanceof Error ? e.message : String(e)),
-  );
+  void copyText(cmd).then((r) => (r.ok ? st.say(`copied · ${cmd.split(NL)[0] ?? cmd}`) : st.refuse(r.error)));
 }
 
 export function DispatchCol({ st, cmd }: { readonly st: CanvasStore; readonly cmd: string }) {
@@ -39,11 +41,12 @@ export function DispatchCol({ st, cmd }: { readonly st: CanvasStore; readonly cm
         />
         <label className={cx(kit.inline, d.until)}>
           until
-          <input
-            className={cx(kit.in, d.untilIn)}
+          <Field
+            skin={cx(kit.in, d.untilIn)}
             type="time"
+            label="Until"
             value={st.ui.until}
-            onChange={(e) => setUi(st, "until", e.currentTarget.value === "" ? "06:00" : e.currentTarget.value)}
+            onChange={(v) => setUi(st, "until", v === "" ? "06:00" : v)}
           />
         </label>
       </div>

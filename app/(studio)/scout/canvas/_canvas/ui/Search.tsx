@@ -12,6 +12,7 @@ import type { Hit, Scene } from "../scene/types.ts";
 import type { CanvasStore } from "../store.ts";
 import { STAGE_NAME, STAGES, STATE, type ItemState } from "../tables.ts";
 import { useCanvasStore } from "../useCanvas.ts";
+import { Field } from "@gt/ui/components/field/Field.tsx";
 import { cx, Kbd, kit } from "./kit.tsx";
 import t from "./toolbar.module.css";
 
@@ -95,22 +96,21 @@ export function Search() {
         <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.6" fill="none" />
         <path d="M11 11l4 4" stroke="currentColor" strokeWidth="1.6" />
       </svg>
-      <input
-        ref={(el) => {
+      <Field
+        inputRef={(el) => {
           field = el;
         }}
+        skin=""
         type="search"
         placeholder="Seed, idea, genre, channel, night"
-        aria-label="Find on the map"
+        label="Find on the map"
         autoComplete="off"
-        role="combobox"
-        aria-expanded={open && q.trim() !== ""}
-        aria-controls="scout-find-results"
+        combobox={{ expanded: open && q.trim() !== "", controls: "scout-find-results" }}
         value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
+        onChange={(v) => {
+          setQ(v);
           setSel(0);
-          setOpen(e.target.value.trim() !== "");
+          setOpen(v.trim() !== "");
         }}
         onKeyDown={onKey}
         onBlur={() => setTimeout(() => setOpen(false), 160)}

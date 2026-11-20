@@ -3,7 +3,7 @@
    the shell is fixed to the window as the winner's was (the owner's "fullscreen", over the studio header too); and the kit's .btn, .chip, .kbd, .seg, .in
    come from kit.module.css, so the foot's taller buttons carry .fbtn and the note .note. */
 
-.shell { position: fixed; inset: 0; z-index: var(--z-flyer); background: var(--ink); display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: var(--w-packet-rail) 1fr; animation: galin var(--dur) var(--ease); }
+.shell { position: fixed; inset: 0; z-index: var(--z-flyer); border-radius: 0; background: var(--ink); display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: var(--w-packet-rail) 1fr; animation: galin var(--dur) var(--ease); }
 .shell:focus { outline: none; }
 @keyframes galin { from { opacity: 0; transform: scale(1.015); } }
 @keyframes fall { 0% { transform: translateY(-9px); opacity: .2; } }

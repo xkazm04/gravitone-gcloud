@@ -7,6 +7,7 @@ import { ErrorLine } from "@gt/ui/components/errorline/ErrorLine.tsx";
 
 import type { RoundGoal } from "../../../_port/contract.ts";
 import type { Scene } from "../../scene/types.ts";
+import { TextArea } from "@gt/ui/components/field/Field.tsx";
 import { Chip, cx, kit } from "../kit.tsx";
 import d from "../desk.module.css";
 
@@ -26,7 +27,7 @@ export function GoalCol({ goal, onGoal, channels, can, refusal }: { readonly goa
     <div className={d.col}>
       <h3>Goal {!can && <Chip tone="planned">planned</Chip>}</h3>
       {!can && refusal !== undefined && <ErrorLine message={refusal} />}
-      <textarea className={cx(kit.in, d.goalText)} aria-label="Goal for the round" value={goal.text} onChange={(e) => onGoal({ ...goal, text: e.currentTarget.value })} />
+      <TextArea skin={cx(kit.in, d.goalText)} label="Goal for the round" value={goal.text} onChange={(text) => onGoal({ ...goal, text })} />
       <div className={d.targets}>
         {channels.map((c) => {
           const n = goal.targets.find((t) => t.channel === c.id)?.n ?? 0;
