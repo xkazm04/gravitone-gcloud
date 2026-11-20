@@ -123,6 +123,8 @@ export const SCREENS = {
   // scout          the scout's decision graph (spark scout-decision-graph): every branch's bands, stage columns,
   //                effort and the split. Reads the produce port's side: the fixture universe on the fixture lane.
   scout: { url: "/scout" },
+  // scout-canvas   the same graph as a map (docs/scout-canvas-port.md): basins, rivers, weirs, the toolbar and docks.
+  "scout-canvas": { url: "/scout/canvas" },
   // (scout-muse, the muse wing's graph, retired with the wing - spark scout-vision S3: the archive's nodes are in `scout`.)
   // scout-runs   the Runs tab: every scout night and seed batch on the rail, the newest open one on the Board desk.
   "scout-runs": { url: "/scout/runs" },

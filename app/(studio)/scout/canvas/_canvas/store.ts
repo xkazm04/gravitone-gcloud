@@ -48,6 +48,8 @@ export type Ui = {
   lens: Lens;
   /** 0 → 1 on first load: the water runs east. */
   reveal: number;
+  /** A ring pulsing where `W` just landed (world point, start time in rAF ms). */
+  pulse: { readonly x: number; readonly y: number; readonly t0: number } | null;
   sheetOpen: boolean;
   surface: Surface;
   menu: MenuState;
@@ -93,7 +95,7 @@ export class CanvasStore {
     this.scene = buildScene(view);
     const split = view.split ?? { adult: audShare(view, "adult"), family: audShare(view, "family"), kids: audShare(view, "kids") };
     this.ui = {
-      cam: { x: 0, y: 0, z: 1 }, W: 0, H: 0, dpr: 1, inset: { r: 0, b: 0 }, hover: null, sel: null, lens: null, reveal: 0,
+      cam: { x: 0, y: 0, z: 1 }, W: 0, H: 0, dpr: 1, inset: { r: 0, b: 0 }, hover: null, sel: null, lens: null, reveal: 0, pulse: null,
       sheetOpen: false, surface: null, menu: null, keysOpen: false, notes: [...view.notes], goal: view.goal, mode: "dry", until: "06:00",
       split: { ...split }, splitSet: view.split !== undefined, assume: { views: 1500, rpm: 0.05 }, projOpen: false,
       log: [], slots: view.slots.filter((s) => s.state !== "cancelled"), flyers: [], cadence: 2, autoSlot: true, toast: null, error: null, busy: 0,
@@ -161,6 +163,19 @@ export class CanvasStore {
     if (this.ui.menu === null) return;
     this.ui.menu = null;
     this.changed("ui");
+  }
+
+  /** One UI field, then a redraw of what reads it (React components write through here, never into `ui`). */
+  set<K extends keyof Ui>(k: K, v: Ui[K], what: Change = "ui"): void {
+    this.ui[k] = v;
+    this.changed(what);
+  }
+
+  /** The canvas's size in CSS px and its pixel ratio (no redraw: the frame loop reads them). */
+  size(W: number, H: number, dpr: number): void {
+    this.ui.W = W;
+    this.ui.H = H;
+    this.ui.dpr = dpr;
   }
 
   setLens(l: Lens): void {

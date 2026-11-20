@@ -295,7 +295,10 @@ async function runScout(argv: readonly string[], io: Io, archive: boolean): Prom
         // `## Asset needs` (spark scout-vision S4): the game's own open needs, the only ones a project asset brief may answer.
         const { needsRoot, needsSection, readNeeds } = await import("../lib/foundry/scout/needs.ts");
         const needs = needsSection([await readNeeds("bp", { now: now(), root: needsRoot(io.env) })]);
-        const extra = [...branchesSection(graph, steer), ...backlog, ...(!k.ok ? [] : (await import("../lib/foundry/scout/genres.ts")).genreTaste(k.value.store, others)), ...sheets, ...needs, ...tracksSection(others)];
+        // `## Operator notes` (docs/scout-canvas-port.md, case b): the round's goal and the notes pinned on the scout canvas lead.
+        const { notesBrief, readNotes } = await import("../lib/foundry/scout/notes.ts");
+        const operatorNotes = notesBrief(await readNotes());
+        const extra = [...(operatorNotes === "" ? [] : [operatorNotes, ""]), ...branchesSection(graph, steer), ...backlog, ...(!k.ok ? [] : (await import("../lib/foundry/scout/genres.ts")).genreTaste(k.value.store, others)), ...sheets, ...needs, ...tracksSection(others)];
         fs.writeFileSync(path.join(store.nightDir(n.id), "taste.md"), await tasteBrief(n.id, k.ok ? (x) => nightLoad(k.value.store, x, now().getTime()) : undefined, extra), "utf8");
       } finally {
         kp.closeProcessKernel();

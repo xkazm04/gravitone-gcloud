@@ -42,7 +42,7 @@ function Backlog({ backlog }: { readonly backlog: ScoutBacklog }) {
   );
 }
 
-export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "runs" | "productions" | "ventures"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
+export function ScoutHead({ current, undecided, facts, backlog }: { readonly current: "graph" | "canvas" | "runs" | "productions" | "ventures"; readonly undecided?: number; readonly facts: ScoutHeaderFacts; readonly backlog?: ScoutBacklog }) {
   const next = facts.next;
   return (
     <div className={s.head}>
@@ -53,6 +53,8 @@ export function ScoutHead({ current, undecided, facts, backlog }: { readonly cur
         current={current}
         tabs={[
           { id: "graph", label: "Graph", href: "/scout" },
+          // The map of the same graph (docs/scout-canvas-port.md), beside Graph until the owner promotes it.
+          { id: "canvas", label: "Canvas", href: "/scout/canvas" },
           { id: "runs", label: "Runs", href: "/scout/runs", ...(undecided === undefined ? {} : { tally: { value: undecided, label: "undecided" } }) },
           { id: "productions", label: "Productions", href: "/scout/productions" },
           { id: "ventures", label: "Ventures", href: "/scout/ventures" },

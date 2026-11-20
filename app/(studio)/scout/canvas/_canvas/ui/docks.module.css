@@ -1,0 +1,43 @@
+/* THE DOCKS OVER THE MAP - the winner's styles.css .dock, #ladder, #legend, #mini and #proj, values byte for byte
+   over the @gt/ui tokens and the canvas root's derived variables (kit.module.css .root). Two recorded changes: a dock
+   is position:absolute inside the canvas root instead of fixed to the viewport, and the prototype's body.sheet-open /
+   body.desk-open rules are the .sheetOpen / .deskOpen classes the components set from the store. The projection
+   dock sat 40px under the fixed header; the stage it lives in starts under the toolbar, so its top is 40px. */
+
+.dock { position: absolute; z-index: 20; background: var(--dock-ground); border: 1px solid var(--hair-2); border-radius: var(--r); backdrop-filter: blur(6px); transition: bottom var(--dur) var(--ease), right var(--dur) var(--ease); }
+
+.ladder { left: 14px; bottom: 14px; display: flex; align-items: center; gap: 2px; padding: 4px; }
+.ladder button { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; border-radius: var(--r-control); height: var(--h-control-sm); padding: 0 9px; color: var(--muted); font: 12.5px var(--mono); }
+.ladder button:hover { background: var(--wash-hi); color: var(--text); }
+.ladder button.on { color: var(--ink); background: var(--cyan); font-weight: 600; }
+.ladder button.on kbd { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 40%, transparent); background: none; }
+.ladder .zb { width: 30px; padding: 0; justify-content: center; font-size: 16px; color: var(--text); }
+.ladder .div { width: 1px; height: 18px; background: var(--hair-2); margin: 0 4px; }
+
+.legend { right: 14px; bottom: 196px; display: flex; flex-direction: column; gap: 1px; padding: 4px; width: 202px; }
+.legend button { display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border: 0; border-radius: var(--r-chip); background: none; font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.legend button i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend button b { color: var(--text); font-weight: 500; margin-left: auto; }
+.legend button:hover { background: var(--wash-hi); color: var(--text); }
+.legend button[aria-pressed=true] { background: var(--ink-4); color: var(--ink-bright); box-shadow: inset 0 0 0 1px var(--hair-3); }
+.legend .proj { color: var(--illustrative-text); }
+.legend .proj i { background: var(--hatch); border: 1px dashed var(--illustrative-text); }
+.legend .dry i { height: 0; border-top: 2px dashed var(--rose); border-radius: 0; width: 14px; }
+.legend .follow i { background: var(--emerald); clip-path: polygon(50% 0, 100% 100%, 0 100%); border-radius: 0; }
+
+.mini { right: 14px; bottom: 14px; padding: 6px; }
+.mini canvas { display: block; cursor: pointer; border-radius: 6px; }
+
+.sheetOpen.mini, .sheetOpen.legend { right: calc(var(--w-sheet) + 14px); }
+.deskOpen.mini, .deskOpen.ladder { bottom: calc(var(--h-desk) + 14px); }
+.deskOpen.legend { display: none; }
+
+.projDock { right: 14px; bottom: auto; top: 40px; width: 300px; padding: 14px; display: none; border-color: var(--proj-line); }
+.projDock.on { display: block; }
+.projDock h4 { margin: 0 0 8px; font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--illustrative-text); }
+.projDock label { display: grid; grid-template-columns: 1fr 110px; gap: 10px; align-items: center; margin: 8px 0; font-size: 13.5px; }
+.projDock input { height: 30px; border-radius: var(--r-control); border: 1px solid var(--hair-2); background: var(--ink); padding: 0 8px; font: 13px var(--mono); color: var(--illustrative-text); }
+.projDock .basis { color: var(--muted); font: 12px var(--mono); margin-top: 6px; }
+
+@media (max-height: 700px) { .legend { display: none; } }
+@media (max-width: 920px) { .legend { display: none; } }

@@ -1,0 +1,12 @@
+/* THE KEYS SHEET - the winner's styles.css #keys, byte for byte over the @gt/ui tokens (contest scout-canvas-v2-r2
+   A/1). It veils the canvas root (absolute), not the viewport. Its caps are the winner's global kbd look. */
+
+.keys { position: absolute; inset: 0; z-index: var(--z-flyer); display: grid; place-items: center; background: var(--ink-veil); }
+.card { display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 8px 34px; padding: 22px 26px; background: var(--ink-2); border: 1px solid var(--hair-3); border-radius: var(--r-lg); max-width: min(960px, 94vw); max-height: 86vh; overflow: auto; }
+.card h4 { margin: 0 0 6px; font: 600 12px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.card h4.next { margin-top: 16px; }
+.k { display: flex; align-items: center; gap: var(--sp-loose); padding: 3px 0; font-size: var(--fs-control-sm); }
+.k span:first-child { display: flex; gap: 3px; min-width: 74px; }
+.k kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; font: 12px var(--mono); color: var(--muted); border: 1px solid var(--hair-2); border-bottom-width: 2px; border-radius: var(--r-xs); padding: 0 5px; background: var(--ink-2); white-space: nowrap; }
+
+@media (max-width: 920px) { .card { grid-template-columns: 1fr; } }

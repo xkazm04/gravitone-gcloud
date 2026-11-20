@@ -1,0 +1,13 @@
+/* THE MAP AND ITS TIP - the winner's styles.css #map and #tip, values byte for byte over the @gt/ui tokens (contest
+   scout-canvas-v2-r2 A/1). One recorded change: the map fills its container (position:absolute; inset:0) instead of
+   the viewport below a fixed header, since the canvas root places it. The tip stays fixed to the viewport, as the
+   prototype placed it from the pointer's client position. */
+
+.map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.map.drag { cursor: grabbing; }
+.map.pointy { cursor: pointer; }
+
+.tip { position: fixed; z-index: var(--z-tooltip); pointer-events: none; max-width: 340px; background: var(--ink-3); border: 1px solid var(--hair-3); border-radius: var(--r-sm); padding: 8px 10px; box-shadow: 0 10px 30px var(--shadow); display: block; }
+.tip .l { color: var(--text); }
+.tip .m { margin-top: 4px; color: var(--muted); font: 12px var(--mono); }
+.tip .k { margin-top: 6px; display: flex; gap: 10px; color: var(--faint); font: 12px var(--mono); align-items: center; }
