@@ -20,7 +20,7 @@ const { readState } = await import("../../lib/production/state.ts");
 // never carries a machine path or a user name, keeps a record's owner, never rewrites a lane file, and is written on every
 // change through the afterWrite hook. Every root is a temp dir; the operator's store is never opened.
 
-const ENV = ["PRODUCTION_FIXTURE_DIR", "GRAVITONE_DEVICE_FILE", "KNOWHOW_ROOT", "GRAVITONE_STORE_PATH"] as const;
+const ENV = ["PRODUCTION_FIXTURE_DIR", "GRAVITONE_DEVICE_FILE", "GRAVITONE_DEVICE_NAME", "KNOWHOW_ROOT", "GRAVITONE_STORE_PATH"] as const;
 const LEAK = /[A-Za-z]:\\|\/Users\/|kazda/;
 let dir = "";
 let saved: Record<string, string | undefined> = {};
@@ -55,6 +55,9 @@ beforeEach(() => {
   saved = Object.fromEntries(ENV.map((k) => [k, process.env[k]]));
   process.env["PRODUCTION_FIXTURE_DIR"] = path.join(dir, "fixture");
   process.env["GRAVITONE_DEVICE_FILE"] = path.join(dir, "device.json");
+  // A fresh device is named from the hostname; a CI host ("runnervm...") contains the runner user's name and the leak guard
+  // would refuse every record. The test names its device, so it does not depend on the host it runs on.
+  process.env["GRAVITONE_DEVICE_NAME"] = "test-device";
   process.env["KNOWHOW_ROOT"] = know();
   process.env["GRAVITONE_STORE_PATH"] = path.join(dir, "store", "gravitone.sqlite");
   put("cores/sofia/portrait.jpg", "sofia-portrait");
